@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  applications Application[]
+  savedJobs    SavedJob[]
+  
+  @@map("users")
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  jobs Job[]
+  
+  @@map("admin_users")
+}
+
+model Category {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String?
+  
+  // Relations
+  jobs Job[]
+  
+  @@map("categories")
+}
+
+model Job {
+  id                        Int      @id @default(autoincrement())
+  title                     String
+  slug                      String   @unique
+  description               String
+  summary                   String?
+  department                String
+  employmentType           String   // "Full-time", "Part-time", "Contract", "Internship"
+  experienceLevel          String   // "Entry", "Mid", "Senior", "Executive"
+  location                  String
+  remotePolicy             String   // "Remote", "Hybrid", "On-site"
+  
+  salaryMin                Int?
+  salaryMax                Int?
+  salaryCurrency           String   @default("USD")
+  salaryType               String   @default("Annual")
+  benefits                  String?
+  
+  requirements              String
+  preferredQualifications  String?
+  educationRequired        String?
+  yearsExperienceRequired  Int?
+  
+  applicationDeadline      DateTime?
+  startDate               DateTime?
+  applicationInstructions  String?
+  
+  status                   String   @default("Draft") // "Active", "Paused", "Closed", "Draft"
+  featured                 Boolean  @default(false)
+  priority                 Int      @default(0)
+  viewCount               Int      @default(0)
+  applicationCount        Int      @default(0)
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  postedAt                DateTime?
+  
+  // Foreign Keys
+  categoryId              Int
+  createdBy               Int
+  
+  // Relations
+  category                Category      @relation(fields: [categoryId], references: [id])
+  admin                   AdminUser     @relation(fields: [createdBy], references: [id])
+  applications            Application[]
+  savedJobs               SavedJob[]
+  
+  @@map("jobs")
+}
+
+model Application {
+  id          Int      @id @default(autoincrement())
+  status      String   @default("Applied") // "Applied", "Reviewing", "Interview", "Rejected", "Hired"
+  coverLetter String?
+  resumeUrl   String?
+  notes       String?
+  appliedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Foreign Keys
+  userId      Int
+  jobId       Int
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  job         Job      @relation(fields: [jobId], references: [id])
+  
+  // Ensure one application per user per job
+  @@unique([userId, jobId])
+  @@map("applications")
+}
+
+model SavedJob {
+  id        Int      @id @default(autoincrement())
+  savedAt   DateTime @default(now())
+  
+  // Foreign Keys
+  userId    Int
+  jobId     Int
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  job       Job      @relation(fields: [jobId], references: [id])
+  
+  // Ensure one save per user per job
+  @@unique([userId, jobId])
+  @@map("saved_jobs")
+}
