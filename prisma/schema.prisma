@@ -146,3 +146,22 @@ model SavedJob {
   @@unique([userId, jobId])
   @@map("saved_jobs")
 }
+
+model UserResume {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  fileName    String   @map("file_name") @db.VarChar(255)
+  fileSize    Int      @map("file_size")
+  fileType    String   @map("file_type") @db.VarChar(50)
+  storagePath String   @map("storage_path") @db.VarChar(500)
+  isDefault   Boolean  @default(false) @map("is_default")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // If you have a User model, you can add this relation
+  // user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_user_resumes_user_id")
+  @@index([userId, isDefault], map: "idx_user_resumes_default")
+  @@map("user_resumes")
+}

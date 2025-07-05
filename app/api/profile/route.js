@@ -20,10 +20,11 @@ export async function GET(req) {
       where: { id: userId },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        firstName: true,
+        lastName: true,
         email: true,
         phone: true,
+        createdAt: true,
       },
     });
 
@@ -55,22 +56,24 @@ export async function PUT(req) {
 
   try {
     const body = await req.json();
-    const { firstname, lastname, email, phone } = body;
+    const { firstName, lastName, email, phone } = body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        firstname,
-        lastname,
+        firstName,
+        lastName,
         email,
         phone,
+        // createdAt,
       },
       select: {
         id: true,
-        firstname: true,
-        lastname: true,
+        firstName: true,
+        lastName: true,
         email: true,
         phone: true,
+        createdAt: true,
       },
     });
 
