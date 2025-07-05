@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
-import ProfileClient from "../../components/ProfileClient";
+import ProfileClient from "../components/ProfileClient";
 
 export const metadata = {
   title: "Profile - JobSite",
