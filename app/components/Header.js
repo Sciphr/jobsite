@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { Briefcase, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/" });
+  };
 
   return (
     <header className="bg-white shadow-lg border-b border-gray-100 sticky top-0 z-50">
@@ -42,18 +48,39 @@ export default function Header() {
 
             {/* CTA Buttons */}
             <div className="flex items-center space-x-3 ml-4">
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
-              >
-                Get Started
-              </Link>
+              {status === "loading" ? (
+                <div className="text-gray-600">Loading...</div>
+              ) : session ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/signin"
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
 
@@ -90,20 +117,46 @@ export default function Header() {
               </Link>
 
               <hr className="border-gray-200 my-2" />
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-blue-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium text-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Get Started
-              </Link>
+
+              {status === "loading" ? (
+                <div className="text-gray-600 py-2">Loading...</div>
+              ) : session ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="text-gray-700 hover:text-blue-600 font-medium py-2 transition-colors duration-200"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium text-center"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/signin"
+                    className="text-gray-700 hover:text-blue-600 font-medium py-2 transition-colors duration-200"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium text-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}
