@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { PrismaClient } from "../../generated/prisma";
+import { PrismaClient } from "../../../app/generated/prisma";
 import {
   uploadToSupabase,
   deleteFromSupabase,
@@ -17,17 +17,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const resume = await prisma.userResume.findFirst({
+    const resumes = await prisma.userResumes.findMany({
       where: { userId: session.user.id },
+      orderBy: { uploadedAt: "desc" },
     });
 
-    if (!resume) {
-      return NextResponse.json({ resume: null });
-    }
-
-    return NextResponse.json({ resume });
+    return NextResponse.json(resumes);
   } catch (error) {
-    console.error("Error fetching resume:", error);
+    console.error("Error fetching resumes:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -73,7 +70,7 @@ export async function POST(request) {
     }
 
     // Check if user already has a resume
-    const existingResume = await prisma.userResume.findFirst({
+    const existingResume = await prisma.userResumes.findFirst({
       where: { userId: session.user.id },
     });
 
@@ -115,18 +112,19 @@ export async function POST(request) {
       fileType: file.type,
       storagePath: filePath,
       uploadedAt: new Date(),
+      isDefault: true, // Mark as default resume
     };
 
     let resume;
     if (existingResume) {
       // Update existing resume
-      resume = await prisma.userResume.update({
+      resume = await prisma.userResumes.update({
         where: { id: existingResume.id },
         data: resumeData,
       });
     } else {
       // Create new resume
-      resume = await prisma.userResume.create({
+      resume = await prisma.userResumes.create({
         data: resumeData,
       });
     }
@@ -157,7 +155,7 @@ export async function DELETE() {
     }
 
     // Find the user's resume
-    const resume = await prisma.userResume.findFirst({
+    const resume = await prisma.userResumes.findFirst({
       where: { userId: session.user.id },
     });
 
@@ -176,7 +174,7 @@ export async function DELETE() {
     }
 
     // Delete from database
-    await prisma.userResume.delete({
+    await prisma.userResumes.delete({
       where: { id: resume.id },
     });
 

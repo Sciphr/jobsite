@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Copy, Check, Heart, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import JobApplicationForm from "./JobApplicationForm"; // Adjust the import based on your file structure
+import JobApplicationForm from "./JobApplicationForm";
 
 export default function JobDetailsClient({ job }) {
   const [copied, setCopied] = useState(false);
@@ -12,8 +12,8 @@ export default function JobDetailsClient({ job }) {
   const [isLoading, setIsLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const [userResumes, setUserResumes] = useState([]); // Add this state
-  const [loadingResumes, setLoadingResumes] = useState(false); // Add loading state
+  const [userResumes, setUserResumes] = useState([]);
+  const [loadingResumes, setLoadingResumes] = useState(false);
   const { data: session, status } = useSession();
 
   // Check if job is already saved when component mounts
@@ -33,13 +33,17 @@ export default function JobDetailsClient({ job }) {
   const fetchUserResumes = async () => {
     try {
       setLoadingResumes(true);
-      const response = await fetch("/api/resumes"); // Adjust endpoint as needed
+      const response = await fetch("/api/resumes");
       if (response.ok) {
         const resumes = await response.json();
         setUserResumes(resumes);
+      } else {
+        console.error("Failed to fetch resumes");
+        setUserResumes([]);
       }
     } catch (error) {
       console.error("Error fetching user resumes:", error);
+      setUserResumes([]);
     } finally {
       setLoadingResumes(false);
     }
@@ -62,7 +66,6 @@ export default function JobDetailsClient({ job }) {
 
   const handleSaveJob = async () => {
     if (!session?.user?.id) {
-      // Redirect to login if not authenticated
       window.location.href = "/auth/signin";
       return;
     }
@@ -82,17 +85,14 @@ export default function JobDetailsClient({ job }) {
 
       if (response.ok) {
         setIsSaved(!isSaved);
-        // Optional: Show success message
         const action = isSaved ? "removed from" : "added to";
         console.log(`Job ${action} saved jobs`);
       } else {
         const error = await response.json();
         console.error("Error saving job:", error);
-        // Optional: Show error message to user
       }
     } catch (error) {
       console.error("Error saving job:", error);
-      // Optional: Show error message to user
     } finally {
       setIsLoading(false);
     }
@@ -110,11 +110,16 @@ export default function JobDetailsClient({ job }) {
 
   const handleApplyClick = () => {
     if (!session?.user?.id) {
-      // Redirect to login if not authenticated
       window.location.href = "/auth/signin";
       return;
     }
     setShowApplicationForm(true);
+  };
+
+  const handleApplicationSuccess = () => {
+    setShowApplicationForm(false);
+    // You could show a success message here
+    alert("Application submitted successfully!");
   };
 
   return (
@@ -380,15 +385,12 @@ export default function JobDetailsClient({ job }) {
                     job={job}
                     user={session?.user}
                     userResumes={userResumes}
-                    onSuccess={() => {
-                      setShowApplicationForm(false);
-                      /* show success message */
-                    }}
+                    onSuccess={handleApplicationSuccess}
                     onCancel={() => setShowApplicationForm(false)}
                   />
                 ) : (
                   <button
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4"
+                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleApplyClick}
                     disabled={loadingResumes}
                   >
@@ -404,7 +406,7 @@ export default function JobDetailsClient({ job }) {
                 )}
 
                 {/* Save Job Button - Mobile/Sidebar */}
-                {session && (
+                {session && !showApplicationForm && (
                   <button
                     onClick={handleSaveJob}
                     disabled={isLoading || checkingStatus}
@@ -431,60 +433,70 @@ export default function JobDetailsClient({ job }) {
               </div>
 
               {/* Job Quick Info */}
-              <div className="border-t pt-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Quick Info</h4>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Job Slug:</span>
-                    <span className="font-medium text-gray-900">
-                      {job.slug}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Department:</span>
-                    <span className="font-medium text-gray-900">
-                      {job.department}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium text-gray-900">
-                      {job.location}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Type:</span>
-                    <span className="font-medium text-gray-900">
-                      {job.employmentType}
-                    </span>
-                  </div>
-                  {job.applicationDeadline && (
+              {!showApplicationForm && (
+                <div className="border-t pt-6">
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Quick Info
+                  </h4>
+                  <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Deadline:</span>
+                      <span className="text-gray-600">Job Slug:</span>
                       <span className="font-medium text-gray-900">
-                        {new Date(job.applicationDeadline).toLocaleDateString()}
+                        {job.slug}
                       </span>
                     </div>
-                  )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Department:</span>
+                      <span className="font-medium text-gray-900">
+                        {job.department}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium text-gray-900">
+                        {job.location}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Type:</span>
+                      <span className="font-medium text-gray-900">
+                        {job.employmentType}
+                      </span>
+                    </div>
+                    {job.applicationDeadline && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Deadline:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(
+                            job.applicationDeadline
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Share Job */}
-              <div className="border-t pt-6 mt-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Share Job</h4>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleCopyLink}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                    {copied ? "Copied!" : "Copy Link"}
-                  </button>
-                  <button className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors text-sm">
-                    Email
-                  </button>
+              {!showApplicationForm && (
+                <div className="border-t pt-6 mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Share Job
+                  </h4>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      {copied ? <Check size={16} /> : <Copy size={16} />}
+                      {copied ? "Copied!" : "Copy Link"}
+                    </button>
+                    <button className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-200 transition-colors text-sm">
+                      Email
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

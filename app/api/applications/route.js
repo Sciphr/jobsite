@@ -15,7 +15,7 @@ export async function GET(request) {
   const userId = session.user.id;
 
   try {
-    const applications = await prisma.application.findMany({
+    const applications = await prisma.applications.findMany({
       where: { userId },
       include: {
         job: {

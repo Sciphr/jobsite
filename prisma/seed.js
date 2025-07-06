@@ -352,7 +352,7 @@ async function main() {
 
   // Create User Resumes
   const userResumes = await Promise.all([
-    prisma.userResume.create({
+    prisma.userResumes.create({
       data: {
         userId: users[0].id,
         fileName: "jane-doe-resume.pdf",
@@ -362,7 +362,7 @@ async function main() {
         isDefault: true,
       },
     }),
-    prisma.userResume.create({
+    prisma.userResumes.create({
       data: {
         userId: users[1].id,
         fileName: "mike-wilson-resume.pdf",
@@ -372,7 +372,7 @@ async function main() {
         isDefault: true,
       },
     }),
-    prisma.userResume.create({
+    prisma.userResumes.create({
       data: {
         userId: users[2].id,
         fileName: "sarah-chen-resume.pdf",

@@ -20,7 +20,7 @@ export async function GET(request) {
   try {
     // If jobId is provided, check if specific job is saved
     if (jobId) {
-      const savedJob = await prisma.savedJob.findUnique({
+      const savedJob = await prisma.savedJobs.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -33,7 +33,7 @@ export async function GET(request) {
     }
 
     // Otherwise, return all saved jobs
-    const savedJobs = await prisma.savedJob.findMany({
+    const savedJobs = await prisma.savedJobs.findMany({
       where: { userId },
       include: {
         job: {
@@ -90,7 +90,7 @@ export async function POST(request) {
       return NextResponse.json({ message: "Job not found" }, { status: 404 });
     }
 
-    const existingSave = await prisma.savedJob.findUnique({
+    const existingSave = await prisma.savedJobs.findUnique({
       where: {
         userId_jobId: {
           userId,
@@ -106,7 +106,7 @@ export async function POST(request) {
       );
     }
 
-    const savedJob = await prisma.savedJob.create({
+    const savedJob = await prisma.savedJobs.create({
       data: { userId, jobId },
       include: {
         job: {
