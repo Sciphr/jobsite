@@ -1,7 +1,7 @@
 // app/api/applications/route.js
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { PrismaClient } from "../../../app/generated/prisma";
+import { appPrisma } from "../../lib/prisma";
 
 //const prisma = new prismaClient();
 
