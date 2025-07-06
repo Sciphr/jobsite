@@ -1,24 +1,11 @@
-// Create a new file: app/lib/appPrisma.js
-
-import { PrismaClient } from "../generated/prisma";
+// app/lib/prisma.js
+import { db, authDb } from "./db";
 
 // For auth operations (requires direct connection)
-export const authPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL,
-    },
-  },
-});
+export const authPrisma = authDb;
 
 // For general operations (can use pooling)
-export const appPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
+export const appPrisma = db;
 
 // For backwards compatibility
 export const prisma = appPrisma;
