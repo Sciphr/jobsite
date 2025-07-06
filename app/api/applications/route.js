@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { PrismaClient } from "../../../app/generated/prisma";
 
-const prisma = new PrismaClient();
+//const prisma = new prismaClient();
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);

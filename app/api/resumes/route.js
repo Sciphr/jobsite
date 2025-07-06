@@ -8,7 +8,7 @@ import {
   deleteFromSupabase,
 } from "../../lib/supabase-storage";
 
-const prisma = new PrismaClient();
+//const prisma = new prismaClient();
 
 // Helper function to truncate strings safely
 function truncateString(str, maxLength) {

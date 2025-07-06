@@ -1,7 +1,7 @@
 // prisma/seed.js
 const { PrismaClient } = require("../app/generated/prisma");
 
-const prisma = new PrismaClient();
+//const prisma = new prismaClient();
 
 async function main() {
   console.log("Starting seed...");
