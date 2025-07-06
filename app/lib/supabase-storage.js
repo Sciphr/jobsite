@@ -1,38 +1,44 @@
 // lib/supabase-storage.js
 import { createClient } from "@supabase/supabase-js";
 
+// Use service role key for server-side operations (bypasses RLS)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // Use service role key
 );
 
-// Simple upload function for API routes
 export async function uploadToSupabase(file, filePath) {
-  try {
-    const { data, error } = await supabase.storage
-      .from("resumes")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true, // Allow overwriting existing files
-      });
+  console.log("Uploading to storage:", filePath);
 
-    return { data, error };
-  } catch (error) {
-    return { data: null, error };
+  const { data, error } = await supabase.storage
+    .from("resumes")
+    .upload(filePath, file, {
+      upsert: false, // Don't overwrite existing files
+    });
+
+  if (error) {
+    console.error("Storage upload error:", error);
+  } else {
+    console.log("Storage upload success:", data);
   }
+
+  return { data, error };
 }
 
-// Simple delete function for API routes
 export async function deleteFromSupabase(filePath) {
-  try {
-    const { data, error } = await supabase.storage
-      .from("resumes")
-      .remove([filePath]);
+  console.log("Deleting from storage:", filePath);
 
-    return { data, error };
-  } catch (error) {
-    return { data: null, error };
+  const { data, error } = await supabase.storage
+    .from("resumes")
+    .remove([filePath]);
+
+  if (error) {
+    console.error("Storage delete error:", error);
+  } else {
+    console.log("Storage delete success:", data);
   }
+
+  return { data, error };
 }
 
 // Get user's single resume

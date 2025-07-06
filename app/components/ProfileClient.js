@@ -10,7 +10,7 @@ export default function ProfileClient({ session }) {
   const [profile, setProfile] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
   const [applications, setApplications] = useState([]);
-  const [resume, setResume] = useState(null); // Changed from resumes array to single resume
+  const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -37,7 +37,7 @@ export default function ProfileClient({ session }) {
           fetch("/api/profile"),
           fetch("/api/saved-jobs"),
           fetch("/api/applications"),
-          fetch("/api/resume"), // Changed from /api/resumes to /api/resume
+          fetch("/api/resumes"), // Changed back to /api/resumes since that's your actual endpoint
         ]);
 
       const [profileData, savedJobsData, applicationsData, resumeData] =
@@ -48,10 +48,22 @@ export default function ProfileClient({ session }) {
           resumeRes.json(),
         ]);
 
+      console.log("Saved Jobs Data:", savedJobsData); // Debug log
+      console.log("Applications Data:", applicationsData); // Debug log
+      console.log("Resume Data:", resumeData); // Debug log
+
       setProfile(profileData);
       setSavedJobs(savedJobsData);
       setApplications(applicationsData);
-      setResume(resumeData); // Set single resume object
+
+      // Handle resume data - it might be an array, so take the first one if it exists
+      if (Array.isArray(resumeData) && resumeData.length > 0) {
+        setResume(resumeData[0]);
+      } else if (resumeData && !Array.isArray(resumeData)) {
+        setResume(resumeData);
+      } else {
+        setResume(null);
+      }
 
       // Initialize edit form with current data
       setEditForm({
@@ -93,14 +105,14 @@ export default function ProfileClient({ session }) {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/resume", {
+      const response = await fetch("/api/resumes", {
         method: "POST",
         body: formData,
       });
 
       if (response.ok) {
-        const newResume = await response.json();
-        setResume(newResume); // Set the single resume
+        const result = await response.json();
+        setResume(result.resume); // Set the resume from the response
         // Reset file input
         event.target.value = "";
       } else {
@@ -119,12 +131,12 @@ export default function ProfileClient({ session }) {
     if (!confirm("Are you sure you want to delete this resume?")) return;
 
     try {
-      const response = await fetch(`/api/resume/${resume.id}`, {
+      const response = await fetch("/api/resumes", {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setResume(null); // Clear the resume
+        setResume(null);
       } else {
         alert("Failed to delete resume");
       }
@@ -136,18 +148,14 @@ export default function ProfileClient({ session }) {
 
   const handleDownloadResume = async (fileName) => {
     try {
-      const response = await fetch(`/api/resume/${resume.id}/download`);
+      const response = await fetch(
+        `/api/resume-download?path=${encodeURIComponent(resume.storagePath)}`
+      );
 
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        const data = await response.json();
+        // Open the signed URL in a new tab for download
+        window.open(data.downloadUrl, "_blank");
       } else {
         alert("Failed to download resume");
       }
@@ -197,12 +205,16 @@ export default function ProfileClient({ session }) {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case "pending":
+      case "applied":
+        return "bg-blue-100 text-blue-800";
+      case "reviewing":
         return "bg-yellow-100 text-yellow-800";
-      case "accepted":
-        return "bg-green-100 text-green-800";
+      case "interview":
+        return "bg-purple-100 text-purple-800";
       case "rejected":
         return "bg-red-100 text-red-800";
+      case "hired":
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -552,32 +564,70 @@ export default function ProfileClient({ session }) {
           {activeTab === "saved-jobs" && (
             <div className="px-6 py-4">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Saved Jobs
+                Saved Jobs ({savedJobs.length})
               </h2>
               {savedJobs.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No saved jobs yet.
-                </p>
+                <div className="text-center py-8">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                  <p className="text-gray-500 mt-2">No saved jobs yet.</p>
+                  <p className="text-gray-400 text-sm">
+                    Browse jobs and save the ones you're interested in.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {savedJobs.map((savedJob) => (
                     <div
                       key={savedJob.id}
-                      className="border border-gray-200 rounded-lg p-4"
+                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-gray-900">
-                            {savedJob.job?.title}
+                            {savedJob.job?.title || "Job Title Not Available"}
                           </h3>
                           <p className="text-gray-600">
-                            {savedJob.job?.company}
+                            {savedJob.job?.department ||
+                              "Department Not Available"}
                           </p>
-                          <p className="text-gray-500 text-sm mt-1">
-                            {savedJob.job?.location}
-                          </p>
-                          <p className="text-gray-500 text-sm">
-                            Saved on {formatDate(savedJob.createdAt)}
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                            <span>
+                              {savedJob.job?.location ||
+                                "Location Not Available"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {savedJob.job?.employmentType ||
+                                "Type Not Available"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {savedJob.job?.remotePolicy ||
+                                "Policy Not Available"}
+                            </span>
+                          </div>
+                          {savedJob.job?.salaryMin &&
+                            savedJob.job?.salaryMax && (
+                              <p className="text-green-600 text-sm mt-1">
+                                ${savedJob.job.salaryMin.toLocaleString()} - $
+                                {savedJob.job.salaryMax.toLocaleString()}{" "}
+                                {savedJob.job.salaryCurrency}
+                              </p>
+                            )}
+                          <p className="text-gray-500 text-sm mt-2">
+                            Saved on {formatDate(savedJob.savedAt)}
                           </p>
                         </div>
                         <div className="flex space-x-2">
@@ -585,7 +635,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${savedJob.job?.slug}`)
                             }
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-medium"
                           >
                             View Job
                           </button>
@@ -601,32 +651,63 @@ export default function ProfileClient({ session }) {
           {activeTab === "applications" && (
             <div className="px-6 py-4">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Job Applications
+                Job Applications ({applications.length})
               </h2>
               {applications.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No applications yet.
-                </p>
+                <div className="text-center py-8">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <p className="text-gray-500 mt-2">No applications yet.</p>
+                  <p className="text-gray-400 text-sm">
+                    Apply to jobs to track your application status here.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {applications.map((application) => (
                     <div
                       key={application.id}
-                      className="border border-gray-200 rounded-lg p-4"
+                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-gray-900">
-                            {application.job?.title}
+                            {application.job?.title ||
+                              "Job Title Not Available"}
                           </h3>
                           <p className="text-gray-600">
-                            {application.job?.company}
+                            {application.job?.department ||
+                              "Department Not Available"}
                           </p>
-                          <p className="text-gray-500 text-sm mt-1">
-                            {application.job?.location}
-                          </p>
-                          <p className="text-gray-500 text-sm">
-                            Applied on {formatDate(application.createdAt)}
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                            <span>
+                              {application.job?.location ||
+                                "Location Not Available"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {application.job?.employmentType ||
+                                "Type Not Available"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {application.job?.remotePolicy ||
+                                "Policy Not Available"}
+                            </span>
+                          </div>
+                          <p className="text-gray-500 text-sm mt-2">
+                            Applied on {formatDate(application.appliedAt)}
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-2">
@@ -635,13 +716,13 @@ export default function ProfileClient({ session }) {
                               application.status
                             )}`}
                           >
-                            {application.status || "Pending"}
+                            {application.status || "Applied"}
                           </span>
                           <button
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="text-indigo-600 hover:text-indigo-900 text-sm"
+                            className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
                           >
                             View Job
                           </button>
