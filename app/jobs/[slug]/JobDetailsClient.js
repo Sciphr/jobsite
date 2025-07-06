@@ -1,17 +1,82 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Copy, Check, Heart, Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function JobDetailsClient({ job }) {
   const [copied, setCopied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const { data: session, status } = useSession();
+
+  // Check if job is already saved when component mounts
+  useEffect(() => {
+    if (session?.user?.id && job.id) {
+      checkSavedStatus();
+    }
+  }, [session, job.id]);
+
+  const checkSavedStatus = async () => {
+    try {
+      setCheckingStatus(true);
+      const response = await fetch(`/api/saved-jobs?jobId=${job.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setIsSaved(data.isSaved);
+      }
+    } catch (error) {
+      console.error("Error checking saved status:", error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const handleSaveJob = async () => {
+    if (!session?.user?.id) {
+      // Redirect to login if not authenticated
+      window.location.href = "/auth/signin";
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/saved-jobs", {
+        method: isSaved ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+        }),
+      });
+
+      if (response.ok) {
+        setIsSaved(!isSaved);
+        // Optional: Show success message
+        const action = isSaved ? "removed from" : "added to";
+        console.log(`Job ${action} saved jobs`);
+      } else {
+        const error = await response.json();
+        console.error("Error saving job:", error);
+        // Optional: Show error message to user
+      }
+    } catch (error) {
+      console.error("Error saving job:", error);
+      // Optional: Show error message to user
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
     }
@@ -43,16 +108,49 @@ export default function JobDetailsClient({ job }) {
             <div className="bg-white rounded-lg shadow-md p-8">
               {/* Job Header */}
               <div className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    {job.title}
-                  </h1>
-                  {job.featured && (
-                    <span className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
-                      Featured
-                    </span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {job.title}
+                    </h1>
+                    {job.featured && (
+                      <span className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
+                        Featured
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Save Job Button - Desktop */}
+                  {session && (
+                    <div className="hidden md:block">
+                      <button
+                        onClick={handleSaveJob}
+                        disabled={isLoading || checkingStatus}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
+                          isSaved
+                            ? "bg-red-100 text-red-700 hover:bg-red-200"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        } ${
+                          isLoading || checkingStatus
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Heart
+                            className={`h-4 w-4 ${
+                              isSaved ? "fill-current" : ""
+                            }`}
+                          />
+                        )}
+                        {isSaved ? "Saved" : "Save Job"}
+                      </button>
+                    </div>
                   )}
                 </div>
+
                 <div className="flex items-center gap-4 text-gray-600 mb-4">
                   <span className="font-medium">{job.department}</span>
                   <span className="text-gray-400">•</span>
@@ -240,9 +338,37 @@ export default function JobDetailsClient({ job }) {
                     </p>
                   </div>
                 )}
-                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium">
+
+                {/* Apply Button */}
+                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4">
                   Apply Now
                 </button>
+
+                {/* Save Job Button - Mobile/Sidebar */}
+                {session && (
+                  <button
+                    onClick={handleSaveJob}
+                    disabled={isLoading || checkingStatus}
+                    className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-colors duration-200 font-medium ${
+                      isSaved
+                        ? "bg-red-100 text-red-700 hover:bg-red-200"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    } ${
+                      isLoading || checkingStatus
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Heart
+                        className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`}
+                      />
+                    )}
+                    {isSaved ? "Saved to Profile" : "Save Job"}
+                  </button>
+                )}
               </div>
 
               {/* Job Quick Info */}

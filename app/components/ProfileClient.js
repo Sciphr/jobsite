@@ -452,7 +452,7 @@ export default function ProfileClient({ session }) {
                 <h2 className="text-xl font-semibold text-gray-900">
                   My Resume
                 </h2>
-                {!resume && (
+                {(!resume || !resume.fileName || !resume.id) && (
                   <div className="flex items-center space-x-4">
                     <input
                       type="file"
@@ -474,7 +474,7 @@ export default function ProfileClient({ session }) {
                 )}
               </div>
 
-              {!resume ? (
+              {!resume || !resume.fileName || !resume.id ? (
                 <div className="text-center py-8">
                   <svg
                     className="mx-auto h-12 w-12 text-gray-400"
@@ -502,7 +502,7 @@ export default function ProfileClient({ session }) {
                         {resume.fileName}
                       </h3>
                       <p className="text-gray-600 text-sm">
-                        {resume.fileType.toUpperCase()} •{" "}
+                        {resume.fileType?.toUpperCase() || "UNKNOWN"} •{" "}
                         {formatFileSize(resume.fileSize)}
                       </p>
                       <p className="text-gray-500 text-sm">

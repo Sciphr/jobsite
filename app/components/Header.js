@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase, Menu, X } from "lucide-react";
+import { Briefcase, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
@@ -11,6 +11,17 @@ export default function Header() {
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
+  };
+
+  // Helper function to get user's initials
+  const getUserInitials = (name) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -52,12 +63,31 @@ export default function Header() {
                 <div className="text-gray-600">Loading...</div>
               ) : session ? (
                 <>
+                  {/* Profile Avatar */}
                   <Link
                     href="/profile"
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+                    className="group relative"
+                    title={`View ${session.user?.name || "your"} profile`}
                   >
-                    Profile
+                    <div className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                      {session.user?.image ? (
+                        <img
+                          src={session.user.image}
+                          alt={session.user.name || "Profile"}
+                          className="h-8 w-8 rounded-full border-2 border-gray-200 group-hover:border-blue-400 transition-colors duration-200"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold border-2 border-gray-200 group-hover:border-blue-400 transition-colors duration-200">
+                          {session.user?.name ? (
+                            getUserInitials(session.user.name)
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </Link>
+
                   <button
                     onClick={handleSignOut}
                     className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
@@ -122,13 +152,32 @@ export default function Header() {
                 <div className="text-gray-600 py-2">Loading...</div>
               ) : session ? (
                 <>
+                  {/* Mobile Profile Link */}
                   <Link
                     href="/profile"
-                    className="text-gray-700 hover:text-blue-600 font-medium py-2 transition-colors duration-200"
+                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 font-medium py-2 transition-colors duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Profile
+                    {session.user?.image ? (
+                      <img
+                        src={session.user.image}
+                        alt={session.user.name || "Profile"}
+                        className="h-6 w-6 rounded-full border border-gray-200"
+                      />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+                        {session.user?.name ? (
+                          getUserInitials(session.user.name)
+                        ) : (
+                          <User className="h-3 w-3" />
+                        )}
+                      </div>
+                    )}
+                    <span>
+                      Profile {session.user?.name && `(${session.user.name})`}
+                    </span>
                   </Link>
+
                   <button
                     onClick={() => {
                       handleSignOut();

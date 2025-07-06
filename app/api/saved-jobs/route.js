@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -14,8 +14,25 @@ export async function GET() {
   }
 
   const userId = session.user.id;
+  const { searchParams } = new URL(request.url);
+  const jobId = searchParams.get("jobId");
 
   try {
+    // If jobId is provided, check if specific job is saved
+    if (jobId) {
+      const savedJob = await prisma.savedJob.findUnique({
+        where: {
+          userId_jobId: {
+            userId,
+            jobId,
+          },
+        },
+      });
+
+      return NextResponse.json({ isSaved: !!savedJob });
+    }
+
+    // Otherwise, return all saved jobs
     const savedJobs = await prisma.savedJob.findMany({
       where: { userId },
       include: {

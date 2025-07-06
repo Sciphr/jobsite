@@ -48,6 +48,16 @@ export default async function JobDetailsPage({ params }) {
     notFound();
   }
 
-  // Pass the job data to the client component
-  return <JobDetailsClient job={job} />;
+  // Serialize the job data to avoid hydration errors
+  const serializedJob = {
+    ...job,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
+    // Handle any other Date fields if they exist
+    ...(job.deadline && { deadline: job.deadline.toISOString() }),
+    ...(job.publishedAt && { publishedAt: job.publishedAt.toISOString() }),
+  };
+
+  // Pass the serialized job data to the client component
+  return <JobDetailsClient job={serializedJob} />;
 }

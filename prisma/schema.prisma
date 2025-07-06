@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
   password  String?
   firstName String?
@@ -27,12 +27,13 @@ model User {
   // Relations
   applications Application[]
   savedJobs    SavedJob[]
+  resumes      UserResume[]
   
   @@map("users")
 }
 
 model AdminUser {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
   password  String
   firstName String?
@@ -48,7 +49,7 @@ model AdminUser {
 }
 
 model Category {
-  id          Int    @id @default(autoincrement())
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String @unique
   description String?
   
@@ -59,7 +60,7 @@ model Category {
 }
 
 model Job {
-  id                        Int      @id @default(autoincrement())
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                     String
   slug                      String   @unique
   description               String
@@ -96,8 +97,8 @@ model Job {
   postedAt                DateTime?
   
   // Foreign Keys
-  categoryId              Int
-  createdBy               Int
+  categoryId              String   @db.Uuid
+  createdBy               String   @db.Uuid
   
   // Relations
   category                Category      @relation(fields: [categoryId], references: [id])
@@ -109,7 +110,7 @@ model Job {
 }
 
 model Application {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status      String   @default("Applied") // "Applied", "Reviewing", "Interview", "Rejected", "Hired"
   coverLetter String?
   resumeUrl   String?
@@ -118,8 +119,8 @@ model Application {
   updatedAt   DateTime @updatedAt
   
   // Foreign Keys
-  userId      Int
-  jobId       Int
+  userId      String   @db.Uuid
+  jobId       String   @db.Uuid
   
   // Relations
   user        User     @relation(fields: [userId], references: [id])
@@ -131,12 +132,12 @@ model Application {
 }
 
 model SavedJob {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   savedAt   DateTime @default(now())
   
   // Foreign Keys
-  userId    Int
-  jobId     Int
+  userId    String   @db.Uuid
+  jobId     String   @db.Uuid
   
   // Relations
   user      User     @relation(fields: [userId], references: [id])
@@ -158,8 +159,8 @@ model UserResume {
   uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamp(6)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
 
-  // If you have a User model, you can add this relation
-  // user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relation to User
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_user_resumes_user_id")
   @@index([userId, isDefault], map: "idx_user_resumes_default")
