@@ -17,7 +17,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const resumes = await prisma.userResumes.findMany({
+    // FIXED: Changed from prisma.userResumes to prisma.userResume
+    const resumes = await prisma.userResume.findMany({
       where: { userId: session.user.id },
       orderBy: { uploadedAt: "desc" },
     });
@@ -70,7 +71,8 @@ export async function POST(request) {
     }
 
     // Check if user already has a resume
-    const existingResume = await prisma.userResumes.findFirst({
+    // FIXED: Changed from prisma.userResumes to prisma.userResume
+    const existingResume = await prisma.userResume.findFirst({
       where: { userId: session.user.id },
     });
 
@@ -118,13 +120,15 @@ export async function POST(request) {
     let resume;
     if (existingResume) {
       // Update existing resume
-      resume = await prisma.userResumes.update({
+      // FIXED: Changed from prisma.userResumes to prisma.userResume
+      resume = await prisma.userResume.update({
         where: { id: existingResume.id },
         data: resumeData,
       });
     } else {
       // Create new resume
-      resume = await prisma.userResumes.create({
+      // FIXED: Changed from prisma.userResumes to prisma.userResume
+      resume = await prisma.userResume.create({
         data: resumeData,
       });
     }
@@ -155,7 +159,8 @@ export async function DELETE() {
     }
 
     // Find the user's resume
-    const resume = await prisma.userResumes.findFirst({
+    // FIXED: Changed from prisma.userResumes to prisma.userResume
+    const resume = await prisma.userResume.findFirst({
       where: { userId: session.user.id },
     });
 
@@ -174,7 +179,8 @@ export async function DELETE() {
     }
 
     // Delete from database
-    await prisma.userResumes.delete({
+    // FIXED: Changed from prisma.userResumes to prisma.userResume
+    await prisma.userResume.delete({
       where: { id: resume.id },
     });
 

@@ -1,7 +1,7 @@
 // app/api/saved-jobs/route.js
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route"; // ✅ move authOptions to a shared /lib/auth.js
-import { PrismaClient } from "../../../app/generated/prisma"; // ✅ adjust import if needed
+import { authOptions } from "../auth/[...nextauth]/route";
+import { PrismaClient } from "../../../app/generated/prisma";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
@@ -20,7 +20,7 @@ export async function GET(request) {
   try {
     // If jobId is provided, check if specific job is saved
     if (jobId) {
-      const savedJob = await prisma.savedJobs.findUnique({
+      const savedJob = await prisma.savedJob.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -33,7 +33,7 @@ export async function GET(request) {
     }
 
     // Otherwise, return all saved jobs
-    const savedJobs = await prisma.savedJobs.findMany({
+    const savedJobs = await prisma.savedJob.findMany({
       where: { userId },
       include: {
         job: {
@@ -90,7 +90,7 @@ export async function POST(request) {
       return NextResponse.json({ message: "Job not found" }, { status: 404 });
     }
 
-    const existingSave = await prisma.savedJobs.findUnique({
+    const existingSave = await prisma.savedJob.findUnique({
       where: {
         userId_jobId: {
           userId,
@@ -106,7 +106,7 @@ export async function POST(request) {
       );
     }
 
-    const savedJob = await prisma.savedJobs.create({
+    const savedJob = await prisma.savedJob.create({
       data: { userId, jobId },
       include: {
         job: {
@@ -156,6 +156,7 @@ export async function DELETE(request) {
       );
     }
 
+    // FIXED: Changed from prisma.savedJobs.delete to prisma.savedJob.delete
     await prisma.savedJob.delete({
       where: {
         userId_jobId: {
