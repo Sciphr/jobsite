@@ -4,12 +4,16 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Copy, Check, Heart, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import JobApplicationForm from "./JobApplicationForm"; // Adjust the import based on your file structure
 
 export default function JobDetailsClient({ job }) {
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [userResumes, setUserResumes] = useState([]); // Add this state
+  const [loadingResumes, setLoadingResumes] = useState(false); // Add loading state
   const { data: session, status } = useSession();
 
   // Check if job is already saved when component mounts
@@ -18,6 +22,28 @@ export default function JobDetailsClient({ job }) {
       checkSavedStatus();
     }
   }, [session, job.id]);
+
+  // Fetch user resumes when user is authenticated
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUserResumes();
+    }
+  }, [session]);
+
+  const fetchUserResumes = async () => {
+    try {
+      setLoadingResumes(true);
+      const response = await fetch("/api/resumes"); // Adjust endpoint as needed
+      if (response.ok) {
+        const resumes = await response.json();
+        setUserResumes(resumes);
+      }
+    } catch (error) {
+      console.error("Error fetching user resumes:", error);
+    } finally {
+      setLoadingResumes(false);
+    }
+  };
 
   const checkSavedStatus = async () => {
     try {
@@ -80,6 +106,15 @@ export default function JobDetailsClient({ job }) {
     } catch (err) {
       console.error("Failed to copy link:", err);
     }
+  };
+
+  const handleApplyClick = () => {
+    if (!session?.user?.id) {
+      // Redirect to login if not authenticated
+      window.location.href = "/auth/signin";
+      return;
+    }
+    setShowApplicationForm(true);
   };
 
   return (
@@ -340,9 +375,33 @@ export default function JobDetailsClient({ job }) {
                 )}
 
                 {/* Apply Button */}
-                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4">
-                  Apply Now
-                </button>
+                {showApplicationForm ? (
+                  <JobApplicationForm
+                    job={job}
+                    user={session?.user}
+                    userResumes={userResumes}
+                    onSuccess={() => {
+                      setShowApplicationForm(false);
+                      /* show success message */
+                    }}
+                    onCancel={() => setShowApplicationForm(false)}
+                  />
+                ) : (
+                  <button
+                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4"
+                    onClick={handleApplyClick}
+                    disabled={loadingResumes}
+                  >
+                    {loadingResumes ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </div>
+                    ) : (
+                      "Apply Now"
+                    )}
+                  </button>
+                )}
 
                 {/* Save Job Button - Mobile/Sidebar */}
                 {session && (

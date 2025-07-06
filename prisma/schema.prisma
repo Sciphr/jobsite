@@ -117,16 +117,21 @@ model Application {
   notes       String?
   appliedAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
+  // New fields for applicant info
+  name        String?
+  email       String?
+  phone       String?
+
   // Foreign Keys
-  userId      String   @db.Uuid
+  userId      String?  @db.Uuid // made optional for guests
   jobId       String   @db.Uuid
-  
+
   // Relations
-  user        User     @relation(fields: [userId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
   job         Job      @relation(fields: [jobId], references: [id])
-  
-  // Ensure one application per user per job
+
+  // Ensure one application per user per job (only for signed-in users)
   @@unique([userId, jobId])
   @@map("applications")
 }

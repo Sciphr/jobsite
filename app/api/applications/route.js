@@ -46,18 +46,17 @@ export async function GET(request) {
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
+  const userId = session?.user?.id || null;
 
   try {
-    const { jobId, coverLetter, resumeUrl } = await request.json();
+    const { jobId, name, email, phone, coverLetter, resumeUrl } =
+      await request.json();
 
-    if (!jobId) {
-      return Response.json({ message: "Job ID is required" }, { status: 400 });
+    if (!jobId || !name || !email || !phone || !resumeUrl) {
+      return Response.json(
+        { message: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
     // Check if job exists
@@ -69,27 +68,32 @@ export async function POST(request) {
       return Response.json({ message: "Job not found" }, { status: 404 });
     }
 
-    // Check if already applied
-    const existingApplication = await prisma.application.findUnique({
-      where: {
-        userId_jobId: {
-          userId,
-          jobId,
+    // Only check for duplicate if user is signed in
+    if (userId) {
+      const existingApplication = await prisma.application.findUnique({
+        where: {
+          userId_jobId: {
+            userId,
+            jobId,
+          },
         },
-      },
-    });
+      });
 
-    if (existingApplication) {
-      return Response.json(
-        { message: "Already applied to this job" },
-        { status: 400 }
-      );
+      if (existingApplication) {
+        return Response.json(
+          { message: "Already applied to this job" },
+          { status: 400 }
+        );
+      }
     }
 
     const application = await prisma.application.create({
       data: {
         userId,
         jobId,
+        name,
+        email,
+        phone,
         coverLetter: coverLetter || null,
         resumeUrl: resumeUrl || null,
       },
