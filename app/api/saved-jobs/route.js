@@ -1,7 +1,7 @@
 // app/api/saved-jobs/route.js
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { PrismaClient } from "../../../app/generated/prisma";
+import { appPrisma } from "../../lib/prisma";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();

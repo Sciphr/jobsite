@@ -1,16 +1,12 @@
 // app/api/auth/[...nextauth]/route.js
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "../../../../app/generated/prisma";
+import { authPrisma } from "../../../lib/prisma"; // Use direct connection for auth
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
-
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(authPrisma), // Use authPrisma for adapter
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -23,7 +19,8 @@ export const authOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        // Use authPrisma for user lookup
+        const user = await authPrisma.user.findUnique({
           where: { email: credentials.email },
         });
 
@@ -44,22 +41,9 @@ export const authOptions = {
           id: user.id,
           email: user.email,
           name: user.firstName + (user.lastName ? " " + user.lastName : ""),
-          // Note: your schema doesn't have 'image' field, so removing it
-          // image: user.image,
         };
       },
     }),
-
-    // Uncomment these when ready to add social providers
-    // GoogleProvider({
-    //   clientId: process.env.GOOGLE_CLIENT_ID,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    // }),
-
-    // GitHubProvider({
-    //   clientId: process.env.GITHUB_ID,
-    //   clientSecret: process.env.GITHUB_SECRET,
-    // }),
   ],
 
   session: {
@@ -88,14 +72,12 @@ export const authOptions = {
 
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
-        // Check if user exists with this email
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await authPrisma.user.findUnique({
           where: { email: user.email },
         });
 
         if (existingUser) {
-          // Link the social account to existing user
-          await prisma.account.create({
+          await authPrisma.account.create({
             data: {
               userId: existingUser.id,
               type: account.type,

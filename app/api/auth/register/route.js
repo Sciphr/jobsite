@@ -1,5 +1,5 @@
 // app/api/auth/register/route.js
-import { PrismaClient } from "../../../../app/generated/prisma";
+import { appPrisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
