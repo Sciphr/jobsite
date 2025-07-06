@@ -136,10 +136,8 @@ export default function JobApplicationForm({
         resumeUrl,
       };
 
-      // Only include name, email, phone for guest users
-      // For logged-in users, the API will pull this from their profile
+      // For guest users, validate and include form data
       if (!user) {
-        // Guest user - validate required fields
         if (!form.name || !form.email || !form.phone) {
           setError("Please fill in all required fields");
           setSubmitting(false);
@@ -150,6 +148,7 @@ export default function JobApplicationForm({
         applicationData.email = form.email;
         applicationData.phone = form.phone;
       }
+      // For logged-in users, the API will pull data from their profile
 
       // Submit application
       const response = await fetch("/api/applications", {
@@ -179,8 +178,22 @@ export default function JobApplicationForm({
           Apply for {job.title}
         </h3>
         <p className="text-sm text-gray-600">
-          Fill out the form below to submit your application
+          {user
+            ? "Fill out the form below to submit your application"
+            : "Create an account or apply as a guest by filling out the form below"}
         </p>
+        {!user && (
+          <p className="text-xs text-blue-600 mt-1">
+            💡 Want to save time?{" "}
+            <button
+              onClick={() => (window.location.href = "/auth/signin")}
+              className="underline hover:no-underline"
+            >
+              Sign in
+            </button>{" "}
+            to auto-fill your information and track your applications.
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -193,8 +206,8 @@ export default function JobApplicationForm({
             name="name"
             value={form.name}
             onChange={handleChange}
-            required={!user} // Only required for guest users
-            readOnly={!!user} // Read-only for logged-in users
+            required
+            readOnly={!!user} // Only read-only for logged-in users
             placeholder={
               user ? "Using your profile name" : "Enter your full name"
             }
@@ -219,7 +232,7 @@ export default function JobApplicationForm({
             type="email"
             value={form.email}
             onChange={handleChange}
-            required={!user}
+            required
             readOnly={!!user}
             placeholder={
               user ? "Using your profile email" : "Enter your email address"
@@ -245,7 +258,7 @@ export default function JobApplicationForm({
             type="tel"
             value={form.phone}
             onChange={handleChange}
-            required={!user}
+            required
             readOnly={!!user}
             placeholder={
               user ? "Using your profile phone" : "Enter your phone number"

@@ -17,11 +17,20 @@ export default function JobDetailsClient({ job }) {
   const { data: session, status } = useSession();
   const [userProfile, setUserProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [checkingApplication, setCheckingApplication] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState(null);
 
   // Check if job is already saved when component mounts
   useEffect(() => {
     if (session?.user?.id && job.id) {
       checkSavedStatus();
+    }
+  }, [session, job.id]);
+
+  useEffect(() => {
+    if (session?.user?.id && job.id) {
+      checkApplicationStatus();
     }
   }, [session, job.id]);
 
@@ -91,6 +100,27 @@ export default function JobDetailsClient({ job }) {
     }
   };
 
+  const checkApplicationStatus = async () => {
+    try {
+      setCheckingApplication(true);
+      const response = await fetch(`/api/applications?jobId=${job.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHasApplied(data.hasApplied);
+        setApplicationStatus(data.status || null);
+      } else {
+        setHasApplied(false);
+        setApplicationStatus(null);
+      }
+    } catch (error) {
+      console.error("Error checking application status:", error);
+      setHasApplied(false);
+      setApplicationStatus(null);
+    } finally {
+      setCheckingApplication(false);
+    }
+  };
+
   const handleSaveJob = async () => {
     if (!session?.user?.id) {
       window.location.href = "/auth/signin";
@@ -136,16 +166,22 @@ export default function JobDetailsClient({ job }) {
   };
 
   const handleApplyClick = () => {
-    if (!session?.user?.id) {
-      window.location.href = "/auth/signin";
+    // For logged-in users, check if they've already applied
+    if (session?.user?.id && hasApplied) {
+      alert(
+        `You have already applied to this position. Status: ${applicationStatus}`
+      );
       return;
     }
+
+    // Allow both logged-in and guest users to proceed
     setShowApplicationForm(true);
   };
 
   const handleApplicationSuccess = () => {
     setShowApplicationForm(false);
-    // You could show a success message here
+    setHasApplied(true);
+    setApplicationStatus("Applied");
     alert("Application submitted successfully!");
   };
 
@@ -410,21 +446,32 @@ export default function JobDetailsClient({ job }) {
                 {showApplicationForm ? (
                   <JobApplicationForm
                     job={job}
-                    user={userProfile} // Pass userProfile instead of session?.user
+                    user={userProfile}
                     userResumes={userResumes}
                     onSuccess={handleApplicationSuccess}
                     onCancel={() => setShowApplicationForm(false)}
                   />
                 ) : (
                   <button
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full py-3 px-4 rounded-md transition-colors font-medium mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      hasApplied
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
                     onClick={handleApplyClick}
-                    disabled={loadingResumes || loadingProfile} // Add loadingProfile here
+                    disabled={
+                      loadingResumes || loadingProfile || checkingApplication
+                    }
                   >
-                    {loadingResumes || loadingProfile ? (
+                    {loadingResumes || loadingProfile || checkingApplication ? (
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading...
+                      </div>
+                    ) : hasApplied ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Check className="h-4 w-4" />
+                        Applied • {applicationStatus}
                       </div>
                     ) : (
                       "Apply Now"

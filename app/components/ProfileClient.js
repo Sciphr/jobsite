@@ -835,7 +835,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
                           >
                             View Job
                           </button>

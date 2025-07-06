@@ -7,7 +7,54 @@ const prisma = new PrismaClient();
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);
+  const { searchParams } = new URL(request.url);
+  const jobId = searchParams.get("jobId");
 
+  // If jobId is provided, check if user has applied to that specific job
+  if (jobId) {
+    if (!session) {
+      return Response.json({ hasApplied: false }, { status: 200 });
+    }
+
+    try {
+      const userId = session.user.id;
+
+      const application = await prisma.application.findUnique({
+        where: {
+          userId_jobId: {
+            userId,
+            jobId,
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+          appliedAt: true,
+        },
+      });
+
+      if (application) {
+        return Response.json({
+          hasApplied: true,
+          status: application.status,
+          appliedAt: application.appliedAt,
+          applicationId: application.id,
+        });
+      } else {
+        return Response.json({
+          hasApplied: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking application status:", error);
+      return Response.json(
+        { message: "Internal server error" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // If no jobId, return all user's applications (existing logic)
   if (!session) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }

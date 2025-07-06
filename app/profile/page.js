@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
 import ProfileClient from "../components/ProfileClient";
 
 export const metadata = {
@@ -10,8 +11,8 @@ export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    // Optionally redirect using server-side method
-    return <div>You need to sign in to view this page.</div>;
+    // Redirect to home page if not authenticated
+    redirect("/");
   }
 
   return <ProfileClient session={session} />;
