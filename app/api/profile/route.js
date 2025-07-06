@@ -16,7 +16,7 @@ export async function GET(req) {
   const userId = session.user.id;
 
   try {
-    const user = await prisma.user.findUnique({
+    const user = await appPrisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -58,7 +58,7 @@ export async function PUT(req) {
     const body = await req.json();
     const { firstName, lastName, email, phone } = body;
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await appPrisma.user.update({
       where: { id: userId },
       data: {
         firstName,

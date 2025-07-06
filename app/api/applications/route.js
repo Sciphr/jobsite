@@ -19,7 +19,7 @@ export async function GET(request) {
     try {
       const userId = session.user.id;
 
-      const application = await prisma.application.findUnique({
+      const application = await appPrisma.application.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -62,7 +62,7 @@ export async function GET(request) {
   const userId = session.user.id;
 
   try {
-    const applications = await prisma.application.findMany({
+    const applications = await appPrisma.application.findMany({
       where: { userId },
       include: {
         job: {
@@ -107,7 +107,7 @@ export async function POST(request) {
     }
 
     // Check if job exists
-    const job = await prisma.job.findUnique({
+    const job = await appPrisma.job.findUnique({
       where: { id: jobId },
     });
 
@@ -123,7 +123,7 @@ export async function POST(request) {
 
     if (userId) {
       // Logged-in user: Get user profile data
-      const user = await prisma.user.findUnique({
+      const user = await appPrisma.user.findUnique({
         where: { id: userId },
         select: {
           firstName: true,
@@ -138,7 +138,7 @@ export async function POST(request) {
       }
 
       // Check for duplicate application
-      const existingApplication = await prisma.application.findUnique({
+      const existingApplication = await appPrisma.application.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -177,7 +177,7 @@ export async function POST(request) {
       applicationData.phone = phone;
     }
 
-    const application = await prisma.application.create({
+    const application = await appPrisma.application.create({
       data: applicationData,
       include: {
         job: {
@@ -199,7 +199,7 @@ export async function POST(request) {
     });
 
     // Increment application count for the job
-    await prisma.job.update({
+    await appPrisma.job.update({
       where: { id: jobId },
       data: {
         applicationCount: {
@@ -245,7 +245,7 @@ export async function PUT(request) {
       return Response.json({ message: "Invalid status" }, { status: 400 });
     }
 
-    const updatedApplication = await prisma.application.update({
+    const updatedApplication = await appPrisma.application.update({
       where: {
         id: applicationId,
         userId, // Ensure user can only update their own applications

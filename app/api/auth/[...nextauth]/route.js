@@ -20,7 +20,7 @@ export const authOptions = {
         }
 
         // Use authPrisma for user lookup
-        const user = await authPrisma.user.findUnique({
+        const user = await authappPrisma.user.findUnique({
           where: { email: credentials.email },
         });
 
@@ -72,12 +72,12 @@ export const authOptions = {
 
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
-        const existingUser = await authPrisma.user.findUnique({
+        const existingUser = await authappPrisma.user.findUnique({
           where: { email: user.email },
         });
 
         if (existingUser) {
-          await authPrisma.account.create({
+          await authappPrisma.account.create({
             data: {
               userId: existingUser.id,
               type: account.type,

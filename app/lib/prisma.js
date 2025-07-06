@@ -1,4 +1,4 @@
-// Create a new file: app/lib/prisma.js
+// Create a new file: app/lib/appPrisma.js
 
 import { PrismaClient } from "../generated/prisma";
 

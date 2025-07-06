@@ -20,7 +20,7 @@ export async function GET(request) {
   try {
     // If jobId is provided, check if specific job is saved
     if (jobId) {
-      const savedJob = await prisma.savedJob.findUnique({
+      const savedJob = await appPrisma.savedJob.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -33,7 +33,7 @@ export async function GET(request) {
     }
 
     // Otherwise, return all saved jobs
-    const savedJobs = await prisma.savedJob.findMany({
+    const savedJobs = await appPrisma.savedJob.findMany({
       where: { userId },
       include: {
         job: {
@@ -84,13 +84,13 @@ export async function POST(request) {
       );
     }
 
-    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    const job = await appPrisma.job.findUnique({ where: { id: jobId } });
 
     if (!job) {
       return NextResponse.json({ message: "Job not found" }, { status: 404 });
     }
 
-    const existingSave = await prisma.savedJob.findUnique({
+    const existingSave = await appPrisma.savedJob.findUnique({
       where: {
         userId_jobId: {
           userId,
@@ -106,7 +106,7 @@ export async function POST(request) {
       );
     }
 
-    const savedJob = await prisma.savedJob.create({
+    const savedJob = await appPrisma.savedJob.create({
       data: { userId, jobId },
       include: {
         job: {
@@ -156,8 +156,8 @@ export async function DELETE(request) {
       );
     }
 
-    // FIXED: Changed from prisma.savedJobs.delete to prisma.savedJob.delete
-    await prisma.savedJob.delete({
+    // FIXED: Changed from appPrisma.savedJobs.delete to appPrisma.savedJob.delete
+    await appPrisma.savedJob.delete({
       where: {
         userId_jobId: {
           userId,

@@ -8,31 +8,31 @@ async function main() {
 
   // Create Categories
   const categories = await Promise.all([
-    prisma.category.create({
+    appPrisma.category.create({
       data: {
         name: "Engineering",
         description: "Software development and engineering positions",
       },
     }),
-    prisma.category.create({
+    appPrisma.category.create({
       data: {
         name: "Design",
         description: "UI/UX design and creative positions",
       },
     }),
-    prisma.category.create({
+    appPrisma.category.create({
       data: {
         name: "Marketing",
         description: "Marketing and growth positions",
       },
     }),
-    prisma.category.create({
+    appPrisma.category.create({
       data: {
         name: "Sales",
         description: "Sales and business development positions",
       },
     }),
-    prisma.category.create({
+    appPrisma.category.create({
       data: {
         name: "Product",
         description: "Product management and strategy positions",
@@ -44,7 +44,7 @@ async function main() {
 
   // Create Admin Users
   const adminUsers = await Promise.all([
-    prisma.adminUser.create({
+    appPrisma.adminUser.create({
       data: {
         email: "admin@company.com",
         password: "hashedpassword123", // In real app, this would be properly hashed
@@ -53,7 +53,7 @@ async function main() {
         role: "admin",
       },
     }),
-    prisma.adminUser.create({
+    appPrisma.adminUser.create({
       data: {
         email: "hr@company.com",
         password: "hashedpassword456",
@@ -68,7 +68,7 @@ async function main() {
 
   // Create Jobs
   const jobs = await Promise.all([
-    prisma.job.create({
+    appPrisma.job.create({
       data: {
         title: "Senior Full Stack Developer",
         slug: "senior-full-stack-developer",
@@ -105,7 +105,7 @@ async function main() {
         postedAt: new Date(),
       },
     }),
-    prisma.job.create({
+    appPrisma.job.create({
       data: {
         title: "UX/UI Designer",
         slug: "ux-ui-designer",
@@ -142,7 +142,7 @@ async function main() {
         postedAt: new Date(),
       },
     }),
-    prisma.job.create({
+    appPrisma.job.create({
       data: {
         title: "Marketing Manager",
         slug: "marketing-manager",
@@ -179,7 +179,7 @@ async function main() {
         postedAt: new Date(),
       },
     }),
-    prisma.job.create({
+    appPrisma.job.create({
       data: {
         title: "Junior Frontend Developer",
         slug: "junior-frontend-developer",
@@ -215,7 +215,7 @@ async function main() {
         postedAt: new Date(),
       },
     }),
-    prisma.job.create({
+    appPrisma.job.create({
       data: {
         title: "Product Manager",
         slug: "product-manager",
@@ -256,7 +256,7 @@ async function main() {
 
   // Create Regular Users
   const users = await Promise.all([
-    prisma.user.create({
+    appPrisma.user.create({
       data: {
         email: "jane.doe@email.com",
         password: "hashedpassword789",
@@ -265,7 +265,7 @@ async function main() {
         phone: "+1-555-0123",
       },
     }),
-    prisma.user.create({
+    appPrisma.user.create({
       data: {
         email: "mike.wilson@email.com",
         password: "hashedpassword101",
@@ -274,7 +274,7 @@ async function main() {
         phone: "+1-555-0456",
       },
     }),
-    prisma.user.create({
+    appPrisma.user.create({
       data: {
         email: "sarah.chen@email.com",
         password: "hashedpassword202",
@@ -289,7 +289,7 @@ async function main() {
 
   // Create Applications
   const applications = await Promise.all([
-    prisma.application.create({
+    appPrisma.application.create({
       data: {
         status: "Applied",
         coverLetter:
@@ -300,7 +300,7 @@ async function main() {
         jobId: jobs[0].id, // Senior Full Stack Developer
       },
     }),
-    prisma.application.create({
+    appPrisma.application.create({
       data: {
         status: "Interview",
         coverLetter:
@@ -311,7 +311,7 @@ async function main() {
         jobId: jobs[1].id, // UX/UI Designer
       },
     }),
-    prisma.application.create({
+    appPrisma.application.create({
       data: {
         status: "Reviewing",
         coverLetter:
@@ -328,19 +328,19 @@ async function main() {
 
   // Create Saved Jobs
   const savedJobs = await Promise.all([
-    prisma.savedJob.create({
+    appPrisma.savedJob.create({
       data: {
         userId: users[0].id,
         jobId: jobs[1].id, // Jane saved the UX/UI Designer job
       },
     }),
-    prisma.savedJob.create({
+    appPrisma.savedJob.create({
       data: {
         userId: users[1].id,
         jobId: jobs[2].id, // Mike saved the Marketing Manager job
       },
     }),
-    prisma.savedJob.create({
+    appPrisma.savedJob.create({
       data: {
         userId: users[2].id,
         jobId: jobs[0].id, // Sarah saved the Senior Full Stack Developer job
@@ -352,7 +352,7 @@ async function main() {
 
   // Create User Resumes
   const userResumes = await Promise.all([
-    prisma.userResumes.create({
+    appPrisma.userResumes.create({
       data: {
         userId: users[0].id,
         fileName: "jane-doe-resume.pdf",
@@ -362,7 +362,7 @@ async function main() {
         isDefault: true,
       },
     }),
-    prisma.userResumes.create({
+    appPrisma.userResumes.create({
       data: {
         userId: users[1].id,
         fileName: "mike-wilson-resume.pdf",
@@ -372,7 +372,7 @@ async function main() {
         isDefault: true,
       },
     }),
-    prisma.userResumes.create({
+    appPrisma.userResumes.create({
       data: {
         userId: users[2].id,
         fileName: "sarah-chen-resume.pdf",
@@ -395,5 +395,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await appPrisma.$disconnect();
   });
