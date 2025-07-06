@@ -19,29 +19,34 @@ export const authOptions = {
           return null;
         }
 
-        // Use authPrisma for user lookup
-        const user = await authappPrisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          // Fixed: Use authPrisma consistently
+          const user = await authPrisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        if (!user || !user.password) {
+          if (!user || !user.password) {
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.firstName + (user.lastName ? " " + user.lastName : ""),
+          };
+        } catch (error) {
+          console.error("Auth error:", error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.firstName + (user.lastName ? " " + user.lastName : ""),
-        };
       },
     }),
   ],
@@ -72,32 +77,40 @@ export const authOptions = {
 
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
-        const existingUser = await authappPrisma.user.findUnique({
-          where: { email: user.email },
-        });
-
-        if (existingUser) {
-          await authappPrisma.account.create({
-            data: {
-              userId: existingUser.id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              session_state: account.session_state,
-            },
+        try {
+          // Fixed: Use authPrisma consistently
+          const existingUser = await authPrisma.user.findUnique({
+            where: { email: user.email },
           });
-          return true;
+
+          if (existingUser) {
+            await authPrisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                refresh_token: account.refresh_token,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                session_state: account.session_state,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("SignIn callback error:", error);
+          return false;
         }
       }
       return true;
     },
   },
+
+  // Add debug logging for production
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
