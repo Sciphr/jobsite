@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Upload, FileText, X, Loader2 } from "lucide-react";
 
 export default function JobApplicationForm({
@@ -15,13 +15,44 @@ export default function JobApplicationForm({
       ? userResumes.find((resume) => resume.isDefault) || userResumes[0]
       : null;
 
+  // Function to get the full name from user object
+  const getUserFullName = (user) => {
+    if (!user) return "";
+
+    // If user has firstName and lastName (from profile API)
+    if (user.firstName || user.lastName) {
+      const firstName = user.firstName || "";
+      const lastName = user.lastName || "";
+      return `${firstName} ${lastName}`.trim();
+    }
+
+    // If user has name property (from session)
+    if (user.name) {
+      return user.name;
+    }
+
+    return "";
+  };
+
   const [form, setForm] = useState({
-    name: user?.name || "",
+    name: getUserFullName(user),
     email: user?.email || "",
     phone: user?.phone || "",
     resumeUrl: userResume?.storagePath || "",
     coverLetter: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        name: getUserFullName(user),
+        email: user?.email || "",
+        phone: user?.phone || "",
+      }));
+    }
+  }, [user]);
+
   const [resumeFile, setResumeFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -92,28 +123,39 @@ export default function JobApplicationForm({
         }
       }
 
-      // Validate required fields
-      if (!form.name || !form.email || !form.phone) {
-        setError("Please fill in all required fields");
-        setSubmitting(false);
-        return;
-      }
-
       if (!resumeUrl) {
         setError("Please upload a resume or use your profile resume");
         setSubmitting(false);
         return;
       }
 
+      // Prepare application data
+      let applicationData = {
+        jobId: job.id,
+        coverLetter: form.coverLetter,
+        resumeUrl,
+      };
+
+      // Only include name, email, phone for guest users
+      // For logged-in users, the API will pull this from their profile
+      if (!user) {
+        // Guest user - validate required fields
+        if (!form.name || !form.email || !form.phone) {
+          setError("Please fill in all required fields");
+          setSubmitting(false);
+          return;
+        }
+
+        applicationData.name = form.name;
+        applicationData.email = form.email;
+        applicationData.phone = form.phone;
+      }
+
       // Submit application
       const response = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          resumeUrl,
-          jobId: job.id,
-        }),
+        body: JSON.stringify(applicationData),
       });
 
       if (response.ok) {
@@ -151,10 +193,20 @@ export default function JobApplicationForm({
             name="name"
             value={form.name}
             onChange={handleChange}
-            required
-            placeholder="Enter your full name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required={!user} // Only required for guest users
+            readOnly={!!user} // Read-only for logged-in users
+            placeholder={
+              user ? "Using your profile name" : "Enter your full name"
+            }
+            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50" : ""
+            }`}
           />
+          {user && (
+            <p className="text-xs text-gray-500 mt-1">
+              This will be pulled from your profile
+            </p>
+          )}
         </div>
 
         {/* Email Field */}
@@ -167,10 +219,20 @@ export default function JobApplicationForm({
             type="email"
             value={form.email}
             onChange={handleChange}
-            required
-            placeholder="Enter your email address"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required={!user}
+            readOnly={!!user}
+            placeholder={
+              user ? "Using your profile email" : "Enter your email address"
+            }
+            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50" : ""
+            }`}
           />
+          {user && (
+            <p className="text-xs text-gray-500 mt-1">
+              This will be pulled from your profile
+            </p>
+          )}
         </div>
 
         {/* Phone Field */}
@@ -183,10 +245,20 @@ export default function JobApplicationForm({
             type="tel"
             value={form.phone}
             onChange={handleChange}
-            required
-            placeholder="Enter your phone number"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required={!user}
+            readOnly={!!user}
+            placeholder={
+              user ? "Using your profile phone" : "Enter your phone number"
+            }
+            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50" : ""
+            }`}
           />
+          {user && (
+            <p className="text-xs text-gray-500 mt-1">
+              This will be pulled from your profile
+            </p>
+          )}
         </div>
 
         {/* Resume Upload Section */}
@@ -197,20 +269,21 @@ export default function JobApplicationForm({
 
           {userResume && !resumeFile ? (
             <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-center  space-y-3">
                 <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                  <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-blue-900">
                       Using profile resume
                     </p>
-                    <p className="text-sm text-blue-700">
+                    <p className="text-sm text-blue-700 break-words">
                       {userResume.fileName}
                     </p>
                   </div>
                 </div>
-                <label className="cursor-pointer bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 transition-colors">
-                  Upload New
+                <label className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload New Resume
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx"

@@ -148,16 +148,31 @@ export default function ProfileClient({ session }) {
 
   const handleDownloadResume = async (fileName) => {
     try {
+      console.log("Downloading resume:", fileName);
+      console.log("Storage path:", resume.storagePath);
+
       const response = await fetch(
         `/api/resume-download?path=${encodeURIComponent(resume.storagePath)}`
       );
 
+      console.log("Download response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
-        // Open the signed URL in a new tab for download
-        window.open(data.downloadUrl, "_blank");
+        console.log("Download URL received:", data.downloadUrl);
+
+        // Create a temporary link element for download
+        const link = document.createElement("a");
+        link.href = data.downloadUrl;
+        link.download = fileName;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
-        alert("Failed to download resume");
+        const errorData = await response.json();
+        console.error("Download failed:", errorData);
+        alert(`Failed to download resume: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error downloading resume:", error);
@@ -507,36 +522,94 @@ export default function ProfileClient({ session }) {
                   </p>
                 </div>
               ) : (
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">
+                <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                  <div className="flex items-start space-x-4">
+                    {/* File Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-6 h-6 text-red-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* File Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 truncate">
                         {resume.fileName}
                       </h3>
-                      <p className="text-gray-600 text-sm">
-                        {resume.fileType?.toUpperCase() || "UNKNOWN"} •{" "}
-                        {formatFileSize(resume.fileSize)}
-                      </p>
-                      <p className="text-gray-500 text-sm">
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {resume.fileType?.includes("pdf")
+                            ? "PDF"
+                            : resume.fileType?.includes("word")
+                            ? "DOC"
+                            : resume.fileType?.toUpperCase() || "UNKNOWN"}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatFileSize(resume.fileSize)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
                         Uploaded on {formatDate(resume.uploadedAt)}
                       </p>
                     </div>
-                    <div className="flex flex-col space-y-2">
+
+                    {/* Action Buttons */}
+                    <div className="flex-shrink-0 flex flex-col space-y-2">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleDownloadResume(resume.fileName)}
-                          className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                         >
+                          <svg
+                            className="w-4 h-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
                           Download
                         </button>
                         <button
                           onClick={handleDeleteResume}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                         >
+                          <svg
+                            className="w-4 h-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
                           Delete
                         </button>
                       </div>
-                      <div className="flex items-center space-x-4">
+
+                      {/* Replace Button */}
+                      <div className="relative">
                         <input
                           type="file"
                           accept=".pdf,.doc,.docx"
@@ -547,11 +620,51 @@ export default function ProfileClient({ session }) {
                         />
                         <label
                           htmlFor="resume-replace"
-                          className={`text-green-600 hover:text-green-900 text-sm font-medium cursor-pointer ${
+                          className={`inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer transition-colors ${
                             uploading ? "opacity-50 cursor-not-allowed" : ""
                           }`}
                         >
-                          {uploading ? "Uploading..." : "Replace"}
+                          {uploading ? (
+                            <>
+                              <svg
+                                className="animate-spin w-4 h-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                />
+                              </svg>
+                              Replace
+                            </>
+                          )}
                         </label>
                       </div>
                     </div>

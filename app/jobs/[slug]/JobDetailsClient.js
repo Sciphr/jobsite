@@ -15,6 +15,8 @@ export default function JobDetailsClient({ job }) {
   const [userResumes, setUserResumes] = useState([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
   const { data: session, status } = useSession();
+  const [userProfile, setUserProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   // Check if job is already saved when component mounts
   useEffect(() => {
@@ -22,6 +24,31 @@ export default function JobDetailsClient({ job }) {
       checkSavedStatus();
     }
   }, [session, job.id]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUserProfile();
+    }
+  }, [session]);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoadingProfile(true);
+      const response = await fetch("/api/profile");
+      if (response.ok) {
+        const profile = await response.json();
+        setUserProfile(profile);
+      } else {
+        console.error("Failed to fetch user profile");
+        setUserProfile(null);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      setUserProfile(null);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   // Fetch user resumes when user is authenticated
   useEffect(() => {
@@ -383,7 +410,7 @@ export default function JobDetailsClient({ job }) {
                 {showApplicationForm ? (
                   <JobApplicationForm
                     job={job}
-                    user={session?.user}
+                    user={userProfile} // Pass userProfile instead of session?.user
                     userResumes={userResumes}
                     onSuccess={handleApplicationSuccess}
                     onCancel={() => setShowApplicationForm(false)}
@@ -392,9 +419,9 @@ export default function JobDetailsClient({ job }) {
                   <button
                     className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleApplyClick}
-                    disabled={loadingResumes}
+                    disabled={loadingResumes || loadingProfile} // Add loadingProfile here
                   >
-                    {loadingResumes ? (
+                    {loadingResumes || loadingProfile ? (
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading...

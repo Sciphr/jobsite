@@ -1,19 +1,19 @@
-// app/api/admin/resume-download/route.js
+// app/api/resume-download/route.js
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
 
+// Use service role key for admin operations (same as upload)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // Changed from ANON_KEY to SERVICE_ROLE_KEY
 );
 
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
 
-    // TODO: Add admin check when you implement admin roles
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -28,6 +28,21 @@ export async function GET(request) {
       );
     }
 
+    console.log("Attempting to download file from path:", storagePath);
+
+    // First, check if the file exists
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from("resumes")
+      .list(storagePath.split("/")[0], {
+        search: storagePath.split("/")[1],
+      });
+
+    if (fileError) {
+      console.error("Error checking file existence:", fileError);
+    } else {
+      console.log("Files found in directory:", fileData);
+    }
+
     // Generate signed URL for file download (valid for 1 hour)
     const { data, error } = await supabase.storage
       .from("resumes")
@@ -35,11 +50,29 @@ export async function GET(request) {
 
     if (error) {
       console.error("Error generating download URL:", error);
+      console.error("Storage path attempted:", storagePath);
+
+      // Try to get more information about available files
+      const userId = storagePath.split("/")[0];
+      const { data: userFiles, error: listError } = await supabase.storage
+        .from("resumes")
+        .list(userId);
+
+      if (!listError && userFiles) {
+        console.log("Available files for user:", userFiles);
+      }
+
       return NextResponse.json(
-        { error: "Failed to generate download URL" },
-        { status: 500 }
+        {
+          error: "File not found in storage",
+          details: error.message,
+          path: storagePath,
+        },
+        { status: 404 }
       );
     }
+
+    console.log("Download URL generated successfully");
 
     return NextResponse.json({
       downloadUrl: data.signedUrl,

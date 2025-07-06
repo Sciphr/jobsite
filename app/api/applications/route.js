@@ -1,4 +1,4 @@
-// app/api/applications/route.js (for App Router)
+// app/api/applications/route.js
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { PrismaClient } from "../../../app/generated/prisma";
@@ -15,7 +15,6 @@ export async function GET(request) {
   const userId = session.user.id;
 
   try {
-    // FIXED: Changed from prisma.applications to prisma.application
     const applications = await prisma.application.findMany({
       where: { userId },
       include: {
@@ -53,9 +52,9 @@ export async function POST(request) {
     const { jobId, name, email, phone, coverLetter, resumeUrl } =
       await request.json();
 
-    if (!jobId || !name || !email || !phone || !resumeUrl) {
+    if (!jobId || !resumeUrl) {
       return Response.json(
-        { message: "Missing required fields" },
+        { message: "Job ID and resume are required" },
         { status: 400 }
       );
     }
@@ -69,8 +68,29 @@ export async function POST(request) {
       return Response.json({ message: "Job not found" }, { status: 404 });
     }
 
-    // Only check for duplicate if user is signed in
+    let applicationData = {
+      jobId,
+      coverLetter: coverLetter || null,
+      resumeUrl,
+    };
+
     if (userId) {
+      // Logged-in user: Get user profile data
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+        },
+      });
+
+      if (!user) {
+        return Response.json({ message: "User not found" }, { status: 404 });
+      }
+
+      // Check for duplicate application
       const existingApplication = await prisma.application.findUnique({
         where: {
           userId_jobId: {
@@ -86,18 +106,32 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+
+      // Use user profile data
+      applicationData.userId = userId;
+      applicationData.name =
+        `${user.firstName || ""} ${user.lastName || ""}`.trim() || null;
+      applicationData.email = user.email;
+      applicationData.phone = user.phone;
+    } else {
+      // Guest user: Require name, email, phone from form
+      if (!name || !email || !phone) {
+        return Response.json(
+          {
+            message:
+              "Name, email, and phone are required for guest applications",
+          },
+          { status: 400 }
+        );
+      }
+
+      applicationData.name = name;
+      applicationData.email = email;
+      applicationData.phone = phone;
     }
 
     const application = await prisma.application.create({
-      data: {
-        userId,
-        jobId,
-        name,
-        email,
-        phone,
-        coverLetter: coverLetter || null,
-        resumeUrl: resumeUrl || null,
-      },
+      data: applicationData,
       include: {
         job: {
           select: {
@@ -153,7 +187,6 @@ export async function PUT(request) {
       );
     }
 
-    // Updated valid statuses based on your schema
     const validStatuses = [
       "Applied",
       "Reviewing",
