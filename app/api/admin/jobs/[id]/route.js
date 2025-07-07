@@ -141,8 +141,6 @@ export async function PATCH(req, { params }) {
       "preferredQualifications",
       "educationRequired",
       "yearsExperienceRequired",
-      "applicationDeadline",
-      "startDate",
       "applicationInstructions",
       "categoryId",
     ];
@@ -153,8 +151,48 @@ export async function PATCH(req, { params }) {
       }
     });
 
+    // Handle date fields properly - convert strings to Date objects
+    if (body.applicationDeadline !== undefined) {
+      if (
+        body.applicationDeadline === null ||
+        body.applicationDeadline === ""
+      ) {
+        updateData.applicationDeadline = null;
+      } else {
+        // Convert date string to Date object
+        updateData.applicationDeadline = new Date(body.applicationDeadline);
+
+        // Validate the date
+        if (isNaN(updateData.applicationDeadline.getTime())) {
+          return new Response(
+            JSON.stringify({ message: "Invalid application deadline date" }),
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    if (body.startDate !== undefined) {
+      if (body.startDate === null || body.startDate === "") {
+        updateData.startDate = null;
+      } else {
+        // Convert date string to Date object
+        updateData.startDate = new Date(body.startDate);
+
+        // Validate the date
+        if (isNaN(updateData.startDate.getTime())) {
+          return new Response(
+            JSON.stringify({ message: "Invalid start date" }),
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Always update the updatedAt timestamp
     updateData.updatedAt = new Date();
+
+    console.log("Update data being sent to Prisma:", updateData);
 
     const updatedJob = await appPrisma.job.update({
       where: { id },

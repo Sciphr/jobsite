@@ -38,6 +38,8 @@ export default function AdminJobs() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     fetchJobs();
     fetchCategories();
@@ -58,6 +60,21 @@ export default function AdminJobs() {
       console.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch("/api/admin/applications");
+      if (response.ok) {
+        const data = await response.json();
+        setApplications(data);
+      }
+    } catch (error) {
+      console.error("Error refreshing applications:", error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -268,15 +285,18 @@ export default function AdminJobs() {
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={fetchJobs}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 shadow-sm"
           >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
           <Link
             href="/admin/jobs/create"
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+            className="flex items-center space-x-2 bg-green-400 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
           >
             <Plus className="h-4 w-4" />
             <span>Create Job</span>

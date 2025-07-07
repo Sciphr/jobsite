@@ -232,7 +232,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="text"
                 value={formData.title}
                 onChange={(e) => handleInputChange("title", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.title ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="e.g., Senior React Developer"
@@ -247,27 +247,6 @@ export default function JobForm({ jobId = null, initialData = null }) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL Slug *
-              </label>
-              <input
-                type="text"
-                value={formData.slug}
-                onChange={(e) => handleInputChange("slug", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.slug ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="senior-react-developer"
-              />
-              {errors.slug && (
-                <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{errors.slug}</span>
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Department *
               </label>
               <input
@@ -276,7 +255,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("department", e.target.value)
                 }
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.department ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="e.g., Engineering"
@@ -298,7 +277,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("categoryId", e.target.value)
                 }
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.categoryId ? "border-red-500" : "border-gray-300"
                 }`}
               >
@@ -326,7 +305,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("employmentType", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 {employmentTypes.map((type) => (
                   <option key={type} value={type}>
@@ -345,7 +324,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("experienceLevel", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 {experienceLevels.map((level) => (
                   <option key={level} value={level}>
@@ -363,7 +342,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="text"
                 value={formData.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.location ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="e.g., San Francisco, CA"
@@ -385,7 +364,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("remotePolicy", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 {remotePolicies.map((policy) => (
                   <option key={policy} value={policy}>
@@ -404,7 +383,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
               value={formData.summary}
               onChange={(e) => handleInputChange("summary", e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               placeholder="Brief overview of the position..."
             />
           </div>
@@ -417,7 +396,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
               rows={6}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                 errors.description ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Detailed job description, responsibilities, and what the role entails..."
@@ -451,7 +430,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="number"
                 value={formData.salaryMin}
                 onChange={(e) => handleInputChange("salaryMin", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
                 placeholder="50000"
               />
             </div>
@@ -464,7 +443,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="number"
                 value={formData.salaryMax}
                 onChange={(e) => handleInputChange("salaryMax", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.salaryMax ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="80000"
@@ -486,7 +465,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("salaryCurrency", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 {currencies.map((currency) => (
                   <option key={currency} value={currency}>
@@ -505,7 +484,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("salaryType", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 {salaryTypes.map((type) => (
                   <option key={type} value={type}>
@@ -524,7 +503,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
               value={formData.benefits}
               onChange={(e) => handleInputChange("benefits", e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               placeholder="Health insurance, dental, vision, 401k, PTO, etc..."
             />
           </div>
@@ -552,7 +531,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                   handleInputChange("requirements", e.target.value)
                 }
                 rows={5}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600 ${
                   errors.requirements ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="• Bachelor's degree in Computer Science or related field&#10;• 3+ years of React development experience&#10;• Strong knowledge of JavaScript, HTML, CSS..."
@@ -575,7 +554,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                   handleInputChange("preferredQualifications", e.target.value)
                 }
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
                 placeholder="• Experience with TypeScript&#10;• Knowledge of modern testing frameworks&#10;• Previous startup experience..."
               />
             </div>
@@ -591,7 +570,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                   onChange={(e) =>
                     handleInputChange("educationRequired", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
                   placeholder="e.g., Bachelor's degree"
                 />
               </div>
@@ -606,7 +585,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                   onChange={(e) =>
                     handleInputChange("yearsExperienceRequired", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
                   placeholder="3"
                 />
               </div>
@@ -636,7 +615,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 onChange={(e) =>
                   handleInputChange("applicationDeadline", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               />
             </div>
 
@@ -648,7 +627,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => handleInputChange("startDate", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               />
             </div>
           </div>
@@ -663,7 +642,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 handleInputChange("applicationInstructions", e.target.value)
               }
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               placeholder="Please submit your resume, cover letter, and portfolio. Include 'React Developer' in the subject line..."
             />
           </div>
@@ -688,7 +667,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange("status", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
               >
                 <option value="Draft">Draft</option>
                 <option value="Active">Active</option>
@@ -705,7 +684,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
                 type="number"
                 value={formData.priority}
                 onChange={(e) => handleInputChange("priority", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
                 placeholder="0"
                 min="0"
               />
