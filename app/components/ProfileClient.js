@@ -48,9 +48,9 @@ export default function ProfileClient({ session }) {
           resumeRes.json(),
         ]);
 
-      console.log("Saved Jobs Data:", savedJobsData); // Debug log
-      console.log("Applications Data:", applicationsData); // Debug log
-      console.log("Resume Data:", resumeData); // Debug log
+      "Saved Jobs Data:", savedJobsData; // Debug log
+      "Applications Data:", applicationsData; // Debug log
+      "Resume Data:", resumeData; // Debug log
 
       setProfile(profileData);
       setSavedJobs(savedJobsData);
@@ -148,18 +148,18 @@ export default function ProfileClient({ session }) {
 
   const handleDownloadResume = async (fileName) => {
     try {
-      console.log("Downloading resume:", fileName);
-      console.log("Storage path:", resume.storagePath);
+      "Downloading resume:", fileName;
+      "Storage path:", resume.storagePath;
 
       const response = await fetch(
         `/api/resume-download?path=${encodeURIComponent(resume.storagePath)}`
       );
 
-      console.log("Download response status:", response.status);
+      "Download response status:", response.status;
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Download URL received:", data.downloadUrl);
+        "Download URL received:", data.downloadUrl;
 
         // Create a temporary link element for download
         const link = document.createElement("a");

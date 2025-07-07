@@ -143,7 +143,7 @@ export default function JobDetailsClient({ job }) {
       if (response.ok) {
         setIsSaved(!isSaved);
         const action = isSaved ? "removed from" : "added to";
-        console.log(`Job ${action} saved jobs`);
+        `Job ${action} saved jobs`;
       } else {
         const error = await response.json();
         console.error("Error saving job:", error);

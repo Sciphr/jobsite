@@ -15,18 +15,19 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("🔍 Authorize called with:", {
-          email: credentials?.email,
-          hasPassword: !!credentials?.password,
-        });
+        "🔍 Authorize called with:",
+          {
+            email: credentials?.email,
+            hasPassword: !!credentials?.password,
+          };
 
         if (!credentials?.email || !credentials?.password) {
-          console.log("❌ Missing credentials");
+          ("❌ Missing credentials");
           return null;
         }
 
         try {
-          console.log("🔍 Looking up user with email:", credentials.email);
+          "🔍 Looking up user with email:", credentials.email;
 
           const user = await authPrisma.user.findUnique({
             where: { email: credentials.email },
@@ -42,35 +43,36 @@ export const authOptions = {
             },
           });
 
-          console.log("🔍 User found:", {
-            found: !!user,
-            hasPassword: !!user?.password,
-            userId: user?.id,
-            role: user?.role,
-            privilegeLevel: user?.privilegeLevel,
-            isActive: user?.isActive,
-          });
+          "🔍 User found:",
+            {
+              found: !!user,
+              hasPassword: !!user?.password,
+              userId: user?.id,
+              role: user?.role,
+              privilegeLevel: user?.privilegeLevel,
+              isActive: user?.isActive,
+            };
 
           if (!user || !user.password) {
-            console.log("❌ User not found or no password");
+            ("❌ User not found or no password");
             return null;
           }
 
           if (!user.isActive) {
-            console.log("❌ User account is deactivated");
+            ("❌ User account is deactivated");
             return null;
           }
 
-          console.log("🔍 Comparing passwords...");
+          ("🔍 Comparing passwords...");
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
-          console.log("🔍 Password valid:", isPasswordValid);
+          "🔍 Password valid:", isPasswordValid;
 
           if (!isPasswordValid) {
-            console.log("❌ Invalid password");
+            ("❌ Invalid password");
             return null;
           }
 
@@ -82,7 +84,7 @@ export const authOptions = {
             privilegeLevel: user.privilegeLevel,
           };
 
-          console.log("✅ Authorization successful:", returnUser);
+          "✅ Authorization successful:", returnUser;
           return returnUser;
         } catch (error) {
           console.error("❌ Auth error:", error);
@@ -103,55 +105,60 @@ export const authOptions = {
 
   callbacks: {
     async jwt({ token, user, account }) {
-      console.log("🔍 JWT callback:", { hasUser: !!user, hasToken: !!token });
+      "🔍 JWT callback:", { hasUser: !!user, hasToken: !!token };
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.privilegeLevel = user.privilegeLevel;
-        console.log("✅ Added user details to token:", {
-          id: user.id,
-          role: user.role,
-          privilegeLevel: user.privilegeLevel,
-        });
+        "✅ Added user details to token:",
+          {
+            id: user.id,
+            role: user.role,
+            privilegeLevel: user.privilegeLevel,
+          };
       }
       return token;
     },
 
     async session({ session, token }) {
-      console.log("🔍 Session callback:", {
-        hasSession: !!session,
-        hasToken: !!token,
-      });
+      "🔍 Session callback:",
+        {
+          hasSession: !!session,
+          hasToken: !!token,
+        };
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.privilegeLevel = token.privilegeLevel;
-        console.log("✅ Added user details to session:", {
-          id: token.id,
-          role: token.role,
-          privilegeLevel: token.privilegeLevel,
-        });
+        "✅ Added user details to session:",
+          {
+            id: token.id,
+            role: token.role,
+            privilegeLevel: token.privilegeLevel,
+          };
       }
       return session;
     },
 
     // Add this callback to refresh user data from database
     async jwt({ token, user, trigger, session }) {
-      console.log("🔍 JWT callback:", {
-        hasUser: !!user,
-        hasToken: !!token,
-        trigger,
-      });
+      "🔍 JWT callback:",
+        {
+          hasUser: !!user,
+          hasToken: !!token,
+          trigger,
+        };
 
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.privilegeLevel = user.privilegeLevel;
-        console.log("✅ Added user details to token:", {
-          id: user.id,
-          role: user.role,
-          privilegeLevel: user.privilegeLevel,
-        });
+        "✅ Added user details to token:",
+          {
+            id: user.id,
+            role: user.role,
+            privilegeLevel: user.privilegeLevel,
+          };
       }
 
       // Refresh user data from database when session is accessed
@@ -174,10 +181,11 @@ export const authOptions = {
             token.role = refreshedUser.role;
             token.privilegeLevel = refreshedUser.privilegeLevel;
             token.isActive = refreshedUser.isActive;
-            console.log("🔄 Refreshed user data:", {
-              role: refreshedUser.role,
-              privilegeLevel: refreshedUser.privilegeLevel,
-            });
+            "🔄 Refreshed user data:",
+              {
+                role: refreshedUser.role,
+                privilegeLevel: refreshedUser.privilegeLevel,
+              };
           }
         } catch (error) {
           console.error("Error refreshing user data:", error);

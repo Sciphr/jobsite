@@ -28,7 +28,7 @@ export async function GET(request) {
       );
     }
 
-    console.log("Attempting to download file from path:", storagePath);
+    "Attempting to download file from path:", storagePath;
 
     // First, check if the file exists
     const { data: fileData, error: fileError } = await supabase.storage
@@ -40,7 +40,7 @@ export async function GET(request) {
     if (fileError) {
       console.error("Error checking file existence:", fileError);
     } else {
-      console.log("Files found in directory:", fileData);
+      "Files found in directory:", fileData;
     }
 
     // Generate signed URL for file download (valid for 1 hour)
@@ -59,7 +59,7 @@ export async function GET(request) {
         .list(userId);
 
       if (!listError && userFiles) {
-        console.log("Available files for user:", userFiles);
+        "Available files for user:", userFiles;
       }
 
       return NextResponse.json(
@@ -72,7 +72,7 @@ export async function GET(request) {
       );
     }
 
-    console.log("Download URL generated successfully");
+    ("Download URL generated successfully");
 
     return NextResponse.json({
       downloadUrl: data.signedUrl,

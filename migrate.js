@@ -9,10 +9,10 @@ const client = new Client({
 async function migrate() {
   try {
     await client.connect();
-    console.log("✓ Connected to database");
+    ("✓ Connected to database");
 
     // Add new columns
-    console.log("Adding new columns...");
+    ("Adding new columns...");
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';`
@@ -24,7 +24,7 @@ async function migrate() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN DEFAULT true;`
     );
 
-    console.log("✓ Columns added");
+    ("✓ Columns added");
 
     // Check if admin_users exists
     const adminTableCheck = await client.query(`
@@ -32,7 +32,7 @@ async function migrate() {
     `);
 
     if (adminTableCheck.rows[0].exists) {
-      console.log("Migrating admin users...");
+      ("Migrating admin users...");
 
       const adminUsers = await client.query("SELECT * FROM admin_users;");
 
@@ -67,7 +67,7 @@ async function migrate() {
           ]
         );
 
-        console.log(`✓ Migrated: ${admin.email}`);
+        `✓ Migrated: ${admin.email}`;
       }
     }
 
@@ -75,9 +75,7 @@ async function migrate() {
     const adminCount = await client.query(
       `SELECT COUNT(*) FROM users WHERE "privilegeLevel" > 0;`
     );
-    console.log(
-      `\n✅ Migration complete! Admin users: ${adminCount.rows[0].count}`
-    );
+    `\n✅ Migration complete! Admin users: ${adminCount.rows[0].count}`;
   } catch (error) {
     console.error("❌ Error:", error.message);
   } finally {

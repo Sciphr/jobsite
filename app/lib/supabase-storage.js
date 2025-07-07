@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 export async function uploadToSupabase(file, filePath) {
-  console.log("Uploading to storage:", filePath);
+  "Uploading to storage:", filePath;
 
   const { data, error } = await supabase.storage
     .from("resumes")
@@ -19,14 +19,14 @@ export async function uploadToSupabase(file, filePath) {
   if (error) {
     console.error("Storage upload error:", error);
   } else {
-    console.log("Storage upload success:", data);
+    "Storage upload success:", data;
   }
 
   return { data, error };
 }
 
 export async function deleteFromSupabase(filePath) {
-  console.log("Deleting from storage:", filePath);
+  "Deleting from storage:", filePath;
 
   const { data, error } = await supabase.storage
     .from("resumes")
@@ -35,7 +35,7 @@ export async function deleteFromSupabase(filePath) {
   if (error) {
     console.error("Storage delete error:", error);
   } else {
-    console.log("Storage delete success:", data);
+    "Storage delete success:", data;
   }
 
   return { data, error };

@@ -4,7 +4,7 @@ const { PrismaClient } = require("../app/generated/prisma");
 //const prisma = new prismaClient();
 
 async function main() {
-  console.log("Starting seed...");
+  ("Starting seed...");
 
   // Create Categories
   const categories = await Promise.all([
@@ -40,7 +40,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created categories:", categories.length);
+  "Created categories:", categories.length;
 
   // Create Admin Users
   const adminUsers = await Promise.all([
@@ -64,7 +64,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created admin users:", adminUsers.length);
+  "Created admin users:", adminUsers.length;
 
   // Create Jobs
   const jobs = await Promise.all([
@@ -252,7 +252,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created jobs:", jobs.length);
+  "Created jobs:", jobs.length;
 
   // Create Regular Users
   const users = await Promise.all([
@@ -285,7 +285,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created users:", users.length);
+  "Created users:", users.length;
 
   // Create Applications
   const applications = await Promise.all([
@@ -324,7 +324,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created applications:", applications.length);
+  "Created applications:", applications.length;
 
   // Create Saved Jobs
   const savedJobs = await Promise.all([
@@ -348,7 +348,7 @@ async function main() {
     }),
   ]);
 
-  console.log("Created saved jobs:", savedJobs.length);
+  "Created saved jobs:", savedJobs.length;
 
   // Create User Resumes
   const userResumes = await Promise.all([
@@ -384,9 +384,9 @@ async function main() {
     }),
   ]);
 
-  console.log("Created user resumes:", userResumes.length);
+  "Created user resumes:", userResumes.length;
 
-  console.log("Seed completed successfully!");
+  ("Seed completed successfully!");
 }
 
 main()

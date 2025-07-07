@@ -103,7 +103,7 @@ export async function POST(request) {
     }
 
     // Upload new file to Supabase Storage FIRST
-    console.log("Uploading new file to storage...");
+    ("Uploading new file to storage...");
     const { data: uploadData, error: uploadError } = await uploadToSupabase(
       file,
       filePath
@@ -117,7 +117,7 @@ export async function POST(request) {
       );
     }
 
-    console.log("File uploaded successfully to storage");
+    ("File uploaded successfully to storage");
 
     // Create or update resume record with safe values
     const resumeData = {
@@ -139,14 +139,14 @@ export async function POST(request) {
         oldStoragePath = existingResume.storagePath;
 
         // Update existing resume in database
-        console.log("Updating existing resume record...");
+        ("Updating existing resume record...");
         resume = await appPrisma.userResume.update({
           where: { id: existingResume.id },
           data: resumeData,
         });
       } else {
         // Create new resume
-        console.log("Creating new resume record...");
+        ("Creating new resume record...");
         resume = await appPrisma.userResume.create({
           data: resumeData,
         });
@@ -154,7 +154,7 @@ export async function POST(request) {
 
       // If we had an old resume, delete it from storage AFTER successful database update
       if (oldStoragePath) {
-        console.log("Deleting old file from storage:", oldStoragePath);
+        "Deleting old file from storage:", oldStoragePath;
         const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
 
         if (deleteError) {
@@ -165,7 +165,7 @@ export async function POST(request) {
           // Don't fail the request if storage cleanup fails
           // The new file is already uploaded and database is updated
         } else {
-          console.log("Old file deleted successfully from storage");
+          ("Old file deleted successfully from storage");
         }
       }
 
@@ -220,15 +220,15 @@ export async function DELETE() {
     const storagePath = resume.storagePath;
 
     // Delete from database first
-    console.log("Deleting resume from database...");
+    ("Deleting resume from database...");
     await appPrisma.userResume.delete({
       where: { id: resume.id },
     });
 
-    console.log("Resume deleted from database successfully");
+    ("Resume deleted from database successfully");
 
     // Then delete from Supabase Storage
-    console.log("Deleting file from storage:", storagePath);
+    "Deleting file from storage:", storagePath;
     const { error: deleteError } = await deleteFromSupabase(storagePath);
 
     if (deleteError) {
@@ -243,7 +243,7 @@ export async function DELETE() {
       });
     }
 
-    console.log("File deleted successfully from storage");
+    ("File deleted successfully from storage");
 
     return NextResponse.json({ message: "Resume deleted successfully" });
   } catch (error) {
@@ -265,7 +265,7 @@ export async function cleanupOrphanedFiles() {
 
     // This would require listing files in storage and comparing with database
     // Implementation depends on your specific cleanup needs
-    console.log("Manual cleanup function - implement based on your needs");
+    ("Manual cleanup function - implement based on your needs");
 
     return NextResponse.json({ message: "Cleanup completed" });
   } catch (error) {

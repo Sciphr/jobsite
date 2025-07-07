@@ -16,7 +16,7 @@ export async function PATCH(req, { params }) {
     });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const body = await req.json();
@@ -117,7 +117,7 @@ export async function GET(req, { params }) {
     });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const application = await appPrisma.application.findUnique({
@@ -179,6 +179,66 @@ export async function GET(req, { params }) {
     return new Response(JSON.stringify(formattedApplication), { status: 200 });
   } catch (error) {
     console.error("Application fetch error:", error);
+    return new Response(JSON.stringify({ message: "Internal server error" }), {
+      status: 500,
+    });
+  }
+}
+
+export async function DELETE(req, { params }) {
+  const session = await getServerSession(authOptions);
+
+  // Check if user is admin (privilege level 1 or higher - HR can delete applications)
+  if (
+    !session ||
+    !session.user.privilegeLevel ||
+    session.user.privilegeLevel < 1
+  ) {
+    return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  const { id } = await params;
+
+  try {
+    // Check if application exists
+    const application = await appPrisma.application.findUnique({
+      where: { id },
+    });
+
+    if (!application) {
+      return new Response(
+        JSON.stringify({ message: "Application not found" }),
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // Delete the application
+    await appPrisma.application.delete({
+      where: { id },
+    });
+
+    return new Response(
+      JSON.stringify({ message: "Application deleted successfully" }),
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Application deletion error:", error);
+
+    if (error.code === "P2025") {
+      return new Response(
+        JSON.stringify({ message: "Application not found" }),
+        {
+          status: 404,
+        }
+      );
+    }
+
     return new Response(JSON.stringify({ message: "Internal server error" }), {
       status: 500,
     });

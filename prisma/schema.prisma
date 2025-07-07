@@ -33,6 +33,7 @@ model User {
   applications Application[]
   savedJobs    SavedJob[]
   resumes      UserResume[]
+  settings     Setting[]    // Add this line
   
   // Admin relations
   createdJobs  Job[]        @relation("JobCreator")
@@ -163,4 +164,24 @@ model UserResume {
   @@index([userId], map: "idx_user_resumes_user_id")
   @@index([userId, isDefault], map: "idx_user_resumes_default")
   @@map("user_resumes")
+}
+
+model Setting {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key            String   // "currency_default", "show_salary_default", etc.
+  value          String   // Stored as JSON string for complex data
+  category       String   // "system", "jobs", "personal", "notifications"
+  userId         String?  @db.Uuid // NULL for system settings, user ID for personal
+  privilegeLevel Int      @default(0) // Minimum privilege to modify this setting
+  dataType       String   @default("string") // "string", "boolean", "number", "json"
+  description    String?  // Human-readable description
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Ensure unique settings per user (or global if userId is null)
+  @@unique([key, userId])
+  @@map("settings")
 }
