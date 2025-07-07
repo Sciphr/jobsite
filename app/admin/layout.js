@@ -94,6 +94,22 @@ export default function AdminLayout({ children }) {
   );
 
   const getRoleBadge = () => {
+    console.log(
+      "getRoleBadge called with userRole:",
+      userRole,
+      "type:",
+      typeof userRole
+    );
+    console.log("userRole length:", userRole?.length);
+    console.log(
+      "userRole char codes:",
+      userRole?.split("").map((char) => char.charCodeAt(0))
+    );
+
+    // Clean the userRole to remove any potential whitespace or hidden characters
+    const cleanRole = userRole?.trim().toLowerCase();
+    console.log("cleaned role:", cleanRole);
+
     const badges = {
       hr: { text: "HR", color: "bg-green-100 text-green-800" },
       admin: { text: "Admin", color: "bg-blue-100 text-blue-800" },
@@ -102,12 +118,28 @@ export default function AdminLayout({ children }) {
         color: "bg-purple-100 text-purple-800",
       },
     };
-    return (
-      badges[userRole] || { text: "User", color: "bg-gray-100 text-gray-800" }
-    );
+
+    // Try with cleaned role
+    if (cleanRole === "super_admin") {
+      console.log("Matched super_admin with cleaned role");
+      return { text: "Super Admin", color: "bg-purple-100 text-purple-800" };
+    } else if (cleanRole === "admin") {
+      console.log("Matched admin with cleaned role");
+      return { text: "Admin", color: "bg-blue-100 text-blue-800" };
+    } else if (cleanRole === "hr") {
+      console.log("Matched hr with cleaned role");
+      return { text: "HR", color: "bg-green-100 text-green-800" };
+    } else {
+      console.log("No match, using default admin");
+      return { text: "Admin", color: "bg-blue-100 text-blue-800" };
+    }
   };
 
   const badge = getRoleBadge();
+
+  // Debug log to see what badge is returned
+  console.log("Badge object:", badge);
+  console.log("Badge text:", badge.text);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
