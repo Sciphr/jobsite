@@ -2,11 +2,11 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { authPrisma } from "../../../lib/prisma"; // Use direct connection for auth
+import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {
-  adapter: PrismaAdapter(authPrisma), // Use authPrisma for adapter
+  adapter: PrismaAdapter(authPrisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -28,19 +28,36 @@ export const authOptions = {
         try {
           console.log("🔍 Looking up user with email:", credentials.email);
 
-          // Fixed: Use authPrisma consistently
           const user = await authPrisma.user.findUnique({
             where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              password: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              privilegeLevel: true,
+              isActive: true,
+            },
           });
 
           console.log("🔍 User found:", {
             found: !!user,
             hasPassword: !!user?.password,
             userId: user?.id,
+            role: user?.role,
+            privilegeLevel: user?.privilegeLevel,
+            isActive: user?.isActive,
           });
 
           if (!user || !user.password) {
             console.log("❌ User not found or no password");
+            return null;
+          }
+
+          if (!user.isActive) {
+            console.log("❌ User account is deactivated");
             return null;
           }
 
@@ -61,6 +78,8 @@ export const authOptions = {
             id: user.id,
             email: user.email,
             name: user.firstName + (user.lastName ? " " + user.lastName : ""),
+            role: user.role,
+            privilegeLevel: user.privilegeLevel,
           };
 
           console.log("✅ Authorization successful:", returnUser);
@@ -87,7 +106,13 @@ export const authOptions = {
       console.log("🔍 JWT callback:", { hasUser: !!user, hasToken: !!token });
       if (user) {
         token.id = user.id;
-        console.log("✅ Added user ID to token:", user.id);
+        token.role = user.role;
+        token.privilegeLevel = user.privilegeLevel;
+        console.log("✅ Added user details to token:", {
+          id: user.id,
+          role: user.role,
+          privilegeLevel: user.privilegeLevel,
+        });
       }
       return token;
     },
@@ -99,7 +124,13 @@ export const authOptions = {
       });
       if (token) {
         session.user.id = token.id;
-        console.log("✅ Added user ID to session:", token.id);
+        session.user.role = token.role;
+        session.user.privilegeLevel = token.privilegeLevel;
+        console.log("✅ Added user details to session:", {
+          id: token.id,
+          role: token.role,
+          privilegeLevel: token.privilegeLevel,
+        });
       }
       return session;
     },
@@ -107,7 +138,6 @@ export const authOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
-          // Fixed: Use authPrisma consistently
           const existingUser = await authPrisma.user.findUnique({
             where: { email: user.email },
           });
@@ -138,7 +168,6 @@ export const authOptions = {
     },
   },
 
-  // Add debug logging for development
   debug: true,
 };
 

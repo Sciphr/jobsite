@@ -24,30 +24,23 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  // Admin fields
+  role            String  @default("user") // "user", "admin", "hr", "super_admin"
+  privilegeLevel  Int     @default(0)     // 0 = regular user, 1 = HR (applications only), 2 = admin (jobs + applications), 3 = super admin (everything)
+  isActive        Boolean @default(true)  // Allow deactivating admin accounts
+  
   // Relations
   applications Application[]
   savedJobs    SavedJob[]
   resumes      UserResume[]
   
+  // Admin relations
+  createdJobs  Job[]        @relation("JobCreator")
+  
   @@map("users")
 }
 
-model AdminUser {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  password  String
-  firstName String?
-  lastName  String?
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  jobs Job[]
-  
-  @@map("admin_users")
-}
-
+// Remove AdminUser model entirely and update Job model
 model Category {
   id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String @unique
@@ -102,7 +95,7 @@ model Job {
   
   // Relations
   category                Category      @relation(fields: [categoryId], references: [id])
-  admin                   AdminUser     @relation(fields: [createdBy], references: [id])
+  creator                 User          @relation("JobCreator", fields: [createdBy], references: [id])
   applications            Application[]
   savedJobs               SavedJob[]
   
@@ -137,7 +130,7 @@ model Application {
 }
 
 model SavedJob {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid")) @db.Uuid
   savedAt   DateTime @default(now())
   
   // Foreign Keys
