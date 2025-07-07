@@ -92,11 +92,11 @@ model Job {
   
   // Foreign Keys
   categoryId              String   @db.Uuid
-  createdBy               String   @db.Uuid
+  createdBy               String?  @db.Uuid  // Made nullable
   
   // Relations
   category                Category      @relation(fields: [categoryId], references: [id])
-  creator                 User          @relation("JobCreator", fields: [createdBy], references: [id])
+  creator                 User?         @relation("JobCreator", fields: [createdBy], references: [id])  // Made nullable
   applications            Application[]
   savedJobs               SavedJob[]
   

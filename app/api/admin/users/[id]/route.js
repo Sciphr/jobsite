@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
+import { deleteFromSupabase } from "../../../../lib/supabase-storage";
 import bcrypt from "bcryptjs";
 
 export async function GET(req, { params }) {
@@ -17,7 +18,7 @@ export async function GET(req, { params }) {
     });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const user = await appPrisma.user.findUnique({
@@ -96,7 +97,7 @@ export async function PATCH(req, { params }) {
     });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const body = await req.json();
@@ -242,7 +243,7 @@ export async function DELETE(req, { params }) {
     });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // Prevent users from deleting themselves
   if (id === session.user.id) {
@@ -255,14 +256,22 @@ export async function DELETE(req, { params }) {
   }
 
   try {
-    // Check if user exists and get their data
+    // Get user data and all related records
     const userToDelete = await appPrisma.user.findUnique({
       where: { id },
       include: {
+        resumes: true, // Get all resume records with storage paths
+        applications: true,
+        savedJobs: true,
+        createdJobs: true,
+        settings: true,
         _count: {
           select: {
             createdJobs: true,
             applications: true,
+            savedJobs: true,
+            resumes: true,
+            settings: true,
           },
         },
       },
@@ -274,29 +283,101 @@ export async function DELETE(req, { params }) {
       });
     }
 
-    // Warn if user has created jobs or applications
-    if (userToDelete._count.createdJobs > 0) {
-      console.warn(
-        `Deleting user ${id} who has created ${userToDelete._count.createdJobs} jobs`
-      );
+    console.log(`Preparing to delete user ${id} with:`, {
+      jobs: userToDelete._count.createdJobs,
+      applications: userToDelete._count.applications,
+      savedJobs: userToDelete._count.savedJobs,
+      resumes: userToDelete._count.resumes,
+      settings: userToDelete._count.settings,
+    });
+
+    // Step 1: Delete resume files from Supabase storage
+    const resumeDeletionPromises = userToDelete.resumes.map(async (resume) => {
+      try {
+        console.log(`Deleting resume file: ${resume.storagePath}`);
+        const { error } = await deleteFromSupabase(resume.storagePath);
+        if (error) {
+          console.error(
+            `Failed to delete resume file ${resume.storagePath}:`,
+            error
+          );
+          // Don't throw here - we want to continue with user deletion even if storage cleanup fails
+        } else {
+          console.log(
+            `Successfully deleted resume file: ${resume.storagePath}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `Error deleting resume file ${resume.storagePath}:`,
+          error
+        );
+      }
+    });
+
+    // Wait for all resume file deletions to complete (or fail)
+    await Promise.allSettled(resumeDeletionPromises);
+
+    // Step 2: Handle jobs created by this user
+    if (userToDelete.createdJobs.length > 0) {
+      console.log(`User has ${userToDelete.createdJobs.length} created jobs`);
+
+      // Option A: Set createdBy to null (recommended)
+      await appPrisma.job.updateMany({
+        where: { createdBy: id },
+        data: { createdBy: null },
+      });
+
+      // Option B: Delete jobs and their applications (uncomment if preferred)
+      // for (const job of userToDelete.createdJobs) {
+      //   await appPrisma.application.deleteMany({
+      //     where: { jobId: job.id }
+      //   });
+      //   await appPrisma.savedJob.deleteMany({
+      //     where: { jobId: job.id }
+      //   });
+      // }
+      // await appPrisma.job.deleteMany({
+      //   where: { createdBy: id }
+      // });
     }
 
+    // Step 3: Delete user's applications
     if (userToDelete._count.applications > 0) {
-      console.warn(
-        `Deleting user ${id} who has ${userToDelete._count.applications} applications`
-      );
+      console.log(`Deleting ${userToDelete._count.applications} applications`);
+      await appPrisma.application.deleteMany({
+        where: { userId: id },
+      });
     }
 
-    // Delete the user (this will cascade delete related records)
+    // Step 4: Delete user's saved jobs
+    if (userToDelete._count.savedJobs > 0) {
+      console.log(`Deleting ${userToDelete._count.savedJobs} saved jobs`);
+      await appPrisma.savedJob.deleteMany({
+        where: { userId: id },
+      });
+    }
+
+    // Step 5: Delete the user (this will CASCADE delete resumes and settings automatically)
     await appPrisma.user.delete({
       where: { id },
     });
 
+    console.log(`Successfully deleted user ${id}`);
+
     return new Response(
-      JSON.stringify({ message: "User deleted successfully" }),
-      {
-        status: 200,
-      }
+      JSON.stringify({
+        message: "User deleted successfully",
+        deletedData: {
+          applications: userToDelete._count.applications,
+          savedJobs: userToDelete._count.savedJobs,
+          resumes: userToDelete._count.resumes,
+          resumeFiles: userToDelete.resumes.length,
+          settings: userToDelete._count.settings,
+          jobsHandled: userToDelete._count.createdJobs,
+        },
+      }),
+      { status: 200 }
     );
   } catch (error) {
     console.error("User deletion error:", error);
@@ -305,6 +386,18 @@ export async function DELETE(req, { params }) {
       return new Response(JSON.stringify({ message: "User not found" }), {
         status: 404,
       });
+    }
+
+    if (error.code === "P2003") {
+      return new Response(
+        JSON.stringify({
+          message:
+            "Cannot delete user due to foreign key constraints. Please contact support.",
+        }),
+        {
+          status: 409,
+        }
+      );
     }
 
     return new Response(JSON.stringify({ message: "Internal server error" }), {

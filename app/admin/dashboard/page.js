@@ -1,8 +1,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { gsap } from "gsap";
 import {
   Users,
   Briefcase,
@@ -26,10 +27,33 @@ export default function AdminDashboard() {
     recentJobs: [],
   });
   const [loading, setLoading] = useState(true);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  // Refs for GSAP animations
+  const headerRef = useRef(null);
+  const statsGridRef = useRef(null);
+  const contentGridRef = useRef(null);
+  const quickActionsRef = useRef(null);
+  const systemStatusRef = useRef(null);
 
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    setAnimationsEnabled(!prefersReducedMotion);
+
     fetchDashboardStats();
   }, []);
+
+  useEffect(() => {
+    if (!loading && animationsEnabled) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        animatePageLoad();
+      }, 100);
+    }
+  }, [loading, animationsEnabled]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -42,6 +66,174 @@ export default function AdminDashboard() {
       console.error("Error fetching dashboard stats:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const animatePageLoad = () => {
+    // Only set initial states for elements that exist
+    const elementsToAnimate = [
+      headerRef.current,
+      // statsGridRef.current,
+      contentGridRef.current,
+      quickActionsRef.current,
+      systemStatusRef.current,
+    ].filter(Boolean);
+
+    if (elementsToAnimate.length === 0) return;
+
+    // Set initial states for containers
+    gsap.set(elementsToAnimate, {
+      opacity: 0,
+      y: 30,
+    });
+
+    // Set initial states for individual stat cards
+    if (statsGridRef.current) {
+      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
+      gsap.set(statCards, {
+        opacity: 0,
+        y: 30,
+        scale: 0.9,
+      });
+    }
+
+    // Create timeline for staggered animations
+    const tl = gsap.timeline();
+
+    // Header animation
+    if (headerRef.current) {
+      tl.to(headerRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power2.out",
+      });
+    }
+
+    // Just animate the individual cards, not the container
+    if (statsGridRef.current) {
+      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
+      if (statCards.length > 0) {
+        tl.to(
+          statCards,
+          {
+            scale: 1,
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            ease: "back.out(1.7)",
+          },
+          "-=0.3"
+        );
+      }
+    }
+
+    // Content grid
+    if (contentGridRef.current) {
+      tl.to(
+        contentGridRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.2"
+      );
+    }
+
+    // Quick actions
+    if (quickActionsRef.current) {
+      tl.to(
+        quickActionsRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.3"
+      );
+    }
+
+    // System status (if visible)
+    if (systemStatusRef.current) {
+      tl.to(
+        systemStatusRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.3"
+      );
+    }
+
+    // Animate numbers counting up after a delay
+    setTimeout(() => {
+      animateCounters();
+    }, 800);
+  };
+
+  const animateCounters = () => {
+    if (!statsGridRef.current) return;
+
+    visibleStats.forEach((stat, index) => {
+      const element = statsGridRef.current.querySelector(
+        `[data-counter="${index}"]`
+      );
+      if (element && typeof stat.value === "number") {
+        const obj = { value: 0 };
+        gsap.to(obj, {
+          value: stat.value,
+          duration: 1.5,
+          ease: "power2.out",
+          onUpdate: function () {
+            element.textContent = Math.round(obj.value).toLocaleString();
+          },
+        });
+      }
+    });
+  };
+
+  const handleCardHover = (e, isEntering) => {
+    if (!animationsEnabled) return;
+
+    const card = e.currentTarget;
+    const icon = card.querySelector(".stat-icon");
+
+    if (isEntering) {
+      gsap.to(card, {
+        y: -5,
+        scale: 1.02,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1.1,
+          rotation: 5,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    } else {
+      gsap.to(card, {
+        y: 0,
+        scale: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1,
+          rotation: 0,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
     }
   };
 
@@ -73,6 +265,8 @@ export default function AdminDashboard() {
       icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
+      borderColor: "border-blue-200",
+      hoverBorderColor: "hover:border-blue-400",
       change: "+12%",
       visible: userPrivilegeLevel >= 1,
       href: "/admin/applications",
@@ -83,6 +277,8 @@ export default function AdminDashboard() {
       icon: Briefcase,
       color: "text-green-600",
       bgColor: "bg-green-100",
+      borderColor: "border-green-200",
+      hoverBorderColor: "hover:border-green-400",
       change: "+3%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/jobs",
@@ -93,16 +289,20 @@ export default function AdminDashboard() {
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
+      borderColor: "border-purple-200",
+      hoverBorderColor: "hover:border-purple-400",
       change: "+8%",
       visible: userPrivilegeLevel >= 3,
       href: "/admin/users",
     },
     {
       title: "Job Views",
-      value: "2,847",
+      value: 2847,
       icon: Eye,
       color: "text-orange-600",
       bgColor: "bg-orange-100",
+      borderColor: "border-orange-200",
+      hoverBorderColor: "hover:border-orange-400",
       change: "+15%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/analytics",
@@ -114,7 +314,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!
@@ -132,22 +332,32 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div
+        ref={statsGridRef}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
         {visibleStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Link
               key={index}
               href={stat.href}
-              className="bg-white p-6 rounded-lg shadow border border-gray-200 hover:shadow-md transition-all duration-200 group cursor-pointer"
+              className={`stat-card bg-white p-6 rounded-lg shadow border-2 ${stat.borderColor} ${stat.hoverBorderColor} hover:shadow-md transition-all duration-200 group cursor-pointer`}
+              onMouseEnter={(e) => handleCardHover(e, true)}
+              onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">
                     {stat.title}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {stat.value}
+                  <p
+                    className="text-3xl font-bold text-gray-900 mt-2"
+                    data-counter={index}
+                  >
+                    {typeof stat.value === "number"
+                      ? stat.value.toLocaleString()
+                      : stat.value}
                   </p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-green-500" />
@@ -159,9 +369,7 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 </div>
-                <div
-                  className={`p-3 rounded-lg ${stat.bgColor} group-hover:scale-110 transition-transform duration-200`}
-                >
+                <div className={`stat-icon p-3 rounded-lg ${stat.bgColor}`}>
                   <Icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
@@ -171,7 +379,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div
+        ref={contentGridRef}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+      >
         {/* Recent Applications (HR and above) */}
         {userPrivilegeLevel >= 1 && (
           <div className="bg-white rounded-lg shadow border border-gray-200">
@@ -317,7 +528,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div
+        ref={quickActionsRef}
+        className="bg-white rounded-lg shadow border border-gray-200 p-6"
+      >
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Quick Actions
         </h2>
@@ -370,12 +584,15 @@ export default function AdminDashboard() {
 
       {/* System Status (Super Admin only) */}
       {userPrivilegeLevel >= 3 && (
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div
+          ref={systemStatusRef}
+          className="bg-white rounded-lg shadow border border-gray-200 p-6"
+        >
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             System Status
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <div className="text-sm font-medium text-gray-900">
@@ -384,7 +601,7 @@ export default function AdminDashboard() {
                 <div className="text-xs text-green-600">Connected</div>
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <div className="text-sm font-medium text-gray-900">
@@ -393,7 +610,7 @@ export default function AdminDashboard() {
                 <div className="text-xs text-green-600">Operational</div>
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+            <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <Clock className="h-5 w-5 text-yellow-600" />
               <div>
                 <div className="text-sm font-medium text-gray-900">Backup</div>

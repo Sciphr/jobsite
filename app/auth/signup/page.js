@@ -1,12 +1,13 @@
 // app/auth/signup/page.js
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function SignUp() {
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -17,6 +18,32 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/profile";
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push(callbackUrl);
+    }
+  }, [status, router, callbackUrl]);
+
+  // Show loading while checking session
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if user is authenticated
+  if (status === "authenticated") {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,7 +89,8 @@ export default function SignUp() {
             "Account created but sign in failed. Please try signing in manually."
           );
         } else {
-          router.push("/profile");
+          // Redirect to callback URL or profile
+          router.push(callbackUrl);
         }
       } else {
         setError(data.message || "An error occurred");
@@ -88,6 +116,11 @@ export default function SignUp() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Create your account
           </h2>
+          {callbackUrl !== "/profile" && (
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Create an account to access that page
+            </p>
+          )}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

@@ -1,12 +1,13 @@
 // app/auth/signin/page.js
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function SignIn() {
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -14,6 +15,32 @@ export default function SignIn() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/profile";
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push(callbackUrl);
+    }
+  }, [status, router, callbackUrl]);
+
+  // Show loading while checking session
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if user is authenticated
+  if (status === "authenticated") {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,8 +57,8 @@ export default function SignIn() {
       if (result?.error) {
         setError("Invalid email or password");
       } else {
-        // Redirect to profile or home page
-        router.push("/profile");
+        // Redirect to callback URL or profile
+        router.push(callbackUrl);
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
@@ -54,6 +81,11 @@ export default function SignIn() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to your account
           </h2>
+          {callbackUrl !== "/profile" && (
+            <p className="mt-2 text-center text-sm text-gray-600">
+              You need to sign in to access that page
+            </p>
+          )}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

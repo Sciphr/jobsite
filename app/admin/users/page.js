@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
   Users,
   Search,
@@ -9,24 +10,17 @@ import {
   Plus,
   Edit3,
   Trash2,
-  Shield,
-  ShieldCheck,
-  ShieldX,
+  MoreHorizontal,
   Mail,
   Phone,
   Calendar,
-  MoreHorizontal,
-  UserPlus,
+  RefreshCw,
+  Shield,
+  ShieldCheck,
+  UserCheck,
+  UserX,
   Crown,
   User,
-  Briefcase,
-  FileText,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Download,
-  Upload,
-  Settings,
 } from "lucide-react";
 
 export default function AdminUsers() {
@@ -37,9 +31,8 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [privilegeFilter, setPrivilegeFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -47,7 +40,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, roleFilter, statusFilter, privilegeFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -63,6 +56,21 @@ export default function AdminUsers() {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch("/api/admin/users");
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error("Error refreshing users:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const filterUsers = () => {
     let filtered = users;
 
@@ -72,7 +80,7 @@ export default function AdminUsers() {
         (user) =>
           user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -85,14 +93,6 @@ export default function AdminUsers() {
     if (statusFilter !== "all") {
       const isActive = statusFilter === "active";
       filtered = filtered.filter((user) => user.isActive === isActive);
-    }
-
-    // Privilege filter
-    if (privilegeFilter !== "all") {
-      const privilegeLevel = parseInt(privilegeFilter);
-      filtered = filtered.filter(
-        (user) => user.privilegeLevel === privilegeLevel
-      );
     }
 
     setFilteredUsers(filtered);
@@ -161,67 +161,47 @@ export default function AdminUsers() {
     }
   };
 
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedUsers(filteredUsers.map((user) => user.id));
-    } else {
-      setSelectedUsers([]);
-    }
-  };
-
-  const handleSelectUser = (userId, checked) => {
-    if (checked) {
-      setSelectedUsers((prev) => [...prev, userId]);
-    } else {
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-    }
+  const getRoleIcon = (role) => {
+    const icons = {
+      user: User,
+      hr: UserCheck,
+      admin: Shield,
+      super_admin: Crown,
+    };
+    return icons[role] || User;
   };
 
   const getRoleColor = (role) => {
     const colors = {
-      user: "bg-gray-100 text-gray-800",
-      hr: "bg-green-100 text-green-800",
-      admin: "bg-blue-100 text-blue-800",
-      super_admin: "bg-purple-100 text-purple-800",
+      user: "text-gray-600 bg-gray-100",
+      hr: "text-blue-600 bg-blue-100",
+      admin: "text-green-600 bg-green-100",
+      super_admin: "text-purple-600 bg-purple-100",
     };
-    return colors[role] || "bg-gray-100 text-gray-800";
-  };
-
-  const getRoleIcon = (role, privilegeLevel) => {
-    if (privilegeLevel >= 3) return Crown;
-    if (privilegeLevel >= 2) return ShieldCheck;
-    if (privilegeLevel >= 1) return Shield;
-    return User;
-  };
-
-  const getPrivilegeName = (level) => {
-    const names = {
-      0: "User",
-      1: "HR",
-      2: "Admin",
-      3: "Super Admin",
-    };
-    return names[level] || "Unknown";
+    return colors[role] || "text-gray-600 bg-gray-100";
   };
 
   const roleOptions = [
-    { value: "user", label: "User", level: 0 },
-    { value: "hr", label: "HR", level: 1 },
-    { value: "admin", label: "Admin", level: 2 },
-    { value: "super_admin", label: "Super Admin", level: 3 },
+    { value: "user", label: "User", privilegeLevel: 0 },
+    { value: "hr", label: "HR", privilegeLevel: 1 },
+    { value: "admin", label: "Admin", privilegeLevel: 2 },
+    { value: "super_admin", label: "Super Admin", privilegeLevel: 3 },
   ];
+
+  const statusOptions = ["active", "inactive"];
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-6 space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow border">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -240,83 +220,74 @@ export default function AdminUsers() {
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={fetchUsers}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 shadow-sm"
           >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
-          <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-            <Download className="h-4 w-4" />
-            <span>Export</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+          <Link
+            href="/admin/users/create"
+            className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
           >
-            <UserPlus className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
             <span>Add User</span>
-          </button>
+          </Link>
         </div>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.length}
+        {roleOptions.map((role, index) => {
+          const count = users.filter((user) => user.role === role.value).length;
+          const RoleIcon = getRoleIcon(role.value);
+          const roleColor = getRoleColor(role.value);
+
+          return (
+            <div
+              key={role.value}
+              className={`bg-white p-6 rounded-lg shadow border-2 border-${
+                role.value === "user"
+                  ? "gray"
+                  : role.value === "hr"
+                  ? "blue"
+                  : role.value === "admin"
+                  ? "green"
+                  : "purple"
+              }-200 hover:border-${
+                role.value === "user"
+                  ? "gray"
+                  : role.value === "hr"
+                  ? "blue"
+                  : role.value === "admin"
+                  ? "green"
+                  : "purple"
+              }-400 hover:shadow-md transition-all duration-200`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {count}
+                  </div>
+                  <div className="text-sm text-gray-600 font-medium">
+                    {role.label}s
+                  </div>
+                </div>
+                <div className={`p-3 rounded-lg ${roleColor.split(" ")[1]}`}>
+                  <RoleIcon className={`h-6 w-6 ${roleColor.split(" ")[0]}`} />
+                </div>
               </div>
-              <div className="text-sm text-gray-600">Total Users</div>
             </div>
-            <Users className="h-8 w-8 text-gray-400" />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.filter((u) => u.isActive).length}
-              </div>
-              <div className="text-sm text-gray-600">Active Users</div>
-            </div>
-            <Eye className="h-8 w-8 text-green-400" />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.filter((u) => u.privilegeLevel > 0).length}
-              </div>
-              <div className="text-sm text-gray-600">Admin Users</div>
-            </div>
-            <ShieldCheck className="h-8 w-8 text-blue-400" />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {
-                  users.filter(
-                    (u) =>
-                      u.createdAt >
-                      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                  ).length
-                }
-              </div>
-              <div className="text-sm text-gray-600">New This Month</div>
-            </div>
-            <UserPlus className="h-8 w-8 text-purple-400" />
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -325,7 +296,7 @@ export default function AdminUsers() {
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 text-gray-700"
             />
           </div>
 
@@ -333,11 +304,17 @@ export default function AdminUsers() {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600"
           >
-            <option value="all">All Roles</option>
+            <option value="all" className="text-gray-600">
+              All Roles
+            </option>
             {roleOptions.map((role) => (
-              <option key={role.value} value={role.value}>
+              <option
+                key={role.value}
+                value={role.value}
+                className="text-gray-600"
+              >
                 {role.label}
               </option>
             ))}
@@ -347,282 +324,211 @@ export default function AdminUsers() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600"
           >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-
-          {/* Privilege Filter */}
-          <select
-            value={privilegeFilter}
-            onChange={(e) => setPrivilegeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Privileges</option>
-            <option value="0">Users (0)</option>
-            <option value="1">HR (1)</option>
-            <option value="2">Admin (2)</option>
-            <option value="3">Super Admin (3)</option>
+            <option value="all" className="text-gray-600">
+              All Status
+            </option>
+            <option value="active" className="text-gray-600">
+              Active
+            </option>
+            <option value="inactive" className="text-gray-600">
+              Inactive
+            </option>
           </select>
         </div>
       </div>
-
-      {/* Bulk Actions */}
-      {selectedUsers.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-blue-800 font-medium">
-              {selectedUsers.length} user{selectedUsers.length !== 1 ? "s" : ""}{" "}
-              selected
-            </span>
-            <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                Activate
-              </button>
-              <button className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700">
-                Deactivate
-              </button>
-              <button className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Users Table */}
       <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Users ({filteredUsers.length})
-            </h2>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={
-                  selectedUsers.length === filteredUsers.length &&
-                  filteredUsers.length > 0
-                }
-                onChange={(e) => handleSelectAll(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-600">Select all</span>
-            </div>
-          </div>
-        </div>
-
         <div className="overflow-x-auto">
-          {filteredUsers.length > 0 ? (
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="w-12 px-6 py-3 text-left">
-                    <span className="sr-only">Select</span>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role & Privileges
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => {
-                  const RoleIcon = getRoleIcon(user.role, user.privilegeLevel);
-                  return (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={(e) =>
-                            handleSelectUser(user.id, e.target.checked)
-                          }
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                            {user.firstName?.charAt(0)?.toUpperCase() ||
-                              user.email?.charAt(0)?.toUpperCase() ||
-                              "U"}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.firstName || user.lastName
-                                ? `${user.firstName || ""} ${
-                                    user.lastName || ""
-                                  }`.trim()
-                                : "No Name"}
-                            </div>
-                            <div className="text-sm text-gray-500 flex items-center space-x-1">
-                              <Mail className="h-3 w-3" />
-                              <span>{user.email}</span>
-                            </div>
-                            {user.phone && (
-                              <div className="text-sm text-gray-500 flex items-center space-x-1">
-                                <Phone className="h-3 w-3" />
-                                <span>{user.phone}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <RoleIcon className="h-4 w-4 text-gray-400" />
-                          <select
-                            value={user.role}
-                            onChange={(e) => {
-                              const selectedRole = roleOptions.find(
-                                (r) => r.value === e.target.value
-                              );
-                              updateUserRole(
-                                user.id,
-                                selectedRole.value,
-                                selectedRole.level
-                              );
-                            }}
-                            className={`text-xs border-0 rounded px-2 py-1 font-medium focus:ring-2 focus:ring-blue-500 ${getRoleColor(
-                              user.role
-                            )}`}
-                          >
-                            {roleOptions.map((role) => (
-                              <option key={role.value} value={role.value}>
-                                {role.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Level {user.privilegeLevel} -{" "}
-                          {getPrivilegeName(user.privilegeLevel)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() =>
-                              updateUserStatus(user.id, !user.isActive)
-                            }
-                            className={`p-1 rounded ${
-                              user.isActive
-                                ? "text-green-600 bg-green-100 hover:bg-green-200"
-                                : "text-red-600 bg-red-100 hover:bg-red-200"
-                            }`}
-                          >
-                            {user.isActive ? (
-                              <Eye className="h-4 w-4" />
-                            ) : (
-                              <EyeOff className="h-4 w-4" />
-                            )}
-                          </button>
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              user.isActive
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {user.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-900 flex items-center space-x-1">
-                            <Briefcase className="h-3 w-3 text-gray-400" />
-                            <span>{user._count?.createdJobs || 0} jobs</span>
-                          </div>
-                          <div className="text-sm text-gray-500 flex items-center space-x-1">
-                            <FileText className="h-3 w-3 text-gray-400" />
-                            <span>
-                              {user._count?.applications || 0} applications
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Activity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredUsers.map((user) => {
+                const RoleIcon = getRoleIcon(user.role);
+                const roleColor = getRoleColor(user.role);
+
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <span className="text-sm font-medium text-purple-600">
+                              {user.firstName?.[0] ||
+                                user.email[0].toUpperCase()}
                             </span>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 flex items-center space-x-1">
-                          <Calendar className="h-3 w-3 text-gray-400" />
-                          <span>
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </span>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.email}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center">
+                            <Mail className="h-3 w-3 mr-1" />
+                            {user.email}
+                          </div>
+                          {user.phone && (
+                            <div className="text-sm text-gray-500 flex items-center">
+                              <Phone className="h-3 w-3 mr-1" />
+                              {user.phone}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(user.createdAt).toLocaleTimeString()}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={user.role}
+                        onChange={(e) => {
+                          const selectedRole = roleOptions.find(
+                            (r) => r.value === e.target.value
+                          );
+                          updateUserRole(
+                            user.id,
+                            e.target.value,
+                            selectedRole.privilegeLevel
+                          );
+                        }}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-purple-500 ${roleColor}`}
+                        disabled={user.id === session?.user?.id}
+                      >
+                        {roleOptions.map((role) => (
+                          <option
+                            key={role.value}
+                            value={role.value}
+                            className="text-gray-800 bg-white"
+                          >
+                            {role.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() =>
+                          updateUserStatus(user.id, !user.isActive)
+                        }
+                        disabled={user.id === session?.user?.id}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200 ${
+                          user.isActive
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                        } ${
+                          user.id === session?.user?.id
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        {user.isActive ? (
+                          <>
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="h-3 w-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </button>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="space-y-1">
+                        <div>Jobs: {user._count?.createdJobs || 0}</div>
+                        <div>
+                          Applications: {user._count?.applications || 0}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className="p-1 text-gray-400 hover:text-blue-600 transition-colors duration-200"
-                            title="Edit user"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </button>
-                          <button
-                            className="p-1 text-gray-400 hover:text-purple-600 transition-colors duration-200"
-                            title="User settings"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </button>
+                        <div>Saved: {user._count?.savedJobs || 0}</div>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Link
+                          href={`/admin/users/${user.id}/edit`}
+                          className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded transition-colors duration-200"
+                          title="Edit user"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Link>
+
+                        {user.id !== session?.user?.id && (
                           <button
                             onClick={() => deleteUser(user.id)}
-                            className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                            className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded transition-colors duration-200"
                             title="Delete user"
-                            disabled={user.id === session?.user?.id}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
-                          <button
-                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                            title="More actions"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No users found
-              </h3>
-              <p className="text-gray-500">
-                {searchTerm ||
-                roleFilter !== "all" ||
-                statusFilter !== "all" ||
-                privilegeFilter !== "all"
-                  ? "Try adjusting your filters to see more results."
-                  : "No users have been created yet."}
-              </p>
-            </div>
-          )}
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Empty State */}
+      {filteredUsers.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No users found
+          </h3>
+          <p className="text-gray-500 mb-6">
+            {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+              ? "Try adjusting your filters to see more results."
+              : "Get started by adding your first user."}
+          </p>
+          {!searchTerm && roleFilter === "all" && statusFilter === "all" && (
+            <Link
+              href="/admin/users/create"
+              className="inline-flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Your First User</span>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
