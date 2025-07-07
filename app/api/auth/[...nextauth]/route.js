@@ -135,6 +135,58 @@ export const authOptions = {
       return session;
     },
 
+    // Add this callback to refresh user data from database
+    async jwt({ token, user, trigger, session }) {
+      console.log("🔍 JWT callback:", {
+        hasUser: !!user,
+        hasToken: !!token,
+        trigger,
+      });
+
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.privilegeLevel = user.privilegeLevel;
+        console.log("✅ Added user details to token:", {
+          id: user.id,
+          role: user.role,
+          privilegeLevel: user.privilegeLevel,
+        });
+      }
+
+      // Refresh user data from database when session is accessed
+      if (trigger === "update" || (!token.role && token.id)) {
+        try {
+          const refreshedUser = await authPrisma.user.findUnique({
+            where: { id: token.id },
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              privilegeLevel: true,
+              isActive: true,
+            },
+          });
+
+          if (refreshedUser) {
+            token.role = refreshedUser.role;
+            token.privilegeLevel = refreshedUser.privilegeLevel;
+            token.isActive = refreshedUser.isActive;
+            console.log("🔄 Refreshed user data:", {
+              role: refreshedUser.role,
+              privilegeLevel: refreshedUser.privilegeLevel,
+            });
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error);
+        }
+      }
+
+      return token;
+    },
+
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
