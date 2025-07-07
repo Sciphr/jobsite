@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function SignUp() {
@@ -18,8 +18,14 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/profile";
+  const [callbackUrl, setCallbackUrl] = useState("/profile");
+
+  // Add this useEffect to get the callback URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const callback = params.get("callbackUrl") || "/profile";
+    setCallbackUrl(callback);
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
