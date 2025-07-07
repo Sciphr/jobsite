@@ -49,9 +49,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!loading && animationsEnabled) {
       // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        animatePageLoad();
-      }, 100);
+
+      animatePageLoad();
     }
   }, [loading, animationsEnabled]);
 
@@ -70,34 +69,32 @@ export default function AdminDashboard() {
   };
 
   const animatePageLoad = () => {
-    // Only set initial states for elements that exist
+    // FIRST: Hide the stat cards immediately
+    if (statsGridRef.current) {
+      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
+      if (statCards.length > 0) {
+        gsap.set(statCards, {
+          opacity: 0,
+          y: 30,
+          scale: 0.9,
+        });
+      }
+    }
+
+    // THEN: Hide other elements
     const elementsToAnimate = [
       headerRef.current,
-      // statsGridRef.current,
       contentGridRef.current,
       quickActionsRef.current,
       systemStatusRef.current,
     ].filter(Boolean);
 
-    if (elementsToAnimate.length === 0) return;
-
-    // Set initial states for containers
     gsap.set(elementsToAnimate, {
       opacity: 0,
       y: 30,
     });
 
-    // Set initial states for individual stat cards
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      gsap.set(statCards, {
-        opacity: 0,
-        y: 30,
-        scale: 0.9,
-      });
-    }
-
-    // Create timeline for staggered animations
+    // FINALLY: Start the animation timeline
     const tl = gsap.timeline();
 
     // Header animation
@@ -312,7 +309,7 @@ export default function AdminDashboard() {
   const visibleStats = quickStats.filter((stat) => stat.visible);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 ">
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
