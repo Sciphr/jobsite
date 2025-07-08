@@ -207,7 +207,8 @@ export async function POST(req) {
 
     // Determine job status based on settings
     let jobStatus = status || "Draft";
-    if (autoPublishJobs && !status) {
+    // Auto-publish overrides the form status when enabled
+    if (autoPublishJobs && (!status || status === "Draft")) {
       jobStatus = "Active";
     }
 

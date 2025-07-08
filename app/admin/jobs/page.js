@@ -25,6 +25,7 @@ import {
   Archive,
   Play,
   Pause,
+  AlertCircle,
 } from "lucide-react";
 
 export default function AdminJobs() {
@@ -40,6 +41,7 @@ export default function AdminJobs() {
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [error, setError] = useState(null);
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -374,13 +376,16 @@ export default function AdminJobs() {
     }
   };
 
+  // Update your toggleFeatured function to include auto-scroll:
   const toggleFeatured = async (jobId, featured) => {
     try {
-      const response = await fetch(`/api/admin/jobs/${jobId}`, {
+      const response = await fetch(`/api/admin/jobs/${jobId}/feature`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ featured: !featured }),
       });
+
+      const result = await response.json();
 
       if (response.ok) {
         setJobs((prev) =>
@@ -388,9 +393,26 @@ export default function AdminJobs() {
             job.id === jobId ? { ...job, featured: !featured } : job
           )
         );
+
+        setError(null);
+      } else {
+        // Set the error and scroll to top
+        if (result.message) {
+          setError(result.message);
+          // Smooth scroll to top to show the error
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          setTimeout(() => setError(null), 8000);
+        } else {
+          setError("Failed to update featured status. Please try again.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          setTimeout(() => setError(null), 5000);
+        }
       }
     } catch (error) {
       console.error("Error updating featured status:", error);
+      setError("An error occurred while updating the featured status.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -536,6 +558,40 @@ export default function AdminJobs() {
           </Link>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 mb-6">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-900 mb-1">
+                Action Failed
+              </h3>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
+              title="Dismiss error"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Overview */}
       <div ref={statsGridRef} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -755,13 +811,15 @@ export default function AdminJobs() {
                 <div className="space-y-3">
                   {/* Salary */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Salary:</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatSalary(
-                        job.salaryMin,
-                        job.salaryMax,
-                        job.salaryCurrency
-                      )}
+                    <span className="text-sm text-gray-600">
+                      Salary Display:
+                    </span>
+                    <span
+                      className={`text-sm font-medium ${
+                        job.showSalary ? "text-green-700" : "text-gray-500"
+                      }`}
+                    >
+                      {job.showSalary ? "Visible" : "Hidden"}
                     </span>
                   </div>
 

@@ -82,6 +82,7 @@ model Job {
   
   status                   String   @default("Draft") // "Active", "Paused", "Closed", "Draft"
   featured                 Boolean  @default(false)
+  showSalary              Boolean  @default(true)  // Add this line
   priority                 Int      @default(0)
   viewCount               Int      @default(0)
   applicationCount        Int      @default(0)

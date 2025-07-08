@@ -4,12 +4,6 @@ import Link from "next/link";
 import { useSetting } from "../hooks/useSettings";
 
 export default function JobCard({ job }) {
-  // Get settings for display preferences
-  const { value: showSalaryDefault, loading: salaryLoading } = useSetting(
-    "show_salary_default",
-    true
-  );
-
   const formatSalary = (min, max, currency) => {
     if (!min || !max) return null;
     return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
@@ -58,16 +52,13 @@ export default function JobCard({ job }) {
         </div>
       </div>
 
-      {/* Conditional salary display based on settings */}
-      {!salaryLoading &&
-        showSalaryDefault &&
-        job.salaryMin &&
-        job.salaryMax && (
-          <div className="text-sm text-gray-600 mb-4">
-            <span className="font-medium">Salary:</span>{" "}
-            {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
-          </div>
-        )}
+      {/* Updated salary display logic - use job.showSalary instead of global setting */}
+      {job.showSalary && job.salaryMin && job.salaryMax && (
+        <div className="text-sm text-gray-600 mb-4">
+          <span className="font-medium">Salary:</span>{" "}
+          {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
+        </div>
+      )}
 
       {/* Application deadline warning */}
       {job.applicationDeadline && (

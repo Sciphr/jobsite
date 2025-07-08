@@ -455,7 +455,7 @@ export default function JobDetailsClient({
               </div>
 
               {/* Salary Information */}
-              {job.salaryMin && job.salaryMax && (
+              {job.showSalary && job.salaryMin && job.salaryMax && (
                 <div className="mb-8 p-6 bg-green-50 rounded-lg border border-green-200">
                   <h3 className="font-semibold text-gray-900 mb-2">
                     Salary Range
@@ -635,6 +635,16 @@ export default function JobDetailsClient({
                         {job.employmentType}
                       </span>
                     </div>
+                    {/* Only show salary if job.showSalary is true */}
+                    {job.showSalary && job.salaryMin && job.salaryMax && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Salary:</span>
+                        <span className="font-medium text-gray-900">
+                          {job.salaryCurrency} {job.salaryMin.toLocaleString()}{" "}
+                          - {job.salaryMax.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
                     {job.applicationDeadline && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Deadline:</span>

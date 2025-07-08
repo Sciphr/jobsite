@@ -21,37 +21,41 @@ export default function JobForm({
   );
   const { value: autoPublishJobs } = useSetting("auto_publish_jobs", false);
   const { value: defaultCurrency } = useSetting("default_currency", "CAD");
+  const { value: showSalaryByDefault } = useSetting(
+    "show_salary_by_default",
+    true
+  );
 
   // Add categories state
   const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
-    title: "",
-    slug: "",
-    description: "",
-    summary: "",
-    department: "",
-    employmentType: "Full-time",
-    experienceLevel: "Mid",
-    location: "",
-    remotePolicy: "On-site",
-    salaryMin: "",
-    salaryMax: "",
-    salaryCurrency: defaultCurrency,
-    salaryType: "Annual",
-    benefits: "",
-    requirements: "",
-    preferredQualifications: "",
-    educationRequired: "",
-    yearsExperienceRequired: "",
-    applicationDeadline: "",
-    startDate: "",
-    applicationInstructions: "",
-    status: autoPublishJobs ? "Active" : "Draft",
-    featured: false,
-    priority: 0,
-    categoryId: "",
-    ...initialData,
+    title: initialData?.title || "",
+    slug: initialData?.slug || "",
+    description: initialData?.description || "",
+    summary: initialData?.summary || "",
+    department: initialData?.department || "",
+    employmentType: initialData?.employmentType || "Full-time",
+    experienceLevel: initialData?.experienceLevel || "Mid",
+    location: initialData?.location || "",
+    remotePolicy: initialData?.remotePolicy || "On-site",
+    salaryMin: initialData?.salaryMin || "",
+    salaryMax: initialData?.salaryMax || "",
+    salaryCurrency: initialData?.salaryCurrency || defaultCurrency,
+    salaryType: initialData?.salaryType || "Annual",
+    benefits: initialData?.benefits || "",
+    requirements: initialData?.requirements || "",
+    preferredQualifications: initialData?.preferredQualifications || "",
+    educationRequired: initialData?.educationRequired || "",
+    yearsExperienceRequired: initialData?.yearsExperienceRequired || "",
+    applicationDeadline: initialData?.applicationDeadline || "",
+    startDate: initialData?.startDate || "",
+    applicationInstructions: initialData?.applicationInstructions || "",
+    status: initialData?.status || (autoPublishJobs ? "Active" : "Draft"),
+    featured: initialData?.featured || false,
+    showSalary: initialData?.showSalary ?? showSalaryByDefault, // Use ?? to handle false values
+    priority: initialData?.priority || 0,
+    categoryId: initialData?.categoryId || "",
   });
 
   const [errors, setErrors] = useState({});
@@ -60,6 +64,12 @@ export default function JobForm({
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (!initialData && showSalaryByDefault !== undefined) {
+      setFormData((prev) => ({ ...prev, showSalary: showSalaryByDefault }));
+    }
+  }, [showSalaryByDefault, initialData]);
 
   const fetchCategories = async () => {
     try {
@@ -445,6 +455,38 @@ export default function JobForm({
         </div>
       </div>
 
+      {/* Show Salary Option */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <input
+            type="checkbox"
+            name="showSalary"
+            id="showSalary"
+            checked={formData.showSalary}
+            onChange={handleChange}
+            disabled={submitting}
+            className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <div className="flex-1">
+            <label
+              htmlFor="showSalary"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Display Salary Information
+            </label>
+            <p className="text-sm text-gray-600">
+              Show salary information on job listings and job detail pages.
+              Uncheck this if you prefer to discuss compensation during the
+              application process.
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Default setting for new jobs:{" "}
+              {showSalaryByDefault ? "Show salary" : "Hide salary"}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Application Deadline - with conditional required indicator */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -530,6 +572,9 @@ export default function JobForm({
             <li>• Jobs will be auto-published when created</li>
           )}
           <li>• Default currency: {defaultCurrency}</li>
+          <li>
+            • Default salary display: {showSalaryByDefault ? "Show" : "Hide"}
+          </li>
         </ul>
       </div>
 

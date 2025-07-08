@@ -20,6 +20,7 @@ export default function CreateJobPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [permissionError, setPermissionError] = useState(null);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -32,7 +33,7 @@ export default function CreateJobPage() {
 
     // Check if user has privilege level 2 or higher (Admin) to create jobs
     if (!session.user.privilegeLevel || session.user.privilegeLevel < 2) {
-      setError(
+      setPermissionError(
         "You don't have permission to create jobs. Admin access required."
       );
       return;
@@ -115,7 +116,7 @@ export default function CreateJobPage() {
   }
 
   // Show error state if user doesn't have permission
-  if (error && !success) {
+  if (permissionError && !success) {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
