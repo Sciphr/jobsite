@@ -351,6 +351,46 @@ export default function AdminSettings() {
           );
 
         case "json":
+          // Special handling for allowed_resume_types
+          if (key === "allowed_resume_types") {
+            const types = Array.isArray(parsedValue)
+              ? parsedValue
+              : ["pdf", "doc", "docx"];
+
+            return (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-600 mb-2">
+                  Select allowed file types for resume uploads:
+                </div>
+                <div className="space-y-2">
+                  {["pdf", "doc", "docx", "txt", "rtf"].map((type) => (
+                    <label key={type} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={types.includes(type)}
+                        onChange={(e) => {
+                          const updatedTypes = e.target.checked
+                            ? [...types, type]
+                            : types.filter((t) => t !== type);
+                          handleSettingChange(key, updatedTypes, setting);
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        disabled={!canEdit}
+                      />
+                      <span className="text-sm text-gray-700 uppercase">
+                        {type}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Selected types: {types.join(", ").toUpperCase()}
+                </div>
+              </div>
+            );
+          }
+
+          // Default JSON handling for other settings
           return (
             <textarea
               value={JSON.stringify(parsedValue, null, 2)}

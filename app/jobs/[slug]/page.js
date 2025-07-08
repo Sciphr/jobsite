@@ -42,7 +42,8 @@ async function getJob(slug) {
 }
 
 export default async function JobDetailsPage({ params }) {
-  const job = await getJob(params.slug);
+  const resolvedParams = await params;
+  const job = await getJob(resolvedParams.slug);
 
   if (!job) {
     notFound();
@@ -66,7 +67,8 @@ export default async function JobDetailsPage({ params }) {
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }) {
-  const job = await getJob(params.slug);
+  const resolvedParams = await params; // Await params before using
+  const job = await getJob(resolvedParams.slug);
 
   if (!job) {
     return {

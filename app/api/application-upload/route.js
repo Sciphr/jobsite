@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { uploadToSupabase } from "../../lib/supabase-storage";
+import { getSystemSetting } from "../../lib/settings";
 
 export async function POST(request) {
   try {
@@ -18,25 +19,34 @@ export async function POST(request) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    // Get allowed types from settings
+    const allowedTypes = await getSystemSetting("allowed_resume_types", [
+      "pdf",
+      "doc",
+      "docx",
+    ]);
+    const maxSizeMB = await getSystemSetting("max_resume_size_mb", 5);
+
+    // Validate file type using settings
+    const fileExtension = file.name.split(".").pop().toLowerCase();
+    if (!allowedTypes.includes(fileExtension)) {
       return NextResponse.json(
         {
-          error: "Invalid file type. Only PDF and Word documents are allowed.",
+          error: `File type not allowed. Please upload: ${allowedTypes
+            .join(", ")
+            .toUpperCase()}`,
         },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size using settings
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
       return NextResponse.json(
-        { error: "File size too large. Maximum 5MB allowed." },
+        {
+          error: `File size too large. Maximum ${maxSizeMB}MB allowed.`,
+        },
         { status: 400 }
       );
     }

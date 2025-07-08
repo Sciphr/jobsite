@@ -15,6 +15,13 @@ export default function JobApplicationForm({
       ? userResumes.find((resume) => resume.isDefault) || userResumes[0]
       : null;
 
+  const [allowedFileTypes, setAllowedFileTypes] = useState([
+    "pdf",
+    "doc",
+    "docx",
+  ]);
+  const [maxResumeSize, setMaxResumeSize] = useState(5);
+
   // Function to get the full name from user object
   const getUserFullName = (user) => {
     if (!user) return "";
@@ -33,6 +40,41 @@ export default function JobApplicationForm({
 
     return "";
   };
+
+  useEffect(() => {
+    const fetchUploadSettings = async () => {
+      try {
+        const [sizeResponse, typesResponse] = await Promise.all([
+          fetch("/api/settings/public?key=max_resume_size_mb"),
+          fetch("/api/settings/public?key=allowed_resume_types"),
+        ]);
+
+        if (sizeResponse.ok) {
+          const sizeSetting = await sizeResponse.json();
+          if (
+            sizeSetting.parsedValue !== null &&
+            sizeSetting.parsedValue !== undefined
+          ) {
+            setMaxResumeSize(sizeSetting.parsedValue);
+          }
+        }
+
+        if (typesResponse.ok) {
+          const typesSetting = await typesResponse.json();
+          if (
+            typesSetting.parsedValue &&
+            Array.isArray(typesSetting.parsedValue)
+          ) {
+            setAllowedFileTypes(typesSetting.parsedValue);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching upload settings:", error);
+      }
+    };
+
+    fetchUploadSettings();
+  }, []);
 
   const [form, setForm] = useState({
     name: getUserFullName(user),
@@ -299,7 +341,9 @@ export default function JobApplicationForm({
                   Upload New Resume
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept={allowedFileTypes
+                      .map((type) => `.${type}`)
+                      .join(",")}
                     className="hidden"
                     onChange={handleFileChange}
                   />
@@ -320,12 +364,15 @@ export default function JobApplicationForm({
                       or drag and drop
                     </div>
                     <p className="text-xs text-gray-500">
-                      PDF, DOC, or DOCX (max 5MB)
+                      {allowedFileTypes.join(", ").toUpperCase()} (max{" "}
+                      {maxResumeSize}MB)
                     </p>
                   </div>
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept={allowedFileTypes
+                      .map((type) => `.${type}`)
+                      .join(",")}
                     className="hidden"
                     onChange={handleFileChange}
                     required={!userResume}

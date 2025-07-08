@@ -11,6 +11,8 @@ export async function GET(request) {
       "allowed_resume_types",
       "site_name",
       "allow_guest_applications",
+      "default_currency",
+      "site_description",
     ];
 
     if (!key || !allowedPublicSettings.includes(key)) {

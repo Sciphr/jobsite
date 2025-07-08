@@ -130,7 +130,7 @@ export default function ProfileClient({ session }) {
     const fileExtension = file.name.split(".").pop().toLowerCase();
     const typesToCheck = allowedFileTypes || ["pdf", "doc", "docx"]; // Fallback to defaults
 
-    if (!allowedFileTypes.includes(fileExtension)) {
+    if (!typesToCheck.includes(fileExtension)) {
       alert(
         `File type not allowed. Please upload: ${typesToCheck
           .join(", ")
@@ -535,7 +535,9 @@ export default function ProfileClient({ session }) {
                   <div className="flex items-center space-x-4">
                     <input
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept={allowedFileTypes
+                        .map((type) => `.${type}`)
+                        .join(",")}
                       onChange={handleFileUpload}
                       className="hidden"
                       id="resume-upload"
@@ -671,7 +673,9 @@ export default function ProfileClient({ session }) {
                       <div className="relative">
                         <input
                           type="file"
-                          accept=".pdf,.doc,.docx"
+                          accept={allowedFileTypes
+                            .map((type) => `.${type}`)
+                            .join(",")}
                           onChange={handleFileUpload}
                           className="hidden"
                           id="resume-replace"

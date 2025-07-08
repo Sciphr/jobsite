@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { getSystemSetting } from "../../../lib/settings";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -196,7 +197,8 @@ export async function POST(req) {
         remotePolicy: remotePolicy || "On-site",
         salaryMin: salaryMin || null,
         salaryMax: salaryMax || null,
-        salaryCurrency: salaryCurrency || "USD",
+        salaryCurrency:
+          salaryCurrency || (await getSystemSetting("default_currency", "CAD")),
         salaryType: salaryType || "Annual",
         benefits: benefits || null,
         requirements,

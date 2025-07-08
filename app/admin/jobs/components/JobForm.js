@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSetting } from "../../../hooks/useSettings";
 import {
   Save,
   X,
@@ -33,7 +34,7 @@ export default function JobForm({ jobId = null, initialData = null }) {
     remotePolicy: "On-site",
     salaryMin: "",
     salaryMax: "",
-    salaryCurrency: "USD",
+    salaryCurrency: "CAD",
     salaryType: "Annual",
     benefits: "",
     requirements: "",
@@ -48,6 +49,11 @@ export default function JobForm({ jobId = null, initialData = null }) {
     priority: 0,
     categoryId: "",
   });
+
+  const { value: defaultCurrency, loading: currencyLoading } = useSetting(
+    "default_currency",
+    "CAD"
+  );
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -70,6 +76,32 @@ export default function JobForm({ jobId = null, initialData = null }) {
       });
     }
   }, [initialData]);
+
+  // Update currency when default currency setting changes (for new jobs only)
+  useEffect(() => {
+    if (!isEdit && defaultCurrency) {
+      setFormData((prev) => ({
+        ...prev,
+        salaryCurrency: defaultCurrency,
+      }));
+    }
+  }, [defaultCurrency, isEdit]);
+
+  // Add this useEffect after your existing useEffects (around line 70)
+  useEffect(() => {
+    // Only update currency for new jobs and when currency setting is loaded
+    if (
+      !isEdit &&
+      !currencyLoading &&
+      defaultCurrency &&
+      defaultCurrency !== formData.salaryCurrency
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        salaryCurrency: defaultCurrency,
+      }));
+    }
+  }, [defaultCurrency, currencyLoading, isEdit, formData.salaryCurrency]);
 
   const fetchCategories = async () => {
     try {
@@ -192,7 +224,8 @@ export default function JobForm({ jobId = null, initialData = null }) {
   const employmentTypes = ["Full-time", "Part-time", "Contract", "Internship"];
   const experienceLevels = ["Entry", "Mid", "Senior", "Executive"];
   const remotePolicies = ["Remote", "Hybrid", "On-site"];
-  const currencies = ["USD", "EUR", "GBP", "CAD", "AUD"];
+
+  const currencies = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"];
   const salaryTypes = ["Annual", "Monthly", "Hourly"];
 
   return (
