@@ -4,6 +4,67 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { getSystemSetting } from "../../../lib/settings";
 
+export async function GET(req) {
+  const session = await getServerSession(authOptions);
+
+  // Check if user is admin (privilege level 2 or higher for jobs management)
+  if (
+    !session ||
+    !session.user.privilegeLevel ||
+    session.user.privilegeLevel < 2
+  ) {
+    return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+    });
+  }
+
+  try {
+    const jobs = await appPrisma.job.findMany({
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Separately fetch creator info for jobs that have valid createdBy
+    const jobsWithCreators = await Promise.all(
+      jobs.map(async (job) => {
+        let creator = null;
+        if (job.createdBy) {
+          try {
+            creator = await appPrisma.user.findUnique({
+              where: { id: job.createdBy },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            });
+          } catch (error) {
+            console.warn(`Creator not found for job ${job.id}`);
+          }
+        }
+        return { ...job, creator };
+      })
+    );
+
+    return new Response(JSON.stringify(jobsWithCreators), { status: 200 });
+  } catch (error) {
+    console.error("Jobs fetch error:", error);
+    return new Response(JSON.stringify({ message: "Internal server error" }), {
+      status: 500,
+    });
+  }
+}
+
 export async function POST(req) {
   const session = await getServerSession(authOptions);
 
