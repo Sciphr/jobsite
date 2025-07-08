@@ -212,6 +212,10 @@ export async function POST(req) {
     }
 
     // Create the job
+    // In your app/api/admin/jobs/route.js POST method
+    // Replace the job creation part with this:
+
+    // Create the job
     const newJob = await appPrisma.job.create({
       data: {
         title,
@@ -223,15 +227,19 @@ export async function POST(req) {
         experienceLevel: experienceLevel || "Mid",
         location,
         remotePolicy: remotePolicy || "On-site",
-        salaryMin: salaryMin || null,
-        salaryMax: salaryMax || null,
+        // Convert salary strings to integers
+        salaryMin: salaryMin ? parseInt(salaryMin, 10) : null,
+        salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
         salaryCurrency: salaryCurrency || defaultCurrency,
         salaryType: salaryType || "Annual",
         benefits: benefits || null,
         requirements,
         preferredQualifications: preferredQualifications || null,
         educationRequired: educationRequired || null,
-        yearsExperienceRequired: yearsExperienceRequired || null,
+        // Convert years experience to integer
+        yearsExperienceRequired: yearsExperienceRequired
+          ? parseInt(yearsExperienceRequired, 10)
+          : null,
         applicationDeadline: applicationDeadline
           ? new Date(applicationDeadline)
           : null,
@@ -239,7 +247,8 @@ export async function POST(req) {
         applicationInstructions: applicationInstructions || null,
         status: jobStatus,
         featured: featured || false,
-        priority: priority || 0,
+        // Convert priority to integer
+        priority: priority ? parseInt(priority, 10) : 0,
         categoryId,
         createdBy: session.user.id,
         postedAt: jobStatus === "Active" ? new Date() : null,

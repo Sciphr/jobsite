@@ -10,6 +10,7 @@ import {
   Shield,
   ArrowLeft,
   Loader2,
+  CheckCircle,
 } from "lucide-react";
 
 export default function CreateJobPage() {
@@ -17,6 +18,8 @@ export default function CreateJobPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -38,6 +41,60 @@ export default function CreateJobPage() {
     setLoading(false);
   }, [session, status, router]);
 
+  const handleSubmit = async (formData) => {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      console.log("Submitting job data:", formData);
+
+      const response = await fetch("/api/admin/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log("Job created successfully:", result);
+        setSuccess(true);
+
+        // Redirect to jobs list after a short delay
+        setTimeout(() => {
+          router.push("/admin/jobs");
+        }, 2000);
+      } else {
+        console.error("Failed to create job:", result);
+        // Stay on the form and show the error
+        setError(
+          result.message ||
+            "Failed to create job. Please check the form and try again."
+        );
+
+        // Scroll to top to show error message
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (error) {
+      console.error("Error creating job:", error);
+      setError(
+        "An unexpected error occurred. Please check your internet connection and try again."
+      );
+
+      // Scroll to top to show error message
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle form cancellation
+  const handleCancel = () => {
+    router.push("/admin/jobs");
+  };
+
   // Show loading state while checking session
   if (status === "loading" || loading) {
     return (
@@ -58,7 +115,7 @@ export default function CreateJobPage() {
   }
 
   // Show error state if user doesn't have permission
-  if (error) {
+  if (error && !success) {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
@@ -107,6 +164,37 @@ export default function CreateJobPage() {
     );
   }
 
+  // Show success state
+  if (success) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Job Created Successfully!
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your job posting has been created. Redirecting to jobs list...
+            </p>
+            <div className="flex items-center justify-center space-x-4">
+              <button
+                onClick={() => router.push("/admin/jobs")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                View All Jobs
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Render the job form for authorized users
   return (
     <div className="space-y-6">
@@ -129,6 +217,61 @@ export default function CreateJobPage() {
         <span className="text-gray-900 font-medium">Create</span>
       </nav>
 
+      {/* Page Header */}
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => router.push("/admin/jobs")}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          title="Back to jobs"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Create New Job</h1>
+          <p className="text-gray-600 mt-1">
+            Fill out the form below to create a new job posting
+          </p>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && !success && (
+        <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-900 mb-1">
+                Unable to Create Job
+              </h3>
+              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-xs text-red-600 mt-2">
+                Please review the form below and fix any issues, then try
+                submitting again.
+              </p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
+              title="Dismiss error"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Success/Info Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
@@ -149,7 +292,13 @@ export default function CreateJobPage() {
       </div>
 
       {/* Job Form */}
-      <JobForm />
+      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <JobForm
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          submitting={submitting}
+        />
+      </div>
 
       {/* Help Section */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
@@ -172,40 +321,6 @@ export default function CreateJobPage() {
               <li>• Include remote work policies clearly</li>
               <li>• Set realistic application deadlines</li>
             </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Actions */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          After Creating This Job
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl mb-2">📊</div>
-            <h4 className="font-medium text-gray-900 mb-1">
-              Track Applications
-            </h4>
-            <p className="text-sm text-gray-600">
-              Monitor and manage applications as they come in
-            </p>
-          </div>
-          <div className="text-center p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl mb-2">🔍</div>
-            <h4 className="font-medium text-gray-900 mb-1">
-              Review Candidates
-            </h4>
-            <p className="text-sm text-gray-600">
-              Screen resumes and schedule interviews
-            </p>
-          </div>
-          <div className="text-center p-4 border border-gray-200 rounded-lg">
-            <div className="text-2xl mb-2">📈</div>
-            <h4 className="font-medium text-gray-900 mb-1">View Analytics</h4>
-            <p className="text-sm text-gray-600">
-              See job performance and application metrics
-            </p>
           </div>
         </div>
       </div>
