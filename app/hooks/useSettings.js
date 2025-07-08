@@ -7,17 +7,25 @@ const SETTINGS_UPDATE_EVENT = "settingsUpdate";
 
 // Helper to dispatch settings update events
 export const updateSettingGlobally = (key, value) => {
-  window.dispatchEvent(
-    new CustomEvent(SETTINGS_UPDATE_EVENT, {
-      detail: { key, value },
-    })
-  );
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(SETTINGS_UPDATE_EVENT, {
+        detail: { key, value },
+      })
+    );
+  }
 };
 
 // Hook to use a specific setting with real-time updates
 export const useSetting = (key, defaultValue = null) => {
   const [value, setValue] = useState(defaultValue);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  // Mark as client-side after hydration
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const fetchSetting = async () => {
     try {
@@ -35,6 +43,9 @@ export const useSetting = (key, defaultValue = null) => {
   };
 
   useEffect(() => {
+    // Only run on client side to prevent hydration mismatch
+    if (!isClient) return;
+
     fetchSetting();
 
     // Listen for global settings updates
@@ -44,12 +55,20 @@ export const useSetting = (key, defaultValue = null) => {
       }
     };
 
-    window.addEventListener(SETTINGS_UPDATE_EVENT, handleSettingsUpdate);
+    if (typeof window !== "undefined") {
+      window.addEventListener(SETTINGS_UPDATE_EVENT, handleSettingsUpdate);
+    }
 
     return () => {
-      window.removeEventListener(SETTINGS_UPDATE_EVENT, handleSettingsUpdate);
+      if (typeof window !== "undefined") {
+        window.removeEventListener(SETTINGS_UPDATE_EVENT, handleSettingsUpdate);
+      }
     };
-  }, [key, defaultValue]);
+  }, [key, defaultValue, isClient]);
 
-  return { value, loading, refetch: fetchSetting };
+  return {
+    value: isClient ? value : defaultValue,
+    loading: !isClient || loading,
+    refetch: fetchSetting,
+  };
 };
