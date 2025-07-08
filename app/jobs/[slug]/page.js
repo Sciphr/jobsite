@@ -1,20 +1,72 @@
-import { db } from "../../lib/db";
+// app/jobs/[slug]/page.js (Server Component)
 import { notFound } from "next/navigation";
+import { appPrisma } from "../../lib/prisma";
+import { getSystemSetting } from "../../lib/settings";
 import JobDetailsClient from "./JobDetailsClient";
+
+async function getJob(slug) {
+  try {
+    const job = await appPrisma.job.findUnique({
+      where: {
+        slug,
+        status: "Active", // Only show active jobs
+      },
+      include: {
+        category: true,
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      return null;
+    }
+
+    // Increment view count
+    await appPrisma.job.update({
+      where: { id: job.id },
+      data: { viewCount: { increment: 1 } },
+    });
+
+    return job;
+  } catch (error) {
+    console.error("Error fetching job:", error);
+    return null;
+  }
+}
+
+export default async function JobDetailsPage({ params }) {
+  const job = await getJob(params.slug);
+
+  if (!job) {
+    notFound();
+  }
+
+  // Get system settings for guest applications
+  const allowGuestApplications = await getSystemSetting(
+    "allow_guest_applications",
+    true
+  );
+  const siteConfig = await getSystemSetting("site_name", "Job Board");
+
+  return (
+    <JobDetailsClient
+      job={job}
+      allowGuestApplications={allowGuestApplications}
+      siteConfig={siteConfig}
+    />
+  );
+}
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-
-  const job = await db.job.findUnique({
-    where: { slug: slug },
-    select: {
-      title: true,
-      summary: true,
-      department: true,
-      location: true,
-    },
-  });
+  const job = await getJob(params.slug);
 
   if (!job) {
     return {
@@ -23,41 +75,15 @@ export async function generateMetadata({ params }) {
   }
 
   return {
-    title: `${job.title} - ${job.department} | JobSite`,
-    description: job.summary,
+    title: `${job.title} - ${job.department}`,
+    description:
+      job.summary ||
+      job.description?.substring(0, 160) ||
+      `Apply for ${job.title} position`,
     openGraph: {
       title: `${job.title} - ${job.department}`,
-      description: job.summary,
+      description: job.summary || job.description?.substring(0, 160),
       type: "website",
     },
   };
-}
-
-export default async function JobDetailsPage({ params }) {
-  const { slug } = await params;
-
-  // Fetch job by slug
-  const job = await db.job.findUnique({
-    where: { slug: slug },
-    include: {
-      category: true,
-    },
-  });
-
-  if (!job || job.status !== "Active") {
-    notFound();
-  }
-
-  // Serialize the job data to avoid hydration errors
-  const serializedJob = {
-    ...job,
-    createdAt: job.createdAt.toISOString(),
-    updatedAt: job.updatedAt.toISOString(),
-    // Handle any other Date fields if they exist
-    ...(job.deadline && { deadline: job.deadline.toISOString() }),
-    ...(job.publishedAt && { publishedAt: job.publishedAt.toISOString() }),
-  };
-
-  // Pass the serialized job data to the client component
-  return <JobDetailsClient job={serializedJob} />;
 }

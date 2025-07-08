@@ -21,6 +21,13 @@ export default function ProfileClient({ session }) {
     phone: "",
   });
 
+  const [maxResumeSize, setMaxResumeSize] = useState(5);
+  const [allowedFileTypes, setAllowedFileTypes] = useState([
+    "pdf",
+    "doc",
+    "docx",
+  ]);
+
   useEffect(() => {
     if (!session) {
       router.push("/auth/signin");
@@ -29,6 +36,42 @@ export default function ProfileClient({ session }) {
 
     fetchProfileData();
   }, [session]);
+
+  useEffect(() => {
+    fetchUploadSettings();
+  }, []);
+
+  const fetchUploadSettings = async () => {
+    try {
+      const [sizeResponse, typesResponse] = await Promise.all([
+        fetch("/api/settings/public?key=max_resume_size_mb"),
+        fetch("/api/settings/public?key=allowed_resume_types"),
+      ]);
+
+      if (sizeResponse.ok) {
+        const sizeSetting = await sizeResponse.json();
+        if (
+          sizeSetting.parsedValue !== null &&
+          sizeSetting.parsedValue !== undefined
+        ) {
+          setMaxResumeSize(sizeSetting.parsedValue);
+        }
+      }
+
+      if (typesResponse.ok) {
+        const typesSetting = await typesResponse.json();
+        if (
+          typesSetting.parsedValue &&
+          Array.isArray(typesSetting.parsedValue)
+        ) {
+          setAllowedFileTypes(typesSetting.parsedValue);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching upload settings:", error);
+      // Keep default values on error
+    }
+  };
 
   const fetchProfileData = async () => {
     try {
@@ -83,20 +126,30 @@ export default function ProfileClient({ session }) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a PDF or Word document");
+    // Check file type using settings
+    const fileExtension = file.name.split(".").pop().toLowerCase();
+    const typesToCheck = allowedFileTypes || ["pdf", "doc", "docx"]; // Fallback to defaults
+
+    if (!allowedFileTypes.includes(fileExtension)) {
+      alert(
+        `File type not allowed. Please upload: ${typesToCheck
+          .join(", ")
+          .toUpperCase()}`
+      );
+      event.target.value = "";
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
+    // Check file size using settings
+    const maxSizeBytes = maxResumeSize * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      alert(
+        `File size exceeds the maximum allowed size of ${maxResumeSize}MB. Your file is ${(
+          file.size /
+          (1024 * 1024)
+        ).toFixed(2)}MB.`
+      );
+      event.target.value = "";
       return;
     }
 
@@ -112,12 +165,11 @@ export default function ProfileClient({ session }) {
 
       if (response.ok) {
         const result = await response.json();
-        setResume(result.resume); // Set the resume from the response
-        // Reset file input
+        setResume(result.resume);
         event.target.value = "";
       } else {
         const error = await response.json();
-        alert(error.message || "Failed to upload resume");
+        alert(error.error || "Failed to upload resume");
       }
     } catch (error) {
       console.error("Upload error:", error);
@@ -497,6 +549,9 @@ export default function ProfileClient({ session }) {
                     >
                       {uploading ? "Uploading..." : "Upload Resume"}
                     </label>
+                    <span className="text-xs text-gray-500">
+                      Max: {maxResumeSize}MB
+                    </span>
                   </div>
                 )}
               </div>
@@ -519,6 +574,10 @@ export default function ProfileClient({ session }) {
                   <p className="text-gray-500 mt-2">No resume uploaded yet.</p>
                   <p className="text-gray-400 text-sm">
                     Upload your resume to get started.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Maximum file size: {maxResumeSize}MB. Accepted formats:{" "}
+                    {allowedFileTypes.join(", ").toUpperCase()}
                   </p>
                 </div>
               ) : (
@@ -666,6 +725,10 @@ export default function ProfileClient({ session }) {
                             </>
                           )}
                         </label>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          Max: {maxResumeSize}MB, Types:{" "}
+                          {allowedFileTypes.join(", ").toUpperCase()}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import {
   uploadToSupabase,
   deleteFromSupabase,
 } from "../../lib/supabase-storage";
+import { getSystemSetting } from "../../lib/settings";
 
 //const prisma = new prismaClient();
 
@@ -58,26 +59,36 @@ export async function POST(request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    // GET THE MAX SIZE AND ALLOWED TYPES FROM SETTINGS
+    const [maxSizeMB, allowedTypes] = await Promise.all([
+      getSystemSetting("max_resume_size_mb", 5),
+      getSystemSetting("allowed_resume_types", ["pdf", "doc", "docx"]),
+    ]);
+
+    // Validate file type using settings
+    const fileExtension = file.name.split(".").pop().toLowerCase();
+    if (!allowedTypes.includes(fileExtension)) {
       return NextResponse.json(
         {
-          error: "Invalid file type. Only PDF and Word documents are allowed.",
+          error: `File type not allowed. Please upload: ${allowedTypes
+            .join(", ")
+            .toUpperCase()}`,
         },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size using settings
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
       return NextResponse.json(
-        { error: "File size too large. Maximum 5MB allowed." },
-        { status: 400 }
+        {
+          error: `File size exceeds the maximum allowed size of ${maxSizeMB}MB. Your file is ${(
+            file.size /
+            (1024 * 1024)
+          ).toFixed(2)}MB.`,
+        },
+        { status: 413 }
       );
     }
 

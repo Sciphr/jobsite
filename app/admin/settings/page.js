@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { updateSettingGlobally } from "@/app/hooks/useSettings";
 import { useSession } from "next-auth/react";
+import { gsap } from "gsap";
 import {
   Settings,
   Save,
@@ -33,10 +35,108 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("system");
   const [unsavedChanges, setUnsavedChanges] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  // Refs for GSAP animations
+  const headerRef = useRef(null);
+  const tabsRef = useRef(null);
+  const contentRef = useRef(null);
 
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    setAnimationsEnabled(!prefersReducedMotion);
+
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    if (!loading && animationsEnabled) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        animatePageLoad();
+      }, 50);
+    }
+  }, [loading, animationsEnabled]);
+
+  const animatePageLoad = () => {
+    // Hide elements immediately
+    const elementsToAnimate = [
+      headerRef.current,
+      tabsRef.current,
+      contentRef.current,
+    ].filter(Boolean);
+
+    gsap.set(elementsToAnimate, {
+      opacity: 0,
+      y: 30,
+    });
+
+    // Start the animation timeline
+    const tl = gsap.timeline();
+
+    // Header animation
+    if (headerRef.current) {
+      tl.to(headerRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power2.out",
+      });
+    }
+
+    // Tabs animation
+    if (tabsRef.current) {
+      tl.to(
+        tabsRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.3"
+      );
+    }
+
+    // Content animation
+    if (contentRef.current) {
+      tl.to(
+        contentRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.3"
+      );
+
+      // Animate individual setting cards
+      const settingCards = contentRef.current.querySelectorAll(".setting-card");
+      if (settingCards.length > 0) {
+        tl.fromTo(
+          settingCards,
+          {
+            opacity: 0,
+            y: 20,
+            scale: 0.95,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.5,
+            stagger: 0.05,
+            ease: "power2.out",
+          },
+          "-=0.4"
+        );
+      }
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -94,6 +194,8 @@ export default function AdminSettings() {
           return newChanges;
         });
 
+        updateSettingGlobally(key, updatedSetting.parsedValue);
+
         // Show success status
         setSaveStatus((prev) => ({ ...prev, [key]: "success" }));
         setTimeout(() => {
@@ -141,7 +243,7 @@ export default function AdminSettings() {
 
   const userPrivilegeLevel = session?.user?.privilegeLevel || 0;
 
-  // Define tabs based on user privilege level
+  // Define tabs based on user privilege level with colors
   const tabs = [
     {
       id: "system",
@@ -149,6 +251,10 @@ export default function AdminSettings() {
       icon: Database,
       minPrivilege: 3,
       description: "Core system configuration",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
+      borderColor: "border-red-200",
+      hoverColor: "hover:bg-red-50",
     },
     {
       id: "jobs",
@@ -156,6 +262,10 @@ export default function AdminSettings() {
       icon: Briefcase,
       minPrivilege: 2,
       description: "Job posting and application settings",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+      borderColor: "border-blue-200",
+      hoverColor: "hover:bg-blue-50",
     },
     {
       id: "notifications",
@@ -163,6 +273,10 @@ export default function AdminSettings() {
       icon: Bell,
       minPrivilege: 1,
       description: "Email and notification preferences",
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-100",
+      borderColor: "border-yellow-200",
+      hoverColor: "hover:bg-yellow-50",
     },
     {
       id: "personal",
@@ -170,6 +284,10 @@ export default function AdminSettings() {
       icon: User,
       minPrivilege: 0,
       description: "Your personal preferences",
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+      borderColor: "border-purple-200",
+      hoverColor: "hover:bg-purple-50",
     },
   ].filter((tab) => userPrivilegeLevel >= tab.minPrivilege);
 
@@ -227,7 +345,7 @@ export default function AdminSettings() {
               onChange={(e) =>
                 handleSettingChange(key, parseInt(e.target.value), setting)
               }
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-600"
               disabled={!canEdit}
             />
           );
@@ -244,9 +362,10 @@ export default function AdminSettings() {
                   // Invalid JSON, don't update
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-gray-700 placeholder-gray-600"
               rows={4}
               disabled={!canEdit}
+              placeholder="Enter valid JSON..."
             />
           );
 
@@ -258,7 +377,7 @@ export default function AdminSettings() {
                 onChange={(e) =>
                   handleSettingChange(key, e.target.value, setting)
                 }
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                 disabled={!canEdit}
               >
                 <option value="USD">USD - US Dollar</option>
@@ -278,8 +397,9 @@ export default function AdminSettings() {
               onChange={(e) =>
                 handleSettingChange(key, e.target.value, setting)
               }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-600"
               disabled={!canEdit}
+              placeholder="Enter value..."
             />
           );
       }
@@ -294,7 +414,7 @@ export default function AdminSettings() {
           <button
             onClick={() => saveChanges(key, setting)}
             disabled={isSaving}
-            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm transition-colors duration-200"
           >
             {isSaving ? (
               <RefreshCw className="h-3 w-3 animate-spin" />
@@ -356,7 +476,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-2">
@@ -384,16 +504,16 @@ export default function AdminSettings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group inline-flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`group inline-flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
                   isActive
-                    ? "border-blue-500 text-blue-600"
+                    ? `border-blue-500 ${tab.color}`
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <Icon
-                  className={`h-4 w-4 ${
+                  className={`h-4 w-4 transition-colors duration-200 ${
                     isActive
-                      ? "text-blue-500"
+                      ? tab.color
                       : "text-gray-400 group-hover:text-gray-500"
                   }`}
                 />
@@ -406,14 +526,22 @@ export default function AdminSettings() {
 
       {/* Tab Content */}
       <div className="bg-white rounded-lg shadow border border-gray-200">
-        {/* Tab Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        {/* Tab Header with colored styling */}
+        <div
+          className={`px-6 py-4 border-b border-gray-200 ${activeTabData?.bgColor} ${activeTabData?.borderColor} border-l-4`}
+        >
           <div className="flex items-center space-x-3">
             {activeTabData && (
               <>
-                <activeTabData.icon className="h-5 w-5 text-gray-400" />
+                <div className={`p-2 rounded-lg ${activeTabData.bgColor}`}>
+                  <activeTabData.icon
+                    className={`h-5 w-5 ${activeTabData.color}`}
+                  />
+                </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2
+                    className={`text-lg font-semibold ${activeTabData.color}`}
+                  >
                     {activeTabData.label}
                   </h2>
                   <p className="text-sm text-gray-600">
@@ -434,10 +562,20 @@ export default function AdminSettings() {
                 return (
                   <div
                     key={setting.key}
-                    className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                    className={`flex items-start space-x-4 p-4 border rounded-lg transition-all duration-200 ${
+                      activeTabData?.borderColor || "border-gray-200"
+                    } ${activeTabData?.hoverColor || "hover:bg-gray-50"}`}
                   >
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <SettingIcon className="h-4 w-4 text-blue-600" />
+                    <div
+                      className={`p-2 rounded-lg ${
+                        activeTabData?.bgColor || "bg-blue-100"
+                      }`}
+                    >
+                      <SettingIcon
+                        className={`h-4 w-4 ${
+                          activeTabData?.color || "text-blue-600"
+                        }`}
+                      />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -485,15 +623,15 @@ export default function AdminSettings() {
 
       {/* Unsaved Changes Warning */}
       {Object.keys(unsavedChanges).length > 0 && (
-        <div className="fixed bottom-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+        <div className="fixed bottom-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg max-w-sm">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-yellow-800">
                 You have {Object.keys(unsavedChanges).length} unsaved change
                 {Object.keys(unsavedChanges).length !== 1 ? "s" : ""}
               </p>
-              <p className="text-xs text-yellow-600">
+              <p className="text-xs text-yellow-600 mt-1">
                 Click the Save button next to each setting to apply changes.
               </p>
             </div>

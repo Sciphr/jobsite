@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Copy, Check, Heart, Loader2 } from "lucide-react";
+import { Copy, Check, Heart, Loader2, UserPlus, Shield } from "lucide-react";
 import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
 
-export default function JobDetailsClient({ job }) {
+export default function JobDetailsClient({
+  job,
+  allowGuestApplications,
+  siteConfig,
+}) {
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,7 +170,7 @@ export default function JobDetailsClient({ job }) {
   };
 
   const handleApplyClick = () => {
-    // For logged-in users, check if they've already applied
+    // Check if user is logged in and has already applied
     if (session?.user?.id && hasApplied) {
       alert(
         `You have already applied to this position. Status: ${applicationStatus}`
@@ -174,7 +178,15 @@ export default function JobDetailsClient({ job }) {
       return;
     }
 
-    // Allow both logged-in and guest users to proceed
+    // Check guest application policy
+    if (!session?.user?.id && !allowGuestApplications) {
+      // Redirect to sign up/sign in page
+      window.location.href =
+        "/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
+    // Allow application (both logged-in users and guests if allowed)
     setShowApplicationForm(true);
   };
 
@@ -183,6 +195,112 @@ export default function JobDetailsClient({ job }) {
     setHasApplied(true);
     setApplicationStatus("Applied");
     alert("Application submitted successfully!");
+  };
+
+  const renderApplyButton = () => {
+    const isUserLoggedIn = !!session?.user?.id;
+    const isLoading = loadingResumes || loadingProfile || checkingApplication;
+
+    // If user is logged in and has already applied
+    if (isUserLoggedIn && hasApplied) {
+      return (
+        <button
+          className="w-full py-3 px-4 rounded-md bg-green-100 text-green-800 border border-green-200 font-medium mb-4 cursor-default"
+          disabled
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Check className="h-4 w-4" />
+            Applied • {applicationStatus}
+          </div>
+        </button>
+      );
+    }
+
+    // If loading user data
+    if (isLoading) {
+      return (
+        <button
+          className="w-full py-3 px-4 rounded-md bg-gray-100 text-gray-600 font-medium mb-4 cursor-not-allowed"
+          disabled
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading...
+          </div>
+        </button>
+      );
+    }
+
+    // If user is not logged in and guest applications are not allowed
+    if (!isUserLoggedIn && !allowGuestApplications) {
+      return (
+        <div className="space-y-3 mb-4">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start space-x-3">
+              <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-amber-800">
+                  Account Required
+                </h4>
+                <p className="text-sm text-amber-700 mt-1">
+                  You need to create an account to apply for this position.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/auth/signin"
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-sm"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="flex items-center justify-center gap-2 py-3 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm"
+            >
+              <UserPlus className="h-4 w-4" />
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    // Standard apply button (logged in user or guest applications allowed)
+    return (
+      <button
+        className="w-full py-3 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium mb-4"
+        onClick={handleApplyClick}
+      >
+        {isUserLoggedIn ? "Apply Now" : "Apply as Guest"}
+      </button>
+    );
+  };
+
+  const renderGuestApplicationNotice = () => {
+    if (session?.user?.id || !allowGuestApplications) return null;
+
+    return (
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <UserPlus className="h-4 w-4 text-blue-600 mt-0.5" />
+          <div className="text-sm">
+            <p className="text-blue-800 font-medium">Applying as Guest</p>
+            <p className="text-blue-700 mt-1">
+              You can apply without an account, but{" "}
+              <Link
+                href="/auth/signup"
+                className="underline hover:no-underline"
+              >
+                creating an account
+              </Link>{" "}
+              lets you track your applications and save jobs.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -442,7 +560,10 @@ export default function JobDetailsClient({ job }) {
                   </div>
                 )}
 
-                {/* Apply Button */}
+                {/* Guest Application Notice */}
+                {renderGuestApplicationNotice()}
+
+                {/* Apply Button or Application Form */}
                 {showApplicationForm ? (
                   <JobApplicationForm
                     job={job}
@@ -450,33 +571,10 @@ export default function JobDetailsClient({ job }) {
                     userResumes={userResumes}
                     onSuccess={handleApplicationSuccess}
                     onCancel={() => setShowApplicationForm(false)}
+                    allowGuestApplications={allowGuestApplications}
                   />
                 ) : (
-                  <button
-                    className={`w-full py-3 px-4 rounded-md transition-colors font-medium mb-4 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      hasApplied
-                        ? "bg-green-100 text-green-800 border border-green-200"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                    onClick={handleApplyClick}
-                    disabled={
-                      loadingResumes || loadingProfile || checkingApplication
-                    }
-                  >
-                    {loadingResumes || loadingProfile || checkingApplication ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading...
-                      </div>
-                    ) : hasApplied ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <Check className="h-4 w-4" />
-                        Applied • {applicationStatus}
-                      </div>
-                    ) : (
-                      "Apply Now"
-                    )}
-                  </button>
+                  renderApplyButton()
                 )}
 
                 {/* Save Job Button - Mobile/Sidebar */}

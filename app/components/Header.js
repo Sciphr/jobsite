@@ -12,10 +12,29 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { useSetting } from "../hooks/useSettings";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const { data: session, status } = useSession();
+
+  const { value: siteName } = useSetting("site_name", "JobSite");
+
+  // const fetchSiteName = async () => {
+  //   try {
+  //     const response = await fetch("/api/settings/public?key=site_name");
+  //     if (response.ok) {
+  //       const setting = await response.json();
+  //       if (setting.parsedValue) {
+  //         setSiteName(setting.parsedValue);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching site name:", error);
+  //     // Keep default "JobSite" on error
+  //   }
+  // };
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
@@ -42,13 +61,14 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
+
           <div className="flex items-center space-x-2">
             <div className="bg-blue-600 p-2 rounded-lg">
               <Briefcase className="h-6 w-6 text-white" />
             </div>
             <Link href="/" className="flex items-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                JobSite
+                {siteName}
               </h1>
             </Link>
           </div>

@@ -59,6 +59,8 @@ export default function AdminAnalytics() {
   const conversionFunnelRef = useRef(null);
   const insightsGridRef = useRef(null);
 
+  const [hasAnimated, setHasAnimated] = useState(false); // Add this state
+
   useEffect(() => {
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia(
@@ -67,18 +69,19 @@ export default function AdminAnalytics() {
     setAnimationsEnabled(!prefersReducedMotion);
 
     fetchAnalytics();
-  }, []);
-
-  useEffect(() => {
-    fetchAnalytics();
   }, [timeRange]);
 
   useEffect(() => {
-    if (!loading && animationsEnabled && analytics) {
-      // Small delay to ensure DOM is ready
-      animatePageLoad();
+    // Only animate once when we first get data
+    if (!loading && animationsEnabled && analytics && !hasAnimated) {
+      setTimeout(() => {
+        animatePageLoad();
+        setHasAnimated(true); // Prevent future animations
+      }, 50);
     }
-  }, [loading, animationsEnabled, analytics]);
+  }, [loading, animationsEnabled, analytics, hasAnimated]);
+
+  // Move the animation trigger to the fetchAnalytics function instead
 
   const fetchAnalytics = async () => {
     setRefreshing(true);
@@ -89,16 +92,15 @@ export default function AdminAnalytics() {
         setAnalytics(data);
       } else {
         console.error("Failed to fetch analytics");
-        // Fallback to mock data if API fails
         setAnalytics(getMockData());
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
-      // Fallback to mock data if API fails
       setAnalytics(getMockData());
     } finally {
       setLoading(false);
       setRefreshing(false);
+      // Remove animation trigger from here
     }
   };
 
@@ -183,7 +185,7 @@ export default function AdminAnalytics() {
   });
 
   const animatePageLoad = () => {
-    // FIRST: Hide the metric cards immediately
+    // FIRST: Hide the metric cards immediately (like other pages)
     if (metricsGridRef.current) {
       const metricCards =
         metricsGridRef.current.querySelectorAll(".metric-card");
@@ -196,7 +198,7 @@ export default function AdminAnalytics() {
       }
     }
 
-    // THEN: Hide other elements
+    // THEN: Hide other elements immediately
     const elementsToAnimate = [
       headerRef.current,
       chartsGridRef.current,
@@ -263,29 +265,6 @@ export default function AdminAnalytics() {
         "-=0.4"
       );
     });
-
-    // Animate individual chart cards
-    setTimeout(() => {
-      const chartCards = document.querySelectorAll(".chart-card");
-      if (chartCards.length > 0) {
-        gsap.fromTo(
-          chartCards,
-          {
-            opacity: 0,
-            scale: 0.95,
-            y: 20,
-          },
-          {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: "power2.out",
-          }
-        );
-      }
-    }, 1000);
 
     // Animate counters after a delay
     setTimeout(() => {

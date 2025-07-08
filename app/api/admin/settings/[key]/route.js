@@ -1,128 +1,158 @@
+// app/api/admin/settings/[key]/route.js
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
 
-export async function PATCH(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
-
-  const { key } = params;
-
+export async function PATCH(request, { params }) {
   try {
-    const body = await req.json();
-    const { value, isPersonal } = body;
+    const session = await getServerSession(authOptions);
 
-    // Determine userId (null for system settings, user ID for personal)
-    const userId = isPersonal ? session.user.id : null;
+    if (
+      !session ||
+      !session.user.privilegeLevel ||
+      session.user.privilegeLevel < 1
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      });
+    }
+
+    const { key } = await params;
+    const { value, isPersonal } = await request.json();
 
     // Find the existing setting
-    const existingSetting = await appPrisma.setting.findUnique({
+    const existingSetting = await appPrisma.setting.findFirst({
       where: {
-        key_userId: {
-          key,
-          userId,
-        },
+        key,
+        userId: isPersonal ? session.user.id : null,
       },
     });
 
     if (!existingSetting) {
-      return new Response(JSON.stringify({ message: "Setting not found" }), {
+      return new Response(JSON.stringify({ error: "Setting not found" }), {
         status: 404,
       });
     }
 
-    // Check if user has privilege to update this setting
+    // Check if user has permission to modify this setting
     if (session.user.privilegeLevel < existingSetting.privilegeLevel) {
       return new Response(
-        JSON.stringify({
-          message: "Insufficient privileges to update this setting",
-        }),
-        {
-          status: 403,
-        }
+        JSON.stringify({ error: "Insufficient privileges" }),
+        { status: 403 }
       );
     }
 
-    // Convert value to string for storage
-    let stringValue;
-    switch (existingSetting.dataType) {
-      case "boolean":
-        stringValue = value ? "true" : "false";
-        break;
-      case "number":
-        stringValue = value.toString();
-        break;
-      case "json":
-        stringValue = JSON.stringify(value);
-        break;
-      default:
-        stringValue = value.toString();
-    }
+    const stringValue = stringifySettingValue(value, existingSetting.dataType);
 
-    // Update the setting
     const updatedSetting = await appPrisma.setting.update({
-      where: {
-        key_userId: {
-          key,
-          userId,
-        },
-      },
+      where: { id: existingSetting.id },
       data: {
         value: stringValue,
         updatedAt: new Date(),
       },
     });
 
-    // Parse value for response
-    let parsedValue = updatedSetting.value;
-    try {
-      switch (updatedSetting.dataType) {
-        case "boolean":
-          parsedValue = updatedSetting.value === "true";
-          break;
-        case "number":
-          parsedValue = parseFloat(updatedSetting.value);
-          break;
-        case "json":
-          parsedValue = JSON.parse(updatedSetting.value);
-          break;
-        default:
-          parsedValue = updatedSetting.value;
-      }
-    } catch (error) {
-      console.warn(
-        `Error parsing updated setting ${updatedSetting.key}:`,
-        error
-      );
-    }
-
     return new Response(
       JSON.stringify({
         ...updatedSetting,
-        parsedValue,
+        parsedValue: parseSettingValue(
+          updatedSetting.value,
+          updatedSetting.dataType
+        ),
+        canEdit: true,
+        isPersonal: updatedSetting.userId !== null,
       }),
       { status: 200 }
     );
   } catch (error) {
-    console.error("Setting update error:", error);
+    console.error("Error updating setting:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+    });
+  }
+}
 
-    if (error.code === "P2025") {
-      return new Response(JSON.stringify({ message: "Setting not found" }), {
+export async function GET(request, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (
+      !session ||
+      !session.user.privilegeLevel ||
+      session.user.privilegeLevel < 1
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      });
+    }
+
+    const { key } = params;
+    const { searchParams } = new URL(request.url);
+    const isPersonal = searchParams.get("personal") === "true";
+
+    const setting = await appPrisma.setting.findFirst({
+      where: {
+        key,
+        userId: isPersonal ? session.user.id : null,
+      },
+    });
+
+    if (!setting) {
+      return new Response(JSON.stringify({ error: "Setting not found" }), {
         status: 404,
       });
     }
 
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
+    return new Response(
+      JSON.stringify({
+        ...setting,
+        parsedValue: parseSettingValue(setting.value, setting.dataType),
+        canEdit: session.user.privilegeLevel >= setting.privilegeLevel,
+        isPersonal: setting.userId !== null,
+      }),
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error fetching setting:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
     });
+  }
+}
+
+// Helper functions (same as in main settings route)
+function parseSettingValue(value, dataType) {
+  try {
+    switch (dataType) {
+      case "boolean":
+        return value === "true" || value === true;
+      case "number":
+        return parseFloat(value);
+      case "json":
+        return JSON.parse(value);
+      default:
+        return value;
+    }
+  } catch (error) {
+    console.error("Error parsing setting value:", error);
+    return value;
+  }
+}
+
+function stringifySettingValue(value, dataType) {
+  try {
+    switch (dataType) {
+      case "boolean":
+        return String(Boolean(value));
+      case "number":
+        return String(Number(value));
+      case "json":
+        return JSON.stringify(value);
+      default:
+        return String(value);
+    }
+  } catch (error) {
+    console.error("Error stringifying setting value:", error);
+    return String(value);
   }
 }
