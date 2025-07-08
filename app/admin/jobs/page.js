@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { gsap } from "gsap";
 import {
   Briefcase,
   Search,
@@ -37,10 +38,23 @@ export default function AdminJobs() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
-
   const [refreshing, setRefreshing] = useState(false);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  // Refs for GSAP animations
+  const headerRef = useRef(null);
+  const statsGridRef = useRef(null);
+  const filtersRef = useRef(null);
+  const bulkActionsRef = useRef(null);
+  const jobsGridRef = useRef(null);
 
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    setAnimationsEnabled(!prefersReducedMotion);
+
     fetchJobs();
     fetchCategories();
   }, []);
@@ -48,6 +62,13 @@ export default function AdminJobs() {
   useEffect(() => {
     filterJobs();
   }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
+
+  useEffect(() => {
+    if (!loading && animationsEnabled) {
+      // Small delay to ensure DOM is ready
+      animatePageLoad();
+    }
+  }, [loading, animationsEnabled]);
 
   const fetchJobs = async () => {
     try {
@@ -66,13 +87,13 @@ export default function AdminJobs() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const response = await fetch("/api/admin/applications");
+      const response = await fetch("/api/admin/jobs");
       if (response.ok) {
         const data = await response.json();
-        setApplications(data);
+        setJobs(data);
       }
     } catch (error) {
-      console.error("Error refreshing applications:", error);
+      console.error("Error refreshing jobs:", error);
     } finally {
       setRefreshing(false);
     }
@@ -87,6 +108,218 @@ export default function AdminJobs() {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const animatePageLoad = () => {
+    // FIRST: Hide the stat cards immediately
+    if (statsGridRef.current) {
+      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
+      if (statCards.length > 0) {
+        gsap.set(statCards, {
+          opacity: 0,
+          y: 30,
+          scale: 0.9,
+        });
+      }
+    }
+
+    // THEN: Hide other elements
+    const elementsToAnimate = [
+      headerRef.current,
+      filtersRef.current,
+      bulkActionsRef.current,
+      jobsGridRef.current,
+    ].filter(Boolean);
+
+    gsap.set(elementsToAnimate, {
+      opacity: 0,
+      y: 30,
+    });
+
+    // FINALLY: Start the animation timeline
+    const tl = gsap.timeline();
+
+    // Header animation
+    if (headerRef.current) {
+      tl.to(headerRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power2.out",
+      });
+    }
+
+    // Animate the individual stat cards
+    if (statsGridRef.current) {
+      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
+      if (statCards.length > 0) {
+        tl.to(
+          statCards,
+          {
+            scale: 1,
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            ease: "back.out(1.7)",
+          },
+          "-=0.3"
+        );
+      }
+    }
+
+    // Filters
+    if (filtersRef.current) {
+      tl.to(
+        filtersRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.2"
+      );
+    }
+
+    // Bulk actions (if visible)
+    if (bulkActionsRef.current) {
+      tl.to(
+        bulkActionsRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.3"
+      );
+    }
+
+    // Jobs grid
+    if (jobsGridRef.current) {
+      tl.to(
+        jobsGridRef.current,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.2"
+      );
+
+      // Animate individual job cards
+      const jobCards = jobsGridRef.current.querySelectorAll(".job-card");
+      if (jobCards.length > 0) {
+        tl.fromTo(
+          jobCards,
+          {
+            opacity: 0,
+            y: 20,
+            scale: 0.95,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.5,
+            stagger: 0.05,
+            ease: "power2.out",
+          },
+          "-=0.4"
+        );
+      }
+    }
+
+    // Animate counters after a delay
+    setTimeout(() => {
+      animateCounters();
+    }, 800);
+  };
+
+  const animateCounters = () => {
+    if (!statsGridRef.current) return;
+
+    const statusOptions = ["Active", "Draft", "Paused", "Closed"];
+    statusOptions.forEach((status, index) => {
+      const count = jobs.filter((job) => job.status === status).length;
+      const element = statsGridRef.current.querySelector(
+        `[data-counter="${index}"]`
+      );
+      if (element && typeof count === "number") {
+        const obj = { value: 0 };
+        gsap.to(obj, {
+          value: count,
+          duration: 1.5,
+          ease: "power2.out",
+          onUpdate: function () {
+            element.textContent = Math.round(obj.value).toLocaleString();
+          },
+        });
+      }
+    });
+  };
+
+  const handleCardHover = (e, isEntering) => {
+    if (!animationsEnabled) return;
+
+    const card = e.currentTarget;
+    const icon = card.querySelector(".stat-icon");
+
+    if (isEntering) {
+      gsap.to(card, {
+        y: -5,
+        scale: 1.02,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1.1,
+          rotation: 5,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    } else {
+      gsap.to(card, {
+        y: 0,
+        scale: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1,
+          rotation: 0,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    }
+  };
+
+  const handleJobCardHover = (e, isEntering) => {
+    if (!animationsEnabled) return;
+
+    const card = e.currentTarget;
+
+    if (isEntering) {
+      gsap.to(card, {
+        y: -3,
+        scale: 1.01,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+    } else {
+      gsap.to(card, {
+        y: 0,
+        scale: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      });
     }
   };
 
@@ -276,9 +509,9 @@ export default function AdminJobs() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Jobs Management</h1>
           <p className="text-gray-600 mt-2">Create and manage job postings</p>
@@ -305,7 +538,7 @@ export default function AdminJobs() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div ref={statsGridRef} className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {statusOptions.map((status, index) => {
           const count = jobs.filter((job) => job.status === status).length;
           const StatusIcon = getStatusIcon(status);
@@ -314,39 +547,50 @@ export default function AdminJobs() {
               color: "text-green-600",
               bgColor: "bg-green-100",
               borderColor: "border-green-200",
+              hoverBorderColor: "hover:border-green-400",
             },
             Draft: {
               color: "text-yellow-600",
               bgColor: "bg-yellow-100",
               borderColor: "border-yellow-200",
+              hoverBorderColor: "hover:border-yellow-400",
             },
             Paused: {
               color: "text-orange-600",
               bgColor: "bg-orange-100",
               borderColor: "border-orange-200",
+              hoverBorderColor: "hover:border-orange-400",
             },
             Closed: {
               color: "text-red-600",
               bgColor: "bg-red-100",
               borderColor: "border-red-200",
+              hoverBorderColor: "hover:border-red-400",
             },
           }[status];
 
           return (
             <div
               key={status}
-              className={`bg-white p-6 rounded-lg shadow border-2 ${statusConfig.borderColor} hover:shadow-md transition-shadow duration-200`}
+              className={`stat-card bg-white p-6 rounded-lg shadow border-2 ${statusConfig.borderColor} ${statusConfig.hoverBorderColor} hover:shadow-md transition-all duration-200 cursor-pointer`}
+              onMouseEnter={(e) => handleCardHover(e, true)}
+              onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">
+                <div className="flex-1">
+                  <div
+                    className="text-2xl font-bold text-gray-900"
+                    data-counter={index}
+                  >
                     {count}
                   </div>
                   <div className="text-sm text-gray-600 font-medium">
                     {status} Jobs
                   </div>
                 </div>
-                <div className={`p-3 rounded-lg ${statusConfig.bgColor}`}>
+                <div
+                  className={`stat-icon p-3 rounded-lg ${statusConfig.bgColor}`}
+                >
                   <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
                 </div>
               </div>
@@ -356,7 +600,10 @@ export default function AdminJobs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+      <div
+        ref={filtersRef}
+        className="bg-white p-6 rounded-lg shadow border border-gray-200"
+      >
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
@@ -416,7 +663,10 @@ export default function AdminJobs() {
 
       {/* Bulk Actions */}
       {selectedJobs.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div
+          ref={bulkActionsRef}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+        >
           <div className="flex items-center justify-between">
             <span className="text-blue-800 font-medium">
               {selectedJobs.length} job{selectedJobs.length !== 1 ? "s" : ""}{" "}
@@ -438,13 +688,18 @@ export default function AdminJobs() {
       )}
 
       {/* Jobs Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div
+        ref={jobsGridRef}
+        className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+      >
         {filteredJobs.map((job) => {
           const StatusIcon = getStatusIcon(job.status);
           return (
             <div
               key={job.id}
-              className="bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow duration-200"
+              className="job-card bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow duration-200"
+              onMouseEnter={(e) => handleJobCardHover(e, true)}
+              onMouseLeave={(e) => handleJobCardHover(e, false)}
             >
               {/* Card Header */}
               <div className="p-6 border-b border-gray-200">

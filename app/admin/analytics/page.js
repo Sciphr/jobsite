@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { gsap } from "gsap";
 import {
   BarChart3,
   TrendingUp,
@@ -47,27 +48,61 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
+  const [refreshing, setRefreshing] = useState(false);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  // Refs for GSAP animations
+  const headerRef = useRef(null);
+  const metricsGridRef = useRef(null);
+  const chartsGridRef = useRef(null);
+  const additionalChartsRef = useRef(null);
+  const conversionFunnelRef = useRef(null);
+  const insightsGridRef = useRef(null);
+
+  useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    setAnimationsEnabled(!prefersReducedMotion);
+
+    fetchAnalytics();
+  }, []);
 
   useEffect(() => {
     fetchAnalytics();
   }, [timeRange]);
 
+  useEffect(() => {
+    if (!loading && animationsEnabled && analytics) {
+      // Small delay to ensure DOM is ready
+      animatePageLoad();
+    }
+  }, [loading, animationsEnabled, analytics]);
+
   const fetchAnalytics = async () => {
+    setRefreshing(true);
     try {
       const response = await fetch(`/api/admin/analytics?range=${timeRange}`);
       if (response.ok) {
         const data = await response.json();
         setAnalytics(data);
+      } else {
+        console.error("Failed to fetch analytics");
+        // Fallback to mock data if API fails
+        setAnalytics(getMockData());
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
+      // Fallback to mock data if API fails
+      setAnalytics(getMockData());
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Mock data for demonstration (replace with real data from API)
-  const mockAnalytics = {
+  const getMockData = () => ({
     overview: {
       totalJobs: 45,
       totalApplications: 1247,
@@ -140,9 +175,194 @@ export default function AdminAnalytics() {
       { stage: "Interview", count: 186, percentage: 14.9 },
       { stage: "Hired", count: 89, percentage: 47.8 },
     ],
+    additionalMetrics: {
+      avgTimeToHire: 18,
+      successRate: 7.1,
+      avgApplicationsPerJob: 27.7,
+    },
+  });
+
+  const animatePageLoad = () => {
+    // FIRST: Hide the metric cards immediately
+    if (metricsGridRef.current) {
+      const metricCards =
+        metricsGridRef.current.querySelectorAll(".metric-card");
+      if (metricCards.length > 0) {
+        gsap.set(metricCards, {
+          opacity: 0,
+          y: 30,
+          scale: 0.9,
+        });
+      }
+    }
+
+    // THEN: Hide other elements
+    const elementsToAnimate = [
+      headerRef.current,
+      chartsGridRef.current,
+      additionalChartsRef.current,
+      conversionFunnelRef.current,
+      insightsGridRef.current,
+    ].filter(Boolean);
+
+    gsap.set(elementsToAnimate, {
+      opacity: 0,
+      y: 30,
+    });
+
+    // FINALLY: Start the animation timeline
+    const tl = gsap.timeline();
+
+    // Header animation
+    if (headerRef.current) {
+      tl.to(headerRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power2.out",
+      });
+    }
+
+    // Animate the individual metric cards
+    if (metricsGridRef.current) {
+      const metricCards =
+        metricsGridRef.current.querySelectorAll(".metric-card");
+      if (metricCards.length > 0) {
+        tl.to(
+          metricCards,
+          {
+            scale: 1,
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            ease: "back.out(1.7)",
+          },
+          "-=0.3"
+        );
+      }
+    }
+
+    // Charts sections
+    const chartSections = [
+      chartsGridRef.current,
+      additionalChartsRef.current,
+      conversionFunnelRef.current,
+      insightsGridRef.current,
+    ].filter(Boolean);
+
+    chartSections.forEach((section, index) => {
+      tl.to(
+        section,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power2.out",
+        },
+        "-=0.4"
+      );
+    });
+
+    // Animate individual chart cards
+    setTimeout(() => {
+      const chartCards = document.querySelectorAll(".chart-card");
+      if (chartCards.length > 0) {
+        gsap.fromTo(
+          chartCards,
+          {
+            opacity: 0,
+            scale: 0.95,
+            y: 20,
+          },
+          {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: "power2.out",
+          }
+        );
+      }
+    }, 1000);
+
+    // Animate counters after a delay
+    setTimeout(() => {
+      animateCounters();
+    }, 800);
   };
 
-  const data = analytics || mockAnalytics;
+  const animateCounters = () => {
+    if (!metricsGridRef.current || !analytics) return;
+
+    const metrics = [
+      analytics.overview.totalJobs,
+      analytics.overview.totalApplications,
+      analytics.overview.totalUsers,
+      analytics.overview.totalViews,
+    ];
+
+    metrics.forEach((value, index) => {
+      const element = metricsGridRef.current.querySelector(
+        `[data-counter="${index}"]`
+      );
+      if (element && typeof value === "number") {
+        const obj = { value: 0 };
+        gsap.to(obj, {
+          value: value,
+          duration: 1.5,
+          ease: "power2.out",
+          onUpdate: function () {
+            element.textContent = Math.round(obj.value).toLocaleString();
+          },
+        });
+      }
+    });
+  };
+
+  const handleCardHover = (e, isEntering) => {
+    if (!animationsEnabled) return;
+
+    const card = e.currentTarget;
+    const icon = card.querySelector(".metric-icon");
+
+    if (isEntering) {
+      gsap.to(card, {
+        y: -5,
+        scale: 1.02,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1.1,
+          rotation: 5,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    } else {
+      gsap.to(card, {
+        y: 0,
+        scale: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      if (icon) {
+        gsap.to(icon, {
+          scale: 1,
+          rotation: 0,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchAnalytics();
+  };
 
   const timeRangeOptions = [
     { value: "7d", label: "Last 7 days" },
@@ -182,10 +402,32 @@ export default function AdminAnalytics() {
     );
   }
 
+  if (!analytics) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Failed to load analytics
+          </h3>
+          <p className="text-gray-500 mb-6">
+            There was an error loading the analytics data.
+          </p>
+          <button
+            onClick={handleRefresh}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div ref={headerRef} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Analytics Dashboard
@@ -207,11 +449,14 @@ export default function AdminAnalytics() {
             ))}
           </select>
           <button
-            onClick={fetchAnalytics}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
           <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
             <Download className="h-4 w-4" />
@@ -221,110 +466,129 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+      <div
+        ref={metricsGridRef}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <div
+          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          onMouseEnter={(e) => handleCardHover(e, true)}
+          onMouseLeave={(e) => handleCardHover(e, false)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Jobs</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {data.overview.totalJobs}
+              <p className="text-3xl font-bold text-gray-900" data-counter="0">
+                {analytics.overview.totalJobs}
               </p>
               <div className="flex items-center mt-2">
-                {getChangeIcon(data.overview.jobsChange)}
+                {getChangeIcon(analytics.overview.jobsChange)}
                 <span
                   className={`text-sm ml-1 ${getChangeColor(
-                    data.overview.jobsChange
+                    analytics.overview.jobsChange
                   )}`}
                 >
-                  {Math.abs(data.overview.jobsChange)}%
+                  {Math.abs(analytics.overview.jobsChange)}%
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-blue-100">
+            <div className="metric-icon p-3 rounded-lg bg-blue-100">
               <Briefcase className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div
+          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          onMouseEnter={(e) => handleCardHover(e, true)}
+          onMouseLeave={(e) => handleCardHover(e, false)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Applications</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {data.overview.totalApplications}
+              <p className="text-3xl font-bold text-gray-900" data-counter="1">
+                {analytics.overview.totalApplications}
               </p>
               <div className="flex items-center mt-2">
-                {getChangeIcon(data.overview.applicationsChange)}
+                {getChangeIcon(analytics.overview.applicationsChange)}
                 <span
                   className={`text-sm ml-1 ${getChangeColor(
-                    data.overview.applicationsChange
+                    analytics.overview.applicationsChange
                   )}`}
                 >
-                  {Math.abs(data.overview.applicationsChange)}%
+                  {Math.abs(analytics.overview.applicationsChange)}%
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-green-100">
+            <div className="metric-icon p-3 rounded-lg bg-green-100">
               <FileText className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div
+          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          onMouseEnter={(e) => handleCardHover(e, true)}
+          onMouseLeave={(e) => handleCardHover(e, false)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {data.overview.totalUsers}
+              <p className="text-3xl font-bold text-gray-900" data-counter="2">
+                {analytics.overview.totalUsers}
               </p>
               <div className="flex items-center mt-2">
-                {getChangeIcon(data.overview.usersChange)}
+                {getChangeIcon(analytics.overview.usersChange)}
                 <span
                   className={`text-sm ml-1 ${getChangeColor(
-                    data.overview.usersChange
+                    analytics.overview.usersChange
                   )}`}
                 >
-                  {Math.abs(data.overview.usersChange)}%
+                  {Math.abs(analytics.overview.usersChange)}%
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-purple-100">
+            <div className="metric-icon p-3 rounded-lg bg-purple-100">
               <Users className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div
+          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          onMouseEnter={(e) => handleCardHover(e, true)}
+          onMouseLeave={(e) => handleCardHover(e, false)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Job Views</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {data.overview.totalViews.toLocaleString()}
+              <p className="text-3xl font-bold text-gray-900" data-counter="3">
+                {analytics.overview.totalViews.toLocaleString()}
               </p>
               <div className="flex items-center mt-2">
-                {getChangeIcon(data.overview.viewsChange)}
+                {getChangeIcon(analytics.overview.viewsChange)}
                 <span
                   className={`text-sm ml-1 ${getChangeColor(
-                    data.overview.viewsChange
+                    analytics.overview.viewsChange
                   )}`}
                 >
-                  {Math.abs(data.overview.viewsChange)}%
+                  {Math.abs(analytics.overview.viewsChange)}%
                 </span>
                 <span className="text-sm text-gray-500 ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-orange-100">
+            <div className="metric-icon p-3 rounded-lg bg-orange-100">
               <Eye className="h-6 w-6 text-orange-600" />
             </div>
           </div>
@@ -332,9 +596,12 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div
+        ref={chartsGridRef}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+      >
         {/* Trend Chart */}
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">
               Activity Trends
@@ -350,7 +617,7 @@ export default function AdminAnalytics() {
             </select>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data.applicationsByDay}>
+            <AreaChart data={analytics.applicationsByDay}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="date"
@@ -383,14 +650,14 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Jobs by Department */}
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Jobs by Department
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={data.jobsByDepartment}
+                data={analytics.jobsByDepartment}
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
@@ -399,7 +666,7 @@ export default function AdminAnalytics() {
                   `${name} ${(percent * 100).toFixed(0)}%`
                 }
               >
-                {data.jobsByDepartment.map((entry, index) => (
+                {analytics.jobsByDepartment.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -410,14 +677,17 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Application Status & Top Jobs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div
+        ref={additionalChartsRef}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+      >
         {/* Application Status */}
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Application Status Distribution
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.applicationStatus} layout="horizontal">
+            <BarChart data={analytics.applicationStatus} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis type="number" tick={{ fontSize: 12 }} />
               <YAxis
@@ -428,7 +698,7 @@ export default function AdminAnalytics() {
               />
               <Tooltip />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {data.applicationStatus.map((entry, index) => (
+                {analytics.applicationStatus.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Bar>
@@ -437,12 +707,12 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Top Performing Jobs */}
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Top Performing Jobs
           </h2>
           <div className="space-y-4">
-            {data.topJobs.map((job, index) => (
+            {analytics.topJobs.map((job, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -466,12 +736,15 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Conversion Funnel */}
-      <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+      <div
+        ref={conversionFunnelRef}
+        className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200"
+      >
         <h2 className="text-lg font-semibold text-gray-900 mb-6">
           Conversion Funnel
         </h2>
         <div className="space-y-4">
-          {data.conversionFunnel.map((stage, index) => (
+          {analytics.conversionFunnel.map((stage, index) => (
             <div key={index} className="relative">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
@@ -498,8 +771,11 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Additional Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+      <div
+        ref={insightsGridRef}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">
               <Target className="h-5 w-5 text-green-600" />
@@ -508,7 +784,9 @@ export default function AdminAnalytics() {
               Avg. Time to Hire
             </h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">18 days</div>
+          <div className="text-3xl font-bold text-gray-900 mb-2">
+            {analytics.additionalMetrics.avgTimeToHire} days
+          </div>
           <div className="flex items-center">
             <TrendingDown className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">2 days faster</span>
@@ -516,7 +794,7 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-blue-100">
               <Award className="h-5 w-5 text-blue-600" />
@@ -525,7 +803,9 @@ export default function AdminAnalytics() {
               Success Rate
             </h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">7.1%</div>
+          <div className="text-3xl font-bold text-gray-900 mb-2">
+            {analytics.additionalMetrics.successRate}%
+          </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">1.2% increase</span>
@@ -533,7 +813,7 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-purple-100">
               <Activity className="h-5 w-5 text-purple-600" />
@@ -542,7 +822,9 @@ export default function AdminAnalytics() {
               Avg. Applications/Job
             </h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">27.7</div>
+          <div className="text-3xl font-bold text-gray-900 mb-2">
+            {analytics.additionalMetrics.avgApplicationsPerJob}
+          </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">3.2 increase</span>

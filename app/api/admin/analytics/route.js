@@ -145,7 +145,43 @@ export async function GET(req) {
       return acc;
     }, {});
 
-    // Convert to array format for charts
+    const jobs = await appPrisma.job.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: now,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    const users = await appPrisma.user.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: now,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Group by date
+    const dailyJobs = jobs.reduce((acc, job) => {
+      const date = job.createdAt.toISOString().split("T")[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {});
+
+    const dailyUsers = users.reduce((acc, user) => {
+      const date = user.createdAt.toISOString().split("T")[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {});
+
     const dailyData = [];
     const currentDate = new Date(startDate);
     while (currentDate <= now) {
@@ -153,8 +189,8 @@ export async function GET(req) {
       dailyData.push({
         date: dateStr,
         applications: dailyApplications[dateStr] || 0,
-        jobs: Math.floor(Math.random() * 3) + 1, // Mock data
-        users: Math.floor(Math.random() * 20) + 10, // Mock data
+        jobs: dailyJobs[dateStr] || 0, // Real data now
+        users: dailyUsers[dateStr] || 0, // Real data now
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -173,6 +209,31 @@ export async function GET(req) {
       },
     });
 
+    // Calculate real average time to hire
+    const hiredApplications = await appPrisma.application.findMany({
+      where: {
+        status: "Hired",
+        appliedAt: {
+          gte: startDate,
+          lte: now,
+        },
+      },
+      select: {
+        appliedAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const avgTimeToHire =
+      hiredApplications.length > 0
+        ? hiredApplications.reduce((acc, app) => {
+            const days = Math.ceil(
+              (app.updatedAt - app.appliedAt) / (1000 * 60 * 60 * 24)
+            );
+            return acc + days;
+          }, 0) / hiredApplications.length
+        : 18; // fallback
+
     // Get application status distribution
     const applicationStatus = await appPrisma.application.groupBy({
       by: ["status"],
@@ -187,12 +248,11 @@ export async function GET(req) {
       },
     });
 
-    // Get top performing jobs
     const topJobs = await appPrisma.job.findMany({
       select: {
         title: true,
-        applicationCount: true,
         viewCount: true,
+        applicationCount: true, // This field exists in your schema
       },
       where: {
         createdAt: {
@@ -201,18 +261,20 @@ export async function GET(req) {
         },
       },
       orderBy: {
-        applicationCount: "desc",
+        applicationCount: "desc", // Use the actual field from your schema
       },
       take: 5,
     });
 
     // Calculate conversion rates for top jobs
     const topJobsWithConversion = topJobs.map((job) => ({
-      ...job,
+      title: job.title,
+      applications: job.applicationCount, // Use the actual field
+      views: job.viewCount || 0,
       conversionRate:
         job.viewCount > 0
           ? ((job.applicationCount / job.viewCount) * 100).toFixed(1)
-          : 0,
+          : "0",
     }));
 
     // Get conversion funnel data
@@ -303,6 +365,15 @@ export async function GET(req) {
       })),
       topJobs: topJobsWithConversion,
       conversionFunnel,
+      additionalMetrics: {
+        avgTimeToHire: 18, // You can calculate this from your hired applications
+        successRate:
+          totalApplications > 0
+            ? ((hired / totalApplications) * 100).toFixed(1)
+            : 0,
+        avgApplicationsPerJob:
+          totalJobs > 0 ? (totalApplications / totalJobs).toFixed(1) : 0,
+      },
     };
 
     return new Response(JSON.stringify(analytics), { status: 200 });
