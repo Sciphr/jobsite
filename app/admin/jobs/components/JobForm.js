@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSetting } from "../hooks/useSettings";
+import { useSetting } from "../../../hooks/useSettings";
 
 export default function JobForm({ initialData = null, onSubmit, onCancel }) {
   // Get settings that affect form validation and defaults
