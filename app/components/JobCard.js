@@ -1,6 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { useSetting } from "../hooks/useSettings";
 
 export default function JobCard({ job }) {
+  // Get settings for display preferences
+  const { value: showSalaryDefault, loading: salaryLoading } = useSetting(
+    "show_salary_default",
+    true
+  );
+
+  const formatSalary = (min, max, currency) => {
+    if (!min || !max) return null;
+    return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
       <div className="flex items-start justify-between mb-4">
@@ -44,10 +58,35 @@ export default function JobCard({ job }) {
         </div>
       </div>
 
-      {job.salaryMin && job.salaryMax && (
-        <div className="text-sm text-gray-600 mb-4">
-          <span className="font-medium">Salary:</span> {job.salaryCurrency}{" "}
-          {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+      {/* Conditional salary display based on settings */}
+      {!salaryLoading &&
+        showSalaryDefault &&
+        job.salaryMin &&
+        job.salaryMax && (
+          <div className="text-sm text-gray-600 mb-4">
+            <span className="font-medium">Salary:</span>{" "}
+            {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
+          </div>
+        )}
+
+      {/* Application deadline warning */}
+      {job.applicationDeadline && (
+        <div className="text-sm text-orange-600 mb-4 flex items-center gap-1">
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span className="font-medium">Deadline:</span>{" "}
+          {new Date(job.applicationDeadline).toLocaleDateString()}
         </div>
       )}
 

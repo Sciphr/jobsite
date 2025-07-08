@@ -1,106 +1,8 @@
+// app/api/admin/jobs/route.js - Updated POST method
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { getSystemSetting } from "../../../lib/settings";
-
-export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher for jobs management)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
-
-  try {
-    const jobs = await appPrisma.job.findMany({
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    // Separately fetch creator info for jobs that have valid createdBy
-    const jobsWithCreators = await Promise.all(
-      jobs.map(async (job) => {
-        let creator = null;
-        if (job.createdBy) {
-          try {
-            creator = await appPrisma.user.findUnique({
-              where: { id: job.createdBy },
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            });
-          } catch (error) {
-            console.warn(`Creator not found for job ${job.id}`);
-          }
-        }
-        return { ...job, creator };
-      })
-    );
-
-    // Format the data for frontend
-    const formattedJobs = jobsWithCreators.map((job) => ({
-      id: job.id,
-      title: job.title,
-      slug: job.slug,
-      description: job.description,
-      summary: job.summary,
-      department: job.department,
-      employmentType: job.employmentType,
-      experienceLevel: job.experienceLevel,
-      location: job.location,
-      remotePolicy: job.remotePolicy,
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
-      salaryCurrency: job.salaryCurrency,
-      salaryType: job.salaryType,
-      benefits: job.benefits,
-      requirements: job.requirements,
-      preferredQualifications: job.preferredQualifications,
-      educationRequired: job.educationRequired,
-      yearsExperienceRequired: job.yearsExperienceRequired,
-      applicationDeadline: job.applicationDeadline,
-      startDate: job.startDate,
-      applicationInstructions: job.applicationInstructions,
-      status: job.status,
-      featured: job.featured,
-      priority: job.priority,
-      viewCount: job.viewCount,
-      applicationCount: job.applicationCount,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      postedAt: job.postedAt,
-      categoryId: job.categoryId,
-      createdBy: job.createdBy,
-      category: job.category,
-      creator: job.creator,
-    }));
-
-    return new Response(JSON.stringify(formattedJobs), { status: 200 });
-  } catch (error) {
-    console.error("Jobs fetch error:", error);
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
-      status: 500,
-    });
-  }
-}
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
@@ -118,6 +20,21 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
+
+    // Get relevant settings
+    const [
+      requireSalaryRange,
+      applicationDeadlineRequired,
+      autoPublishJobs,
+      defaultExpirationDays,
+      defaultCurrency,
+    ] = await Promise.all([
+      getSystemSetting("require_salary_range", false),
+      getSystemSetting("application_deadline_required", false),
+      getSystemSetting("auto_publish_jobs", false),
+      getSystemSetting("job_expiration_days", 60),
+      getSystemSetting("default_currency", "CAD"),
+    ]);
 
     // Extract and validate required fields
     const {
@@ -148,7 +65,7 @@ export async function POST(req) {
       categoryId,
     } = body;
 
-    // Validation
+    // Basic validation
     if (
       !title ||
       !slug ||
@@ -162,6 +79,42 @@ export async function POST(req) {
         JSON.stringify({
           message:
             "Missing required fields: title, slug, description, department, location, requirements, categoryId",
+        }),
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // Apply salary range validation if required by settings
+    if (requireSalaryRange) {
+      if (!salaryMin || !salaryMax) {
+        return new Response(
+          JSON.stringify({
+            message: "Salary range is required by system settings",
+          }),
+          {
+            status: 400,
+          }
+        );
+      }
+      if (salaryMin >= salaryMax) {
+        return new Response(
+          JSON.stringify({
+            message: "Minimum salary must be less than maximum salary",
+          }),
+          {
+            status: 400,
+          }
+        );
+      }
+    }
+
+    // Apply application deadline validation if required by settings
+    if (applicationDeadlineRequired && !applicationDeadline) {
+      return new Response(
+        JSON.stringify({
+          message: "Application deadline is required by system settings",
         }),
         {
           status: 400,
@@ -183,6 +136,20 @@ export async function POST(req) {
       );
     }
 
+    // Calculate auto-expiration date if enabled
+    let autoExpirationDate = null;
+    const autoExpireDays = await getSystemSetting("auto_expire_jobs_days", 0);
+    if (autoExpireDays > 0) {
+      autoExpirationDate = new Date();
+      autoExpirationDate.setDate(autoExpirationDate.getDate() + autoExpireDays);
+    }
+
+    // Determine job status based on settings
+    let jobStatus = status || "Draft";
+    if (autoPublishJobs && !status) {
+      jobStatus = "Active";
+    }
+
     // Create the job
     const newJob = await appPrisma.job.create({
       data: {
@@ -197,8 +164,7 @@ export async function POST(req) {
         remotePolicy: remotePolicy || "On-site",
         salaryMin: salaryMin || null,
         salaryMax: salaryMax || null,
-        salaryCurrency:
-          salaryCurrency || (await getSystemSetting("default_currency", "CAD")),
+        salaryCurrency: salaryCurrency || defaultCurrency,
         salaryType: salaryType || "Annual",
         benefits: benefits || null,
         requirements,
@@ -210,12 +176,14 @@ export async function POST(req) {
           : null,
         startDate: startDate ? new Date(startDate) : null,
         applicationInstructions: applicationInstructions || null,
-        status: status || "Draft",
+        status: jobStatus,
         featured: featured || false,
         priority: priority || 0,
         categoryId,
         createdBy: session.user.id,
-        postedAt: status === "Active" ? new Date() : null,
+        postedAt: jobStatus === "Active" ? new Date() : null,
+        // Add auto-expiration if enabled
+        ...(autoExpirationDate && { autoExpiresAt: autoExpirationDate }),
       },
       include: {
         category: {

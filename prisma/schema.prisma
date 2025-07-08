@@ -89,6 +89,9 @@ model Job {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   postedAt                DateTime?
+
+  autoExpiresAt     DateTime? // When the job should auto-expire
+  lastExpiredCheck  DateTime? // Last time expiration was checked (optional, for tracking)
   
   // Foreign Keys
   categoryId              String   @db.Uuid
