@@ -107,7 +107,7 @@ export default function JobDetailsClient({
   const checkApplicationStatus = async () => {
     try {
       setCheckingApplication(true);
-      const response = await fetch(`/api/applications?jobId=${job.id}`);
+      const response = await fetch(`/api/applications/check?jobId=${job.id}`);
       if (response.ok) {
         const data = await response.json();
         setHasApplied(data.hasApplied);

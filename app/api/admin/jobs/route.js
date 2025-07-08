@@ -208,16 +208,27 @@ export async function POST(req) {
 
     // Determine job status based on settings
     let jobStatus = status || "Draft";
+    let postedAt = null;
+
     // Auto-publish overrides the form status when enabled
     if (autoPublishJobs && (!status || status === "Draft")) {
       jobStatus = "Active";
     }
 
-    // Create the job
-    // In your app/api/admin/jobs/route.js POST method
-    // Replace the job creation part with this:
+    // Set postedAt if job is being published
+    if (jobStatus === "Active") {
+      postedAt = new Date();
 
-    // Create the job
+      // If we have auto-expiration enabled and no specific expiration date set,
+      // calculate it from the posting date
+      if (autoExpireDays > 0 && !autoExpirationDate) {
+        autoExpirationDate = new Date(postedAt);
+        autoExpirationDate.setDate(
+          autoExpirationDate.getDate() + autoExpireDays
+        );
+      }
+    }
+
     const newJob = await appPrisma.job.create({
       data: {
         title,
@@ -229,7 +240,6 @@ export async function POST(req) {
         experienceLevel: experienceLevel || "Mid",
         location,
         remotePolicy: remotePolicy || "On-site",
-        // Convert salary strings to integers
         salaryMin: salaryMin ? parseInt(salaryMin, 10) : null,
         salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
         salaryCurrency: salaryCurrency || defaultCurrency,
@@ -238,7 +248,6 @@ export async function POST(req) {
         requirements,
         preferredQualifications: preferredQualifications || null,
         educationRequired: educationRequired || null,
-        // Convert years experience to integer
         yearsExperienceRequired: yearsExperienceRequired
           ? parseInt(yearsExperienceRequired, 10)
           : null,
@@ -249,13 +258,12 @@ export async function POST(req) {
         applicationInstructions: applicationInstructions || null,
         status: jobStatus,
         featured: featured || false,
-        // Convert priority to integer
         priority: priority ? parseInt(priority, 10) : 0,
         categoryId,
         createdBy: session.user.id,
-        postedAt: jobStatus === "Active" ? new Date() : null,
-        // Add auto-expiration if enabled
-        ...(autoExpirationDate && { autoExpiresAt: autoExpirationDate }),
+        postedAt,
+        // Add auto-expiration if calculated
+        autoExpiresAt: autoExpirationDate,
       },
       include: {
         category: {

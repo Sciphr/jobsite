@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useSetting } from "../hooks/useSettings";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { Check } from "lucide-react";
 
-export default function JobCard({ job }) {
+export default function JobCard({ job, applicationStatus }) {
+  const { data: session } = useSession();
+
   const formatSalary = (min, max, currency) => {
     if (!min || !max) return null;
     return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
@@ -15,11 +19,20 @@ export default function JobCard({ job }) {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
-            {job.featured && (
-              <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                Featured
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {job.featured && (
+                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                  Featured
+                </span>
+              )}
+              {/* Application Status Badge */}
+              {session && applicationStatus?.hasApplied && (
+                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Applied
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-gray-600 mb-2">{job.department}</p>
           <p className="text-gray-700 mb-4 line-clamp-2">{job.summary}</p>
@@ -29,6 +42,7 @@ export default function JobCard({ job }) {
         </span>
       </div>
 
+      {/* Rest of your JobCard JSX stays the same */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 mb-4">
         <div>
           <span className="font-medium">Location:</span>
@@ -52,7 +66,6 @@ export default function JobCard({ job }) {
         </div>
       </div>
 
-      {/* Updated salary display logic - use job.showSalary instead of global setting */}
       {job.showSalary && job.salaryMin && job.salaryMax && (
         <div className="text-sm text-gray-600 mb-4">
           <span className="font-medium">Salary:</span>{" "}
@@ -60,7 +73,6 @@ export default function JobCard({ job }) {
         </div>
       )}
 
-      {/* Application deadline warning */}
       {job.applicationDeadline && (
         <div className="text-sm text-orange-600 mb-4 flex items-center gap-1">
           <svg
@@ -84,13 +96,35 @@ export default function JobCard({ job }) {
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500">
           Posted {new Date(job.postedAt).toLocaleDateString()}
+          {session && applicationStatus?.hasApplied && (
+            <>
+              <br />
+              <span className="text-green-600 font-medium">
+                Applied{" "}
+                {new Date(applicationStatus.appliedAt).toLocaleDateString()}
+              </span>
+            </>
+          )}
         </div>
-        <Link
-          href={`/jobs/${job.slug}`}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          View Details
-        </Link>
+        <div className="flex items-center gap-2">
+          {session && applicationStatus?.hasApplied && (
+            <span className="text-xs text-green-600 font-medium">
+              Status: {applicationStatus.status}
+            </span>
+          )}
+          <Link
+            href={`/jobs/${job.slug}`}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              session && applicationStatus?.hasApplied
+                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+          >
+            {session && applicationStatus?.hasApplied
+              ? "View Application"
+              : "View Details"}
+          </Link>
+        </div>
       </div>
     </div>
   );

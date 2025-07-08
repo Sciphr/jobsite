@@ -99,7 +99,7 @@ export async function PATCH(req, { params }) {
     // Extract fields that can be updated
     const updateData = {};
 
-    // Status update
+    // Status update with auto-expiration handling
     if (body.status !== undefined) {
       const validStatuses = ["Active", "Draft", "Paused", "Closed"];
       if (!validStatuses.includes(body.status)) {
@@ -109,9 +109,35 @@ export async function PATCH(req, { params }) {
       }
       updateData.status = body.status;
 
-      // If activating, set postedAt
-      if (body.status === "Active" && !updateData.postedAt) {
-        updateData.postedAt = new Date();
+      // If activating a job, set postedAt and calculate auto-expiration
+      if (body.status === "Active") {
+        if (!updateData.postedAt) {
+          updateData.postedAt = new Date();
+        }
+
+        // Calculate auto-expiration if enabled and not already set
+        const autoExpireDays = await getSystemSetting(
+          "auto_expire_jobs_days",
+          0
+        );
+        if (autoExpireDays > 0) {
+          // Only set auto-expiration if it's not already set
+          const currentJob = await appPrisma.job.findUnique({
+            where: { id },
+            select: { autoExpiresAt: true, postedAt: true },
+          });
+
+          if (!currentJob?.autoExpiresAt) {
+            const expirationDate = new Date(updateData.postedAt);
+            expirationDate.setDate(expirationDate.getDate() + autoExpireDays);
+            updateData.autoExpiresAt = expirationDate;
+          }
+        }
+      }
+
+      // If setting to Draft, Paused, or Closed, clear auto-expiration
+      if (["Draft", "Paused", "Closed"].includes(body.status)) {
+        updateData.autoExpiresAt = null;
       }
     }
 

@@ -1,7 +1,7 @@
 import { db } from "../lib/db";
 import Link from "next/link";
 import JobsFilter from "../components/JobsFilter";
-import JobCard from "../components/JobCard";
+import JobsList from "../components/JobsList"; // Import the new component
 
 export default async function JobsPage({ searchParams }) {
   // Fix 1: Await searchParams before accessing properties
@@ -113,11 +113,7 @@ export default async function JobsPage({ searchParams }) {
           {/* Jobs List */}
           <div className="lg:col-span-3 mt-8 lg:mt-0">
             {jobs.length > 0 ? (
-              <div className="space-y-6">
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
-              </div>
+              <JobsList jobs={jobs} />
             ) : (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">🔍</div>

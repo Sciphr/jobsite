@@ -209,3 +209,38 @@ export async function POST(request) {
     return Response.json({ message: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function GET(request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const applications = await appPrisma.application.findMany({
+      where: { userId },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            department: true,
+            location: true,
+            employmentType: true,
+            remotePolicy: true,
+            slug: true,
+          },
+        },
+      },
+      orderBy: { appliedAt: "desc" },
+    });
+
+    return Response.json(applications, { status: 200 });
+  } catch (error) {
+    console.error("Applications fetch error:", error);
+    return Response.json({ message: "Internal server error" }, { status: 500 });
+  }
+}
