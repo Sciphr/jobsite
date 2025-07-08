@@ -4,15 +4,24 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
 
 export async function GET(req) {
+  console.log("🔍 Profile API GET request started");
+
   const session = await getServerSession(authOptions);
+  console.log("📋 Session check:", {
+    hasSession: !!session,
+    userId: session?.user?.id,
+  });
 
   if (!session) {
+    console.log("❌ No session found, returning unauthorized");
     return new Response(JSON.stringify({ message: "Unauthorized" }), {
       status: 401,
+      headers: { "Content-Type": "application/json" },
     });
   }
 
   const userId = session.user.id;
+  console.log("🔍 Fetching profile for user:", userId);
 
   try {
     const user = await appPrisma.user.findUnique({
@@ -44,9 +53,13 @@ export async function GET(req) {
       },
     });
 
+    console.log("👤 User data fetched:", { found: !!user, userId: user?.id });
+
     if (!user) {
+      console.log("❌ User not found in database");
       return new Response(JSON.stringify({ message: "User not found" }), {
         status: 404,
+        headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -58,12 +71,23 @@ export async function GET(req) {
       user.isSuperAdmin = user.privilegeLevel >= 3;
     }
 
-    return new Response(JSON.stringify(user), { status: 200 });
-  } catch (error) {
-    console.error("Profile fetch error:", error);
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
-      status: 500,
+    console.log("✅ Returning user profile successfully");
+    return new Response(JSON.stringify(user), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
     });
+  } catch (error) {
+    console.error("❌ Profile fetch error:", error);
+    return new Response(
+      JSON.stringify({
+        message: "Internal server error",
+        error: error.message,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 

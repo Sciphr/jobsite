@@ -75,29 +75,101 @@ export default function ProfileClient({ session }) {
 
   const fetchProfileData = async () => {
     try {
+      console.log("🔍 Starting to fetch profile data...");
+
+      // Fetch all data with individual error handling
       const [profileRes, savedJobsRes, applicationsRes, resumeRes] =
         await Promise.all([
-          fetch("/api/profile"),
-          fetch("/api/saved-jobs"),
-          fetch("/api/applications"),
-          fetch("/api/resumes"), // Changed back to /api/resumes since that's your actual endpoint
+          fetch("/api/profile").catch((err) => {
+            console.error("❌ Profile fetch failed:", err);
+            return { ok: false, error: "Profile fetch failed" };
+          }),
+          fetch("/api/saved-jobs").catch((err) => {
+            console.error("❌ Saved jobs fetch failed:", err);
+            return { ok: false, error: "Saved jobs fetch failed" };
+          }),
+          fetch("/api/applications").catch((err) => {
+            console.error("❌ Applications fetch failed:", err);
+            return { ok: false, error: "Applications fetch failed" };
+          }),
+          fetch("/api/resumes").catch((err) => {
+            console.error("❌ Resumes fetch failed:", err);
+            return { ok: false, error: "Resumes fetch failed" };
+          }),
         ]);
+
+      console.log("📡 API Response statuses:", {
+        profile: profileRes.ok ? profileRes.status : "FAILED",
+        savedJobs: savedJobsRes.ok ? savedJobsRes.status : "FAILED",
+        applications: applicationsRes.ok ? applicationsRes.status : "FAILED",
+        resumes: resumeRes.ok ? resumeRes.status : "FAILED",
+      });
+
+      // Parse responses with individual error handling
+      const parseResponse = async (response, name) => {
+        if (!response.ok) {
+          console.error(`❌ ${name} response not ok:`, response.status);
+          return null;
+        }
+
+        try {
+          const text = await response.text();
+          console.log(`📄 ${name} response text length:`, text.length);
+
+          if (!text || text.trim() === "") {
+            console.error(`❌ ${name} response is empty`);
+            return null;
+          }
+
+          const data = JSON.parse(text);
+          console.log(`✅ ${name} parsed successfully`);
+          return data;
+        } catch (parseError) {
+          console.error(`❌ Failed to parse ${name} JSON:`, parseError);
+          console.error(
+            `Raw ${name} response:`,
+            await response.text().catch(() => "Could not get text")
+          );
+          return null;
+        }
+      };
 
       const [profileData, savedJobsData, applicationsData, resumeData] =
         await Promise.all([
-          profileRes.json(),
-          savedJobsRes.json(),
-          applicationsRes.json(),
-          resumeRes.json(),
+          parseResponse(profileRes, "Profile"),
+          parseResponse(savedJobsRes, "Saved Jobs"),
+          parseResponse(applicationsRes, "Applications"),
+          parseResponse(resumeRes, "Resumes"),
         ]);
 
-      "Saved Jobs Data:", savedJobsData; // Debug log
-      "Applications Data:", applicationsData; // Debug log
-      "Resume Data:", resumeData; // Debug log
+      console.log("📊 Parsed data:", {
+        profile: !!profileData,
+        savedJobs: Array.isArray(savedJobsData)
+          ? savedJobsData.length
+          : "Not array",
+        applications: Array.isArray(applicationsData)
+          ? applicationsData.length
+          : "Not array",
+        resumes: Array.isArray(resumeData) ? resumeData.length : "Not array",
+      });
 
-      setProfile(profileData);
-      setSavedJobs(savedJobsData);
-      setApplications(applicationsData);
+      // Set data with fallbacks
+      if (profileData) {
+        setProfile(profileData);
+        // Initialize edit form with current data
+        setEditForm({
+          firstName: profileData.firstName || "",
+          lastName: profileData.lastName || "",
+          email: profileData.email || "",
+          phone: profileData.phone || "",
+        });
+      } else {
+        console.error("❌ Profile data is null, user might not be found");
+        // Handle profile not found - maybe redirect to login
+      }
+
+      setSavedJobs(Array.isArray(savedJobsData) ? savedJobsData : []);
+      setApplications(Array.isArray(applicationsData) ? applicationsData : []);
 
       // Handle resume data - it might be an array, so take the first one if it exists
       if (Array.isArray(resumeData) && resumeData.length > 0) {
@@ -108,15 +180,17 @@ export default function ProfileClient({ session }) {
         setResume(null);
       }
 
-      // Initialize edit form with current data
-      setEditForm({
-        firstName: profileData.firstName || "",
-        lastName: profileData.lastName || "",
-        email: profileData.email || "",
-        phone: profileData.phone || "",
-      });
+      console.log("✅ Profile data fetch completed successfully");
     } catch (err) {
-      console.error("Error fetching profile data", err);
+      console.error("❌ Error fetching profile data:", err);
+
+      // Set empty/default values on error
+      setSavedJobs([]);
+      setApplications([]);
+      setResume(null);
+
+      // You might want to show an error message to the user
+      alert("Failed to load profile data. Please try refreshing the page.");
     } finally {
       setLoading(false);
     }
@@ -200,18 +274,18 @@ export default function ProfileClient({ session }) {
 
   const handleDownloadResume = async (fileName) => {
     try {
-      "Downloading resume:", fileName;
-      "Storage path:", resume.storagePath;
+      ("Downloading resume:", fileName);
+      ("Storage path:", resume.storagePath);
 
       const response = await fetch(
         `/api/resume-download?path=${encodeURIComponent(resume.storagePath)}`
       );
 
-      "Download response status:", response.status;
+      ("Download response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        "Download URL received:", data.downloadUrl;
+        ("Download URL received:", data.downloadUrl);
 
         // Create a temporary link element for download
         const link = document.createElement("a");
@@ -614,8 +688,8 @@ export default function ProfileClient({ session }) {
                           {resume.fileType?.includes("pdf")
                             ? "PDF"
                             : resume.fileType?.includes("word")
-                            ? "DOC"
-                            : resume.fileType?.toUpperCase() || "UNKNOWN"}
+                              ? "DOC"
+                              : resume.fileType?.toUpperCase() || "UNKNOWN"}
                         </span>
                         <span className="text-sm text-gray-500">
                           {formatFileSize(resume.fileSize)}

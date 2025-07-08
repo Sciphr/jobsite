@@ -194,7 +194,14 @@ export default function JobDetailsClient({
     setShowApplicationForm(false);
     setHasApplied(true);
     setApplicationStatus("Applied");
+
+    // Show success message
     alert("Application submitted successfully!");
+
+    // Optional: Re-check application status from server to ensure consistency
+    setTimeout(() => {
+      checkApplicationStatus();
+    }, 1000);
   };
 
   const renderApplyButton = () => {

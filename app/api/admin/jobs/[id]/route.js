@@ -2,6 +2,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
 
+import { sendJobPublishedNotification } from "../../../../lib/email";
+import { getSystemSetting } from "../../../../lib/settings";
+
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
 
@@ -206,6 +209,52 @@ export async function PATCH(req, { params }) {
         },
       },
     });
+
+    // Check if job was just published (status changed to Active)
+    const wasJustPublished =
+      updateData.status === "Active" && updateData.postedAt;
+
+    // Send job published notification (if enabled and job was just published)
+    const jobPublishedEmailEnabled = await getSystemSetting(
+      "email_job_published",
+      true
+    );
+    if (jobPublishedEmailEnabled && wasJustPublished) {
+      console.log("📧 Sending job published notification for status update...");
+
+      let creatorName = "Unknown";
+      if (updatedJob.createdBy) {
+        try {
+          const creator = await appPrisma.user.findUnique({
+            where: { id: updatedJob.createdBy },
+            select: { firstName: true, lastName: true },
+          });
+          if (creator) {
+            creatorName = `${creator.firstName} ${creator.lastName}`.trim();
+          }
+        } catch (error) {
+          console.warn(
+            "Could not fetch creator for job published notification"
+          );
+        }
+      }
+
+      const emailResult = await sendJobPublishedNotification({
+        jobTitle: updatedJob.title,
+        jobId: updatedJob.id,
+        creatorName,
+      });
+
+      if (emailResult.success) {
+        console.log("✅ Job published notification sent successfully");
+      } else {
+        console.error(
+          "❌ Failed to send job published notification:",
+          emailResult.error
+        );
+        // Don't fail the job update if email fails - just log it
+      }
+    }
 
     // Separately fetch creator if exists
     let creator = null;

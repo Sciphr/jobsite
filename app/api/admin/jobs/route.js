@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { getSystemSetting } from "../../../lib/settings";
+import { sendJobPublishedNotification } from "../../../lib/email";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -263,8 +264,44 @@ export async function POST(req) {
             name: true,
           },
         },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
+
+    const jobPublishedEmailEnabled = await getSystemSetting(
+      "email_job_published",
+      true
+    );
+    if (jobPublishedEmailEnabled && newJob.status === "Active") {
+      console.log("📧 Sending job published notification...");
+
+      const creatorName = newJob.creator
+        ? `${newJob.creator.firstName} ${newJob.creator.lastName}`.trim()
+        : "Unknown";
+
+      const emailResult = await sendJobPublishedNotification({
+        jobTitle: newJob.title,
+        jobId: newJob.id,
+        creatorName,
+      });
+
+      if (emailResult.success) {
+        console.log("✅ Job published notification sent successfully");
+      } else {
+        console.error(
+          "❌ Failed to send job published notification:",
+          emailResult.error
+        );
+        // Don't fail the job creation if email fails - just log it
+      }
+    }
 
     return new Response(JSON.stringify(newJob), { status: 201 });
   } catch (error) {

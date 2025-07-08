@@ -235,6 +235,51 @@ export default function AdminSettings() {
     });
   };
 
+  const testEmail = async () => {
+    const email = prompt("Enter email address to test:");
+    if (!email) return;
+
+    try {
+      const response = await fetch("/api/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert("Test email sent successfully!");
+      } else {
+        alert(`Failed to send test email: ${result.message}`);
+      }
+    } catch (error) {
+      alert("Error sending test email");
+    }
+  };
+
+  const testConfiguration = async () => {
+    try {
+      const response = await fetch("/api/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testType: "configuration" }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(
+          `Configuration test successful!\nProvider: ${result.data?.provider}\nConnection: ${result.data?.connectionTest}`
+        );
+      } else {
+        alert(`Configuration test failed: ${result.message}`);
+      }
+    } catch (error) {
+      alert("Error testing configuration");
+    }
+  };
+
   const saveChanges = async (key, setting) => {
     if (unsavedChanges[key] !== undefined) {
       await updateSetting(key, unsavedChanges[key], setting.isPersonal);
@@ -570,25 +615,46 @@ export default function AdminSettings() {
         <div
           className={`px-6 py-4 border-b border-gray-200 ${activeTabData?.bgColor} ${activeTabData?.borderColor} border-l-4`}
         >
-          <div className="flex items-center space-x-3">
-            {activeTabData && (
-              <>
-                <div className={`p-2 rounded-lg ${activeTabData.bgColor}`}>
-                  <activeTabData.icon
-                    className={`h-5 w-5 ${activeTabData.color}`}
-                  />
-                </div>
-                <div>
-                  <h2
-                    className={`text-lg font-semibold ${activeTabData.color}`}
-                  >
-                    {activeTabData.label}
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    {activeTabData.description}
-                  </p>
-                </div>
-              </>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {activeTabData && (
+                <>
+                  <div className={`p-2 rounded-lg ${activeTabData.bgColor}`}>
+                    <activeTabData.icon
+                      className={`h-5 w-5 ${activeTabData.color}`}
+                    />
+                  </div>
+                  <div>
+                    <h2
+                      className={`text-lg font-semibold ${activeTabData.color}`}
+                    >
+                      {activeTabData.label}
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {activeTabData.description}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {activeTab === "notifications" && (
+              <div className="flex space-x-2">
+                <button
+                  onClick={testConfiguration}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Test Config</span>
+                </button>
+                <button
+                  onClick={testEmail}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span>Test Email</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -2,94 +2,11 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
-
-//const prisma = new prismaClient();
-
-export async function GET(request) {
-  const session = await getServerSession(authOptions);
-  const { searchParams } = new URL(request.url);
-  const jobId = searchParams.get("jobId");
-
-  // If jobId is provided, check if user has applied to that specific job
-  if (jobId) {
-    if (!session) {
-      return Response.json({ hasApplied: false }, { status: 200 });
-    }
-
-    try {
-      const userId = session.user.id;
-
-      const application = await appPrisma.application.findUnique({
-        where: {
-          userId_jobId: {
-            userId,
-            jobId,
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          appliedAt: true,
-        },
-      });
-
-      if (application) {
-        return Response.json({
-          hasApplied: true,
-          status: application.status,
-          appliedAt: application.appliedAt,
-          applicationId: application.id,
-        });
-      } else {
-        return Response.json({
-          hasApplied: false,
-        });
-      }
-    } catch (error) {
-      console.error("Error checking application status:", error);
-      return Response.json(
-        { message: "Internal server error" },
-        { status: 500 }
-      );
-    }
-  }
-
-  // If no jobId, return all user's applications (existing logic)
-  if (!session) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-
-  try {
-    const applications = await appPrisma.application.findMany({
-      where: { userId },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            department: true,
-            location: true,
-            salaryMin: true,
-            salaryMax: true,
-            salaryCurrency: true,
-            employmentType: true,
-            remotePolicy: true,
-            createdAt: true,
-            slug: true,
-          },
-        },
-      },
-      orderBy: { appliedAt: "desc" },
-    });
-
-    return Response.json(applications);
-  } catch (error) {
-    console.error("Applications fetch error:", error);
-    return Response.json({ message: "Internal server error" }, { status: 500 });
-  }
-}
+import {
+  sendApplicationConfirmation,
+  sendNewApplicationNotification,
+} from "../../lib/email";
+import { getSystemSetting } from "../../lib/settings";
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -109,10 +26,24 @@ export async function POST(request) {
     // Check if job exists
     const job = await appPrisma.job.findUnique({
       where: { id: jobId },
+      select: {
+        id: true,
+        title: true,
+        department: true,
+        status: true,
+      },
     });
 
     if (!job) {
       return Response.json({ message: "Job not found" }, { status: 404 });
+    }
+
+    // Check if job is still accepting applications
+    if (job.status !== "Active") {
+      return Response.json(
+        { message: "This job is no longer accepting applications" },
+        { status: 400 }
+      );
     }
 
     let applicationData = {
@@ -120,6 +51,9 @@ export async function POST(request) {
       coverLetter: coverLetter || null,
       resumeUrl,
     };
+
+    let applicantName = name;
+    let applicantEmail = email;
 
     if (userId) {
       // Logged-in user: Get user profile data
@@ -160,6 +94,10 @@ export async function POST(request) {
         `${user.firstName || ""} ${user.lastName || ""}`.trim() || null;
       applicationData.email = user.email;
       applicationData.phone = user.phone;
+
+      // Set variables for email
+      applicantName = applicationData.name;
+      applicantEmail = user.email;
     } else {
       // Guest user: Require name, email, phone from form
       if (!name || !email || !phone) {
@@ -175,8 +113,13 @@ export async function POST(request) {
       applicationData.name = name;
       applicationData.email = email;
       applicationData.phone = phone;
+
+      // Variables already set from form data
+      applicantName = name;
+      applicantEmail = email;
     }
 
+    // Create the application
     const application = await appPrisma.application.create({
       data: applicationData,
       include: {
@@ -208,71 +151,61 @@ export async function POST(request) {
       },
     });
 
+    // Send confirmation email to applicant (if enabled)
+    const confirmationEmailEnabled = await getSystemSetting(
+      "application_confirmation_email",
+      true
+    );
+    if (confirmationEmailEnabled && applicantEmail) {
+      console.log("📧 Sending application confirmation email...");
+
+      const emailResult = await sendApplicationConfirmation({
+        applicantEmail,
+        applicantName,
+        jobTitle: job.title,
+        companyName: await getSystemSetting("site_name", "Our Company"),
+      });
+
+      if (emailResult.success) {
+        console.log("✅ Application confirmation email sent successfully");
+      } else {
+        console.error(
+          "❌ Failed to send application confirmation email:",
+          emailResult.error
+        );
+        // Don't fail the application if email fails - just log it
+      }
+    }
+
+    // Send admin notification about new application (if enabled)
+    const adminNotificationEnabled = await getSystemSetting(
+      "email_new_applications",
+      true
+    );
+    if (adminNotificationEnabled) {
+      console.log("📧 Sending admin notification for new application...");
+
+      const adminEmailResult = await sendNewApplicationNotification({
+        jobTitle: job.title,
+        applicantName,
+        applicantEmail,
+        applicationId: application.id,
+      });
+
+      if (adminEmailResult.success) {
+        console.log("✅ Admin notification email sent successfully");
+      } else {
+        console.error(
+          "❌ Failed to send admin notification email:",
+          adminEmailResult.error
+        );
+        // Don't fail the application if email fails - just log it
+      }
+    }
+
     return Response.json(application, { status: 201 });
   } catch (error) {
     console.error("Apply to job error:", error);
-    return Response.json({ message: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function PUT(request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-
-  try {
-    const { applicationId, status } = await request.json();
-
-    if (!applicationId || !status) {
-      return Response.json(
-        { message: "Application ID and status are required" },
-        { status: 400 }
-      );
-    }
-
-    const validStatuses = [
-      "Applied",
-      "Reviewing",
-      "Interview",
-      "Rejected",
-      "Hired",
-    ];
-    if (!validStatuses.includes(status)) {
-      return Response.json({ message: "Invalid status" }, { status: 400 });
-    }
-
-    const updatedApplication = await appPrisma.application.update({
-      where: {
-        id: applicationId,
-        userId, // Ensure user can only update their own applications
-      },
-      data: { status },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            department: true,
-            location: true,
-            salaryMin: true,
-            salaryMax: true,
-            salaryCurrency: true,
-            employmentType: true,
-            remotePolicy: true,
-            createdAt: true,
-            slug: true,
-          },
-        },
-      },
-    });
-
-    return Response.json(updatedApplication);
-  } catch (error) {
-    console.error("Update application error:", error);
     return Response.json({ message: "Internal server error" }, { status: 500 });
   }
 }
