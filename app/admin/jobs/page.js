@@ -1,3 +1,4 @@
+// app/admin/jobs/page.js - Updated to use React Query
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,6 +7,13 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import {
+  useJobs,
+  useCategories,
+  useUpdateJob,
+  useDeleteJob,
+  useInvalidateAdminData,
+} from "@/app/hooks/useAdminData";
 import {
   Briefcase,
   Search,
@@ -28,24 +36,31 @@ import {
   Play,
   Pause,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function AdminJobs() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
-  const [jobs, setJobs] = useState([]);
+
+  // Use React Query hooks
+  const { data: jobs = [], isLoading, isError, error, refetch } = useJobs();
+
+  const { data: categories = [] } = useCategories();
+  const updateJobMutation = useUpdateJob();
+  const deleteJobMutation = useDeleteJob();
+  const { invalidateJobs } = useInvalidateAdminData();
+
   const [filteredJobs, setFilteredJobs] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const [featuredError, setFeaturedError] = useState(null);
+
   const { shouldAnimate, loading: animationSettingsLoading } =
     useAnimationSettings();
-  const [error, setError] = useState(null);
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -55,61 +70,131 @@ export default function AdminJobs() {
   const jobsGridRef = useRef(null);
 
   useEffect(() => {
-    fetchJobs();
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
     filterJobs();
   }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
 
   useEffect(() => {
-    if (!loading && !animationSettingsLoading && shouldAnimate) {
+    if (!isLoading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, shouldAnimate, animationSettingsLoading]);
+  }, [isLoading, shouldAnimate, animationSettingsLoading]);
 
-  const fetchJobs = async () => {
+  const filterJobs = () => {
+    let filtered = jobs;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (job) =>
+          job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          job.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((job) => job.status === statusFilter);
+    }
+
+    // Category filter
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((job) => job.categoryId === categoryFilter);
+    }
+
+    // Department filter
+    if (departmentFilter !== "all") {
+      filtered = filtered.filter((job) => job.department === departmentFilter);
+    }
+
+    setFilteredJobs(filtered);
+  };
+
+  const updateJobStatus = async (jobId, newStatus) => {
     try {
-      const response = await fetch("/api/admin/jobs");
-      if (response.ok) {
-        const data = await response.json();
-        setJobs(data);
-      }
+      await updateJobMutation.mutateAsync({
+        jobId,
+        jobData: { status: newStatus },
+      });
     } catch (error) {
-      console.error("Error fetching jobs:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error updating job status:", error);
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const toggleFeatured = async (jobId, featured) => {
     try {
-      const response = await fetch("/api/admin/jobs");
+      setFeaturedError(null);
+
+      const response = await fetch(`/api/admin/jobs/${jobId}/feature`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured: !featured }),
+      });
+
+      const result = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        setJobs(data);
+        // Invalidate jobs data to refetch with updated featured status
+        invalidateJobs();
+      } else {
+        setFeaturedError(result.message);
+        setTimeout(() => setFeaturedError(null), 8000);
       }
     } catch (error) {
-      console.error("Error refreshing jobs:", error);
-    } finally {
-      setRefreshing(false);
+      console.error("Error updating featured status:", error);
+      setFeaturedError("An error occurred while updating the featured status.");
+      setTimeout(() => setFeaturedError(null), 5000);
     }
   };
 
-  const fetchCategories = async () => {
+  const duplicateJob = async (jobId) => {
     try {
-      const response = await fetch("/api/admin/categories");
+      const response = await fetch(`/api/admin/jobs/${jobId}/duplicate`, {
+        method: "POST",
+      });
+
       if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
+        invalidateJobs(); // Refresh jobs list
       }
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("Error duplicating job:", error);
     }
   };
 
+  const deleteJob = async (jobId) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this job? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteJobMutation.mutateAsync(jobId);
+      setSelectedJobs((prev) => prev.filter((id) => id !== jobId));
+    } catch (error) {
+      console.error("Error deleting job:", error);
+    }
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedJobs(filteredJobs.map((job) => job.id));
+    } else {
+      setSelectedJobs([]);
+    }
+  };
+
+  const handleSelectJob = (jobId, checked) => {
+    if (checked) {
+      setSelectedJobs((prev) => [...prev, jobId]);
+    } else {
+      setSelectedJobs((prev) => prev.filter((id) => id !== jobId));
+    }
+  };
+
+  // Animation functions (keeping your existing GSAP code)
   const animatePageLoad = () => {
     // FIRST: Hide the stat cards immediately
     if (statsGridRef.current) {
@@ -168,10 +253,16 @@ export default function AdminJobs() {
       }
     }
 
-    // Filters
-    if (filtersRef.current) {
+    // Other sections
+    const sections = [
+      filtersRef.current,
+      bulkActionsRef.current,
+      jobsGridRef.current,
+    ].filter(Boolean);
+
+    sections.forEach((section) => {
       tl.to(
-        filtersRef.current,
+        section,
         {
           opacity: 1,
           y: 0,
@@ -180,36 +271,10 @@ export default function AdminJobs() {
         },
         "-=0.2"
       );
-    }
+    });
 
-    // Bulk actions (if visible)
-    if (bulkActionsRef.current) {
-      tl.to(
-        bulkActionsRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-    }
-
-    // Jobs grid
+    // Animate individual job cards
     if (jobsGridRef.current) {
-      tl.to(
-        jobsGridRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-
-      // Animate individual job cards
       const jobCards = jobsGridRef.current.querySelectorAll(".job-card");
       if (jobCards.length > 0) {
         tl.fromTo(
@@ -322,150 +387,6 @@ export default function AdminJobs() {
     }
   };
 
-  const filterJobs = () => {
-    let filtered = jobs;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (job) =>
-          job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          job.location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((job) => job.status === statusFilter);
-    }
-
-    // Category filter
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((job) => job.categoryId === categoryFilter);
-    }
-
-    // Department filter
-    if (departmentFilter !== "all") {
-      filtered = filtered.filter((job) => job.department === departmentFilter);
-    }
-
-    setFilteredJobs(filtered);
-  };
-
-  const updateJobStatus = async (jobId, newStatus) => {
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        setJobs((prev) =>
-          prev.map((job) =>
-            job.id === jobId ? { ...job, status: newStatus } : job
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error updating job status:", error);
-    }
-  };
-
-  const toggleFeatured = async (jobId, featured) => {
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}/feature`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ featured: !featured }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setJobs((prev) =>
-          prev.map((job) =>
-            job.id === jobId ? { ...job, featured: !featured } : job
-          )
-        );
-
-        setError(null);
-      } else {
-        // Set the error and scroll to top
-        if (result.message) {
-          setError(result.message);
-          // Smooth scroll to top to show the error
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          setTimeout(() => setError(null), 8000);
-        } else {
-          setError("Failed to update featured status. Please try again.");
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          setTimeout(() => setError(null), 5000);
-        }
-      }
-    } catch (error) {
-      console.error("Error updating featured status:", error);
-      setError("An error occurred while updating the featured status.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      setTimeout(() => setError(null), 5000);
-    }
-  };
-
-  const duplicateJob = async (jobId) => {
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}/duplicate`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const newJob = await response.json();
-        setJobs((prev) => [newJob, ...prev]);
-      }
-    } catch (error) {
-      console.error("Error duplicating job:", error);
-    }
-  };
-
-  const deleteJob = async (jobId) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this job? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setJobs((prev) => prev.filter((job) => job.id !== jobId));
-        setSelectedJobs((prev) => prev.filter((id) => id !== jobId));
-      }
-    } catch (error) {
-      console.error("Error deleting job:", error);
-    }
-  };
-
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedJobs(filteredJobs.map((job) => job.id));
-    } else {
-      setSelectedJobs([]);
-    }
-  };
-
-  const handleSelectJob = (jobId, checked) => {
-    if (checked) {
-      setSelectedJobs((prev) => [...prev, jobId]);
-    } else {
-      setSelectedJobs((prev) => prev.filter((id) => id !== jobId));
-    }
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       Active: "bg-green-100 text-green-800",
@@ -508,7 +429,8 @@ export default function AdminJobs() {
   const departments = [...new Set(jobs.map((job) => job.department))];
   const statusOptions = ["Active", "Draft", "Paused", "Closed"];
 
-  if (loading) {
+  // Loading state (much faster now with React Query cache!)
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -526,6 +448,29 @@ export default function AdminJobs() {
     );
   }
 
+  // Error state with retry option
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-900 mb-2">
+            Failed to Load Jobs
+          </h2>
+          <p className="text-red-700 mb-6 max-w-md mx-auto">
+            {error?.message || "There was an error loading the jobs data."}
+          </p>
+          <button
+            onClick={() => refetch()}
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -538,14 +483,14 @@ export default function AdminJobs() {
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${isLoading ? "opacity-50" : ""}`}
           >
             <RefreshCw
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
-            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
+            <span>{isLoading ? "Refreshing..." : "Refresh"}</span>
           </button>
           <Link
             href="/admin/jobs/create"
@@ -557,8 +502,8 @@ export default function AdminJobs() {
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
+      {/* Error Message for Featured Jobs */}
+      {featuredError && (
         <div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4 mb-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
@@ -566,10 +511,10 @@ export default function AdminJobs() {
               <h3 className="text-sm font-medium text-red-900 mb-1">
                 Action Failed
               </h3>
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-700">{featuredError}</p>
             </div>
             <button
-              onClick={() => setError(null)}
+              onClick={() => setFeaturedError(null)}
               className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
               title="Dismiss error"
             >
@@ -877,6 +822,7 @@ export default function AdminJobs() {
                       className={`text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium ${getStatusColor(
                         job.status
                       )}`}
+                      disabled={updateJobMutation.isLoading}
                     >
                       {statusOptions.map((status) => (
                         <option
@@ -913,8 +859,13 @@ export default function AdminJobs() {
                         <button
                           onClick={() => deleteJob(job.id)}
                           className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-lg flex items-center space-x-2"
+                          disabled={deleteJobMutation.isLoading}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          {deleteJobMutation.isLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
                           <span>Delete</span>
                         </button>
                       </div>
@@ -928,7 +879,7 @@ export default function AdminJobs() {
       </div>
 
       {/* Empty State */}
-      {filteredJobs.length === 0 && !loading && (
+      {filteredJobs.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium admin-text mb-2">No jobs found</h3>

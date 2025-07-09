@@ -1,11 +1,13 @@
+// app/admin/dashboard/page.js - Updated to use React Query
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
+import { useRef, useEffect } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { useDashboardStats } from "@/app/hooks/useAdminData";
 import {
   Users,
   Briefcase,
@@ -17,20 +19,24 @@ import {
   Eye,
   Plus,
   ArrowRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses, getThemeClasses } =
     useThemeClasses();
-  const [stats, setStats] = useState({
-    totalJobs: 0,
-    totalApplications: 0,
-    totalUsers: 0,
-    recentApplications: [],
-    recentJobs: [],
-  });
-  const [loading, setLoading] = useState(true);
+
+  // Use React Query for dashboard stats
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useDashboardStats();
+
   const { shouldAnimate, loading: animationSettingsLoading } =
     useAnimationSettings();
 
@@ -41,37 +47,14 @@ export default function AdminDashboard() {
   const quickActionsRef = useRef(null);
   const systemStatusRef = useRef(null);
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !animationSettingsLoading && shouldAnimate) {
-      animatePageLoad();
-    }
-  }, [loading, shouldAnimate, animationSettingsLoading]);
-
-  const fetchDashboardStats = async () => {
-    try {
-      const response = await fetch("/api/admin/dashboard-stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Animation effects (keeping your existing animation logic)
   const animatePageLoad = () => {
     // FIRST: Hide the stat cards immediately
     if (statsGridRef.current) {
       const statCards = statsGridRef.current.querySelectorAll(".stat-card");
       if (statCards.length > 0) {
         gsap.set(statCards, {
-          autoAlpha: 0, // Use autoAlpha instead of opacity
+          autoAlpha: 0,
           y: 30,
           scale: 0.9,
         });
@@ -87,7 +70,7 @@ export default function AdminDashboard() {
     ].filter(Boolean);
 
     gsap.set(elementsToAnimate, {
-      autoAlpha: 0, // Use autoAlpha instead of opacity
+      autoAlpha: 0,
       y: 30,
     });
 
@@ -97,7 +80,7 @@ export default function AdminDashboard() {
     // Header animation
     if (headerRef.current) {
       tl.to(headerRef.current, {
-        autoAlpha: 1, // Animate to autoAlpha 1
+        autoAlpha: 1,
         y: 0,
         duration: 0.6,
         ease: "power2.out",
@@ -112,7 +95,7 @@ export default function AdminDashboard() {
           statCards,
           {
             scale: 1,
-            autoAlpha: 1, // Animate to autoAlpha 1
+            autoAlpha: 1,
             y: 0,
             duration: 0.6,
             stagger: 0.1,
@@ -123,56 +106,34 @@ export default function AdminDashboard() {
       }
     }
 
-    // Content grid
-    if (contentGridRef.current) {
-      tl.to(
-        contentGridRef.current,
-        {
-          autoAlpha: 1, // Animate to autoAlpha 1
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-    }
+    // Other sections
+    const sections = [
+      contentGridRef.current,
+      quickActionsRef.current,
+      systemStatusRef.current,
+    ].filter(Boolean);
 
-    // Quick actions
-    if (quickActionsRef.current) {
+    sections.forEach((section) => {
       tl.to(
-        quickActionsRef.current,
+        section,
         {
-          autoAlpha: 1, // Animate to autoAlpha 1
+          autoAlpha: 1,
           y: 0,
           duration: 0.6,
           ease: "power2.out",
         },
         "-=0.3"
       );
-    }
+    });
 
-    // System status (if visible)
-    if (systemStatusRef.current) {
-      tl.to(
-        systemStatusRef.current,
-        {
-          autoAlpha: 1, // Animate to autoAlpha 1
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-    }
-
-    // Animate numbers counting up after a delay
+    // Animate counters after a delay
     setTimeout(() => {
       animateCounters();
     }, 800);
   };
 
   const animateCounters = () => {
-    if (!statsGridRef.current) return;
+    if (!statsGridRef.current || !stats) return;
 
     visibleStats.forEach((stat, index) => {
       const element = statsGridRef.current.querySelector(
@@ -231,10 +192,18 @@ export default function AdminDashboard() {
     }
   };
 
+  // Trigger animations when data loads
+  useEffect(() => {
+    if (!isLoading && !animationSettingsLoading && shouldAnimate && stats) {
+      animatePageLoad();
+    }
+  }, [isLoading, shouldAnimate, animationSettingsLoading, stats]);
+
   const userPrivilegeLevel = session?.user?.privilegeLevel || 0;
   const userRole = session?.user?.role || "user";
 
-  if (loading) {
+  // Loading state (much faster now with React Query cache!)
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -252,10 +221,33 @@ export default function AdminDashboard() {
     );
   }
 
+  // Error state with retry option
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-900 mb-2">
+            Failed to Load Dashboard
+          </h2>
+          <p className="text-red-700 mb-6 max-w-md mx-auto">
+            {error?.message || "There was an error loading the dashboard data."}
+          </p>
+          <button
+            onClick={() => refetch()}
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const quickStats = [
     {
       title: "Total Applications",
-      value: stats.totalApplications || 0,
+      value: stats?.totalApplications || 0,
       icon: FileText,
       change: "+12%",
       visible: userPrivilegeLevel >= 1,
@@ -264,7 +256,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Active Jobs",
-      value: stats.totalJobs || 0,
+      value: stats?.totalJobs || 0,
       icon: Briefcase,
       change: "+3%",
       visible: userPrivilegeLevel >= 2,
@@ -273,7 +265,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Total Users",
-      value: stats.totalUsers || 0,
+      value: stats?.totalUsers || 0,
       icon: Users,
       change: "+8%",
       visible: userPrivilegeLevel >= 3,
@@ -383,7 +375,7 @@ export default function AdminDashboard() {
               </Link>
             </div>
             <div className="p-6">
-              {stats.recentApplications?.length > 0 ? (
+              {stats?.recentApplications?.length > 0 ? (
                 <div className="space-y-4">
                   {stats.recentApplications
                     .slice(0, 5)
@@ -456,7 +448,7 @@ export default function AdminDashboard() {
               </Link>
             </div>
             <div className="p-6">
-              {stats.recentJobs?.length > 0 ? (
+              {stats?.recentJobs?.length > 0 ? (
                 <div className="space-y-4">
                   {stats.recentJobs.slice(0, 5).map((job, index) => (
                     <div

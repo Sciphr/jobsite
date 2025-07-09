@@ -1,20 +1,32 @@
 // app/providers/QueryProvider.js
 "use client";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 
 export function QueryProvider({ children }) {
-  // Create query client inside component to avoid SSR issues
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long
-            cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache this long
-            refetchOnWindowFocus: false, // Don't refetch when window regains focus
-            retry: 1, // Only retry failed requests once
+            // Keep data fresh for 5 minutes before considering it stale
+            staleTime: 5 * 60 * 1000, // 5 minutes
+            // Keep data in cache for 30 minutes after it becomes inactive
+            gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+            // Retry failed requests up to 3 times
+            retry: 3,
+            // Refetch when window regains focus
+            refetchOnWindowFocus: false, // Disable for admin dashboard
+            // Refetch when reconnecting to internet
+            refetchOnReconnect: true,
+            // Show cached data while refetching in background
+            refetchInterval: false,
+          },
+          mutations: {
+            // Retry failed mutations once
+            retry: 1,
           },
         },
       })
@@ -23,9 +35,12 @@ export function QueryProvider({ children }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/* Only show devtools in development */}
       {process.env.NODE_ENV === "development" && (
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtools
+          initialIsOpen={false}
+          position="bottom-right"
+          buttonPosition="bottom-right"
+        />
       )}
     </QueryClientProvider>
   );

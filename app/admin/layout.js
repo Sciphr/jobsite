@@ -1,9 +1,11 @@
+// app/admin/layout.js - Fixed hooks order issue
 "use client";
 
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -19,12 +21,16 @@ import {
   useThemeClasses,
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
+import { usePrefetchAdminData } from "../hooks/useAdminData";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
+
+  // ✅ ALWAYS call hooks at the top level, before any conditionals
+  const { prefetchAll } = usePrefetchAdminData();
 
   // Show loading while checking session
   if (status === "loading") {
@@ -48,6 +54,12 @@ function AdminLayoutContent({ children }) {
 
   const userPrivilegeLevel = session.user.privilegeLevel;
   const userRole = session.user.role;
+
+  // ✅ Now it's safe to use effects since we know the user is admin
+  useEffect(() => {
+    console.log("🚀 Prefetching admin data for faster navigation...");
+    prefetchAll();
+  }, [prefetchAll]);
 
   // Navigation items based on privilege level
   const navigationItems = [
@@ -164,6 +176,13 @@ function AdminLayoutContent({ children }) {
                     ? `${getButtonClasses("primary")} border border-opacity-20`
                     : `admin-text hover:bg-gray-100`
                 }`}
+                // Optional: Prefetch data on hover for even faster navigation
+                onMouseEnter={() => {
+                  if (!isActive) {
+                    console.log(`🔍 Prefetching data for ${item.name}...`);
+                    prefetchAll();
+                  }
+                }}
               >
                 <Icon
                   className={`h-5 w-5 ${
@@ -227,8 +246,10 @@ function AdminLayoutContent({ children }) {
 
 export default function AdminLayout({ children }) {
   return (
-    <AdminThemeProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </AdminThemeProvider>
+    <QueryProvider>
+      <AdminThemeProvider>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </AdminThemeProvider>
+    </QueryProvider>
   );
 }

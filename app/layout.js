@@ -6,6 +6,8 @@ import { SessionProvider } from "next-auth/react";
 import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
 
+import { QueryProvider } from "./providers/QueryProvider";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -75,11 +77,13 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers session={undefined}>
-          <Header />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-        </Providers>
+        <QueryProvider>
+          <Providers session={undefined}>
+            <Header />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+          </Providers>
+        </QueryProvider>
       </body>
     </html>
   );
