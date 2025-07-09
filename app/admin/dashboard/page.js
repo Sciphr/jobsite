@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   Users,
   Briefcase,
@@ -30,7 +31,8 @@ export default function AdminDashboard() {
     recentJobs: [],
   });
   const [loading, setLoading] = useState(true);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const { shouldAnimate, loading: animationSettingsLoading } =
+    useAnimationSettings();
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -40,20 +42,14 @@ export default function AdminDashboard() {
   const systemStatusRef = useRef(null);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    setAnimationsEnabled(!prefersReducedMotion);
-
     fetchDashboardStats();
   }, []);
 
   useEffect(() => {
-    if (!loading && animationsEnabled) {
+    if (!loading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, animationsEnabled]);
+  }, [loading, shouldAnimate, animationSettingsLoading]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -75,7 +71,7 @@ export default function AdminDashboard() {
       const statCards = statsGridRef.current.querySelectorAll(".stat-card");
       if (statCards.length > 0) {
         gsap.set(statCards, {
-          opacity: 0,
+          autoAlpha: 0, // Use autoAlpha instead of opacity
           y: 30,
           scale: 0.9,
         });
@@ -91,7 +87,7 @@ export default function AdminDashboard() {
     ].filter(Boolean);
 
     gsap.set(elementsToAnimate, {
-      opacity: 0,
+      autoAlpha: 0, // Use autoAlpha instead of opacity
       y: 30,
     });
 
@@ -101,7 +97,7 @@ export default function AdminDashboard() {
     // Header animation
     if (headerRef.current) {
       tl.to(headerRef.current, {
-        opacity: 1,
+        autoAlpha: 1, // Animate to autoAlpha 1
         y: 0,
         duration: 0.6,
         ease: "power2.out",
@@ -116,7 +112,7 @@ export default function AdminDashboard() {
           statCards,
           {
             scale: 1,
-            opacity: 1,
+            autoAlpha: 1, // Animate to autoAlpha 1
             y: 0,
             duration: 0.6,
             stagger: 0.1,
@@ -132,7 +128,7 @@ export default function AdminDashboard() {
       tl.to(
         contentGridRef.current,
         {
-          opacity: 1,
+          autoAlpha: 1, // Animate to autoAlpha 1
           y: 0,
           duration: 0.6,
           ease: "power2.out",
@@ -146,7 +142,7 @@ export default function AdminDashboard() {
       tl.to(
         quickActionsRef.current,
         {
-          opacity: 1,
+          autoAlpha: 1, // Animate to autoAlpha 1
           y: 0,
           duration: 0.6,
           ease: "power2.out",
@@ -160,7 +156,7 @@ export default function AdminDashboard() {
       tl.to(
         systemStatusRef.current,
         {
-          opacity: 1,
+          autoAlpha: 1, // Animate to autoAlpha 1
           y: 0,
           duration: 0.6,
           ease: "power2.out",
@@ -197,7 +193,7 @@ export default function AdminDashboard() {
   };
 
   const handleCardHover = (e, isEntering) => {
-    if (!animationsEnabled) return;
+    if (!shouldAnimate) return;
 
     const card = e.currentTarget;
     const icon = card.querySelector(".stat-icon");

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   BarChart3,
   TrendingUp,
@@ -51,7 +52,8 @@ export default function AdminAnalytics() {
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
   const [refreshing, setRefreshing] = useState(false);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const { shouldAnimate, loading: animationSettingsLoading } =
+    useAnimationSettings();
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -64,24 +66,31 @@ export default function AdminAnalytics() {
   const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    setAnimationsEnabled(!prefersReducedMotion);
-
     fetchAnalytics();
   }, [timeRange]);
 
+  // Update the animation trigger useEffect:
   useEffect(() => {
-    // Only animate once when we first get data
-    if (!loading && animationsEnabled && analytics && !hasAnimated) {
+    // Only animate once when we first get data and animation settings are loaded
+    if (
+      !loading &&
+      !animationSettingsLoading &&
+      shouldAnimate &&
+      analytics &&
+      !hasAnimated
+    ) {
       setTimeout(() => {
         animatePageLoad();
         setHasAnimated(true);
       }, 50);
     }
-  }, [loading, animationsEnabled, analytics, hasAnimated]);
+  }, [
+    loading,
+    shouldAnimate,
+    animationSettingsLoading,
+    analytics,
+    hasAnimated,
+  ]);
 
   const fetchAnalytics = async () => {
     setRefreshing(true);
@@ -300,7 +309,7 @@ export default function AdminAnalytics() {
   };
 
   const handleCardHover = (e, isEntering) => {
-    if (!animationsEnabled) return;
+    if (!shouldAnimate) return;
 
     const card = e.currentTarget;
     const icon = card.querySelector(".metric-icon");

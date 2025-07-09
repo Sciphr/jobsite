@@ -37,8 +37,8 @@ body {
 }
 
 .stat-card {
-  opacity: 0;
-  transform: translateY(30px) scale(0.9);
+  /* opacity: 0; */
+  /* transform: translateY(30px) scale(0.9); */
 }
 
 /* Admin Dashboard Themes */

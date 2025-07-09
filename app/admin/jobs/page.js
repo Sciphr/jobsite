@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   Briefcase,
   Search,
@@ -42,7 +43,8 @@ export default function AdminJobs() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const { shouldAnimate, loading: animationSettingsLoading } =
+    useAnimationSettings();
   const [error, setError] = useState(null);
 
   // Refs for GSAP animations
@@ -53,12 +55,6 @@ export default function AdminJobs() {
   const jobsGridRef = useRef(null);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    setAnimationsEnabled(!prefersReducedMotion);
-
     fetchJobs();
     fetchCategories();
   }, []);
@@ -68,11 +64,10 @@ export default function AdminJobs() {
   }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
 
   useEffect(() => {
-    if (!loading && animationsEnabled) {
-      // Small delay to ensure DOM is ready
+    if (!loading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, animationsEnabled]);
+  }, [loading, shouldAnimate, animationSettingsLoading]);
 
   const fetchJobs = async () => {
     try {
@@ -267,7 +262,7 @@ export default function AdminJobs() {
   };
 
   const handleCardHover = (e, isEntering) => {
-    if (!animationsEnabled) return;
+    if (!shouldAnimate) return;
 
     const card = e.currentTarget;
     const icon = card.querySelector(".stat-icon");
@@ -306,7 +301,7 @@ export default function AdminJobs() {
   };
 
   const handleJobCardHover = (e, isEntering) => {
-    if (!animationsEnabled) return;
+    if (!shouldAnimate) return;
 
     const card = e.currentTarget;
 

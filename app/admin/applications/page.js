@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   FileText,
   Search,
@@ -39,7 +40,8 @@ export default function AdminApplications() {
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
 
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const { shouldAnimate, loading: animationSettingsLoading } =
+    useAnimationSettings();
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -58,19 +60,10 @@ export default function AdminApplications() {
   }, [applications, searchTerm, statusFilter, jobFilter]);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    setAnimationsEnabled(!prefersReducedMotion);
-  }, []);
-
-  useEffect(() => {
-    if (!loading && animationsEnabled) {
-      // Small delay to ensure DOM is ready
+    if (!loading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, animationsEnabled]);
+  }, [loading, shouldAnimate, animationSettingsLoading]);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -442,7 +435,7 @@ export default function AdminApplications() {
   };
 
   const handleCardHover = (e, isEntering) => {
-    if (!animationsEnabled) return;
+    if (!shouldAnimate) return;
 
     const card = e.currentTarget;
     const icon = card.querySelector(".stat-icon");
