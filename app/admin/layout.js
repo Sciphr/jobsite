@@ -34,6 +34,14 @@ function AdminLayoutContent({ children }) {
   // ✅ ALWAYS call hooks at the top level, before any conditionals
   const { prefetchAll } = usePrefetchAdminData();
 
+  // ✅ Always call useEffect at the top level
+  useEffect(() => {
+    // Only prefetch if we have a valid admin session
+    if (session?.user?.privilegeLevel >= 1) {
+      prefetchAll();
+    }
+  }, [session?.user?.privilegeLevel, prefetchAll]);
+
   // Show loading while checking session
   if (status === "loading") {
     return (
@@ -56,12 +64,6 @@ function AdminLayoutContent({ children }) {
 
   const userPrivilegeLevel = session.user.privilegeLevel;
   const userRole = session.user.role;
-
-  // ✅ Now it's safe to use effects since we know the user is admin
-  useEffect(() => {
-    console.log("🚀 Prefetching admin data for faster navigation...");
-    prefetchAll();
-  }, [prefetchAll]);
 
   // Navigation items based on privilege level
   const navigationItems = [
@@ -184,10 +186,8 @@ function AdminLayoutContent({ children }) {
                 {isActive && (
                   <motion.div
                     layoutId="activeNavBackground"
-                    className="absolute inset-0 rounded-lg"
+                    className="absolute inset-0 rounded-lg theme-primary-bg"
                     style={{
-                      background:
-                        "linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)",
                       zIndex: -1,
                     }}
                     transition={{

@@ -7,10 +7,6 @@ export async function GET(req) {
   console.log("🔍 Profile API GET request started");
 
   const session = await getServerSession(authOptions);
-  console.log("📋 Session check:", {
-    hasSession: !!session,
-    userId: session?.user?.id,
-  });
 
   if (!session) {
     console.log("❌ No session found, returning unauthorized");
@@ -21,7 +17,6 @@ export async function GET(req) {
   }
 
   const userId = session.user.id;
-  console.log("🔍 Fetching profile for user:", userId);
 
   try {
     const user = await appPrisma.user.findUnique({
@@ -53,8 +48,6 @@ export async function GET(req) {
       },
     });
 
-    console.log("👤 User data fetched:", { found: !!user, userId: user?.id });
-
     if (!user) {
       console.log("❌ User not found in database");
       return new Response(JSON.stringify({ message: "User not found" }), {
@@ -71,7 +64,6 @@ export async function GET(req) {
       user.isSuperAdmin = user.privilegeLevel >= 3;
     }
 
-    console.log("✅ Returning user profile successfully");
     return new Response(JSON.stringify(user), {
       status: 200,
       headers: { "Content-Type": "application/json" },
