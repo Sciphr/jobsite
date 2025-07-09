@@ -18,6 +18,7 @@ import {
   AdminThemeProvider,
   useThemeClasses,
 } from "../contexts/AdminThemeContext";
+import { QueryProvider } from "../providers/QueryProvider";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
