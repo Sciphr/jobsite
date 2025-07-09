@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { gsap } from "gsap";
+import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   Briefcase,
   Search,
@@ -30,6 +31,7 @@ import {
 
 export default function AdminJobs() {
   const { data: session } = useSession();
+  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [jobs, setJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -376,7 +378,6 @@ export default function AdminJobs() {
     }
   };
 
-  // Update your toggleFeatured function to include auto-scroll:
   const toggleFeatured = async (jobId, featured) => {
     try {
       const response = await fetch(`/api/admin/jobs/${jobId}/feature`, {
@@ -519,7 +520,7 @@ export default function AdminJobs() {
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow border">
+              <div key={i} className="admin-card p-6 rounded-lg shadow">
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/2"></div>
               </div>
@@ -535,14 +536,16 @@ export default function AdminJobs() {
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Jobs Management</h1>
-          <p className="text-gray-600 mt-2">Create and manage job postings</p>
+          <h1 className="text-3xl font-bold admin-text">Jobs Management</h1>
+          <p className="admin-text-light mt-2">
+            Create and manage job postings
+          </p>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 shadow-sm"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -551,7 +554,7 @@ export default function AdminJobs() {
           </button>
           <Link
             href="/admin/jobs/create"
-            className="flex items-center space-x-2 bg-green-400 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("success")}`}
           >
             <Plus className="h-4 w-4" />
             <span>Create Job</span>
@@ -598,56 +601,29 @@ export default function AdminJobs() {
         {statusOptions.map((status, index) => {
           const count = jobs.filter((job) => job.status === status).length;
           const StatusIcon = getStatusIcon(status);
-          const statusConfig = {
-            Active: {
-              color: "text-green-600",
-              bgColor: "bg-green-100",
-              borderColor: "border-green-200",
-              hoverBorderColor: "hover:border-green-400",
-            },
-            Draft: {
-              color: "text-yellow-600",
-              bgColor: "bg-yellow-100",
-              borderColor: "border-yellow-200",
-              hoverBorderColor: "hover:border-yellow-400",
-            },
-            Paused: {
-              color: "text-orange-600",
-              bgColor: "bg-orange-100",
-              borderColor: "border-orange-200",
-              hoverBorderColor: "hover:border-orange-400",
-            },
-            Closed: {
-              color: "text-red-600",
-              bgColor: "bg-red-100",
-              borderColor: "border-red-200",
-              hoverBorderColor: "hover:border-red-400",
-            },
-          }[status];
+          const statClasses = getStatCardClasses(index);
 
           return (
             <div
               key={status}
-              className={`stat-card bg-white p-6 rounded-lg shadow border-2 ${statusConfig.borderColor} ${statusConfig.hoverBorderColor} hover:shadow-md transition-all duration-200 cursor-pointer`}
+              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 cursor-pointer`}
               onMouseEnter={(e) => handleCardHover(e, true)}
               onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div
-                    className="text-2xl font-bold text-gray-900"
+                    className="text-2xl font-bold admin-text"
                     data-counter={index}
                   >
                     {count}
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">
+                  <div className="text-sm admin-text-light font-medium">
                     {status} Jobs
                   </div>
                 </div>
-                <div
-                  className={`stat-icon p-3 rounded-lg ${statusConfig.bgColor}`}
-                >
-                  <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
+                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
+                  <StatusIcon className={`h-6 w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </div>
@@ -656,10 +632,7 @@ export default function AdminJobs() {
       </div>
 
       {/* Filters */}
-      <div
-        ref={filtersRef}
-        className="bg-white p-6 rounded-lg shadow border border-gray-200"
-      >
+      <div ref={filtersRef} className="admin-card p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
@@ -669,7 +642,7 @@ export default function AdminJobs() {
               placeholder="Search jobs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-600 text-gray-700"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-600 admin-text"
             />
           </div>
 
@@ -677,7 +650,7 @@ export default function AdminJobs() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             <option value="all">All Statuses</option>
             {statusOptions.map((status) => (
@@ -691,7 +664,7 @@ export default function AdminJobs() {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             <option value="all">All Departments</option>
             {departments.map((dept) => (
@@ -705,7 +678,7 @@ export default function AdminJobs() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-600"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             <option value="all">All Categories</option>
             {categories.map((category) => (
@@ -753,12 +726,12 @@ export default function AdminJobs() {
           return (
             <div
               key={job.id}
-              className="job-card bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow duration-200"
+              className="job-card admin-card rounded-lg shadow hover:shadow-md transition-shadow duration-200"
               onMouseEnter={(e) => handleJobCardHover(e, true)}
               onMouseLeave={(e) => handleJobCardHover(e, false)}
             >
               {/* Card Header */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b admin-text-light">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
@@ -774,10 +747,10 @@ export default function AdminJobs() {
                         <Star className="h-4 w-4 text-yellow-500 fill-current" />
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold admin-text mb-2">
                       {job.title}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                    <div className="flex items-center space-x-4 text-sm admin-text-light mb-3">
                       <div className="flex items-center space-x-1">
                         <Building2 className="h-4 w-4" />
                         <span>{job.department}</span>
@@ -795,10 +768,10 @@ export default function AdminJobs() {
                       >
                         {job.status}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs admin-text-light">
                         {job.employmentType}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs admin-text-light">
                         {job.experienceLevel}
                       </span>
                     </div>
@@ -811,12 +784,12 @@ export default function AdminJobs() {
                 <div className="space-y-3">
                   {/* Salary */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm admin-text-light">
                       Salary Display:
                     </span>
                     <span
                       className={`text-sm font-medium ${
-                        job.showSalary ? "text-green-700" : "text-gray-500"
+                        job.showSalary ? "text-green-700" : "admin-text-light"
                       }`}
                     >
                       {job.showSalary ? "Visible" : "Hidden"}
@@ -825,8 +798,10 @@ export default function AdminJobs() {
 
                   {/* Applications */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Applications:</span>
-                    <span className="text-sm font-medium text-gray-900 flex items-center space-x-1">
+                    <span className="text-sm admin-text-light">
+                      Applications:
+                    </span>
+                    <span className="text-sm font-medium admin-text flex items-center space-x-1">
                       <Users className="h-4 w-4 text-gray-400" />
                       <span>{job.applicationCount}</span>
                     </span>
@@ -834,8 +809,8 @@ export default function AdminJobs() {
 
                   {/* Views */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Views:</span>
-                    <span className="text-sm font-medium text-gray-900 flex items-center space-x-1">
+                    <span className="text-sm admin-text-light">Views:</span>
+                    <span className="text-sm font-medium admin-text flex items-center space-x-1">
                       <Eye className="h-4 w-4 text-gray-400" />
                       <span>{job.viewCount}</span>
                     </span>
@@ -843,8 +818,8 @@ export default function AdminJobs() {
 
                   {/* Created Date */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Created:</span>
-                    <span className="text-sm text-gray-500 flex items-center space-x-1">
+                    <span className="text-sm admin-text-light">Created:</span>
+                    <span className="text-sm admin-text-light flex items-center space-x-1">
                       <Calendar className="h-4 w-4" />
                       <span>
                         {new Date(job.createdAt).toLocaleDateString()}
@@ -855,7 +830,7 @@ export default function AdminJobs() {
               </div>
 
               {/* Card Actions */}
-              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="px-6 py-4 border-t admin-text-light bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Link
@@ -925,17 +900,17 @@ export default function AdminJobs() {
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
-                      <div className="absolute right-0 top-8 w-40 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                      <div className="absolute right-0 top-8 w-40 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                         <Link
                           href={`/admin/jobs/${job.id}/edit`}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg flex items-center space-x-2"
+                          className="w-full px-3 py-2 text-left text-sm admin-text-light hover:bg-gray-50 rounded-t-lg flex items-center space-x-2"
                         >
                           <Edit3 className="h-3 w-3" />
                           <span>Edit Job</span>
                         </Link>
                         <button
                           onClick={() => duplicateJob(job.id)}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                          className="w-full px-3 py-2 text-left text-sm admin-text-light hover:bg-gray-50 flex items-center space-x-2"
                         >
                           <Copy className="h-3 w-3" />
                           <span>Duplicate</span>
@@ -961,10 +936,8 @@ export default function AdminJobs() {
       {filteredJobs.length === 0 && !loading && (
         <div className="text-center py-12">
           <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No jobs found
-          </h3>
-          <p className="text-gray-500 mb-6">
+          <h3 className="text-lg font-medium admin-text mb-2">No jobs found</h3>
+          <p className="admin-text-light mb-6">
             {searchTerm ||
             statusFilter !== "all" ||
             categoryFilter !== "all" ||
@@ -978,7 +951,7 @@ export default function AdminJobs() {
             departmentFilter === "all" && (
               <Link
                 href="/admin/jobs/create"
-                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
               >
                 <Plus className="h-4 w-4" />
                 <span>Create Your First Job</span>

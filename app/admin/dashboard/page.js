@@ -20,7 +20,8 @@ import {
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
-  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
+  const { getStatCardClasses, getButtonClasses, getThemeClasses } =
+    useThemeClasses();
   const [stats, setStats] = useState({
     totalJobs: 0,
     totalApplications: 0,
@@ -263,6 +264,7 @@ export default function AdminDashboard() {
       change: "+12%",
       visible: userPrivilegeLevel >= 1,
       href: "/admin/applications",
+      statIndex: 0,
     },
     {
       title: "Active Jobs",
@@ -271,6 +273,7 @@ export default function AdminDashboard() {
       change: "+3%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/jobs",
+      statIndex: 1,
     },
     {
       title: "Total Users",
@@ -279,6 +282,7 @@ export default function AdminDashboard() {
       change: "+8%",
       visible: userPrivilegeLevel >= 3,
       href: "/admin/users",
+      statIndex: 2,
     },
     {
       title: "Job Views",
@@ -287,6 +291,7 @@ export default function AdminDashboard() {
       change: "+15%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/analytics",
+      statIndex: 3,
     },
   ];
 
@@ -297,16 +302,16 @@ export default function AdminDashboard() {
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold admin-text">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="admin-text-light mt-2">
             Here's what's happening with your job board today.
           </p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-sm text-gray-500">Your Role</div>
-          <div className="font-semibold text-gray-900 capitalize">
+        <div className="admin-card px-4 py-2 rounded-lg shadow-sm">
+          <div className="text-sm admin-text-light">Your Role</div>
+          <div className="font-semibold admin-text capitalize">
             {userRole.replace("_", " ")}
           </div>
         </div>
@@ -319,23 +324,23 @@ export default function AdminDashboard() {
       >
         {visibleStats.map((stat, index) => {
           const Icon = stat.icon;
-          const statClasses = getStatCardClasses(index);
+          const statClasses = getStatCardClasses(stat.statIndex);
 
           return (
             <Link
               key={index}
               href={stat.href}
-              className={`stat-card bg-white p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
+              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
               onMouseEnter={(e) => handleCardHover(e, true)}
               onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-medium admin-text-light">
                     {stat.title}
                   </p>
                   <p
-                    className="text-3xl font-bold text-gray-900 mt-2"
+                    className="text-3xl font-bold admin-text mt-2"
                     data-counter={index}
                   >
                     {typeof stat.value === "number"
@@ -347,7 +352,7 @@ export default function AdminDashboard() {
                     <span className="text-sm text-green-600 ml-1">
                       {stat.change}
                     </span>
-                    <span className="text-sm text-gray-500 ml-1">
+                    <span className="text-sm admin-text-light ml-1">
                       vs last month
                     </span>
                   </div>
@@ -368,14 +373,14 @@ export default function AdminDashboard() {
       >
         {/* Recent Applications (HR and above) */}
         {userPrivilegeLevel >= 1 && (
-          <div className="bg-white rounded-lg shadow border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="admin-card rounded-lg shadow">
+            <div className="p-6 border-b admin-text-light flex items-center justify-between">
+              <h2 className="text-lg font-semibold admin-text">
                 Recent Applications
               </h2>
               <Link
                 href="/admin/applications"
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1"
+                className="theme-primary-text hover:opacity-80 text-sm font-medium flex items-center space-x-1 transition-colors duration-200"
               >
                 <span>View all</span>
                 <ArrowRight className="h-4 w-4" />
@@ -392,13 +397,13 @@ export default function AdminDashboard() {
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                       >
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium admin-text">
                             {application.name || "Anonymous"}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm admin-text-light">
                             {application.jobTitle}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs admin-text-light mt-1">
                             {new Date(
                               application.appliedAt
                             ).toLocaleDateString()}
@@ -429,7 +434,9 @@ export default function AdminDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-2">No recent applications</p>
+                  <p className="admin-text-light mb-2">
+                    No recent applications
+                  </p>
                   <p className="text-sm text-gray-400">
                     Applications will appear here when users apply to jobs
                   </p>
@@ -441,14 +448,12 @@ export default function AdminDashboard() {
 
         {/* Recent Jobs (Admin and above) */}
         {userPrivilegeLevel >= 2 && (
-          <div className="bg-white rounded-lg shadow border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Jobs
-              </h2>
+          <div className="admin-card rounded-lg shadow">
+            <div className="p-6 border-b admin-text-light flex items-center justify-between">
+              <h2 className="text-lg font-semibold admin-text">Recent Jobs</h2>
               <Link
                 href="/admin/jobs"
-                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1"
+                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1 transition-colors duration-200"
               >
                 <span>View all</span>
                 <ArrowRight className="h-4 w-4" />
@@ -463,13 +468,13 @@ export default function AdminDashboard() {
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                     >
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium admin-text">
                           {job.title}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm admin-text-light">
                           {job.department}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs admin-text-light mt-1">
                           {new Date(job.createdAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -489,7 +494,7 @@ export default function AdminDashboard() {
                         >
                           {job.status}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm admin-text-light">
                           {job.applicationCount} apps
                         </span>
                       </div>
@@ -499,7 +504,7 @@ export default function AdminDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-2">No recent jobs</p>
+                  <p className="admin-text-light mb-2">No recent jobs</p>
                   <p className="text-sm text-gray-400">
                     Create your first job posting to get started
                   </p>
@@ -511,13 +516,8 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions with Theme Support */}
-      <div
-        ref={quickActionsRef}
-        className="bg-white rounded-lg shadow border border-gray-200 p-6"
-      >
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Quick Actions
-        </h2>
+      <div ref={quickActionsRef} className="admin-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold admin-text mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {userPrivilegeLevel >= 1 && (
             <Link
@@ -525,10 +525,10 @@ export default function AdminDashboard() {
               className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors duration-200 text-center group"
             >
               <FileText className="h-8 w-8 text-gray-400 group-hover:text-blue-600 mx-auto mb-2 transition-colors duration-200" />
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm font-medium admin-text">
                 Review Applications
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs admin-text-light">
                 Check new applications
               </div>
             </Link>
@@ -556,10 +556,8 @@ export default function AdminDashboard() {
               className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors duration-200 text-center group"
             >
               <Users className="h-8 w-8 text-gray-400 group-hover:text-purple-600 mx-auto mb-2 transition-colors duration-200" />
-              <div className="text-sm font-medium text-gray-900">
-                Manage Users
-              </div>
-              <div className="text-xs text-gray-500">Add or edit users</div>
+              <div className="text-sm font-medium admin-text">Manage Users</div>
+              <div className="text-xs admin-text-light">Add or edit users</div>
             </Link>
           )}
         </div>
@@ -567,27 +565,22 @@ export default function AdminDashboard() {
 
       {/* System Status (Super Admin only) */}
       {userPrivilegeLevel >= 3 && (
-        <div
-          ref={systemStatusRef}
-          className="bg-white rounded-lg shadow border border-gray-200 p-6"
-        >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div ref={systemStatusRef} className="admin-card rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold admin-text mb-4">
             System Status
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
-                <div className="text-sm font-medium text-gray-900">
-                  Database
-                </div>
+                <div className="text-sm font-medium admin-text">Database</div>
                 <div className="text-xs text-green-600">Connected</div>
               </div>
             </div>
             <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
-                <div className="text-sm font-medium text-gray-900">
+                <div className="text-sm font-medium admin-text">
                   Email Service
                 </div>
                 <div className="text-xs text-green-600">Operational</div>
@@ -596,7 +589,7 @@ export default function AdminDashboard() {
             <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <Clock className="h-5 w-5 text-yellow-600" />
               <div>
-                <div className="text-sm font-medium text-gray-900">Backup</div>
+                <div className="text-sm font-medium admin-text">Backup</div>
                 <div className="text-xs text-yellow-600">Last: 2 hours ago</div>
               </div>
             </div>

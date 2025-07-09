@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
+import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   FileText,
   Search,
@@ -26,6 +27,7 @@ import {
 
 export default function AdminApplications() {
   const { data: session } = useSession();
+  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [applications, setApplications] = useState([]);
   const [filteredApplications, setFilteredApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -491,7 +493,7 @@ export default function AdminApplications() {
       <div className="space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="bg-white rounded-lg shadow border">
+          <div className="admin-card rounded-lg shadow border">
             <div className="p-6 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="h-16 bg-gray-200 rounded"></div>
@@ -508,8 +510,8 @@ export default function AdminApplications() {
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Applications</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold admin-text">Applications</h1>
+          <p className="admin-text-light mt-2">
             Manage job applications and candidate pipeline
           </p>
         </div>
@@ -517,7 +519,7 @@ export default function AdminApplications() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 shadow-sm"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -574,30 +576,29 @@ export default function AdminApplications() {
           }[status];
 
           const StatusIcon = statusConfig.icon;
+          const statClasses = getStatCardClasses(index);
 
           return (
             <div
               key={status}
-              className={`stat-card bg-white p-6 rounded-lg shadow border-2 ${statusConfig.borderColor} hover:shadow-md transition-shadow duration-200 cursor-pointer`}
+              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-shadow duration-200 cursor-pointer`}
               onMouseEnter={(e) => handleCardHover(e, true)}
               onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div>
                   <div
-                    className="text-2xl font-bold text-gray-900"
+                    className="text-2xl font-bold admin-text"
                     data-counter={index}
                   >
                     {count}
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">
+                  <div className="text-sm admin-text-light font-medium">
                     {status}
                   </div>
                 </div>
-                <div
-                  className={`stat-icon p-3 rounded-lg ${statusConfig.bgColor}`}
-                >
-                  <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
+                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
+                  <StatusIcon className={`h-6 w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </div>
@@ -606,10 +607,7 @@ export default function AdminApplications() {
       </div>
 
       {/* Filters */}
-      <div
-        ref={filtersRef}
-        className="bg-white p-6 rounded-lg shadow border border-gray-200"
-      >
+      <div ref={filtersRef} className="admin-card p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -618,14 +616,14 @@ export default function AdminApplications() {
               placeholder="Search by name, email, or job title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 admin-text"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text"
           >
             <option value="all">All Statuses</option>
             {statusOptions.map((status) => (
@@ -638,7 +636,7 @@ export default function AdminApplications() {
           <select
             value={jobFilter}
             onChange={(e) => setJobFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text"
           >
             <option value="all">All Jobs</option>
             {jobs.map((job) => (
@@ -694,11 +692,11 @@ export default function AdminApplications() {
       {/* Applications Table */}
       <div
         ref={applicationsTableRef}
-        className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden"
+        className="admin-card rounded-lg shadow overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b admin-text-light">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold admin-text">
               Applications ({filteredApplications.length})
             </h2>
             <div className="flex items-center space-x-2">
@@ -711,7 +709,7 @@ export default function AdminApplications() {
                 onChange={(e) => handleSelectAll(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-600">Select all</span>
+              <span className="text-sm admin-text-light">Select all</span>
             </div>
           </div>
         </div>
@@ -724,24 +722,24 @@ export default function AdminApplications() {
                   <th className="w-12 px-6 py-3 text-left">
                     <span className="sr-only">Select</span>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                     Candidate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                     Job
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                     Applied
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="admin-card divide-y divide-gray-200">
                 {filteredApplications.map((application) => (
                   <tr key={application.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -759,21 +757,23 @@ export default function AdminApplications() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                        <div
+                          className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
+                        >
                           {application.name?.charAt(0)?.toUpperCase() ||
                             application.email?.charAt(0)?.toUpperCase() ||
                             "A"}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium admin-text">
                             {application.name || "Anonymous"}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center space-x-1">
+                          <div className="text-sm admin-text-light flex items-center space-x-1">
                             <Mail className="h-3 w-3" />
                             <span>{application.email}</span>
                           </div>
                           {application.phone && (
-                            <div className="text-sm text-gray-500 flex items-center space-x-1">
+                            <div className="text-sm admin-text-light flex items-center space-x-1">
                               <Phone className="h-3 w-3" />
                               <span>{application.phone}</span>
                             </div>
@@ -782,10 +782,10 @@ export default function AdminApplications() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium admin-text">
                         {application.job?.title}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm admin-text-light">
                         {application.job?.department}
                       </div>
                     </td>
@@ -810,13 +810,13 @@ export default function AdminApplications() {
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 flex items-center space-x-1">
+                      <div className="text-sm admin-text flex items-center space-x-1">
                         <Calendar className="h-3 w-3 text-gray-400" />
                         <span>
                           {new Date(application.appliedAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs admin-text-light">
                         {new Date(application.appliedAt).toLocaleTimeString()}
                       </div>
                     </td>
@@ -850,7 +850,7 @@ export default function AdminApplications() {
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
-                          <div className="absolute right-0 top-8 w-32 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                          <div className="absolute right-0 top-8 w-32 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                             <button
                               onClick={() => deleteApplication(application.id)}
                               className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg"
@@ -868,10 +868,10 @@ export default function AdminApplications() {
           ) : (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium admin-text mb-2">
                 No applications found
               </h3>
-              <p className="text-gray-500">
+              <p className="admin-text-light">
                 {searchTerm || statusFilter !== "all" || jobFilter !== "all"
                   ? "Try adjusting your filters to see more results."
                   : "Applications will appear here when candidates apply to your jobs."}
@@ -891,14 +891,16 @@ export default function AdminApplications() {
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200"
+              className="admin-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header with gradient */}
-              <div className="px-6 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+              {/* Header with theme-aware gradient */}
+              <div
+                className={`px-6 py-5 text-white ${getButtonClasses("primary")}`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded-full bg-white bg-opacity-30 flex items-center justify-center text-blue-600 font-semibold">
+                    <div className="h-10 w-10 rounded-full bg-white bg-opacity-30 flex items-center justify-center theme-primary-text font-semibold">
                       {selectedApplication.name?.charAt(0)?.toUpperCase() ||
                         selectedApplication.email?.charAt(0)?.toUpperCase() ||
                         "A"}
@@ -907,7 +909,7 @@ export default function AdminApplications() {
                       <h2 className="text-lg font-semibold">
                         Application Details
                       </h2>
-                      <p className="text-blue-100 text-sm">
+                      <p className="text-white text-opacity-80 text-sm">
                         {selectedApplication.job?.title}
                       </p>
                     </div>
@@ -929,40 +931,40 @@ export default function AdminApplications() {
                       <div className="p-2 bg-blue-100 rounded-lg">
                         <User className="h-5 w-5 text-blue-600" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold admin-text">
                         Applicant Information
                       </h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-blue-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Name
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {selectedApplication.name || "Not provided"}
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-blue-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Email
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {selectedApplication.email}
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-blue-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Phone
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {selectedApplication.phone || "Not provided"}
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-blue-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-blue-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Applied
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {new Date(
                             selectedApplication.appliedAt
                           ).toLocaleDateString()}
@@ -977,24 +979,24 @@ export default function AdminApplications() {
                       <div className="p-2 bg-green-100 rounded-lg">
                         <Briefcase className="h-5 w-5 text-green-600" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold admin-text">
                         Position Details
                       </h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-green-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Position
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {selectedApplication.job?.title}
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <span className="text-gray-700 font-medium block mb-1">
+                      <div className="admin-card rounded-lg p-3 border border-green-100">
+                        <span className="admin-text-light font-medium block mb-1">
                           Department
                         </span>
-                        <p className="text-gray-900">
+                        <p className="admin-text">
                           {selectedApplication.job?.department}
                         </p>
                       </div>
@@ -1008,12 +1010,12 @@ export default function AdminApplications() {
                         <div className="p-2 bg-purple-100 rounded-lg">
                           <Mail className="h-5 w-5 text-purple-600" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold admin-text">
                           Cover Letter
                         </h3>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-purple-100">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      <div className="admin-card rounded-lg p-4 border border-purple-100">
+                        <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
                           {selectedApplication.coverLetter}
                         </p>
                       </div>
@@ -1027,12 +1029,12 @@ export default function AdminApplications() {
                         <div className="p-2 bg-yellow-100 rounded-lg">
                           <FileText className="h-5 w-5 text-yellow-600" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold admin-text">
                           Internal Notes
                         </h3>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-yellow-200">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      <div className="admin-card rounded-lg p-4 border border-yellow-200">
+                        <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
                           {selectedApplication.notes}
                         </p>
                       </div>
@@ -1046,7 +1048,7 @@ export default function AdminApplications() {
                         <div className="p-2 bg-orange-100 rounded-lg">
                           <Download className="h-5 w-5 text-orange-600" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold admin-text">
                           Resume
                         </h3>
                       </div>
@@ -1070,7 +1072,7 @@ export default function AdminApplications() {
               {/* Footer */}
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-700 font-medium">
+                  <span className="text-sm admin-text-light font-medium">
                     Current Status:
                   </span>
                   <select
@@ -1085,7 +1087,7 @@ export default function AdminApplications() {
                         status: e.target.value,
                       }));
                     }}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 font-medium"
+                    className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text font-medium"
                   >
                     {statusOptions.map((status) => (
                       <option key={status} value={status}>

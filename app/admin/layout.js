@@ -22,7 +22,8 @@ import {
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const { getThemeClasses } = useThemeClasses();
+  const { getThemeClasses, getStatCardClasses, getButtonClasses } =
+    useThemeClasses();
 
   // Show loading while checking session
   if (status === "loading") {
@@ -104,22 +105,22 @@ function AdminLayoutContent({ children }) {
     if (cleanRole === "super_admin") {
       return {
         text: "Super Admin",
-        classes: getThemeClasses("primary") + " text-white",
+        classes: getButtonClasses("primary"),
       };
     } else if (cleanRole === "admin") {
       return {
         text: "Admin",
-        classes: getThemeClasses("accent") + " text-white",
+        classes: getButtonClasses("accent"),
       };
     } else if (cleanRole === "hr") {
       return {
         text: "HR",
-        classes: getThemeClasses("success") + " text-white",
+        classes: getButtonClasses("success"),
       };
     } else {
       return {
         text: "Admin",
-        classes: getThemeClasses("accent") + " text-white",
+        classes: getButtonClasses("accent"),
       };
     }
   };
@@ -128,17 +129,15 @@ function AdminLayoutContent({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className={`w-64 shadow-lg ${getThemeClasses("sidebar")}`}>
-        <div className="p-6 border-b border-gray-200">
+      {/* Themed Sidebar */}
+      <div className="w-64 shadow-lg admin-sidebar">
+        <div className="p-6 border-b admin-text-light">
           <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-lg ${getThemeClasses("primary")}`}>
-              <Shield className="h-6 w-6 text-white" />
+            <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
+              <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h2
-                className={`text-lg font-semibold ${getThemeClasses("text")}`}
-              >
+              <h2 className={`text-lg font-semibold admin-text`}>
                 Admin Panel
               </h2>
               <span
@@ -161,15 +160,15 @@ function AdminLayoutContent({ children }) {
                 href={item.href}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 group ${
                   isActive
-                    ? `${getThemeClasses("primary")} text-white border border-opacity-20`
-                    : `${getThemeClasses("text")} hover:bg-gray-100`
+                    ? `${getButtonClasses("primary")} border border-opacity-20`
+                    : `admin-text hover:bg-gray-100`
                 }`}
               >
                 <Icon
                   className={`h-5 w-5 ${
                     isActive
                       ? "text-white"
-                      : `${getThemeClasses("textLight")} group-hover:${getThemeClasses("text")}`
+                      : `admin-text-light group-hover:admin-text`
                   }`}
                 />
                 <div className="flex-1">
@@ -178,7 +177,7 @@ function AdminLayoutContent({ children }) {
                     className={`text-xs mt-0.5 ${
                       isActive
                         ? "text-white text-opacity-80"
-                        : getThemeClasses("textLight")
+                        : "admin-text-light"
                     }`}
                   >
                     {item.description}
@@ -190,22 +189,18 @@ function AdminLayoutContent({ children }) {
         </nav>
 
         {/* User Info at Bottom */}
-        <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 bg-white">
+        <div className="absolute bottom-0 w-64 p-4 border-t admin-text-light bg-white">
           <div className="flex items-center space-x-3">
             <div
-              className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getThemeClasses("primary")}`}
+              className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
             >
               {session.user?.name?.charAt(0)?.toUpperCase() || "A"}
             </div>
             <div className="flex-1 min-w-0">
-              <div
-                className={`text-sm font-medium truncate ${getThemeClasses("text")}`}
-              >
+              <div className={`text-sm font-medium truncate admin-text`}>
                 {session.user?.name || "Admin User"}
               </div>
-              <div
-                className={`text-xs truncate ${getThemeClasses("textLight")}`}
-              >
+              <div className={`text-xs truncate admin-text-light`}>
                 {session.user?.email}
               </div>
             </div>
@@ -213,7 +208,7 @@ function AdminLayoutContent({ children }) {
 
           <Link
             href="/"
-            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${getThemeClasses("card")} hover:${getThemeClasses("primaryBorder")} ${getThemeClasses("text")}`}
+            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border rounded-md text-sm font-medium transition-colors duration-200 admin-card hover:admin-primary-border admin-text`}
           >
             <Building2 className="h-4 w-4 mr-2" />
             Back to Site

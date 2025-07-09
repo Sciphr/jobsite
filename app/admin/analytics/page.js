@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
+import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   BarChart3,
   TrendingUp,
@@ -44,6 +45,7 @@ import {
 
 export default function AdminAnalytics() {
   const { data: session } = useSession();
+  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30d");
@@ -59,7 +61,7 @@ export default function AdminAnalytics() {
   const conversionFunnelRef = useRef(null);
   const insightsGridRef = useRef(null);
 
-  const [hasAnimated, setHasAnimated] = useState(false); // Add this state
+  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
     // Check for reduced motion preference
@@ -76,12 +78,10 @@ export default function AdminAnalytics() {
     if (!loading && animationsEnabled && analytics && !hasAnimated) {
       setTimeout(() => {
         animatePageLoad();
-        setHasAnimated(true); // Prevent future animations
+        setHasAnimated(true);
       }, 50);
     }
   }, [loading, animationsEnabled, analytics, hasAnimated]);
-
-  // Move the animation trigger to the fetchAnalytics function instead
 
   const fetchAnalytics = async () => {
     setRefreshing(true);
@@ -100,7 +100,6 @@ export default function AdminAnalytics() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-      // Remove animation trigger from here
     }
   };
 
@@ -185,7 +184,7 @@ export default function AdminAnalytics() {
   });
 
   const animatePageLoad = () => {
-    // FIRST: Hide the metric cards immediately (like other pages)
+    // FIRST: Hide the metric cards immediately
     if (metricsGridRef.current) {
       const metricCards =
         metricsGridRef.current.querySelectorAll(".metric-card");
@@ -369,7 +368,7 @@ export default function AdminAnalytics() {
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow border">
+              <div key={i} className="admin-card p-6 rounded-lg shadow">
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/2"></div>
               </div>
@@ -386,15 +385,15 @@ export default function AdminAnalytics() {
       <div className="space-y-6">
         <div className="text-center py-12">
           <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium admin-text mb-2">
             Failed to load analytics
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="admin-text-light mb-6">
             There was an error loading the analytics data.
           </p>
           <button
             onClick={handleRefresh}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className={`${getButtonClasses("primary")} px-4 py-2 rounded-lg`}
           >
             Retry
           </button>
@@ -408,10 +407,8 @@ export default function AdminAnalytics() {
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Analytics Dashboard
-          </h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold admin-text">Analytics Dashboard</h1>
+          <p className="admin-text-light mt-2">
             Track performance metrics and insights across your job board
           </p>
         </div>
@@ -419,7 +416,7 @@ export default function AdminAnalytics() {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             {timeRangeOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -430,14 +427,16 @@ export default function AdminAnalytics() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 admin-text"
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             />
             <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
-          <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+          <button
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
+          >
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>
@@ -450,14 +449,14 @@ export default function AdminAnalytics() {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
         <div
-          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Jobs</p>
-              <p className="text-3xl font-bold text-gray-900" data-counter="0">
+              <p className="text-sm font-medium admin-text-light">Total Jobs</p>
+              <p className="text-3xl font-bold admin-text" data-counter="0">
                 {analytics.overview.totalJobs}
               </p>
               <div className="flex items-center mt-2">
@@ -469,26 +468,30 @@ export default function AdminAnalytics() {
                 >
                   {Math.abs(analytics.overview.jobsChange)}%
                 </span>
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm admin-text-light ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="metric-icon p-3 rounded-lg bg-blue-100">
-              <Briefcase className="h-6 w-6 text-blue-600" />
+            <div
+              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(0).bg}`}
+            >
+              <Briefcase className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
             </div>
           </div>
         </div>
 
         <div
-          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Applications</p>
-              <p className="text-3xl font-bold text-gray-900" data-counter="1">
+              <p className="text-sm font-medium admin-text-light">
+                Applications
+              </p>
+              <p className="text-3xl font-bold admin-text" data-counter="1">
                 {analytics.overview.totalApplications}
               </p>
               <div className="flex items-center mt-2">
@@ -500,26 +503,30 @@ export default function AdminAnalytics() {
                 >
                   {Math.abs(analytics.overview.applicationsChange)}%
                 </span>
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm admin-text-light ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="metric-icon p-3 rounded-lg bg-green-100">
-              <FileText className="h-6 w-6 text-green-600" />
+            <div
+              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(1).bg}`}
+            >
+              <FileText className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
             </div>
           </div>
         </div>
 
         <div
-          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900" data-counter="2">
+              <p className="text-sm font-medium admin-text-light">
+                Total Users
+              </p>
+              <p className="text-3xl font-bold admin-text" data-counter="2">
                 {analytics.overview.totalUsers}
               </p>
               <div className="flex items-center mt-2">
@@ -531,26 +538,28 @@ export default function AdminAnalytics() {
                 >
                   {Math.abs(analytics.overview.usersChange)}%
                 </span>
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm admin-text-light ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="metric-icon p-3 rounded-lg bg-purple-100">
-              <Users className="h-6 w-6 text-purple-600" />
+            <div
+              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(2).bg}`}
+            >
+              <Users className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
             </div>
           </div>
         </div>
 
         <div
-          className="metric-card bg-white p-6 rounded-lg shadow border border-gray-200 cursor-pointer transition-all duration-200"
+          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Job Views</p>
-              <p className="text-3xl font-bold text-gray-900" data-counter="3">
+              <p className="text-sm font-medium admin-text-light">Job Views</p>
+              <p className="text-3xl font-bold admin-text" data-counter="3">
                 {analytics.overview.totalViews.toLocaleString()}
               </p>
               <div className="flex items-center mt-2">
@@ -562,13 +571,15 @@ export default function AdminAnalytics() {
                 >
                   {Math.abs(analytics.overview.viewsChange)}%
                 </span>
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm admin-text-light ml-1">
                   vs last period
                 </span>
               </div>
             </div>
-            <div className="metric-icon p-3 rounded-lg bg-orange-100">
-              <Eye className="h-6 w-6 text-orange-600" />
+            <div
+              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(3).bg}`}
+            >
+              <Eye className={`h-6 w-6 ${getStatCardClasses(3).icon}`} />
             </div>
           </div>
         </div>
@@ -580,15 +591,15 @@ export default function AdminAnalytics() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-8"
       >
         {/* Trend Chart */}
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold admin-text">
               Activity Trends
             </h2>
             <select
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
-              className="text-sm border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="text-sm border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
             >
               <option value="applications">Applications</option>
               <option value="jobs">Jobs Posted</option>
@@ -629,8 +640,8 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Jobs by Department */}
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold admin-text mb-6">
             Jobs by Department
           </h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -661,8 +672,8 @@ export default function AdminAnalytics() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-8"
       >
         {/* Application Status */}
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold admin-text mb-6">
             Application Status Distribution
           </h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -686,8 +697,8 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Top Performing Jobs */}
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold admin-text mb-6">
             Top Performing Jobs
           </h2>
           <div className="space-y-4">
@@ -697,16 +708,16 @@ export default function AdminAnalytics() {
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{job.title}</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="font-medium admin-text">{job.title}</div>
+                  <div className="text-sm admin-text-light">
                     {job.applications} applications • {job.views} views
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium admin-text">
                     {job.conversionRate}%
                   </div>
-                  <div className="text-xs text-gray-500">conversion</div>
+                  <div className="text-xs admin-text-light">conversion</div>
                 </div>
               </div>
             ))}
@@ -717,23 +728,23 @@ export default function AdminAnalytics() {
       {/* Conversion Funnel */}
       <div
         ref={conversionFunnelRef}
-        className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200"
+        className="chart-card admin-card p-6 rounded-lg shadow"
       >
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <h2 className="text-lg font-semibold admin-text mb-6">
           Conversion Funnel
         </h2>
         <div className="space-y-4">
           {analytics.conversionFunnel.map((stage, index) => (
             <div key={index} className="relative">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium admin-text-light">
                   {stage.stage}
                 </span>
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm admin-text-light">
                     {stage.percentage}%
                   </span>
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold admin-text">
                     {stage.count.toLocaleString()}
                   </span>
                 </div>
@@ -754,60 +765,64 @@ export default function AdminAnalytics() {
         ref={insightsGridRef}
         className="grid grid-cols-1 md:grid-cols-3 gap-6"
       >
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">
               <Target className="h-5 w-5 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold admin-text">
               Avg. Time to Hire
             </h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
+          <div className="text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.avgTimeToHire} days
           </div>
           <div className="flex items-center">
             <TrendingDown className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">2 days faster</span>
-            <span className="text-sm text-gray-500 ml-1">than last month</span>
+            <span className="text-sm admin-text-light ml-1">
+              than last month
+            </span>
           </div>
         </div>
 
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-blue-100">
               <Award className="h-5 w-5 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Success Rate
-            </h3>
+            <h3 className="text-lg font-semibold admin-text">Success Rate</h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
+          <div className="text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.successRate}%
           </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">1.2% increase</span>
-            <span className="text-sm text-gray-500 ml-1">from last month</span>
+            <span className="text-sm admin-text-light ml-1">
+              from last month
+            </span>
           </div>
         </div>
 
-        <div className="chart-card bg-white p-6 rounded-lg shadow border border-gray-200">
+        <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-purple-100">
               <Activity className="h-5 w-5 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold admin-text">
               Avg. Applications/Job
             </h3>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-2">
+          <div className="text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.avgApplicationsPerJob}
           </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
             <span className="text-sm text-green-600 ml-1">3.2 increase</span>
-            <span className="text-sm text-gray-500 ml-1">from last month</span>
+            <span className="text-sm admin-text-light ml-1">
+              from last month
+            </span>
           </div>
         </div>
       </div>

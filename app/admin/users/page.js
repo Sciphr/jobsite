@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
 import Link from "next/link";
+import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   Users,
   Search,
@@ -26,6 +27,7 @@ import {
 
 export default function AdminUsers() {
   const { data: session } = useSession();
+  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -395,7 +397,7 @@ export default function AdminUsers() {
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow border">
+              <div key={i} className="admin-card p-6 rounded-lg shadow">
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/2"></div>
               </div>
@@ -411,8 +413,8 @@ export default function AdminUsers() {
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold admin-text">Users Management</h1>
+          <p className="admin-text-light mt-2">
             Manage user accounts and permissions
           </p>
         </div>
@@ -420,7 +422,7 @@ export default function AdminUsers() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors duration-200 shadow-sm"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -429,7 +431,7 @@ export default function AdminUsers() {
           </button>
           <Link
             href="/admin/users/create"
-            className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("accent")}`}
           >
             <Plus className="h-4 w-4" />
             <span>Add User</span>
@@ -442,49 +444,29 @@ export default function AdminUsers() {
         {roleOptions.map((role, index) => {
           const count = users.filter((user) => user.role === role.value).length;
           const RoleIcon = getRoleIcon(role.value);
-          const roleColor = getRoleColor(role.value);
+          const statClasses = getStatCardClasses(index);
 
           return (
             <div
               key={role.value}
-              className={`stat-card bg-white p-6 rounded-lg shadow border-2 border-${
-                role.value === "user"
-                  ? "gray"
-                  : role.value === "hr"
-                  ? "blue"
-                  : role.value === "admin"
-                  ? "green"
-                  : "purple"
-              }-200 hover:border-${
-                role.value === "user"
-                  ? "gray"
-                  : role.value === "hr"
-                  ? "blue"
-                  : role.value === "admin"
-                  ? "green"
-                  : "purple"
-              }-400 hover:shadow-md transition-all duration-200 cursor-pointer`}
+              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 cursor-pointer`}
               onMouseEnter={(e) => handleCardHover(e, true)}
               onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div>
                   <div
-                    className="text-2xl font-bold text-gray-900"
+                    className="text-2xl font-bold admin-text"
                     data-counter={index}
                   >
                     {count}
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">
+                  <div className="text-sm admin-text-light font-medium">
                     {role.label}s
                   </div>
                 </div>
-                <div
-                  className={`stat-icon p-3 rounded-lg ${
-                    roleColor.split(" ")[1]
-                  }`}
-                >
-                  <RoleIcon className={`h-6 w-6 ${roleColor.split(" ")[0]}`} />
+                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
+                  <RoleIcon className={`h-6 w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </div>
@@ -493,10 +475,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Filters */}
-      <div
-        ref={filtersRef}
-        className="bg-white p-6 rounded-lg shadow border border-gray-200"
-      >
+      <div ref={filtersRef} className="admin-card p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
@@ -506,7 +485,7 @@ export default function AdminUsers() {
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 text-gray-700"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 admin-text"
             />
           </div>
 
@@ -514,17 +493,11 @@ export default function AdminUsers() {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text"
           >
-            <option value="all" className="text-gray-600">
-              All Roles
-            </option>
+            <option value="all">All Roles</option>
             {roleOptions.map((role) => (
-              <option
-                key={role.value}
-                value={role.value}
-                className="text-gray-600"
-              >
+              <option key={role.value} value={role.value}>
                 {role.label}
               </option>
             ))}
@@ -534,17 +507,11 @@ export default function AdminUsers() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text"
           >
-            <option value="all" className="text-gray-600">
-              All Status
-            </option>
-            <option value="active" className="text-gray-600">
-              Active
-            </option>
-            <option value="inactive" className="text-gray-600">
-              Inactive
-            </option>
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </select>
         </div>
       </div>
@@ -552,33 +519,33 @@ export default function AdminUsers() {
       {/* Users Table */}
       <div
         ref={usersTableRef}
-        className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden"
+        className="admin-card rounded-lg shadow overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   Activity
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   Joined
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium admin-text-light uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="admin-card divide-y divide-gray-200">
               {filteredUsers.map((user) => {
                 const RoleIcon = getRoleIcon(user.role);
                 const roleColor = getRoleColor(user.role);
@@ -588,25 +555,27 @@ export default function AdminUsers() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-purple-600">
+                          <div
+                            className={`h-10 w-10 rounded-full flex items-center justify-center ${getButtonClasses("accent")}`}
+                          >
+                            <span className="text-sm font-medium text-white">
                               {user.firstName?.[0] ||
                                 user.email[0].toUpperCase()}
                             </span>
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium admin-text">
                             {user.firstName && user.lastName
                               ? `${user.firstName} ${user.lastName}`
                               : user.email}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center">
+                          <div className="text-sm admin-text-light flex items-center">
                             <Mail className="h-3 w-3 mr-1" />
                             {user.email}
                           </div>
                           {user.phone && (
-                            <div className="text-sm text-gray-500 flex items-center">
+                            <div className="text-sm admin-text-light flex items-center">
                               <Phone className="h-3 w-3 mr-1" />
                               {user.phone}
                             </div>
@@ -673,7 +642,7 @@ export default function AdminUsers() {
                       </button>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm admin-text-light">
                       <div className="space-y-1">
                         <div>Jobs: {user._count?.createdJobs || 0}</div>
                         <div>
@@ -683,7 +652,7 @@ export default function AdminUsers() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm admin-text-light">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-1" />
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -723,10 +692,10 @@ export default function AdminUsers() {
       {filteredUsers.length === 0 && !loading && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium admin-text mb-2">
             No users found
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="admin-text-light mb-6">
             {searchTerm || roleFilter !== "all" || statusFilter !== "all"
               ? "Try adjusting your filters to see more results."
               : "Get started by adding your first user."}
@@ -734,7 +703,7 @@ export default function AdminUsers() {
           {!searchTerm && roleFilter === "all" && statusFilter === "all" && (
             <Link
               href="/admin/users/create"
-              className="inline-flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("accent")}`}
             >
               <Plus className="h-4 w-4" />
               <span>Add Your First User</span>
