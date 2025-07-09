@@ -13,7 +13,8 @@ export const ADMIN_THEMES = {
     description: "Colorful & vibrant theme",
     primary: "#7c3aed",
     accent: "#3b82f6",
-    preview: "bg-gradient-to-r from-purple-500 via-blue-500 to-green-500",
+    preview:
+      "bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 to-blue-500",
   },
   minimal: {
     id: "minimal",

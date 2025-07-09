@@ -1,11 +1,10 @@
 // app/admin/jobs/page.js - Updated to use React Query
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   useJobs,
   useCategories,
@@ -59,10 +58,6 @@ export default function AdminJobs() {
   const [featuredError, setFeaturedError] = useState(null);
 
   useEffect(() => {
-    filterJobs();
-  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
-
-  const filterJobs = () => {
     let filtered = jobs;
 
     // Search filter
@@ -91,7 +86,7 @@ export default function AdminJobs() {
     }
 
     setFilteredJobs(filtered);
-  };
+  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
 
   const updateJobStatus = async (jobId, newStatus) => {
     try {
@@ -179,12 +174,18 @@ export default function AdminJobs() {
 
   const getStatusColor = (status) => {
     const colors = {
-      Active: "bg-green-100 text-green-800",
-      Draft: "bg-yellow-100 text-yellow-800",
-      Paused: "bg-orange-100 text-orange-800",
-      Closed: "bg-red-100 text-red-800",
+      Active:
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      Draft:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+      Paused:
+        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+      Closed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return (
+      colors[status] ||
+      "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+    );
   };
 
   const getStatusIcon = (status) => {
@@ -216,7 +217,10 @@ export default function AdminJobs() {
   };
 
   // Get unique departments for filter
-  const departments = [...new Set(jobs.map((job) => job.department))];
+  const departments = useMemo(
+    () => [...new Set(jobs.map((job) => job.department))],
+    [jobs]
+  );
   const statusOptions = ["Active", "Draft", "Paused", "Closed"];
 
   // Loading state (much faster now with React Query cache!)
@@ -365,7 +369,7 @@ export default function AdminJobs() {
               placeholder="Search jobs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-600 admin-text"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-600 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
             />
           </div>
 
@@ -373,7 +377,7 @@ export default function AdminJobs() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
           >
             <option value="all">All Statuses</option>
             {statusOptions.map((status) => (
@@ -387,7 +391,7 @@ export default function AdminJobs() {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
+            className="px-4 py-2 border border-gray-300 dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             <option value="all">All Departments</option>
             {departments.map((dept) => (
@@ -401,7 +405,7 @@ export default function AdminJobs() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500 admin-text"
           >
             <option value="all">All Categories</option>
             {categories.map((category) => (
@@ -415,7 +419,7 @@ export default function AdminJobs() {
 
       {/* Bulk Actions */}
       {selectedJobs.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <span className="text-blue-800 font-medium">
               {selectedJobs.length} job{selectedJobs.length !== 1 ? "s" : ""}{" "}
@@ -545,7 +549,7 @@ export default function AdminJobs() {
               </div>
 
               {/* Card Actions */}
-              <div className="px-6 py-4 border-t admin-text-light bg-gray-50">
+              <div className="px-6 py-4 border-t admin-text-light bg-gray-50 dark:bg-gray-700">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Link
@@ -594,16 +598,16 @@ export default function AdminJobs() {
                     <select
                       value={job.status}
                       onChange={(e) => updateJobStatus(job.id, e.target.value)}
-                      className={`text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium ${getStatusColor(
+                      className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium ${getStatusColor(
                         job.status
-                      )}`}
+                      )} bg-white dark:bg-gray-700`}
                       disabled={updateJobMutation.isLoading}
                     >
                       {statusOptions.map((status) => (
                         <option
                           key={status}
                           value={status}
-                          className="text-gray-800 bg-white"
+                          className="text-gray-800 dark:text-white bg-white dark:bg-gray-700"
                         >
                           {status}
                         </option>

@@ -214,18 +214,18 @@ export default function JobApplicationForm({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
           Apply for {job.title}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           {user
             ? "Fill out the form below to submit your application"
             : "Create an account or apply as a guest by filling out the form below"}
         </p>
         {!user && (
-          <p className="text-xs text-blue-600 mt-1">
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
             💡 Want to save time?{" "}
             <button
               onClick={() => (window.location.href = "/auth/signin")}
@@ -241,7 +241,7 @@ export default function JobApplicationForm({
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Name Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Full Name *
           </label>
           <input
@@ -253,12 +253,12 @@ export default function JobApplicationForm({
             placeholder={
               user ? "Using your profile name" : "Enter your full name"
             }
-            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              user ? "bg-gray-50" : ""
+            className={`w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50 dark:bg-gray-600" : ""
             }`}
           />
           {user && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               This will be pulled from your profile
             </p>
           )}
@@ -266,7 +266,7 @@ export default function JobApplicationForm({
 
         {/* Email Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Email Address *
           </label>
           <input
@@ -279,12 +279,12 @@ export default function JobApplicationForm({
             placeholder={
               user ? "Using your profile email" : "Enter your email address"
             }
-            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              user ? "bg-gray-50" : ""
+            className={`w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50 dark:bg-gray-600" : ""
             }`}
           />
           {user && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               This will be pulled from your profile
             </p>
           )}
@@ -292,7 +292,7 @@ export default function JobApplicationForm({
 
         {/* Phone Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Phone Number *
           </label>
           <input
@@ -305,12 +305,12 @@ export default function JobApplicationForm({
             placeholder={
               user ? "Using your profile phone" : "Enter your phone number"
             }
-            className={`w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              user ? "bg-gray-50" : ""
+            className={`w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              user ? "bg-gray-50 dark:bg-gray-600" : ""
             }`}
           />
           {user && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               This will be pulled from your profile
             </p>
           )}
@@ -318,25 +318,25 @@ export default function JobApplicationForm({
 
         {/* Resume Upload Section */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Resume {!userResume && "*"}
           </label>
 
           {userResume && !resumeFile ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <div className="flex flex-col items-center  space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
+              <div className="flex flex-col items-center space-y-3">
                 <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                       Using profile resume
                     </p>
-                    <p className="text-sm text-blue-700 break-words">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 break-words">
                       {userResume.fileName}
                     </p>
                   </div>
                 </div>
-                <label className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                <label className="cursor-pointer bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors inline-flex items-center gap-2">
                   <Upload className="h-4 w-4" />
                   Upload New Resume
                   <input
@@ -353,17 +353,17 @@ export default function JobApplicationForm({
           ) : (
             <div className="space-y-3">
               {/* File Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center hover:border-blue-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
                 <label className="cursor-pointer">
                   <div className="space-y-2">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                    <div className="text-sm text-gray-600">
-                      <span className="text-blue-600 font-medium">
+                    <Upload className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto" />
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">
                         Click to upload
                       </span>{" "}
                       or drag and drop
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {allowedFileTypes.join(", ").toUpperCase()} (max{" "}
                       {maxResumeSize}MB)
                     </p>
@@ -382,15 +382,15 @@ export default function JobApplicationForm({
 
               {/* Selected File Display */}
               {resumeFile && (
-                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-green-600" />
+                      <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
                       <div>
-                        <p className="text-sm font-medium text-green-900">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
                           {resumeFile.name}
                         </p>
-                        <p className="text-xs text-green-700">
+                        <p className="text-xs text-green-700 dark:text-green-300">
                           {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
@@ -398,7 +398,7 @@ export default function JobApplicationForm({
                     <button
                       type="button"
                       onClick={removeFile}
-                      className="text-green-600 hover:text-green-800 transition-colors"
+                      className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
                       disabled={uploading || submitting}
                     >
                       <X className="h-4 w-4" />
@@ -412,7 +412,7 @@ export default function JobApplicationForm({
 
         {/* Cover Letter Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Cover Letter (Optional)
           </label>
           <textarea
@@ -421,27 +421,29 @@ export default function JobApplicationForm({
             onChange={handleChange}
             placeholder="Tell us why you're interested in this position and what makes you a great fit..."
             rows={4}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Optional but recommended to help your application stand out
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
             <div className="flex">
-              <div className="text-sm text-red-700">{error}</div>
+              <div className="text-sm text-red-700 dark:text-red-300">
+                {error}
+              </div>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             type="submit"
-            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             disabled={submitting || uploading}
           >
             {uploading ? (
@@ -460,7 +462,7 @@ export default function JobApplicationForm({
           </button>
           <button
             type="button"
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
             onClick={onCancel}
             disabled={submitting || uploading}
           >

@@ -140,9 +140,9 @@ export default function AdminDashboard() {
   const visibleStats = quickStats.filter((stat) => stat.visible);
 
   return (
-    <div className="space-y-8 dark:bg-gray-950">
+    <div className="space-y-8 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center justify-between dark:bg-gray-950">
+      <div className="flex items-center justify-between dark:bg-gray-900">
         <div>
           <h1 className="text-3xl font-bold admin-text">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
             Here's what's happening with your job board today.
           </p>
         </div>
-        <div className="admin-card px-4 py-2 rounded-lg shadow-sm">
+        <div className="admin-card px-4 py-2 rounded-lg shadow-sm bg-white dark:bg-gray-800 border dark:border-gray-700">
           <div className="text-sm admin-text-light">Your Role</div>
           <div className="font-semibold admin-text capitalize">
             {userRole.replace("_", " ")}
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                     .map((application, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
                       >
                         <div className="flex-1">
                           <div className="font-medium admin-text">
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
                   {stats.recentJobs.slice(0, 5).map((job, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
                     >
                       <div className="flex-1">
                         <div className="font-medium admin-text">
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
           {userPrivilegeLevel >= 1 && (
             <Link
               href="/admin/applications"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors duration-200 text-center group"
+              className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 text-center group"
             >
               <FileText className="h-8 w-8 text-gray-400 group-hover:text-blue-600 mx-auto mb-2 transition-colors duration-200" />
               <div className="text-sm font-medium admin-text">

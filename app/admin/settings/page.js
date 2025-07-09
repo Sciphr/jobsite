@@ -348,7 +348,7 @@ export default function AdminSettings() {
                   // Invalid JSON, don't update
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm admin-text placeholder-gray-600"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm admin-text placeholder-gray-600 dark:placeholder-gray-400 bg-white dark:bg-gray-700"
               rows={4}
               disabled={!canEdit}
               placeholder="Enter valid JSON..."
@@ -383,7 +383,7 @@ export default function AdminSettings() {
               onChange={(e) =>
                 handleSettingChange(key, e.target.value, setting)
               }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text placeholder-gray-600"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text placeholder-gray-600 dark:placeholder-gray-400 bg-white dark:bg-gray-700"
               disabled={!canEdit}
               placeholder="Enter value..."
             />
@@ -472,7 +472,7 @@ export default function AdminSettings() {
         <div className="flex items-center space-x-3">
           <button
             onClick={fetchSettings}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 admin-text"
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 admin-text bg-white dark:bg-gray-800"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>

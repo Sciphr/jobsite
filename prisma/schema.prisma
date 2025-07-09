@@ -67,7 +67,7 @@ model Job {
   
   salaryMin                Int?
   salaryMax                Int?
-  salaryCurrency           String   @default("USD")
+  salaryCurrency           String   @default("CAD")
   salaryType               String   @default("Annual")
   benefits                  String?
   
@@ -82,7 +82,7 @@ model Job {
   
   status                   String   @default("Draft") // "Active", "Paused", "Closed", "Draft"
   featured                 Boolean  @default(false)
-  showSalary              Boolean  @default(true)  // Add this line
+  showSalary              Boolean  @default(true) 
   priority                 Int      @default(0)
   viewCount               Int      @default(0)
   applicationCount        Int      @default(0)

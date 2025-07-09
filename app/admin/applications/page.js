@@ -354,14 +354,14 @@ export default function AdminApplications() {
               placeholder="Search by name, email, or job title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 admin-text"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text bg-white dark:bg-gray-700"
           >
             <option value="all">All Statuses</option>
             {statusOptions.map((status) => (
@@ -388,9 +388,9 @@ export default function AdminApplications() {
 
       {/* Bulk Actions */}
       {selectedApplications.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-center justify-between">
-            <span className="text-blue-800 font-medium">
+            <span className="text-blue-800 dark:text-blue-200 font-medium">
               {selectedApplications.length} application
               {selectedApplications.length !== 1 ? "s" : ""} selected
             </span>
@@ -449,7 +449,7 @@ export default function AdminApplications() {
         <div className="overflow-x-auto">
           {filteredApplications.length > 0 ? (
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
                   <th className="w-12 px-6 py-3 text-left">
                     <span className="sr-only">Select</span>
@@ -473,7 +473,10 @@ export default function AdminApplications() {
               </thead>
               <tbody className="admin-card divide-y divide-gray-200">
                 {filteredApplications.map((application) => (
-                  <tr key={application.id} className="hover:bg-gray-50">
+                  <tr
+                    key={application.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
@@ -484,7 +487,7 @@ export default function AdminApplications() {
                             e.target.checked
                           )
                         }
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -532,7 +535,7 @@ export default function AdminApplications() {
                         }
                         className={`px-2 py-1 rounded text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 ${getStatusColor(
                           application.status
-                        )}`}
+                        )} dark:border-gray-600`}
                       >
                         {statusOptions.map((status) => (
                           <option key={status} value={status}>

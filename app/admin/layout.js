@@ -145,7 +145,7 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex transition-colors duration-200">
       {/* Themed Sidebar */}
       <div className="w-64 shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
