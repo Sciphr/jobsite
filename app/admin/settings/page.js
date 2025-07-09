@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
+import AnimationToggle from "./components/AnimationToggle";
+import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   Settings,
   Save,
@@ -30,6 +32,8 @@ import {
 } from "lucide-react";
 
 export default function AdminSettings() {
+  const { shouldAnimate, loading: animationSettingsLoading } =
+    useAnimationSettings();
   const { data: session } = useSession();
   const { getButtonClasses } = useThemeClasses();
   const [settings, setSettings] = useState({});
@@ -38,7 +42,6 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("system");
   const [unsavedChanges, setUnsavedChanges] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -46,23 +49,17 @@ export default function AdminSettings() {
   const contentRef = useRef(null);
 
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    setAnimationsEnabled(!prefersReducedMotion);
-
     fetchSettings();
   }, []);
 
   useEffect(() => {
-    if (!loading && animationsEnabled) {
-      // Small delay to ensure DOM is ready
+    // Wait for BOTH data loading AND animation settings to be ready
+    if (!loading && !animationSettingsLoading && shouldAnimate) {
       setTimeout(() => {
         animatePageLoad();
       }, 50);
     }
-  }, [loading, animationsEnabled]);
+  }, [loading, shouldAnimate, animationSettingsLoading]);
 
   const animatePageLoad = () => {
     // Hide elements immediately
@@ -756,9 +753,12 @@ export default function AdminSettings() {
           {activeTab === "personal" ? (
             <div className="space-y-6">
               <ThemeSelector />
+              <AnimationToggle />
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(
-                (setting) => setting.key !== "admin_dashboard_theme"
+                (setting) =>
+                  setting.key !== "admin_dashboard_theme" &&
+                  setting.key !== "enable_dashboard_animations"
               ).length > 0 && (
                 <>
                   <div className="border-t border-gray-200 pt-6">
@@ -768,7 +768,9 @@ export default function AdminSettings() {
                   </div>
                   {activeSettings
                     .filter(
-                      (setting) => setting.key !== "admin_dashboard_theme"
+                      (setting) =>
+                        setting.key !== "admin_dashboard_theme" &&
+                        setting.key !== "enable_dashboard_animations"
                     )
                     .map((setting, index) => {
                       const SettingIcon = getSettingIcon(setting.key);

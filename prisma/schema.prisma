@@ -187,5 +187,6 @@ model Setting {
   
   // Ensure unique settings per user (or global if userId is null)
   @@unique([key, userId])
+  
   @@map("settings")
 }

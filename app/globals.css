@@ -43,7 +43,7 @@ body {
 
 /* Admin Dashboard Themes */
 :root {
-  /* Default Theme (Current colorful design) */
+  /* Default Theme (Colorful design) */
   --admin-primary: #7c3aed;
   --admin-primary-light: #a855f7;
   --admin-primary-dark: #5b21b6;
@@ -188,7 +188,7 @@ body {
 
   --admin-stat-3: #d97706; /* Amber */
   --admin-stat-3-bg: #fffbeb;
-  --admin-stat-3-border: #fde68a;
+  --admin-tat-3-border: #fde68a;
 
   --admin-stat-4: #b91c1c; /* Dark Red */
   --admin-stat-4-bg: #fef2f2;
@@ -237,7 +237,7 @@ body {
 
   --admin-stat-5: #65a30d; /* Lime */
   --admin-stat-5-bg: #f7fee7;
-  --admin-stat-5-border: #d9f99d;
+  --admin-stat-5-border: #d9f7d;
 
   --admin-card-bg: #ffffff;
   --admin-border: #d1fae5;

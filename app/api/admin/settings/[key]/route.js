@@ -1,4 +1,4 @@
-// app/api/admin/settings/[key]/route.js - Enhanced version
+// app/api/admin/settings/[key]/route.js - Fixed but less restrictive version
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
@@ -20,61 +20,89 @@ export async function PATCH(request, { params }) {
     const { key } = await params;
     const { value, isPersonal } = await request.json();
 
-    // Find existing setting or create if it doesn't exist
+    console.log("PATCH Settings - Debug info:", {
+      key,
+      value,
+      isPersonal,
+      userId: session.user.id,
+      userEmail: session.user.email,
+    });
+
+    // Special handling for admin_dashboard_theme - always treat as personal
+    const shouldBePersonal = isPersonal || key === "admin_dashboard_theme";
+    const targetUserId = shouldBePersonal ? session.user.id : null;
+
+    // SAFETY: If this should be personal but we don't have a user ID, that's a problem
+    if (shouldBePersonal && !session.user.id) {
+      console.error("Missing user ID for personal setting:", {
+        key,
+        sessionUser: session.user,
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Cannot create personal setting: user ID not found",
+        }),
+        { status: 400 }
+      );
+    }
+
+    // Find existing setting
     let existingSetting = await appPrisma.setting.findFirst({
       where: {
         key,
-        userId: isPersonal ? session.user.id : null,
+        userId: targetUserId,
       },
     });
 
-    // If no personal setting exists but we're trying to set one, create it
-    if (!existingSetting && isPersonal) {
-      // First check if there's a system default for this setting
-      const systemSetting = await appPrisma.setting.findFirst({
-        where: {
-          key,
-          userId: null,
-        },
-      });
+    console.log("Existing setting found:", existingSetting);
 
-      if (systemSetting) {
-        // Create personal setting based on system setting structure
+    // If no setting exists, create it
+    if (!existingSetting) {
+      if (key === "admin_dashboard_theme") {
+        // Always create theme setting as personal
         existingSetting = await appPrisma.setting.create({
           data: {
             key,
-            value: stringifySettingValue(value, systemSetting.dataType),
-            category: systemSetting.category,
+            value: stringifySettingValue(value, "string"),
+            category: "personal",
             userId: session.user.id,
-            privilegeLevel: 1, // Personal settings require at least level 1
-            dataType: systemSetting.dataType,
-            description: systemSetting.description + " (Personal)",
+            privilegeLevel: 1,
+            dataType: "string",
+            description: "Admin dashboard color theme preference (Personal)",
           },
         });
+        console.log("Created new theme setting:", existingSetting);
       } else {
-        // Create new personal setting for admin dashboard theme
-        if (key === "admin_dashboard_theme") {
+        // For other settings, check if there's a system default
+        const systemSetting = await appPrisma.setting.findFirst({
+          where: {
+            key,
+            userId: null,
+          },
+        });
+
+        if (systemSetting && shouldBePersonal) {
+          // Create personal setting based on system setting structure
           existingSetting = await appPrisma.setting.create({
             data: {
               key,
-              value: stringifySettingValue(value, "string"),
-              category: "personal",
+              value: stringifySettingValue(value, systemSetting.dataType),
+              category: systemSetting.category,
               userId: session.user.id,
               privilegeLevel: 1,
-              dataType: "string",
-              description: "Admin dashboard color theme preference",
+              dataType: systemSetting.dataType,
+              description: systemSetting.description + " (Personal)",
             },
           });
+        } else if (!shouldBePersonal && systemSetting) {
+          // Update existing system setting
+          existingSetting = systemSetting;
         } else {
           return new Response(JSON.stringify({ error: "Setting not found" }), {
             status: 404,
           });
         }
       }
-    } else if (!existingSetting) {
-      return new Response(JSON.stringify({ error: "Setting not found" }), {
-        status: 404,
-      });
     }
 
     // Check if user has permission to modify this setting
@@ -95,6 +123,8 @@ export async function PATCH(request, { params }) {
       },
     });
 
+    console.log("Updated setting:", updatedSetting);
+
     return new Response(
       JSON.stringify({
         ...updatedSetting,
@@ -109,9 +139,15 @@ export async function PATCH(request, { params }) {
     );
   } catch (error) {
     console.error("Error updating setting:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: error.message,
+      }),
+      {
+        status: 500,
+      }
+    );
   }
 }
 
@@ -133,16 +169,20 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url);
     const isPersonal = searchParams.get("personal") === "true";
 
+    // For theme settings, always check personal first
+    const shouldCheckPersonal = isPersonal || key === "admin_dashboard_theme";
+    const targetUserId = shouldCheckPersonal ? session.user.id : null;
+
     const setting = await appPrisma.setting.findFirst({
       where: {
         key,
-        userId: isPersonal ? session.user.id : null,
+        userId: targetUserId,
       },
     });
 
     if (!setting) {
-      // If requesting a personal setting that doesn't exist, return default
-      if (isPersonal && key === "admin_dashboard_theme") {
+      // If requesting a personal theme setting that doesn't exist, return default
+      if (key === "admin_dashboard_theme") {
         return new Response(
           JSON.stringify({
             key,
@@ -177,7 +217,7 @@ export async function GET(request, { params }) {
   }
 }
 
-// Helper functions (same as in main settings route)
+// Helper functions (same as before)
 function parseSettingValue(value, dataType) {
   try {
     switch (dataType) {
