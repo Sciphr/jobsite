@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
+import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   Users,
   Briefcase,
@@ -19,6 +20,7 @@ import {
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
+  const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [stats, setStats] = useState({
     totalJobs: 0,
     totalApplications: 0,
@@ -48,8 +50,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && animationsEnabled) {
-      // Small delay to ensure DOM is ready
-
       animatePageLoad();
     }
   }, [loading, animationsEnabled]);
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
       });
     }
 
-    // Just animate the individual cards, not the container
+    // Animate the individual stat cards
     if (statsGridRef.current) {
       const statCards = statsGridRef.current.querySelectorAll(".stat-card");
       if (statCards.length > 0) {
@@ -260,10 +260,6 @@ export default function AdminDashboard() {
       title: "Total Applications",
       value: stats.totalApplications || 0,
       icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
-      borderColor: "border-blue-200",
-      hoverBorderColor: "hover:border-blue-400",
       change: "+12%",
       visible: userPrivilegeLevel >= 1,
       href: "/admin/applications",
@@ -272,10 +268,6 @@ export default function AdminDashboard() {
       title: "Active Jobs",
       value: stats.totalJobs || 0,
       icon: Briefcase,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
-      borderColor: "border-green-200",
-      hoverBorderColor: "hover:border-green-400",
       change: "+3%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/jobs",
@@ -284,10 +276,6 @@ export default function AdminDashboard() {
       title: "Total Users",
       value: stats.totalUsers || 0,
       icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
-      borderColor: "border-purple-200",
-      hoverBorderColor: "hover:border-purple-400",
       change: "+8%",
       visible: userPrivilegeLevel >= 3,
       href: "/admin/users",
@@ -296,10 +284,6 @@ export default function AdminDashboard() {
       title: "Job Views",
       value: 2847,
       icon: Eye,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
-      borderColor: "border-orange-200",
-      hoverBorderColor: "hover:border-orange-400",
       change: "+15%",
       visible: userPrivilegeLevel >= 2,
       href: "/admin/analytics",
@@ -309,7 +293,7 @@ export default function AdminDashboard() {
   const visibleStats = quickStats.filter((stat) => stat.visible);
 
   return (
-    <div className="space-y-8 ">
+    <div className="space-y-8">
       {/* Header */}
       <div ref={headerRef} className="flex items-center justify-between">
         <div>
@@ -328,18 +312,20 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats with Theme Support */}
       <div
         ref={statsGridRef}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
         {visibleStats.map((stat, index) => {
           const Icon = stat.icon;
+          const statClasses = getStatCardClasses(index);
+
           return (
             <Link
               key={index}
               href={stat.href}
-              className={`stat-card bg-white p-6 rounded-lg shadow border-2 ${stat.borderColor} ${stat.hoverBorderColor} hover:shadow-md transition-all duration-200 group cursor-pointer`}
+              className={`stat-card bg-white p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
               onMouseEnter={(e) => handleCardHover(e, true)}
               onMouseLeave={(e) => handleCardHover(e, false)}
             >
@@ -366,8 +352,8 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 </div>
-                <div className={`stat-icon p-3 rounded-lg ${stat.bgColor}`}>
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
+                  <Icon className={`h-6 w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </Link>
@@ -424,14 +410,14 @@ export default function AdminDashboard() {
                               application.status === "Applied"
                                 ? "bg-blue-100 text-blue-800"
                                 : application.status === "Reviewing"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : application.status === "Interview"
-                                ? "bg-green-100 text-green-800"
-                                : application.status === "Hired"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : application.status === "Rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : application.status === "Interview"
+                                    ? "bg-green-100 text-green-800"
+                                    : application.status === "Hired"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : application.status === "Rejected"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
                             }`}
                           >
                             {application.status}
@@ -493,12 +479,12 @@ export default function AdminDashboard() {
                             job.status === "Active"
                               ? "bg-green-100 text-green-800"
                               : job.status === "Draft"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : job.status === "Paused"
-                              ? "bg-orange-100 text-orange-800"
-                              : job.status === "Closed"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : job.status === "Paused"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : job.status === "Closed"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
                           }`}
                         >
                           {job.status}
@@ -524,7 +510,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions with Theme Support */}
       <div
         ref={quickActionsRef}
         className="bg-white rounded-lg shadow border border-gray-200 p-6"
@@ -551,16 +537,16 @@ export default function AdminDashboard() {
           {userPrivilegeLevel >= 2 && (
             <Link
               href="/admin/jobs/create"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors duration-200 text-center group"
+              className={`p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors duration-200 text-center group ${getButtonClasses("primary")} hover:border-opacity-0`}
             >
               <div className="flex items-center justify-center mb-2">
-                <Briefcase className="h-6 w-6 text-gray-400 group-hover:text-green-600 transition-colors duration-200" />
-                <Plus className="h-4 w-4 text-gray-400 group-hover:text-green-600 ml-1 transition-colors duration-200" />
+                <Briefcase className="h-6 w-6 text-white transition-colors duration-200" />
+                <Plus className="h-4 w-4 text-white ml-1 transition-colors duration-200" />
               </div>
-              <div className="text-sm font-medium text-gray-900">
-                Create Job
+              <div className="text-sm font-medium text-white">Create Job</div>
+              <div className="text-xs text-white text-opacity-80">
+                Post a new position
               </div>
-              <div className="text-xs text-gray-500">Post a new position</div>
             </Link>
           )}
 

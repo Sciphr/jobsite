@@ -14,10 +14,15 @@ import {
   Shield,
   Building2,
 } from "lucide-react";
+import {
+  AdminThemeProvider,
+  useThemeClasses,
+} from "../contexts/AdminThemeContext";
 
-export default function AdminLayout({ children }) {
+function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const { getThemeClasses } = useThemeClasses();
 
   // Show loading while checking session
   if (status === "loading") {
@@ -94,61 +99,50 @@ export default function AdminLayout({ children }) {
   );
 
   const getRoleBadge = () => {
-    "getRoleBadge called with userRole:", userRole, "type:", typeof userRole;
-    "userRole length:", userRole?.length;
-    "userRole char codes:",
-      userRole?.split("").map((char) => char.charCodeAt(0));
-
-    // Clean the userRole to remove any potential whitespace or hidden characters
     const cleanRole = userRole?.trim().toLowerCase();
-    "cleaned role:", cleanRole;
 
-    const badges = {
-      hr: { text: "HR", color: "bg-green-100 text-green-800" },
-      admin: { text: "Admin", color: "bg-blue-100 text-blue-800" },
-      super_admin: {
-        text: "Super Admin",
-        color: "bg-purple-100 text-purple-800",
-      },
-    };
-
-    // Try with cleaned role
     if (cleanRole === "super_admin") {
-      ("Matched super_admin with cleaned role");
-      return { text: "Super Admin", color: "bg-purple-100 text-purple-800" };
+      return {
+        text: "Super Admin",
+        classes: getThemeClasses("primary") + " text-white",
+      };
     } else if (cleanRole === "admin") {
-      ("Matched admin with cleaned role");
-      return { text: "Admin", color: "bg-blue-100 text-blue-800" };
+      return {
+        text: "Admin",
+        classes: getThemeClasses("accent") + " text-white",
+      };
     } else if (cleanRole === "hr") {
-      ("Matched hr with cleaned role");
-      return { text: "HR", color: "bg-green-100 text-green-800" };
+      return {
+        text: "HR",
+        classes: getThemeClasses("success") + " text-white",
+      };
     } else {
-      ("No match, using default admin");
-      return { text: "Admin", color: "bg-blue-100 text-blue-800" };
+      return {
+        text: "Admin",
+        classes: getThemeClasses("accent") + " text-white",
+      };
     }
   };
 
   const badge = getRoleBadge();
 
-  // Debug log to see what badge is returned
-  "Badge object:", badge;
-  "Badge text:", badge.text;
-
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg border-r border-gray-200">
+      <div className={`w-64 shadow-lg ${getThemeClasses("sidebar")}`}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="bg-purple-600 p-2 rounded-lg">
+            <div className={`p-2 rounded-lg ${getThemeClasses("primary")}`}>
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2
+                className={`text-lg font-semibold ${getThemeClasses("text")}`}
+              >
                 Admin Panel
               </h2>
               <span
-                className={`inline-block px-2 py-1 rounded text-xs font-medium ${badge.color}`}
+                className={`inline-block px-2 py-1 rounded text-xs font-medium ${badge.classes}`}
               >
                 {badge.text}
               </span>
@@ -167,20 +161,26 @@ export default function AdminLayout({ children }) {
                 href={item.href}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 group ${
                   isActive
-                    ? "bg-purple-100 text-purple-700 border border-purple-200"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? `${getThemeClasses("primary")} text-white border border-opacity-20`
+                    : `${getThemeClasses("text")} hover:bg-gray-100`
                 }`}
               >
                 <Icon
                   className={`h-5 w-5 ${
                     isActive
-                      ? "text-purple-600"
-                      : "text-gray-500 group-hover:text-gray-700"
+                      ? "text-white"
+                      : `${getThemeClasses("textLight")} group-hover:${getThemeClasses("text")}`
                   }`}
                 />
                 <div className="flex-1">
                   <div className="text-sm font-medium">{item.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">
+                  <div
+                    className={`text-xs mt-0.5 ${
+                      isActive
+                        ? "text-white text-opacity-80"
+                        : getThemeClasses("textLight")
+                    }`}
+                  >
                     {item.description}
                   </div>
                 </div>
@@ -192,14 +192,20 @@ export default function AdminLayout({ children }) {
         {/* User Info at Bottom */}
         <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+            <div
+              className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getThemeClasses("primary")}`}
+            >
               {session.user?.name?.charAt(0)?.toUpperCase() || "A"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
+              <div
+                className={`text-sm font-medium truncate ${getThemeClasses("text")}`}
+              >
                 {session.user?.name || "Admin User"}
               </div>
-              <div className="text-xs text-gray-500 truncate">
+              <div
+                className={`text-xs truncate ${getThemeClasses("textLight")}`}
+              >
                 {session.user?.email}
               </div>
             </div>
@@ -207,7 +213,7 @@ export default function AdminLayout({ children }) {
 
           <Link
             href="/"
-            className="mt-3 w-full flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
+            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border rounded-md text-sm font-medium transition-colors duration-200 ${getThemeClasses("card")} hover:${getThemeClasses("primaryBorder")} ${getThemeClasses("text")}`}
           >
             <Building2 className="h-4 w-4 mr-2" />
             Back to Site
@@ -220,5 +226,13 @@ export default function AdminLayout({ children }) {
         <main className="flex-1 p-8">{children}</main>
       </div>
     </div>
+  );
+}
+
+export default function AdminLayout({ children }) {
+  return (
+    <AdminThemeProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AdminThemeProvider>
   );
 }

@@ -40,3 +40,387 @@ body {
   opacity: 0;
   transform: translateY(30px) scale(0.9);
 }
+
+/* Admin Dashboard Themes */
+:root {
+  /* Default Theme (Current colorful design) */
+  --admin-primary: #7c3aed;
+  --admin-primary-light: #a855f7;
+  --admin-primary-dark: #5b21b6;
+  --admin-accent: #3b82f6;
+  --admin-accent-light: #60a5fa;
+  --admin-success: #10b981;
+  --admin-warning: #f59e0b;
+  --admin-danger: #ef4444;
+  --admin-info: #06b6d4;
+
+  /* Stat card colors for dashboard */
+  --admin-stat-1: #7c3aed; /* Purple */
+  --admin-stat-1-bg: #f3e8ff;
+  --admin-stat-1-border: #d8b4fe;
+
+  --admin-stat-2: #10b981; /* Green */
+  --admin-stat-2-bg: #d1fae5;
+  --admin-stat-2-border: #a7f3d0;
+
+  --admin-stat-3: #f59e0b; /* Orange */
+  --admin-stat-3-bg: #fef3c7;
+  --admin-stat-3-border: #fde68a;
+
+  --admin-stat-4: #ef4444; /* Red */
+  --admin-stat-4-bg: #fee2e2;
+  --admin-stat-4-border: #fecaca;
+
+  --admin-stat-5: #3b82f6; /* Blue */
+  --admin-stat-5-bg: #dbeafe;
+  --admin-stat-5-border: #bfdbfe;
+
+  --admin-card-bg: #ffffff;
+  --admin-border: #e5e7eb;
+  --admin-text: #1f2937;
+  --admin-text-light: #6b7280;
+  --admin-sidebar-bg: #ffffff;
+  --admin-sidebar-border: #e5e7eb;
+}
+
+[data-admin-theme="minimal"] {
+  /* Minimal Theme (Sophisticated grays) */
+  --admin-primary: #374151;
+  --admin-primary-light: #4b5563;
+  --admin-primary-dark: #1f2937;
+  --admin-accent: #6b7280;
+  --admin-accent-light: #9ca3af;
+  --admin-success: #059669;
+  --admin-warning: #d97706;
+  --admin-danger: #dc2626;
+  --admin-info: #0284c7;
+
+  /* All stat cards use subtle grays with minimal color */
+  --admin-stat-1: #374151;
+  --admin-stat-1-bg: #f9fafb;
+  --admin-stat-1-border: #e5e7eb;
+
+  --admin-stat-2: #4b5563;
+  --admin-stat-2-bg: #f3f4f6;
+  --admin-stat-2-border: #d1d5db;
+
+  --admin-stat-3: #6b7280;
+  --admin-stat-3-bg: #f9fafb;
+  --admin-stat-3-border: #e5e7eb;
+
+  --admin-stat-4: #9ca3af;
+  --admin-stat-4-bg: #f3f4f6;
+  --admin-stat-4-border: #d1d5db;
+
+  --admin-stat-5: #374151;
+  --admin-stat-5-bg: #f9fafb;
+  --admin-stat-5-border: #e5e7eb;
+
+  --admin-card-bg: #ffffff;
+  --admin-border: #e5e7eb;
+  --admin-text: #1f2937;
+  --admin-text-light: #6b7280;
+  --admin-sidebar-bg: #f9fafb;
+  --admin-sidebar-border: #e5e7eb;
+}
+
+[data-admin-theme="cool"] {
+  /* Cool Theme (Blues, purples, teals) */
+  --admin-primary: #3b82f6;
+  --admin-primary-light: #60a5fa;
+  --admin-primary-dark: #2563eb;
+  --admin-accent: #8b5cf6;
+  --admin-accent-light: #a78bfa;
+  --admin-success: #06b6d4;
+  --admin-warning: #0891b2;
+  --admin-danger: #3730a3;
+  --admin-info: #0284c7;
+
+  /* Cool color palette throughout */
+  --admin-stat-1: #3b82f6; /* Blue */
+  --admin-stat-1-bg: #dbeafe;
+  --admin-stat-1-border: #bfdbfe;
+
+  --admin-stat-2: #8b5cf6; /* Purple */
+  --admin-stat-2-bg: #ede9fe;
+  --admin-stat-2-border: #ddd6fe;
+
+  --admin-stat-3: #06b6d4; /* Cyan */
+  --admin-stat-3-bg: #cffafe;
+  --admin-stat-3-border: #a5f3fc;
+
+  --admin-stat-4: #0891b2; /* Teal */
+  --admin-stat-4-bg: #e6fffa;
+  --admin-stat-4-border: #b2f5ea;
+
+  --admin-stat-5: #3730a3; /* Indigo */
+  --admin-stat-5-bg: #e0e7ff;
+  --admin-stat-5-border: #c7d2fe;
+
+  --admin-card-bg: #ffffff;
+  --admin-border: #e0e7ff;
+  --admin-text: #1e293b;
+  --admin-text-light: #475569;
+  --admin-sidebar-bg: #f8fafc;
+  --admin-sidebar-border: #e0e7ff;
+}
+
+[data-admin-theme="warm"] {
+  /* Warm Theme (Oranges, reds, yellows) */
+  --admin-primary: #ea580c;
+  --admin-primary-light: #fb923c;
+  --admin-primary-dark: #c2410c;
+  --admin-accent: #dc2626;
+  --admin-accent-light: #ef4444;
+  --admin-success: #65a30d;
+  --admin-warning: #d97706;
+  --admin-danger: #b91c1c;
+  --admin-info: #c2410c;
+
+  /* Warm color palette */
+  --admin-stat-1: #ea580c; /* Orange */
+  --admin-stat-1-bg: #fff7ed;
+  --admin-stat-1-border: #fed7aa;
+
+  --admin-stat-2: #dc2626; /* Red */
+  --admin-stat-2-bg: #fef2f2;
+  --admin-stat-2-border: #fecaca;
+
+  --admin-stat-3: #d97706; /* Amber */
+  --admin-stat-3-bg: #fffbeb;
+  --admin-stat-3-border: #fde68a;
+
+  --admin-stat-4: #b91c1c; /* Dark Red */
+  --admin-stat-4-bg: #fef2f2;
+  --admin-stat-4-border: #fca5a5;
+
+  --admin-stat-5: #92400e; /* Brown */
+  --admin-stat-5-bg: #fef3c7;
+  --admin-stat-5-border: #fcd34d;
+
+  --admin-card-bg: #ffffff;
+  --admin-border: #fed7aa;
+  --admin-text: #1f2937;
+  --admin-text-light: #6b7280;
+  --admin-sidebar-bg: #fefcfb;
+  --admin-sidebar-border: #fed7aa;
+}
+
+[data-admin-theme="nature"] {
+  /* Nature Theme (Greens, earth tones) */
+  --admin-primary: #16a34a;
+  --admin-primary-light: #22c55e;
+  --admin-primary-dark: #15803d;
+  --admin-accent: #059669;
+  --admin-accent-light: #10b981;
+  --admin-success: #65a30d;
+  --admin-warning: #a16207;
+  --admin-danger: #b45309;
+  --admin-info: #0d9488;
+
+  /* Nature-inspired colors */
+  --admin-stat-1: #16a34a; /* Green */
+  --admin-stat-1-bg: #dcfce7;
+  --admin-stat-1-border: #bbf7d0;
+
+  --admin-stat-2: #059669; /* Emerald */
+  --admin-stat-2-bg: #d1fae5;
+  --admin-stat-2-border: #a7f3d0;
+
+  --admin-stat-3: #0d9488; /* Teal */
+  --admin-stat-3-bg: #f0fdfa;
+  --admin-stat-3-border: #99f6e4;
+
+  --admin-stat-4: #a16207; /* Yellow-Brown */
+  --admin-stat-4-bg: #fefce8;
+  --admin-stat-4-border: #fef08a;
+
+  --admin-stat-5: #65a30d; /* Lime */
+  --admin-stat-5-bg: #f7fee7;
+  --admin-stat-5-border: #d9f99d;
+
+  --admin-card-bg: #ffffff;
+  --admin-border: #d1fae5;
+  --admin-text: #1f2937;
+  --admin-text-light: #6b7280;
+  --admin-sidebar-bg: #f0fdf4;
+  --admin-sidebar-border: #d1fae5;
+}
+
+/* Theme-aware utility classes */
+.theme-stat-1 {
+  color: var(--admin-stat-1) !important;
+}
+.theme-stat-1-bg {
+  background-color: var(--admin-stat-1-bg) !important;
+}
+.theme-stat-1-border {
+  border-color: var(--admin-stat-1-border) !important;
+}
+
+.theme-stat-2 {
+  color: var(--admin-stat-2) !important;
+}
+.theme-stat-2-bg {
+  background-color: var(--admin-stat-2-bg) !important;
+}
+.theme-stat-2-border {
+  border-color: var(--admin-stat-2-border) !important;
+}
+
+.theme-stat-3 {
+  color: var(--admin-stat-3) !important;
+}
+.theme-stat-3-bg {
+  background-color: var(--admin-stat-3-bg) !important;
+}
+.theme-stat-3-border {
+  border-color: var(--admin-stat-3-border) !important;
+}
+
+.theme-stat-4 {
+  color: var(--admin-stat-4) !important;
+}
+.theme-stat-4-bg {
+  background-color: var(--admin-stat-4-bg) !important;
+}
+.theme-stat-4-border {
+  border-color: var(--admin-stat-4-border) !important;
+}
+
+.theme-stat-5 {
+  color: var(--admin-stat-5) !important;
+}
+.theme-stat-5-bg {
+  background-color: var(--admin-stat-5-bg) !important;
+}
+.theme-stat-5-border {
+  border-color: var(--admin-stat-5-border) !important;
+}
+
+.theme-primary {
+  color: var(--admin-primary) !important;
+}
+.theme-primary-bg {
+  background-color: var(--admin-primary) !important;
+}
+.theme-accent {
+  color: var(--admin-accent) !important;
+}
+.theme-accent-bg {
+  background-color: var(--admin-accent) !important;
+}
+.theme-success {
+  color: var(--admin-success) !important;
+}
+.theme-success-bg {
+  background-color: var(--admin-success) !important;
+}
+.theme-warning {
+  color: var(--admin-warning) !important;
+}
+.theme-warning-bg {
+  background-color: var(--admin-warning) !important;
+}
+.theme-danger {
+  color: var(--admin-danger) !important;
+}
+.theme-danger-bg {
+  background-color: var(--admin-danger) !important;
+}
+
+/* Admin Theme Classes - Use !important to override Tailwind */
+.admin-primary {
+  background-color: var(--admin-primary) !important;
+  color: white !important;
+}
+
+.admin-primary:hover {
+  background-color: var(--admin-primary-dark) !important;
+}
+
+.admin-primary-light {
+  background-color: var(--admin-primary-light) !important;
+  color: white !important;
+}
+
+.admin-primary-border {
+  border-color: var(--admin-primary) !important;
+}
+
+.admin-primary-text {
+  color: var(--admin-primary) !important;
+}
+
+.admin-accent {
+  background-color: var(--admin-accent) !important;
+  color: white !important;
+}
+
+.admin-accent:hover {
+  background-color: var(--admin-accent-light) !important;
+}
+
+.admin-accent-light {
+  background-color: var(--admin-accent-light) !important;
+  color: white !important;
+}
+
+.admin-success {
+  background-color: var(--admin-success) !important;
+  color: white !important;
+}
+
+.admin-warning {
+  background-color: var(--admin-warning) !important;
+  color: white !important;
+}
+
+.admin-danger {
+  background-color: var(--admin-danger) !important;
+  color: white !important;
+}
+
+.admin-card {
+  background-color: var(--admin-card-bg) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-sidebar {
+  background-color: var(--admin-sidebar-bg) !important;
+  border-color: var(--admin-sidebar-border) !important;
+}
+
+.admin-text {
+  color: var(--admin-text) !important;
+}
+
+.admin-text-light {
+  color: var(--admin-text-light) !important;
+}
+
+/* Dynamic theme utility classes */
+.theme-primary-bg {
+  background-color: var(--admin-primary) !important;
+}
+
+.theme-primary-text {
+  color: var(--admin-primary) !important;
+}
+
+.theme-accent-bg {
+  background-color: var(--admin-accent) !important;
+}
+
+.theme-accent-text {
+  color: var(--admin-accent) !important;
+}
+
+.theme-card {
+  background-color: var(--admin-card-bg) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-card:hover {
+  border-color: var(--admin-primary-light);
+}

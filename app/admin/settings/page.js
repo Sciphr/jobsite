@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { updateSettingGlobally } from "@/app/hooks/useSettings";
 import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
+import ThemeSelector from "./components/ThemeSelector";
 import {
   Settings,
   Save,
@@ -580,7 +581,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div ref={tabsRef} className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -610,7 +611,10 @@ export default function AdminSettings() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white rounded-lg shadow border border-gray-200">
+      <div
+        ref={contentRef}
+        className="bg-white rounded-lg shadow border border-gray-200"
+      >
         {/* Tab Header with colored styling */}
         <div
           className={`px-6 py-4 border-b border-gray-200 ${activeTabData?.bgColor} ${activeTabData?.borderColor} border-l-4`}
@@ -661,14 +665,83 @@ export default function AdminSettings() {
 
         {/* Settings List */}
         <div className="p-6">
-          {activeSettings.length > 0 ? (
+          {/* Special handling for Personal tab - show theme selector */}
+          {activeTab === "personal" ? (
+            <div className="space-y-6">
+              <ThemeSelector />
+              {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
+              {activeSettings.filter(
+                (setting) => setting.key !== "admin_dashboard_theme"
+              ).length > 0 && (
+                <>
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-sm font-medium text-gray-900 mb-4">
+                      Other Personal Settings
+                    </h3>
+                  </div>
+                  {activeSettings
+                    .filter(
+                      (setting) => setting.key !== "admin_dashboard_theme"
+                    )
+                    .map((setting) => {
+                      const SettingIcon = getSettingIcon(setting.key);
+                      return (
+                        <div
+                          key={setting.key}
+                          className={`setting-card flex items-start space-x-4 p-4 border rounded-lg transition-all duration-200 ${
+                            activeTabData?.borderColor || "border-gray-200"
+                          } ${activeTabData?.hoverColor || "hover:bg-gray-50"}`}
+                        >
+                          <div
+                            className={`p-2 rounded-lg ${
+                              activeTabData?.bgColor || "bg-blue-100"
+                            }`}
+                          >
+                            <SettingIcon
+                              className={`h-4 w-4 ${
+                                activeTabData?.color || "text-blue-600"
+                              }`}
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-900">
+                                  {setting.key
+                                    .replace(/_/g, " ")
+                                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                                </h3>
+                                {setting.description && (
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {setting.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              {setting.isPersonal && (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                  Personal
+                                </span>
+                              )}
+                            </div>
+
+                            {renderSettingInput(setting)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </>
+              )}
+            </div>
+          ) : activeSettings.length > 0 ? (
             <div className="space-y-6">
               {activeSettings.map((setting) => {
                 const SettingIcon = getSettingIcon(setting.key);
                 return (
                   <div
                     key={setting.key}
-                    className={`flex items-start space-x-4 p-4 border rounded-lg transition-all duration-200 ${
+                    className={`setting-card flex items-start space-x-4 p-4 border rounded-lg transition-all duration-200 ${
                       activeTabData?.borderColor || "border-gray-200"
                     } ${activeTabData?.hoverColor || "hover:bg-gray-50"}`}
                   >
