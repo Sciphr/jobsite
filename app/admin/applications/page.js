@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
@@ -62,25 +61,9 @@ export default function AdminApplications() {
     setRefreshing(false);
   };
 
-  const { shouldAnimate, loading: animationSettingsLoading } =
-    useAnimationSettings();
-
-  // Refs for GSAP animations
-  const headerRef = useRef(null);
-  const statsGridRef = useRef(null);
-  const filtersRef = useRef(null);
-  const bulkActionsRef = useRef(null);
-  const applicationsTableRef = useRef(null);
-
   useEffect(() => {
     filterApplications();
   }, [applications, searchTerm, statusFilter, jobFilter]);
-
-  useEffect(() => {
-    if (!isLoading && !animationSettingsLoading && shouldAnimate) {
-      animatePageLoad();
-    }
-  }, [isLoading, shouldAnimate, animationSettingsLoading]);
 
   const filterApplications = () => {
     let filtered = applications;
@@ -112,14 +95,6 @@ export default function AdminApplications() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      // if (response.ok) {
-      //   setApplications((prev) =>
-      //     prev.map((app) =>
-      //       app.id === applicationId ? { ...app, status: newStatus } : app
-      //     )
-      //   );
-      // }
     } catch (error) {
       console.error("Error updating application status:", error);
     }
@@ -250,203 +225,6 @@ export default function AdminApplications() {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const animatePageLoad = () => {
-    // FIRST: Hide the stat cards immediately
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        gsap.set(statCards, {
-          opacity: 0,
-          y: 30,
-          scale: 0.9,
-        });
-      }
-    }
-
-    // THEN: Hide other elements
-    const elementsToAnimate = [
-      headerRef.current,
-      filtersRef.current,
-      bulkActionsRef.current,
-      applicationsTableRef.current,
-    ].filter(Boolean);
-
-    gsap.set(elementsToAnimate, {
-      opacity: 0,
-      y: 30,
-    });
-
-    // FINALLY: Start the animation timeline
-    const tl = gsap.timeline();
-
-    // Header animation
-    if (headerRef.current) {
-      tl.to(headerRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "power2.out",
-      });
-    }
-
-    // Animate the individual stat cards
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        tl.to(
-          statCards,
-          {
-            scale: 1,
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "back.out(1.7)",
-          },
-          "-=0.3"
-        );
-      }
-    }
-
-    // Filters
-    if (filtersRef.current) {
-      tl.to(
-        filtersRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-    }
-
-    // Bulk actions (if visible)
-    if (bulkActionsRef.current) {
-      tl.to(
-        bulkActionsRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-    }
-
-    // Applications table
-    if (applicationsTableRef.current) {
-      tl.to(
-        applicationsTableRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-
-      // Animate individual table rows
-      const tableRows =
-        applicationsTableRef.current.querySelectorAll("tbody tr");
-      if (tableRows.length > 0) {
-        tl.fromTo(
-          tableRows,
-          {
-            opacity: 0,
-            y: 10,
-            scale: 0.98,
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.4,
-            stagger: 0.03,
-            ease: "power2.out",
-          },
-          "-=0.4"
-        );
-      }
-    }
-
-    // Animate counters after a delay
-    setTimeout(() => {
-      animateCounters();
-    }, 800);
-  };
-
-  const animateCounters = () => {
-    if (!statsGridRef.current) return;
-
-    const statusOptions = [
-      "Applied",
-      "Reviewing",
-      "Interview",
-      "Hired",
-      "Rejected",
-    ];
-    statusOptions.forEach((status, index) => {
-      const count = applications.filter((app) => app.status === status).length;
-      const element = statsGridRef.current.querySelector(
-        `[data-counter="${index}"]`
-      );
-      if (element && typeof count === "number") {
-        const obj = { value: 0 };
-        gsap.to(obj, {
-          value: count,
-          duration: 1.5,
-          ease: "power2.out",
-          onUpdate: function () {
-            element.textContent = Math.round(obj.value).toLocaleString();
-          },
-        });
-      }
-    });
-  };
-
-  const handleCardHover = (e, isEntering) => {
-    if (!shouldAnimate) return;
-
-    const card = e.currentTarget;
-    const icon = card.querySelector(".stat-icon");
-
-    if (isEntering) {
-      gsap.to(card, {
-        y: -5,
-        scale: 1.02,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1.1,
-          rotation: 5,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    } else {
-      gsap.to(card, {
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1,
-          rotation: 0,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    }
-  };
-
   const statusOptions = [
     "Applied",
     "Reviewing",
@@ -475,7 +253,7 @@ export default function AdminApplications() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">Applications</h1>
           <p className="admin-text-light mt-2">
@@ -504,7 +282,7 @@ export default function AdminApplications() {
       </div>
 
       {/* Stats Overview */}
-      <div ref={statsGridRef} className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {statusOptions.map((status, index) => {
           const count = applications.filter(
             (app) => app.status === status
@@ -549,17 +327,10 @@ export default function AdminApplications() {
             <div
               key={status}
               className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-shadow duration-200 cursor-pointer`}
-              onMouseEnter={(e) => handleCardHover(e, true)}
-              onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div
-                    className="text-2xl font-bold admin-text"
-                    data-counter={index}
-                  >
-                    {count}
-                  </div>
+                  <div className="text-2xl font-bold admin-text">{count}</div>
                   <div className="text-sm admin-text-light font-medium">
                     {status}
                   </div>
@@ -574,7 +345,7 @@ export default function AdminApplications() {
       </div>
 
       {/* Filters */}
-      <div ref={filtersRef} className="admin-card p-6 rounded-lg shadow">
+      <div className="admin-card p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -617,10 +388,7 @@ export default function AdminApplications() {
 
       {/* Bulk Actions */}
       {selectedApplications.length > 0 && (
-        <div
-          ref={bulkActionsRef}
-          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
-        >
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <span className="text-blue-800 font-medium">
               {selectedApplications.length} application
@@ -657,10 +425,7 @@ export default function AdminApplications() {
       )}
 
       {/* Applications Table */}
-      <div
-        ref={applicationsTableRef}
-        className="admin-card rounded-lg shadow overflow-hidden"
-      >
+      <div className="admin-card rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b admin-text-light">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold admin-text">

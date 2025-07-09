@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { updateSettingGlobally } from "@/app/hooks/useSettings";
 import { useSession } from "next-auth/react";
-import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
-import AnimationToggle from "./components/AnimationToggle";
-import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import {
   Settings,
@@ -33,8 +30,6 @@ import {
 } from "lucide-react";
 
 export default function AdminSettings() {
-  const { shouldAnimate, loading: animationSettingsLoading } =
-    useAnimationSettings();
   const { data: session } = useSession();
   const { getButtonClasses } = useThemeClasses();
   const [saving, setSaving] = useState({});
@@ -47,103 +42,12 @@ export default function AdminSettings() {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Refs for GSAP animations
-  const headerRef = useRef(null);
-  const tabsRef = useRef(null);
-  const contentRef = useRef(null);
-
   useEffect(() => {
     if (settingsData) {
       setSettings(settingsData.grouped || {});
       setLoading(false);
     }
   }, [settingsData]);
-
-  useEffect(() => {
-    // Wait for BOTH data loading AND animation settings to be ready
-    if (!loading && !animationSettingsLoading && shouldAnimate) {
-      setTimeout(() => {
-        animatePageLoad();
-      }, 50);
-    }
-  }, [loading, shouldAnimate, animationSettingsLoading]);
-
-  const animatePageLoad = () => {
-    // Hide elements immediately
-    const elementsToAnimate = [
-      headerRef.current,
-      tabsRef.current,
-      contentRef.current,
-    ].filter(Boolean);
-
-    gsap.set(elementsToAnimate, {
-      opacity: 0,
-      y: 30,
-    });
-
-    // Start the animation timeline
-    const tl = gsap.timeline();
-
-    // Header animation
-    if (headerRef.current) {
-      tl.to(headerRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "power2.out",
-      });
-    }
-
-    // Tabs animation
-    if (tabsRef.current) {
-      tl.to(
-        tabsRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-    }
-
-    // Content animation
-    if (contentRef.current) {
-      tl.to(
-        contentRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-
-      // Animate individual setting cards
-      const settingCards = contentRef.current.querySelectorAll(".setting-card");
-      if (settingCards.length > 0) {
-        tl.fromTo(
-          settingCards,
-          {
-            opacity: 0,
-            y: 20,
-            scale: 0.95,
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.5,
-            stagger: 0.05,
-            ease: "power2.out",
-          },
-          "-=0.4"
-        );
-      }
-    }
-  };
 
   const fetchSettings = async () => {
     await refetch();
@@ -558,7 +462,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">Settings</h1>
           <p className="admin-text-light mt-2">
@@ -577,7 +481,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Tabs */}
-      <div ref={tabsRef} className="border-b border-gray-200">
+      <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -634,7 +538,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Tab Content */}
-      <div ref={contentRef} className="admin-card rounded-lg shadow">
+      <div className="admin-card rounded-lg shadow">
         {/* Tab Header with theme-aware colored styling */}
         <div
           className={`px-6 py-4 border-b admin-text-light`}
@@ -750,7 +654,7 @@ export default function AdminSettings() {
           {activeTab === "personal" ? (
             <div className="space-y-6">
               <ThemeSelector />
-              <AnimationToggle />
+
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(
                 (setting) =>

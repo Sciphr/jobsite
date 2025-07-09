@@ -42,11 +42,8 @@ export default function EditUserPage() {
       setError(
         "You don't have permission to edit users. Super Admin access required."
       );
-
       return;
     }
-
-    fetchUserData();
   }, [session, status, userId, router]);
 
   // Show loading state while checking session or fetching data
@@ -105,7 +102,7 @@ export default function EditUserPage() {
               Back to Users
             </button>
             <button
-              onClick={fetchUserData}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
             >
               Try Again

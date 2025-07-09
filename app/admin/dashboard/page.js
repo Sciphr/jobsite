@@ -2,9 +2,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRef, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
-import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
@@ -42,161 +41,6 @@ export default function AdminDashboard() {
     refetch,
   } = useDashboardStats();
 
-  const { shouldAnimate, loading: animationSettingsLoading } =
-    useAnimationSettings();
-
-  // Refs for GSAP animations
-  const headerRef = useRef(null);
-  const statsGridRef = useRef(null);
-  const contentGridRef = useRef(null);
-  const quickActionsRef = useRef(null);
-  const systemStatusRef = useRef(null);
-
-  // Animation effects (keeping your existing animation logic)
-  const animatePageLoad = () => {
-    // FIRST: Hide the stat cards immediately
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        gsap.set(statCards, {
-          autoAlpha: 0,
-          y: 30,
-          scale: 0.9,
-        });
-      }
-    }
-
-    // THEN: Hide other elements
-    const elementsToAnimate = [
-      headerRef.current,
-      contentGridRef.current,
-      quickActionsRef.current,
-      systemStatusRef.current,
-    ].filter(Boolean);
-
-    gsap.set(elementsToAnimate, {
-      autoAlpha: 0,
-      y: 30,
-    });
-
-    // FINALLY: Start the animation timeline
-    const tl = gsap.timeline();
-
-    // Header animation
-    if (headerRef.current) {
-      tl.to(headerRef.current, {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "power2.out",
-      });
-    }
-
-    // Animate the individual stat cards
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        tl.to(
-          statCards,
-          {
-            scale: 1,
-            autoAlpha: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "back.out(1.7)",
-          },
-          "-=0.3"
-        );
-      }
-    }
-
-    // Other sections
-    const sections = [
-      contentGridRef.current,
-      quickActionsRef.current,
-      systemStatusRef.current,
-    ].filter(Boolean);
-
-    sections.forEach((section) => {
-      tl.to(
-        section,
-        {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.3"
-      );
-    });
-
-    // Animate counters after a delay
-    setTimeout(() => {
-      animateCounters();
-    }, 800);
-  };
-
-  const animateCounters = () => {
-    if (!statsGridRef.current || !stats) return;
-
-    visibleStats.forEach((stat, index) => {
-      const element = statsGridRef.current.querySelector(
-        `[data-counter="${index}"]`
-      );
-      if (element && typeof stat.value === "number") {
-        const obj = { value: 0 };
-        gsap.to(obj, {
-          value: stat.value,
-          duration: 1.5,
-          ease: "power2.out",
-          onUpdate: function () {
-            element.textContent = Math.round(obj.value).toLocaleString();
-          },
-        });
-      }
-    });
-  };
-
-  const handleCardHover = (e, isEntering) => {
-    if (!shouldAnimate) return;
-
-    const card = e.currentTarget;
-    const icon = card.querySelector(".stat-icon");
-
-    if (isEntering) {
-      gsap.to(card, {
-        y: -5,
-        scale: 1.02,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1.1,
-          rotation: 5,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    } else {
-      gsap.to(card, {
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1,
-          rotation: 0,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    }
-  };
-
   // Check if user is admin (privilege level 1 or higher)
   const isAdmin = session?.user?.privilegeLevel >= 1;
 
@@ -204,13 +48,6 @@ export default function AdminDashboard() {
     redirect("/auth/signin");
     return null;
   }
-
-  // Trigger animations when data loads
-  useEffect(() => {
-    if (!isLoading && !animationSettingsLoading && shouldAnimate && stats) {
-      animatePageLoad();
-    }
-  }, [isLoading, shouldAnimate, animationSettingsLoading, stats]);
 
   const userPrivilegeLevel = session.user.privilegeLevel;
   const userRole = session.user.role;
@@ -305,7 +142,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!
@@ -323,10 +160,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Stats with Theme Support */}
-      <div
-        ref={statsGridRef}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {visibleStats.map((stat, index) => {
           const Icon = stat.icon;
           const statClasses = getStatCardClasses(stat.statIndex);
@@ -336,18 +170,13 @@ export default function AdminDashboard() {
               key={index}
               href={stat.href}
               className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
-              onMouseEnter={(e) => handleCardHover(e, true)}
-              onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm font-medium admin-text-light">
                     {stat.title}
                   </p>
-                  <p
-                    className="text-3xl font-bold admin-text mt-2"
-                    data-counter={index}
-                  >
+                  <p className="text-3xl font-bold admin-text mt-2">
                     {typeof stat.value === "number"
                       ? stat.value.toLocaleString()
                       : stat.value}
@@ -372,10 +201,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Content Grid */}
-      <div
-        ref={contentGridRef}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Applications (HR and above) */}
         {userPrivilegeLevel >= 1 && (
           <div className="admin-card rounded-lg shadow">
@@ -521,7 +347,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions with Theme Support */}
-      <div ref={quickActionsRef} className="admin-card rounded-lg shadow p-6">
+      <div className="admin-card rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold admin-text mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {userPrivilegeLevel >= 1 && (
@@ -570,7 +396,7 @@ export default function AdminDashboard() {
 
       {/* System Status (Super Admin only) */}
       {userPrivilegeLevel >= 3 && (
-        <div ref={systemStatusRef} className="admin-card rounded-lg shadow p-6">
+        <div className="admin-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold admin-text mb-4">
             System Status
           </h2>

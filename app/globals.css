@@ -87,11 +87,6 @@ body {
   backface-visibility: hidden;
 }
 
-.stat-card {
-  /* opacity: 0; */
-  /* transform: translateY(30px) scale(0.9); */
-}
-
 /* Admin Dashboard Themes */
 :root {
   /* Default Theme (Colorful design) */

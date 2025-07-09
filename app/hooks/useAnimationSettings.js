@@ -92,12 +92,9 @@ export const useAnimationSettings = () => {
     }
   };
 
-  // Determine if animations should actually run
-  const shouldAnimate = !systemPrefersReducedMotion && animationsEnabled;
-
   return {
     animationsEnabled,
-    shouldAnimate,
+
     systemPrefersReducedMotion,
     loading,
     updateAnimationSetting,

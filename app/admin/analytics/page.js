@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import { useAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
@@ -50,8 +49,6 @@ export default function AdminAnalytics() {
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
-  const { shouldAnimate, loading: animationSettingsLoading } =
-    useAnimationSettings();
   const { prefetchAll } = usePrefetchAdminData();
   const {
     data: analytics,
@@ -61,39 +58,6 @@ export default function AdminAnalytics() {
     refetch,
   } = useAnalytics(timeRange);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Refs for GSAP animations
-  const headerRef = useRef(null);
-  const metricsGridRef = useRef(null);
-  const chartsGridRef = useRef(null);
-  const additionalChartsRef = useRef(null);
-  const conversionFunnelRef = useRef(null);
-  const insightsGridRef = useRef(null);
-
-  const [hasAnimated, setHasAnimated] = useState(false);
-
-  // Update the animation trigger useEffect:
-  useEffect(() => {
-    // Only animate once when we first get data and animation settings are loaded
-    if (
-      !isLoading &&
-      !animationSettingsLoading &&
-      shouldAnimate &&
-      analytics &&
-      !hasAnimated
-    ) {
-      setTimeout(() => {
-        animatePageLoad();
-        setHasAnimated(true);
-      }, 50);
-    }
-  }, [
-    isLoading,
-    shouldAnimate,
-    animationSettingsLoading,
-    analytics,
-    hasAnimated,
-  ]);
 
   const getMockData = () => ({
     overview: {
@@ -175,161 +139,6 @@ export default function AdminAnalytics() {
     },
   });
 
-  const animatePageLoad = () => {
-    // FIRST: Hide the metric cards immediately
-    if (metricsGridRef.current) {
-      const metricCards =
-        metricsGridRef.current.querySelectorAll(".metric-card");
-      if (metricCards.length > 0) {
-        gsap.set(metricCards, {
-          opacity: 0,
-          y: 30,
-          scale: 0.9,
-        });
-      }
-    }
-
-    // THEN: Hide other elements immediately
-    const elementsToAnimate = [
-      headerRef.current,
-      chartsGridRef.current,
-      additionalChartsRef.current,
-      conversionFunnelRef.current,
-      insightsGridRef.current,
-    ].filter(Boolean);
-
-    gsap.set(elementsToAnimate, {
-      opacity: 0,
-      y: 30,
-    });
-
-    // FINALLY: Start the animation timeline
-    const tl = gsap.timeline();
-
-    // Header animation
-    if (headerRef.current) {
-      tl.to(headerRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "power2.out",
-      });
-    }
-
-    // Animate the individual metric cards
-    if (metricsGridRef.current) {
-      const metricCards =
-        metricsGridRef.current.querySelectorAll(".metric-card");
-      if (metricCards.length > 0) {
-        tl.to(
-          metricCards,
-          {
-            scale: 1,
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "back.out(1.7)",
-          },
-          "-=0.3"
-        );
-      }
-    }
-
-    // Charts sections
-    const chartSections = [
-      chartsGridRef.current,
-      additionalChartsRef.current,
-      conversionFunnelRef.current,
-      insightsGridRef.current,
-    ].filter(Boolean);
-
-    chartSections.forEach((section, index) => {
-      tl.to(
-        section,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.4"
-      );
-    });
-
-    // Animate counters after a delay
-    setTimeout(() => {
-      animateCounters();
-    }, 800);
-  };
-
-  const animateCounters = () => {
-    if (!metricsGridRef.current || !analytics) return;
-
-    const metrics = [
-      analytics.overview.totalJobs,
-      analytics.overview.totalApplications,
-      analytics.overview.totalUsers,
-      analytics.overview.totalViews,
-    ];
-
-    metrics.forEach((value, index) => {
-      const element = metricsGridRef.current.querySelector(
-        `[data-counter="${index}"]`
-      );
-      if (element && typeof value === "number") {
-        const obj = { value: 0 };
-        gsap.to(obj, {
-          value: value,
-          duration: 1.5,
-          ease: "power2.out",
-          onUpdate: function () {
-            element.textContent = Math.round(obj.value).toLocaleString();
-          },
-        });
-      }
-    });
-  };
-
-  const handleCardHover = (e, isEntering) => {
-    if (!shouldAnimate) return;
-
-    const card = e.currentTarget;
-    const icon = card.querySelector(".metric-icon");
-
-    if (isEntering) {
-      gsap.to(card, {
-        y: -5,
-        scale: 1.02,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1.1,
-          rotation: 5,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    } else {
-      gsap.to(card, {
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1,
-          rotation: 0,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await refetch();
@@ -399,7 +208,7 @@ export default function AdminAnalytics() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">Analytics Dashboard</h1>
           <p className="admin-text-light mt-2">
@@ -438,19 +247,12 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Key Metrics */}
-      <div
-        ref={metricsGridRef}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-      >
-        <div
-          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
-          onMouseEnter={(e) => handleCardHover(e, true)}
-          onMouseLeave={(e) => handleCardHover(e, false)}
-        >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium admin-text-light">Total Jobs</p>
-              <p className="text-3xl font-bold admin-text" data-counter="0">
+              <p className="text-3xl font-bold admin-text">
                 {analytics.overview.totalJobs}
               </p>
               <div className="flex items-center mt-2">
@@ -475,17 +277,13 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div
-          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
-          onMouseEnter={(e) => handleCardHover(e, true)}
-          onMouseLeave={(e) => handleCardHover(e, false)}
-        >
+        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium admin-text-light">
                 Applications
               </p>
-              <p className="text-3xl font-bold admin-text" data-counter="1">
+              <p className="text-3xl font-bold admin-text">
                 {analytics.overview.totalApplications}
               </p>
               <div className="flex items-center mt-2">
@@ -510,17 +308,13 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div
-          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
-          onMouseEnter={(e) => handleCardHover(e, true)}
-          onMouseLeave={(e) => handleCardHover(e, false)}
-        >
+        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium admin-text-light">
                 Total Users
               </p>
-              <p className="text-3xl font-bold admin-text" data-counter="2">
+              <p className="text-3xl font-bold admin-text">
                 {analytics.overview.totalUsers}
               </p>
               <div className="flex items-center mt-2">
@@ -545,15 +339,11 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div
-          className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200"
-          onMouseEnter={(e) => handleCardHover(e, true)}
-          onMouseLeave={(e) => handleCardHover(e, false)}
-        >
+        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium admin-text-light">Job Views</p>
-              <p className="text-3xl font-bold admin-text" data-counter="3">
+              <p className="text-3xl font-bold admin-text">
                 {analytics.overview.totalViews.toLocaleString()}
               </p>
               <div className="flex items-center mt-2">
@@ -580,10 +370,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Main Charts Section */}
-      <div
-        ref={chartsGridRef}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Trend Chart */}
         <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-6">
@@ -661,10 +448,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Application Status & Top Jobs */}
-      <div
-        ref={additionalChartsRef}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Application Status */}
         <div className="chart-card admin-card p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
@@ -720,10 +504,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Conversion Funnel */}
-      <div
-        ref={conversionFunnelRef}
-        className="chart-card admin-card p-6 rounded-lg shadow"
-      >
+      <div className="chart-card admin-card p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold admin-text mb-6">
           Conversion Funnel
         </h2>
@@ -755,10 +536,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Additional Insights */}
-      <div
-        ref={insightsGridRef}
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
-      >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="chart-card admin-card p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">

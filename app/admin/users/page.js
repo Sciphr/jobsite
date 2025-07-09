@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { gsap } from "gsap";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
@@ -39,24 +38,9 @@ export default function AdminUsers() {
   const { data: users = [], isLoading, isError, error, refetch } = useUsers();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { shouldAnimate, loading: animationSettingsLoading } =
-    useAnimationSettings();
-
-  // Refs for GSAP animations
-  const headerRef = useRef(null);
-  const statsGridRef = useRef(null);
-  const filtersRef = useRef(null);
-  const usersTableRef = useRef(null);
-
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter, statusFilter]);
-
-  useEffect(() => {
-    if (!isLoading && !animationSettingsLoading && shouldAnimate) {
-      animatePageLoad();
-    }
-  }, [isLoading, shouldAnimate, animationSettingsLoading]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -175,180 +159,6 @@ export default function AdminUsers() {
     return colors[role] || "text-gray-600 bg-gray-100";
   };
 
-  const animatePageLoad = () => {
-    // FIRST: Hide the stat cards immediately
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        gsap.set(statCards, {
-          opacity: 0,
-          y: 30,
-          scale: 0.9,
-        });
-      }
-    }
-
-    // THEN: Hide other elements
-    const elementsToAnimate = [
-      headerRef.current,
-      filtersRef.current,
-      usersTableRef.current,
-    ].filter(Boolean);
-
-    gsap.set(elementsToAnimate, {
-      opacity: 0,
-      y: 30,
-    });
-
-    // FINALLY: Start the animation timeline
-    const tl = gsap.timeline();
-
-    // Header animation
-    if (headerRef.current) {
-      tl.to(headerRef.current, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: "power2.out",
-      });
-    }
-
-    // Animate the individual stat cards
-    if (statsGridRef.current) {
-      const statCards = statsGridRef.current.querySelectorAll(".stat-card");
-      if (statCards.length > 0) {
-        tl.to(
-          statCards,
-          {
-            scale: 1,
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "back.out(1.7)",
-          },
-          "-=0.3"
-        );
-      }
-    }
-
-    // Filters
-    if (filtersRef.current) {
-      tl.to(
-        filtersRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-    }
-
-    // Users table
-    if (usersTableRef.current) {
-      tl.to(
-        usersTableRef.current,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out",
-        },
-        "-=0.2"
-      );
-
-      // Animate individual table rows
-      const tableRows = usersTableRef.current.querySelectorAll("tbody tr");
-      if (tableRows.length > 0) {
-        tl.fromTo(
-          tableRows,
-          {
-            opacity: 0,
-            y: 10,
-            scale: 0.98,
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.4,
-            stagger: 0.03,
-            ease: "power2.out",
-          },
-          "-=0.4"
-        );
-      }
-    }
-
-    // Animate counters after a delay
-    setTimeout(() => {
-      animateCounters();
-    }, 800);
-  };
-
-  const animateCounters = () => {
-    if (!statsGridRef.current) return;
-
-    roleOptions.forEach((role, index) => {
-      const count = users.filter((user) => user.role === role.value).length;
-      const element = statsGridRef.current.querySelector(
-        `[data-counter="${index}"]`
-      );
-      if (element && typeof count === "number") {
-        const obj = { value: 0 };
-        gsap.to(obj, {
-          value: count,
-          duration: 1.5,
-          ease: "power2.out",
-          onUpdate: function () {
-            element.textContent = Math.round(obj.value).toLocaleString();
-          },
-        });
-      }
-    });
-  };
-
-  const handleCardHover = (e, isEntering) => {
-    if (!shouldAnimate) return;
-
-    const card = e.currentTarget;
-    const icon = card.querySelector(".stat-icon");
-
-    if (isEntering) {
-      gsap.to(card, {
-        y: -5,
-        scale: 1.02,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1.1,
-          rotation: 5,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    } else {
-      gsap.to(card, {
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      if (icon) {
-        gsap.to(icon, {
-          scale: 1,
-          rotation: 0,
-          duration: 0.3,
-          ease: "power2.out",
-        });
-      }
-    }
-  };
-
   const roleOptions = [
     { value: "user", label: "User", privilegeLevel: 0 },
     { value: "hr", label: "HR", privilegeLevel: 1 },
@@ -379,7 +189,7 @@ export default function AdminUsers() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div ref={headerRef} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">Users Management</h1>
           <p className="admin-text-light mt-2">
@@ -408,7 +218,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Stats Overview */}
-      <div ref={statsGridRef} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {roleOptions.map((role, index) => {
           const count = users.filter((user) => user.role === role.value).length;
           const RoleIcon = getRoleIcon(role.value);
@@ -418,17 +228,10 @@ export default function AdminUsers() {
             <div
               key={role.value}
               className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 cursor-pointer`}
-              onMouseEnter={(e) => handleCardHover(e, true)}
-              onMouseLeave={(e) => handleCardHover(e, false)}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div
-                    className="text-2xl font-bold admin-text"
-                    data-counter={index}
-                  >
-                    {count}
-                  </div>
+                  <div className="text-2xl font-bold admin-text">{count}</div>
                   <div className="text-sm admin-text-light font-medium">
                     {role.label}s
                   </div>
@@ -443,7 +246,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Filters */}
-      <div ref={filtersRef} className="admin-card p-6 rounded-lg shadow">
+      <div className="admin-card p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
@@ -485,10 +288,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Users Table */}
-      <div
-        ref={usersTableRef}
-        className="admin-card rounded-lg shadow overflow-hidden"
-      >
+      <div className="admin-card rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
