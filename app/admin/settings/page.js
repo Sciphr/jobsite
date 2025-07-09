@@ -27,6 +27,12 @@ import {
   X,
   AlertTriangle,
   Info,
+  Server,
+  Users,
+  AlertCircle,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 export default function AdminSettings() {
@@ -36,6 +42,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("system");
   const [unsavedChanges, setUnsavedChanges] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
+  const [collapsedSections, setCollapsedSections] = useState({});
 
   const { prefetchAll } = usePrefetchAdminData();
   const { data: settingsData, isLoading, refetch } = useSettings();
@@ -185,6 +192,87 @@ export default function AdminSettings() {
     if (unsavedChanges[key] !== undefined) {
       await updateSetting(key, unsavedChanges[key], setting.isPersonal);
     }
+  };
+
+  const toggleSection = (sectionId) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  };
+
+  // Function to organize notification settings into sections
+  const organizeNotificationSettings = (notificationSettings) => {
+    const sections = {
+      smtp: {
+        title: "SMTP Configuration",
+        description: "Configure custom SMTP server settings for email delivery",
+        icon: Server,
+        color: "var(--admin-stat-1)",
+        bgColor: "var(--admin-stat-1-bg)",
+        borderColor: "var(--admin-stat-1-border)",
+        settings: [],
+      },
+      emailNotifications: {
+        title: "Email Notifications",
+        description: "Control when email notifications are sent",
+        icon: Mail,
+        color: "var(--admin-stat-2)",
+        bgColor: "var(--admin-stat-2-bg)",
+        borderColor: "var(--admin-stat-2-border)",
+        settings: [],
+      },
+      digestNotifications: {
+        title: "Digest & Alerts",
+        description: "Configure periodic summaries and threshold alerts",
+        icon: Calendar,
+        color: "var(--admin-stat-3)",
+        bgColor: "var(--admin-stat-3-bg)",
+        borderColor: "var(--admin-stat-3-border)",
+        settings: [],
+      },
+      systemNotifications: {
+        title: "System & Emergency",
+        description: "Critical system notifications and rate limiting",
+        icon: AlertCircle,
+        color: "var(--admin-stat-4)",
+        bgColor: "var(--admin-stat-4-bg)",
+        borderColor: "var(--admin-stat-4-border)",
+        settings: [],
+      },
+    };
+
+    // Categorize settings
+    notificationSettings.forEach((setting) => {
+      if (setting.key.startsWith("smtp_")) {
+        sections.smtp.settings.push(setting);
+      } else if (
+        setting.key.includes("email_") ||
+        setting.key === "application_confirmation_email"
+      ) {
+        sections.emailNotifications.settings.push(setting);
+      } else if (
+        setting.key.includes("digest") ||
+        setting.key.includes("low_application") ||
+        setting.key === "notification_frequency_limit"
+      ) {
+        sections.digestNotifications.settings.push(setting);
+      } else if (
+        setting.key.includes("emergency") ||
+        setting.key === "job_approval_required" ||
+        setting.key === "notification_email"
+      ) {
+        sections.systemNotifications.settings.push(setting);
+      } else {
+        // Default to email notifications for any unmatched notification settings
+        sections.emailNotifications.settings.push(setting);
+      }
+    });
+
+    // Filter out empty sections
+    return Object.entries(sections).filter(
+      ([key, section]) => section.settings.length > 0
+    );
   };
 
   const userPrivilegeLevel = session?.user?.privilegeLevel || 0;
@@ -436,7 +524,121 @@ export default function AdminSettings() {
     if (key.includes("show") || key.includes("visible")) return Eye;
     if (key.includes("file") || key.includes("resume")) return FileText;
     if (key.includes("site") || key.includes("name")) return Globe;
+    if (key.includes("smtp")) return Server;
     return Settings;
+  };
+
+  const renderSection = (sectionId, section) => {
+    const isCollapsed = collapsedSections[sectionId];
+    const SectionIcon = section.icon;
+
+    return (
+      <div
+        key={sectionId}
+        className="border rounded-lg overflow-hidden"
+        style={{ borderColor: section.borderColor }}
+      >
+        {/* Section Header */}
+        <button
+          onClick={() => toggleSection(sectionId)}
+          className="w-full px-4 py-3 flex items-center justify-between transition-colors duration-200 hover:opacity-80"
+          style={{ backgroundColor: section.bgColor }}
+        >
+          <div className="flex items-center space-x-3">
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: section.bgColor }}
+            >
+              <SectionIcon
+                className="h-4 w-4"
+                style={{ color: section.color }}
+              />
+            </div>
+            <div className="text-left">
+              <h3
+                className="text-sm font-semibold"
+                style={{ color: section.color }}
+              >
+                {section.title}
+              </h3>
+              <p className="text-xs admin-text-light">{section.description}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span
+              className="text-xs px-2 py-1 rounded-full"
+              style={{
+                backgroundColor: section.color,
+                color: "white",
+              }}
+            >
+              {section.settings.length} setting
+              {section.settings.length !== 1 ? "s" : ""}
+            </span>
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 admin-text-light" />
+            ) : (
+              <ChevronDown className="h-4 w-4 admin-text-light" />
+            )}
+          </div>
+        </button>
+
+        {/* Section Content */}
+        {!isCollapsed && (
+          <div className="p-4 space-y-4 bg-white dark:bg-gray-800">
+            {section.settings.map((setting, index) => {
+              const SettingIcon = getSettingIcon(setting.key);
+
+              return (
+                <div
+                  key={setting.key}
+                  className="setting-card flex items-start space-x-4 p-3 border rounded-lg transition-all duration-200 hover:shadow-sm"
+                  style={{ borderColor: section.borderColor }}
+                >
+                  <div
+                    className="p-2 rounded-lg"
+                    style={{ backgroundColor: section.bgColor }}
+                  >
+                    <SettingIcon
+                      className="h-4 w-4"
+                      style={{ color: section.color }}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="text-sm font-medium admin-text">
+                          {setting.key
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l) => l.toUpperCase())}
+                        </h3>
+                        {setting.description && (
+                          <p className="text-sm admin-text-light mt-1">
+                            {setting.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {setting.isPersonal && (
+                        <span
+                          className="inline-flex items-center px-2 py-1 rounded text-xs font-medium text-white"
+                          style={{ backgroundColor: "var(--admin-stat-5)" }}
+                        >
+                          Personal
+                        </span>
+                      )}
+                    </div>
+
+                    {renderSettingInput(setting)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -753,6 +955,12 @@ export default function AdminSettings() {
                       );
                     })}
                 </>
+              )}
+            </div>
+          ) : activeTab === "notifications" ? (
+            <div className="space-y-6">
+              {organizeNotificationSettings(activeSettings).map(
+                ([sectionId, section]) => renderSection(sectionId, section)
               )}
             </div>
           ) : activeSettings.length > 0 ? (
