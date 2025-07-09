@@ -8,6 +8,7 @@ import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
 import AnimationToggle from "./components/AnimationToggle";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import {
   Settings,
   Save,
@@ -36,12 +37,15 @@ export default function AdminSettings() {
     useAnimationSettings();
   const { data: session } = useSession();
   const { getButtonClasses } = useThemeClasses();
-  const [settings, setSettings] = useState({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
   const [activeTab, setActiveTab] = useState("system");
   const [unsavedChanges, setUnsavedChanges] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
+
+  const { prefetchAll } = usePrefetchAdminData();
+  const { data: settingsData, isLoading, refetch } = useSettings();
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -49,8 +53,11 @@ export default function AdminSettings() {
   const contentRef = useRef(null);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (settingsData) {
+      setSettings(settingsData.grouped || {});
+      setLoading(false);
+    }
+  }, [settingsData]);
 
   useEffect(() => {
     // Wait for BOTH data loading AND animation settings to be ready
@@ -139,17 +146,7 @@ export default function AdminSettings() {
   };
 
   const fetchSettings = async () => {
-    try {
-      const response = await fetch("/api/admin/settings");
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data.grouped);
-      }
-    } catch (error) {
-      console.error("Error fetching settings:", error);
-    } finally {
-      setLoading(false);
-    }
+    await refetch();
   };
 
   const updateSetting = async (key, value, isPersonal = false) => {

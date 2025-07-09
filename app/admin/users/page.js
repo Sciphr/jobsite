@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { useUsers, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import {
   Users,
   Search,
@@ -29,13 +30,13 @@ import {
 export default function AdminUsers() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
-  const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const { prefetchAll } = usePrefetchAdminData();
+  const { data: users = [], isLoading, isError, error, refetch } = useUsers();
   const [refreshing, setRefreshing] = useState(false);
 
   const { shouldAnimate, loading: animationSettingsLoading } =
@@ -48,32 +49,14 @@ export default function AdminUsers() {
   const usersTableRef = useRef(null);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter, statusFilter]);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/admin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (!loading && !animationSettingsLoading && shouldAnimate) {
+    if (!isLoading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, shouldAnimate, animationSettingsLoading]);
+  }, [isLoading, shouldAnimate, animationSettingsLoading]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -126,11 +109,7 @@ export default function AdminUsers() {
       });
 
       if (response.ok) {
-        setUsers((prev) =>
-          prev.map((user) =>
-            user.id === userId ? { ...user, isActive } : user
-          )
-        );
+        refetch();
       }
     } catch (error) {
       console.error("Error updating user status:", error);
@@ -146,11 +125,7 @@ export default function AdminUsers() {
       });
 
       if (response.ok) {
-        setUsers((prev) =>
-          prev.map((user) =>
-            user.id === userId ? { ...user, role, privilegeLevel } : user
-          )
-        );
+        refetch();
       }
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -172,7 +147,7 @@ export default function AdminUsers() {
       });
 
       if (response.ok) {
-        setUsers((prev) => prev.filter((user) => user.id !== userId));
+        refetch();
         setSelectedUsers((prev) => prev.filter((id) => id !== userId));
       }
     } catch (error) {
@@ -383,7 +358,7 @@ export default function AdminUsers() {
 
   const statusOptions = ["active", "inactive"];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -682,7 +657,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Empty State */}
-      {filteredUsers.length === 0 && !loading && (
+      {filteredUsers.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium admin-text mb-2">

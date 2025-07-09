@@ -7,7 +7,10 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
-import { useDashboardStats } from "@/app/hooks/useAdminData";
+import {
+  useDashboardStats,
+  usePrefetchAdminData,
+} from "@/app/hooks/useAdminData";
 import {
   Users,
   Briefcase,
@@ -27,6 +30,8 @@ export default function AdminDashboard() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses, getThemeClasses } =
     useThemeClasses();
+
+  const { prefetchAll } = usePrefetchAdminData();
 
   // Use React Query for dashboard stats
   const {
@@ -192,6 +197,14 @@ export default function AdminDashboard() {
     }
   };
 
+  // Check if user is admin (privilege level 1 or higher)
+  const isAdmin = session?.user?.privilegeLevel >= 1;
+
+  if (!session || !isAdmin) {
+    redirect("/auth/signin");
+    return null;
+  }
+
   // Trigger animations when data loads
   useEffect(() => {
     if (!isLoading && !animationSettingsLoading && shouldAnimate && stats) {
@@ -199,8 +212,12 @@ export default function AdminDashboard() {
     }
   }, [isLoading, shouldAnimate, animationSettingsLoading, stats]);
 
-  const userPrivilegeLevel = session?.user?.privilegeLevel || 0;
-  const userRole = session?.user?.role || "user";
+  const userPrivilegeLevel = session.user.privilegeLevel;
+  const userRole = session.user.role;
+
+  useEffect(() => {
+    prefetchAll();
+  }, [prefetchAll]);
 
   // Loading state (much faster now with React Query cache!)
   if (isLoading) {

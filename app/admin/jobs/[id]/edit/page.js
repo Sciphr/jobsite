@@ -3,36 +3,25 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import JobForm from "../../components/JobForm";
+import { useJob } from "@/app/hooks/useAdminData";
 
 export default function EditJobPage() {
   const params = useParams();
   const jobId = params.id;
-  const [jobData, setJobData] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    data: jobData,
+    isLoading: loading,
+    isError,
+    error: queryError,
+  } = useJob(jobId);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchJobData();
-  }, [jobId]);
-
-  const fetchJobData = async () => {
-    try {
-      const response = await fetch(`/api/admin/jobs/${jobId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setJobData(data);
-      } else if (response.status === 404) {
-        setError("Job not found");
-      } else {
-        setError("Failed to load job data");
-      }
-    } catch (error) {
-      console.error("Error fetching job:", error);
-      setError("An error occurred while loading the job");
-    } finally {
-      setLoading(false);
+    if (isError) {
+      setError(queryError?.message || "Failed to load job data");
     }
-  };
+  }, [isError, queryError]);
 
   if (loading) {
     return (

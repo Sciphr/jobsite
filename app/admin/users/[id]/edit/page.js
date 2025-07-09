@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import UserForm from "../../components/UserForm";
 import { User, AlertCircle, Shield, ArrowLeft, Loader2 } from "lucide-react";
+import { useUser } from "@/app/hooks/useAdminData";
 
 export default function EditUserPage() {
   const { data: session, status } = useSession();
@@ -13,9 +14,19 @@ export default function EditUserPage() {
   const router = useRouter();
   const userId = params.id;
 
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: userData,
+    isLoading: loading,
+    isError,
+    error: queryError,
+  } = useUser(userId);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isError) {
+      setError(queryError?.message || "Failed to load user data");
+    }
+  }, [isError, queryError]);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -31,33 +42,12 @@ export default function EditUserPage() {
       setError(
         "You don't have permission to edit users. Super Admin access required."
       );
-      setLoading(false);
+
       return;
     }
 
     fetchUserData();
   }, [session, status, userId, router]);
-
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUserData(data);
-      } else if (response.status === 404) {
-        setError("User not found");
-      } else if (response.status === 401) {
-        setError("You don't have permission to view this user");
-      } else {
-        setError("Failed to load user data");
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      setError("An error occurred while loading the user");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Show loading state while checking session or fetching data
   if (status === "loading" || loading) {

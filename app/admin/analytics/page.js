@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { useAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import {
   BarChart3,
   TrendingUp,
@@ -47,13 +48,19 @@ import {
 export default function AdminAnalytics() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
-  const [refreshing, setRefreshing] = useState(false);
   const { shouldAnimate, loading: animationSettingsLoading } =
     useAnimationSettings();
+  const { prefetchAll } = usePrefetchAdminData();
+  const {
+    data: analytics,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useAnalytics(timeRange);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Refs for GSAP animations
   const headerRef = useRef(null);
@@ -65,15 +72,11 @@ export default function AdminAnalytics() {
 
   const [hasAnimated, setHasAnimated] = useState(false);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [timeRange]);
-
   // Update the animation trigger useEffect:
   useEffect(() => {
     // Only animate once when we first get data and animation settings are loaded
     if (
-      !loading &&
+      !isLoading &&
       !animationSettingsLoading &&
       shouldAnimate &&
       analytics &&
@@ -85,32 +88,12 @@ export default function AdminAnalytics() {
       }, 50);
     }
   }, [
-    loading,
+    isLoading,
     shouldAnimate,
     animationSettingsLoading,
     analytics,
     hasAnimated,
   ]);
-
-  const fetchAnalytics = async () => {
-    setRefreshing(true);
-    try {
-      const response = await fetch(`/api/admin/analytics?range=${timeRange}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      } else {
-        console.error("Failed to fetch analytics");
-        setAnalytics(getMockData());
-      }
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      setAnalytics(getMockData());
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
 
   const getMockData = () => ({
     overview: {
@@ -347,8 +330,10 @@ export default function AdminAnalytics() {
     }
   };
 
-  const handleRefresh = () => {
-    fetchAnalytics();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
   };
 
   const timeRangeOptions = [
@@ -370,7 +355,7 @@ export default function AdminAnalytics() {
     return "text-gray-500";
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">

@@ -6,6 +6,11 @@ import { gsap } from "gsap";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
+  useApplications,
+  useJobsSimple,
+  usePrefetchAdminData,
+} from "@/app/hooks/useAdminData";
+import {
   FileText,
   Search,
   Filter,
@@ -29,16 +34,33 @@ import {
 export default function AdminApplications() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
-  const [applications, setApplications] = useState([]);
+
   const [filteredApplications, setFilteredApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
-  const [jobs, setJobs] = useState([]);
+
   const [selectedApplications, setSelectedApplications] = useState([]);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
+
+  const { prefetchAll } = usePrefetchAdminData();
+  const {
+    data: applications = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useApplications();
+  const { data: jobs = [] } = useJobsSimple();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const { shouldAnimate, loading: animationSettingsLoading } =
     useAnimationSettings();
@@ -51,62 +73,14 @@ export default function AdminApplications() {
   const applicationsTableRef = useRef(null);
 
   useEffect(() => {
-    fetchApplications();
-    fetchJobs();
-  }, []);
-
-  useEffect(() => {
     filterApplications();
   }, [applications, searchTerm, statusFilter, jobFilter]);
 
   useEffect(() => {
-    if (!loading && !animationSettingsLoading && shouldAnimate) {
+    if (!isLoading && !animationSettingsLoading && shouldAnimate) {
       animatePageLoad();
     }
-  }, [loading, shouldAnimate, animationSettingsLoading]);
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchApplications = async () => {
-    try {
-      const response = await fetch("/api/admin/applications");
-      if (response.ok) {
-        const data = await response.json();
-        setApplications(data);
-      }
-    } catch (error) {
-      console.error("Error fetching applications:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const response = await fetch("/api/admin/applications");
-      if (response.ok) {
-        const data = await response.json();
-        setApplications(data);
-      }
-    } catch (error) {
-      console.error("Error refreshing applications:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const fetchJobs = async () => {
-    try {
-      const response = await fetch("/api/admin/jobs-simple");
-      if (response.ok) {
-        const data = await response.json();
-        setJobs(data);
-      }
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
-    }
-  };
+  }, [isLoading, shouldAnimate, animationSettingsLoading]);
 
   const filterApplications = () => {
     let filtered = applications;
@@ -139,13 +113,13 @@ export default function AdminApplications() {
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (response.ok) {
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === applicationId ? { ...app, status: newStatus } : app
-          )
-        );
-      }
+      // if (response.ok) {
+      //   setApplications((prev) =>
+      //     prev.map((app) =>
+      //       app.id === applicationId ? { ...app, status: newStatus } : app
+      //     )
+      //   );
+      // }
     } catch (error) {
       console.error("Error updating application status:", error);
     }
@@ -481,7 +455,7 @@ export default function AdminApplications() {
     "Rejected",
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">

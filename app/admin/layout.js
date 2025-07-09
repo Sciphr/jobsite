@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -28,6 +29,7 @@ function AdminLayoutContent({ children }) {
   const pathname = usePathname();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // ✅ ALWAYS call hooks at the top level, before any conditionals
   const { prefetchAll } = usePrefetchAdminData();
@@ -171,36 +173,53 @@ function AdminLayoutContent({ children }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 group ${
+                className={`admin-nav-link relative flex items-center space-x-3 px-4 py-3 rounded-lg group ${
                   isActive
-                    ? `${getButtonClasses("primary")} border border-opacity-20`
-                    : `admin-text hover:bg-gray-100`
+                    ? `text-white`
+                    : `admin-text hover:bg-gray-100 transition-colors duration-150`
                 }`}
-                // Optional: Prefetch data on hover for even faster navigation
-                onMouseEnter={() => {
-                  if (!isActive) {
-                    console.log(`🔍 Prefetching data for ${item.name}...`);
-                    prefetchAll();
-                  }
-                }}
+                style={{ zIndex: isActive ? 10 : 1 }} // Ensure active item is on top
               >
-                <Icon
-                  className={`h-5 w-5 ${
-                    isActive
-                      ? "text-white"
-                      : `admin-text-light group-hover:admin-text`
-                  }`}
-                />
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{item.name}</div>
-                  <div
-                    className={`text-xs mt-0.5 ${
+                {/* Animated background for active state */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNavBackground"
+                    className="absolute inset-0 rounded-lg"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)",
+                      zIndex: -1,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
+                    initial={false} // Prevent initial animation flash
+                  />
+                )}
+
+                {/* Content with relative positioning */}
+                <div className="relative flex items-center space-x-3 w-full">
+                  <Icon
+                    className={`h-5 w-5 transition-transform duration-200 ${
                       isActive
-                        ? "text-white text-opacity-80"
-                        : "admin-text-light"
+                        ? "text-white scale-110"
+                        : `admin-text-light group-hover:admin-text`
                     }`}
-                  >
-                    {item.description}
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{item.name}</div>
+                    <div
+                      className={`text-xs mt-0.5 transition-colors duration-200 ${
+                        isActive
+                          ? "text-white text-opacity-80"
+                          : "admin-text-light"
+                      }`}
+                    >
+                      {item.description}
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -237,8 +256,12 @@ function AdminLayoutContent({ children }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-8">{children}</main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.main key={pathname} className="flex-1 p-8" data-main-content>
+            {children}
+          </motion.main>
+        </AnimatePresence>
       </div>
     </div>
   );
