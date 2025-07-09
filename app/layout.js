@@ -1,12 +1,12 @@
+// app/layout.js
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import { SessionProvider } from "next-auth/react";
 import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
-
 import { QueryProvider } from "./providers/QueryProvider";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,17 +72,21 @@ export async function generateMetadata() {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryProvider>
-          <Providers session={undefined}>
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
-          </Providers>
+          <ThemeProvider>
+            <Providers session={undefined}>
+              <Header />
+              <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+                {children}
+              </main>
+              <Footer />
+            </Providers>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

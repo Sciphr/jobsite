@@ -140,9 +140,9 @@ export default function AdminDashboard() {
   const visibleStats = quickStats.filter((stat) => stat.visible);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between dark:bg-gray-950">
         <div>
           <h1 className="text-3xl font-bold admin-text">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!

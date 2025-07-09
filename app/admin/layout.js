@@ -23,13 +23,13 @@ import {
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
 import { usePrefetchAdminData } from "../hooks/useAdminData";
+import ThemeToggle from "../components/ThemeToggle";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // ✅ ALWAYS call hooks at the top level, before any conditionals
   const { prefetchAll } = usePrefetchAdminData();
@@ -45,10 +45,10 @@ function AdminLayoutContent({ children }) {
   // Show loading while checking session
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -145,23 +145,27 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200">
       {/* Themed Sidebar */}
-      <div className="w-64 shadow-lg admin-sidebar">
-        <div className="p-6 border-b admin-text-light">
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
-              <Shield className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className={`text-lg font-semibold admin-text`}>
-                Admin Panel
-              </h2>
-              <span
-                className={`inline-block px-2 py-1 rounded text-xs font-medium ${badge.classes}`}
-              >
-                {badge.text}
-              </span>
+      <div className="w-64 shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
+                <Shield className="h-6 w-6" />
+              </div>
+              <div>
+                <h2
+                  className={`text-lg font-semibold admin-text dark:text-white`}
+                >
+                  Admin Panel
+                </h2>
+                <span
+                  className={`inline-block px-2 py-1 rounded text-xs font-medium ${badge.classes}`}
+                >
+                  {badge.text}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -175,12 +179,12 @@ function AdminLayoutContent({ children }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`admin-nav-link relative flex items-center space-x-3 px-4 py-3 rounded-lg group ${
+                className={`admin-nav-link relative flex items-center space-x-3 px-4 py-3 rounded-lg group transition-colors duration-200 ${
                   isActive
                     ? `text-white`
-                    : `admin-text hover:bg-gray-100 transition-colors duration-150`
+                    : `admin-text dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700`
                 }`}
-                style={{ zIndex: isActive ? 10 : 1 }} // Ensure active item is on top
+                style={{ zIndex: isActive ? 10 : 1 }}
               >
                 {/* Animated background for active state */}
                 {isActive && (
@@ -196,7 +200,7 @@ function AdminLayoutContent({ children }) {
                       damping: 30,
                       mass: 0.8,
                     }}
-                    initial={false} // Prevent initial animation flash
+                    initial={false}
                   />
                 )}
 
@@ -206,7 +210,7 @@ function AdminLayoutContent({ children }) {
                     className={`h-5 w-5 transition-transform duration-200 ${
                       isActive
                         ? "text-white scale-110"
-                        : `admin-text-light group-hover:admin-text`
+                        : `admin-text-light dark:text-gray-400 group-hover:admin-text dark:group-hover:text-gray-200`
                     }`}
                   />
                   <div className="flex-1">
@@ -215,7 +219,7 @@ function AdminLayoutContent({ children }) {
                       className={`text-xs mt-0.5 transition-colors duration-200 ${
                         isActive
                           ? "text-white text-opacity-80"
-                          : "admin-text-light"
+                          : "admin-text-light dark:text-gray-500"
                       }`}
                     >
                       {item.description}
@@ -228,7 +232,7 @@ function AdminLayoutContent({ children }) {
         </nav>
 
         {/* User Info at Bottom */}
-        <div className="absolute bottom-0 w-64 p-4 border-t admin-text-light bg-white">
+        <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors duration-200">
           <div className="flex items-center space-x-3">
             <div
               className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
@@ -236,10 +240,14 @@ function AdminLayoutContent({ children }) {
               {session.user?.name?.charAt(0)?.toUpperCase() || "A"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`text-sm font-medium truncate admin-text`}>
+              <div
+                className={`text-sm font-medium truncate admin-text dark:text-white`}
+              >
                 {session.user?.name || "Admin User"}
               </div>
-              <div className={`text-xs truncate admin-text-light`}>
+              <div
+                className={`text-xs truncate admin-text-light dark:text-gray-400`}
+              >
                 {session.user?.email}
               </div>
             </div>
@@ -247,7 +255,7 @@ function AdminLayoutContent({ children }) {
 
           <Link
             href="/"
-            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border rounded-md text-sm font-medium transition-colors duration-200 admin-card hover:admin-primary-border admin-text`}
+            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium transition-colors duration-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300`}
           >
             <Building2 className="h-4 w-4 mr-2" />
             Back to Site
@@ -258,7 +266,11 @@ function AdminLayoutContent({ children }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <AnimatePresence mode="wait">
-          <motion.main key={pathname} className="flex-1 p-8" data-main-content>
+          <motion.main
+            key={pathname}
+            className="flex-1 p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
+            data-main-content
+          >
             {children}
           </motion.main>
         </AnimatePresence>
