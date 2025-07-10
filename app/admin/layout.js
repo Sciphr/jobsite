@@ -16,6 +16,7 @@ import {
   BarChart3,
   Shield,
   Building2,
+  Mail,
 } from "lucide-react";
 import {
   AdminThemeProvider,
@@ -100,6 +101,13 @@ function AdminLayoutContent({ children }) {
       icon: BarChart3,
       requiredLevel: 2,
       description: "View detailed reports",
+    },
+    {
+      name: "Weekly Digest",
+      href: "/admin/weekly-digest",
+      icon: Mail, // You'll need to import Mail from lucide-react
+      requiredLevel: 1,
+      description: "Configure digest emails",
     },
     {
       name: "Settings",
