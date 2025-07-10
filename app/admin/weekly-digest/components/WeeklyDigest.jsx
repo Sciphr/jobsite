@@ -28,7 +28,7 @@ const WeeklyDigest = () => {
   const [digestConfig, setDigestConfig] = useState({
     enabled: true,
     recipients: [],
-    template: "professional",
+    emailTheme: "professional", // Add this line
     sections: {
       jobMetrics: true,
       userMetrics: true,
@@ -57,7 +57,7 @@ const WeeklyDigest = () => {
         reviewing: true,
         interview: true,
         hired: true,
-        rejected: false, // Default off as requested
+        rejected: false,
         appTrends: true,
         dailyBreakdown: true,
         conversionRates: false,
@@ -154,6 +154,184 @@ const WeeklyDigest = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add this component to your WeeklyDigest.jsx file
+
+  const ThemeConfiguration = ({ selectedTheme, onThemeChange, theme }) => {
+    const emailThemes = [
+      {
+        id: "professional",
+        name: "Professional",
+        description: "Clean, corporate design with traditional layout",
+        preview: {
+          gradient: "from-blue-600 to-blue-800",
+          accent: "bg-blue-600",
+          text: "Professional and trustworthy",
+        },
+        features: [
+          "Corporate colors",
+          "Traditional layout",
+          "Formal typography",
+        ],
+      },
+      {
+        id: "minimalist",
+        name: "Minimalist",
+        description: "Simple, clean design with plenty of white space",
+        preview: {
+          gradient: "from-gray-700 to-gray-900",
+          accent: "bg-gray-600",
+          text: "Clean and focused",
+        },
+        features: ["Minimal design", "Clean typography", "Focused content"],
+      },
+      {
+        id: "modern",
+        name: "Modern",
+        description: "Vibrant, contemporary design with bold colors",
+        preview: {
+          gradient: "from-purple-600 to-pink-600",
+          accent: "bg-gradient-to-r from-purple-500 to-pink-500",
+          text: "Bold and engaging",
+        },
+        features: ["Vibrant colors", "Modern layout", "Interactive elements"],
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3
+            className={`text-lg font-medium mb-2 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+          >
+            Email Template Theme
+          </h3>
+          <p
+            className={`text-sm mb-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+          >
+            Choose the visual style for your weekly digest emails
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {emailThemes.map((emailTheme) => (
+            <div
+              key={emailTheme.id}
+              onClick={() => onThemeChange(emailTheme.id)}
+              className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 overflow-hidden ${
+                selectedTheme === emailTheme.id
+                  ? "border-blue-500 shadow-lg scale-105"
+                  : theme === "dark"
+                    ? "border-gray-600 hover:border-gray-500"
+                    : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {/* Theme Preview */}
+              <div
+                className={`h-32 bg-gradient-to-br ${emailTheme.preview.gradient} relative`}
+              >
+                <div className="absolute inset-4">
+                  <div className="bg-white/90 rounded p-2 mb-2">
+                    <div className="h-2 bg-gray-300 rounded mb-1"></div>
+                    <div className="h-1 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                  <div className="flex space-x-1">
+                    <div
+                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-80`}
+                    ></div>
+                    <div
+                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-60`}
+                    ></div>
+                    <div
+                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-40`}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Selected indicator */}
+                {selectedTheme === emailTheme.id && (
+                  <div className="absolute top-2 right-2">
+                    <div className="bg-blue-500 text-white rounded-full p-1">
+                      <Check className="w-4 h-4" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Theme Info */}
+              <div
+                className={`p-4 ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
+              >
+                <h4
+                  className={`font-semibold mb-1 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                >
+                  {emailTheme.name}
+                </h4>
+                <p
+                  className={`text-xs mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+                >
+                  {emailTheme.description}
+                </p>
+
+                <div className="space-y-1">
+                  {emailTheme.features.map((feature, index) => (
+                    <div key={index} className="flex items-center text-xs">
+                      <div
+                        className={`w-1 h-1 rounded-full mr-2 ${emailTheme.preview.accent}`}
+                      ></div>
+                      <span
+                        className={
+                          theme === "dark" ? "text-gray-300" : "text-gray-700"
+                        }
+                      >
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Theme Description */}
+        {selectedTheme && (
+          <div
+            className={`p-4 rounded-lg border ${
+              theme === "dark"
+                ? "bg-gray-800 border-gray-700"
+                : "bg-blue-50 border-blue-200"
+            }`}
+          >
+            <div className="flex items-start space-x-3">
+              <div
+                className={`p-2 rounded-lg ${
+                  theme === "dark" ? "bg-blue-900/20" : "bg-blue-100"
+                }`}
+              >
+                <Eye className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h5
+                  className={`font-medium ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                >
+                  {emailThemes.find((t) => t.id === selectedTheme)?.name} Theme
+                  Selected
+                </h5>
+                <p
+                  className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+                >
+                  Your weekly digest emails will use the {selectedTheme} design
+                  template. Recipients will see this visual style when they
+                  receive their digest.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSendTest = async () => {
@@ -274,7 +452,7 @@ const WeeklyDigest = () => {
             <div className="p-6">
               <div className="w-full">
                 <div
-                  className={`grid w-full grid-cols-3 rounded-lg p-1 ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}
+                  className={`grid w-full grid-cols-4 rounded-lg p-1 ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}
                 >
                   <button
                     onClick={() => setActiveTab("content")}
@@ -285,6 +463,16 @@ const WeeklyDigest = () => {
                     }`}
                   >
                     Content
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("theme")}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === "theme"
+                        ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Theme
                   </button>
                   <button
                     onClick={() => setActiveTab("recipients")}
@@ -343,6 +531,21 @@ const WeeklyDigest = () => {
                       schedule={digestConfig.schedule}
                       onScheduleChange={(schedule) =>
                         setDigestConfig((prev) => ({ ...prev, schedule }))
+                      }
+                      theme={theme}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "theme" && (
+                  <div className="space-y-4 mt-6">
+                    <ThemeConfiguration
+                      selectedTheme={digestConfig.emailTheme}
+                      onThemeChange={(theme) =>
+                        setDigestConfig((prev) => ({
+                          ...prev,
+                          emailTheme: theme,
+                        }))
                       }
                       theme={theme}
                     />

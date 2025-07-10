@@ -1,19 +1,60 @@
-// app/lib/weeklyDigestTemplate.js - Updated to respect customization settings
 import { getSystemSetting } from "./settings";
 
-/**
- * Generate HTML email template for weekly digest based on user's customization settings
- */
 export async function generateWeeklyDigestHTML(admin, digestData) {
   const siteName = await getSystemSetting("site_name", "Job Board");
   const adminUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+  const { configuration } = digestData;
+  const selectedTheme = configuration?.emailTheme || "professional";
+
+  // Theme configurations
+  const themes = {
+    professional: {
+      headerGradient:
+        "background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);",
+      primaryColor: "#1e40af",
+      accentColor: "#3b82f6",
+      backgroundColor: "#f8fafc",
+      cardBackground: "#ffffff",
+      textColor: "#1f2937",
+      borderRadius: "8px",
+      fontFamily:
+        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      spacing: "standard",
+    },
+    minimalist: {
+      headerGradient:
+        "background: linear-gradient(135deg, #374151 0%, #1f2937 100%);",
+      primaryColor: "#374151",
+      accentColor: "#6b7280",
+      backgroundColor: "#ffffff",
+      cardBackground: "#f9fafb",
+      textColor: "#111827",
+      borderRadius: "4px",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      spacing: "compact",
+    },
+    modern: {
+      headerGradient:
+        "background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);",
+      primaryColor: "#7c3aed",
+      accentColor: "#a855f7",
+      backgroundColor: "#faf5ff",
+      cardBackground: "#ffffff",
+      textColor: "#1f2937",
+      borderRadius: "12px",
+      fontFamily: "'Poppins', -apple-system, BlinkMacSystemFont, sans-serif",
+      spacing: "spacious",
+    },
+  };
+
+  const currentTheme = themes[selectedTheme];
 
   const adminName = admin.firstName
     ? `${admin.firstName} ${admin.lastName || ""}`.trim()
     : admin.email.split("@")[0];
 
-  const { summary, insights, systemHealth, dateRange, configuration } =
-    digestData;
+  const { summary, insights, systemHealth, dateRange } = digestData;
 
   // Helper function to format percentage change
   const formatChange = (change) => {
@@ -120,7 +161,7 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     if (customs.applied) {
       statusCards.push(`
         <div class="metric-card">
-          <div class="metric-number" style="color: #3b82f6;">${summary.applications.thisWeek.applied}</div>
+          <div class="metric-number" style="color: ${currentTheme.accentColor};">${summary.applications.thisWeek.applied}</div>
           <div class="metric-label">Applied</div>
         </div>
       `);
@@ -174,6 +215,30 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     `;
   };
 
+  // Theme-specific header content
+  const getThemeHeader = () => {
+    const emoji =
+      selectedTheme === "professional"
+        ? "📊"
+        : selectedTheme === "minimalist"
+          ? "📈"
+          : "🚀";
+    const subtitle =
+      selectedTheme === "professional"
+        ? "Weekly Performance Summary"
+        : selectedTheme === "minimalist"
+          ? "Week in Review"
+          : "Your Weekly Highlights";
+
+    return `
+      <div class="header">
+        <h1>${emoji} Weekly Digest</h1>
+        <p>Hi ${adminName}! ${subtitle}</p>
+        <p style="font-size: 14px; opacity: 0.8;">${dateRange.formatted}</p>
+      </div>
+    `;
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -183,30 +248,31 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     <title>Weekly Digest - ${dateRange.formatted}</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: ${currentTheme.fontFamily};
+            background-color: ${currentTheme.backgroundColor};
+            color: ${currentTheme.textColor};
             line-height: 1.6;
-            color: #333;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8fafc;
         }
         .container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: ${currentTheme.cardBackground};
+            border-radius: ${currentTheme.borderRadius};
             overflow: hidden;
+            ${selectedTheme === "modern" ? "box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);" : "box-shadow: 0 2px 4px rgba(0,0,0,0.1);"}
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            ${currentTheme.headerGradient}
             color: white;
-            padding: 30px;
+            padding: ${currentTheme.spacing === "compact" ? "20px" : currentTheme.spacing === "spacious" ? "40px" : "30px"};
             text-align: center;
+            border-radius: ${currentTheme.borderRadius} ${currentTheme.borderRadius} 0 0;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            font-weight: 600;
+            font-size: ${selectedTheme === "modern" ? "32px" : "28px"};
+            font-weight: ${selectedTheme === "minimalist" ? "500" : "600"};
         }
         .header p {
             margin: 10px 0 0 0;
@@ -214,35 +280,35 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
             font-size: 16px;
         }
         .content {
-            padding: 30px;
+            padding: ${currentTheme.spacing === "compact" ? "20px" : currentTheme.spacing === "spacious" ? "40px" : "30px"};
+            background: ${currentTheme.cardBackground};
         }
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
+            gap: ${currentTheme.spacing === "compact" ? "15px" : currentTheme.spacing === "spacious" ? "25px" : "20px"};
             margin: 30px 0;
         }
         .metric-card {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
+            background: ${selectedTheme === "minimalist" ? "#ffffff" : currentTheme.cardBackground};
+            border: ${selectedTheme === "minimalist" ? "1px solid #e5e7eb" : "none"};
+            border-radius: ${currentTheme.borderRadius};
+            padding: ${currentTheme.spacing === "compact" ? "15px" : currentTheme.spacing === "spacious" ? "25px" : "20px"};
             text-align: center;
             transition: all 0.2s;
-        }
-        .metric-card:hover {
-            border-color: #cbd5e0;
-            transform: translateY(-2px);
+            ${selectedTheme === "modern" ? "box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" : ""}
+            ${selectedTheme === "professional" ? "border: 2px solid #e2e8f0;" : ""}
         }
         .metric-number {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2d3748;
+            font-size: ${selectedTheme === "modern" ? "36px" : "32px"};
+            font-weight: ${selectedTheme === "minimalist" ? "600" : "700"};
+            color: ${currentTheme.primaryColor};
             margin-bottom: 5px;
         }
         .metric-label {
             font-size: 14px;
-            color: #718096;
+            color: ${currentTheme.textColor};
+            opacity: 0.7;
             font-weight: 500;
             margin-bottom: 5px;
         }
@@ -251,18 +317,19 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
             font-weight: 600;
         }
         .section {
-            margin: 40px 0;
+            margin: ${currentTheme.spacing === "compact" ? "30px 0" : "40px 0"};
         }
         .section h2 {
-            color: #2d3748;
-            font-size: 22px;
+            color: ${currentTheme.primaryColor};
+            font-size: ${selectedTheme === "modern" ? "24px" : "22px"};
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 2px solid ${currentTheme.accentColor};
+            font-weight: ${selectedTheme === "minimalist" ? "500" : "600"};
         }
         .chart-container {
-            background: #f8fafc;
-            border-radius: 8px;
+            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f8fafc"};
+            border-radius: ${currentTheme.borderRadius};
             padding: 20px;
             margin: 20px 0;
             text-align: center;
@@ -282,7 +349,7 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
             text-align: center;
         }
         .bar {
-            background: linear-gradient(to top, #667eea, #764ba2);
+            background: ${currentTheme.headerGradient.replace("background: ", "")};
             border-radius: 2px;
             margin-bottom: 5px;
             min-height: 4px;
@@ -294,21 +361,21 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
         }
         .day-count {
             font-size: 12px;
-            color: #2d3748;
+            color: ${currentTheme.textColor};
             font-weight: 600;
             margin-bottom: 2px;
         }
         .table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
+            background: ${currentTheme.cardBackground};
+            border-radius: ${currentTheme.borderRadius};
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .table th {
-            background: #f7fafc;
-            color: #2d3748;
+            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f7fafc"};
+            color: ${currentTheme.textColor};
             font-weight: 600;
             padding: 12px;
             text-align: left;
@@ -322,9 +389,6 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
         .table tr:last-child td {
             border-bottom: none;
         }
-        .table tr:hover {
-            background: #f8fafc;
-        }
         .department-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -332,41 +396,38 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
             margin: 20px 0;
         }
         .dept-card {
-            background: #f8fafc;
-            border-radius: 6px;
+            background: ${selectedTheme === "minimalist" ? "#ffffff" : "#f8fafc"};
+            border-radius: ${currentTheme.borderRadius};
             padding: 15px;
             text-align: center;
             border: 1px solid #e2e8f0;
         }
         .dept-name {
             font-weight: 600;
-            color: #2d3748;
+            color: ${currentTheme.textColor};
             font-size: 14px;
             margin-bottom: 5px;
         }
         .dept-count {
             font-size: 20px;
             font-weight: 700;
-            color: #667eea;
+            color: ${currentTheme.accentColor};
         }
         .alert-box {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 6px;
+            border-radius: ${currentTheme.borderRadius};
             padding: 15px;
             margin: 20px 0;
         }
         .alert-box.warning {
             background: #fffbeb;
-            border-color: #fed7aa;
+            border: 1px solid #fed7aa;
         }
         .alert-box.info {
             background: #eff6ff;
-            border-color: #bfdbfe;
+            border: 1px solid #bfdbfe;
         }
         .alert-title {
             font-weight: 600;
-            color: #991b1b;
             margin-bottom: 8px;
         }
         .alert-box.warning .alert-title {
@@ -375,30 +436,27 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
         .alert-box.info .alert-title {
             color: #1e40af;
         }
+        .button {
+            display: inline-block;
+            background: ${currentTheme.primaryColor};
+            color: white;
+            padding: ${selectedTheme === "modern" ? "14px 28px" : "12px 24px"};
+            border-radius: ${currentTheme.borderRadius};
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
         .footer {
-            background: #f7fafc;
+            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f7fafc"};
             padding: 30px;
             text-align: center;
             color: #718096;
             font-size: 14px;
         }
         .footer a {
-            color: #667eea;
+            color: ${currentTheme.accentColor};
             text-decoration: none;
             font-weight: 600;
-        }
-        .button {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 10px 5px;
-        }
-        .button:hover {
-            background: #5a67d8;
         }
         @media (max-width: 600px) {
             .metrics-grid {
@@ -415,13 +473,8 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>📊 Weekly Digest</h1>
-            <p>Hi ${adminName}! Here's your weekly ${siteName} summary</p>
-            <p style="font-size: 14px; opacity: 0.8;">${dateRange.formatted}</p>
-        </div>
-
+        ${getThemeHeader()}
+        
         <div class="content">
             <!-- Key Metrics -->
             ${
@@ -492,7 +545,7 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                         <div class="metric-change">This week</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-number" style="color: #3b82f6;">${formatChange(summary.users.change.totalPercent)}</div>
+                        <div class="metric-number" style="color: ${currentTheme.accentColor};">${formatChange(summary.users.change.totalPercent)}</div>
                         <div class="metric-label">Growth Rate</div>
                         <div class="metric-change">vs. last week</div>
                     </div>
@@ -704,7 +757,7 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                 <a href="${adminUrl}/admin/analytics">View detailed analytics</a>
             </p>
             <p style="font-size: 12px; margin-top: 15px; color: #a0aec0;">
-                ${siteName} Weekly Digest • Customized based on your preferences
+                ${siteName} Weekly Digest • ${selectedTheme.charAt(0).toUpperCase() + selectedTheme.slice(1)} Theme
             </p>
         </div>
     </div>

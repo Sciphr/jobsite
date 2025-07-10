@@ -26,11 +26,12 @@ export async function GET(req) {
             "weekly_digest_recipients",
             "weekly_digest_sections",
             "weekly_digest_customizations",
+            "weekly_digest_theme", // Add this line
             "weekly_digest_day",
             "weekly_digest_time",
           ],
         },
-        userId: null, // System settings only
+        userId: null,
       },
     });
 
@@ -38,6 +39,7 @@ export async function GET(req) {
     const digestConfig = {
       enabled: true,
       recipients: [],
+      emailTheme: "professional",
       sections: {
         jobMetrics: true,
         userMetrics: true,
@@ -99,6 +101,9 @@ export async function GET(req) {
             digestConfig.recipients = Array.isArray(recipients)
               ? recipients
               : [];
+            break;
+          case "weekly_digest_theme": // Add this case
+            digestConfig.emailTheme = setting.value || "professional";
             break;
           case "weekly_digest_sections":
             const sections = JSON.parse(setting.value || "{}");
@@ -178,43 +183,46 @@ export async function POST(req) {
       sections: Object.keys(digestConfig.sections || {}),
     });
 
-    // Prepare settings to upsert
-    const settingsToSave = [];
+    // Prepare settings to save
+    const settingsToSave = [
+      {
+        key: "weekly_digest_enabled",
+        value: digestConfig.enabled ? "true" : "false",
+        dataType: "boolean",
+        category: "notifications",
+        description: "Enable/disable weekly digest emails",
+      },
+      {
+        key: "weekly_digest_theme", // Add this setting
+        value: digestConfig.emailTheme || "professional",
+        dataType: "string",
+        category: "notifications",
+        description: "Visual theme for digest emails",
+      },
+      {
+        key: "weekly_digest_recipients",
+        value: JSON.stringify(digestConfig.recipients || []),
+        dataType: "json",
+        category: "notifications",
+        description: "List of user IDs to receive weekly digest",
+      },
+      {
+        key: "weekly_digest_sections",
+        value: JSON.stringify(digestConfig.sections || {}),
+        dataType: "json",
+        category: "notifications",
+        description: "Enabled sections for weekly digest",
+      },
+      {
+        key: "weekly_digest_customizations",
+        value: JSON.stringify(digestConfig.sectionCustomizations || {}),
+        dataType: "json",
+        category: "notifications",
+        description: "Customization settings for digest sections",
+      },
+    ];
 
-    // Basic settings
-    settingsToSave.push({
-      key: "weekly_digest_enabled",
-      value: digestConfig.enabled ? "true" : "false",
-      dataType: "boolean",
-      category: "notifications",
-      description: "Enable/disable weekly digest emails",
-    });
-
-    settingsToSave.push({
-      key: "weekly_digest_recipients",
-      value: JSON.stringify(digestConfig.recipients || []),
-      dataType: "json",
-      category: "notifications",
-      description: "List of user IDs to receive weekly digest",
-    });
-
-    settingsToSave.push({
-      key: "weekly_digest_sections",
-      value: JSON.stringify(digestConfig.sections || {}),
-      dataType: "json",
-      category: "notifications",
-      description: "Enabled sections for weekly digest",
-    });
-
-    settingsToSave.push({
-      key: "weekly_digest_customizations",
-      value: JSON.stringify(digestConfig.sectionCustomizations || {}),
-      dataType: "json",
-      category: "notifications",
-      description: "Customization settings for digest sections",
-    });
-
-    // Schedule settings
+    // Add schedule settings if provided
     if (digestConfig.schedule) {
       const dayNames = [
         "sunday",
@@ -227,47 +235,66 @@ export async function POST(req) {
       ];
       const dayName = dayNames[digestConfig.schedule.dayOfWeek] || "monday";
 
-      settingsToSave.push({
-        key: "weekly_digest_day",
-        value: dayName,
-        dataType: "string",
-        category: "notifications",
-        description: "Day of week to send digest",
-      });
-
-      settingsToSave.push({
-        key: "weekly_digest_time",
-        value: digestConfig.schedule.time || "09:00",
-        dataType: "string",
-        category: "notifications",
-        description: "Time of day to send digest",
-      });
+      settingsToSave.push(
+        {
+          key: "weekly_digest_day",
+          value: dayName,
+          dataType: "string",
+          category: "notifications",
+          description: "Day of week to send digest",
+        },
+        {
+          key: "weekly_digest_time",
+          value: digestConfig.schedule.time || "09:00",
+          dataType: "string",
+          category: "notifications",
+          description: "Time of day to send digest",
+        }
+      );
     }
 
-    // Save all settings using upsert
+    // Save settings using find-then-create/update approach to avoid upsert issues
     for (const setting of settingsToSave) {
-      await appPrisma.setting.upsert({
-        where: {
-          key_userId: {
+      try {
+        // First try to find existing setting
+        const existingSetting = await appPrisma.setting.findFirst({
+          where: {
             key: setting.key,
-            userId: null, // System setting
+            userId: null,
           },
-        },
-        update: {
-          value: setting.value,
-          updatedAt: new Date(),
-        },
-        create: {
-          key: setting.key,
-          value: setting.value,
-          dataType: setting.dataType,
-          category: setting.category,
-          description: setting.description,
-          userId: null, // System setting
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+        });
+
+        if (existingSetting) {
+          // Update existing setting
+          await appPrisma.setting.update({
+            where: { id: existingSetting.id },
+            data: {
+              value: setting.value,
+              updatedAt: new Date(),
+            },
+          });
+          console.log(`✅ Updated setting: ${setting.key}`);
+        } else {
+          // Create new setting
+          await appPrisma.setting.create({
+            data: {
+              key: setting.key,
+              value: setting.value,
+              dataType: setting.dataType,
+              category: setting.category,
+              description: setting.description,
+              userId: null,
+              privilegeLevel: 1,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+          console.log(`✅ Created setting: ${setting.key}`);
+        }
+      } catch (settingError) {
+        console.error(`❌ Error saving setting ${setting.key}:`, settingError);
+        // Continue with other settings even if one fails
+      }
     }
 
     console.log("✅ Weekly digest settings saved successfully");

@@ -152,7 +152,6 @@ export class WeeklyDigestService {
       return config;
     } catch (error) {
       console.error("Error loading digest configuration:", error);
-      // Return default config on error
       return {
         enabled: true,
         recipients: [],
@@ -168,10 +167,303 @@ export class WeeklyDigestService {
   }
 
   /**
+   * Get application statistics for current and previous week
+   */
+  async getApplicationStats(customizations = {}) {
+    const thisWeekApplications = await appPrisma.application.findMany({
+      where: {
+        appliedAt: {
+          gte: this.weekStart,
+          lte: this.weekEnd,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        appliedAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const previousWeekApplications = await appPrisma.application.findMany({
+      where: {
+        appliedAt: {
+          gte: this.previousWeekStart,
+          lte: this.previousWeekEnd,
+        },
+      },
+      select: { id: true, status: true },
+    });
+
+    const thisWeekStats = {
+      total: thisWeekApplications.length,
+      applied: thisWeekApplications.filter((a) => a.status === "Applied")
+        .length,
+      reviewing: thisWeekApplications.filter((a) => a.status === "Reviewing")
+        .length,
+      interview: thisWeekApplications.filter((a) => a.status === "Interview")
+        .length,
+      hired: thisWeekApplications.filter((a) => a.status === "Hired").length,
+      rejected: thisWeekApplications.filter((a) => a.status === "Rejected")
+        .length,
+    };
+
+    const previousWeekStats = {
+      total: previousWeekApplications.length,
+    };
+
+    return {
+      thisWeek: thisWeekStats,
+      previousWeek: previousWeekStats,
+      change: {
+        total: thisWeekStats.total - previousWeekStats.total,
+        totalPercent: this.calculatePercentChange(
+          previousWeekStats.total,
+          thisWeekStats.total
+        ),
+      },
+      customizations,
+    };
+  }
+
+  /**
+   * Get user registration statistics
+   */
+  async getUserStats(customizations = {}) {
+    const thisWeekUsers = await appPrisma.user.count({
+      where: {
+        createdAt: {
+          gte: this.weekStart,
+          lte: this.weekEnd,
+        },
+      },
+    });
+
+    const previousWeekUsers = await appPrisma.user.count({
+      where: {
+        createdAt: {
+          gte: this.previousWeekStart,
+          lte: this.previousWeekEnd,
+        },
+      },
+    });
+
+    return {
+      thisWeek: { total: thisWeekUsers },
+      previousWeek: { total: previousWeekUsers },
+      change: {
+        total: thisWeekUsers - previousWeekUsers,
+        totalPercent: this.calculatePercentChange(
+          previousWeekUsers,
+          thisWeekUsers
+        ),
+      },
+      customizations,
+    };
+  }
+
+  /**
+   * Get top performing jobs (most applications this week)
+   */
+  async getTopPerformingJobs() {
+    const topJobs = await appPrisma.job.findMany({
+      select: {
+        id: true,
+        title: true,
+        department: true,
+        viewCount: true,
+        applicationCount: true,
+        createdAt: true,
+        applications: {
+          where: {
+            appliedAt: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+          },
+          select: { id: true },
+        },
+      },
+      orderBy: { applicationCount: "desc" },
+      take: 10,
+    });
+
+    return topJobs
+      .map((job) => ({
+        title: job.title,
+        department: job.department,
+        weeklyApplications: job.applications.length,
+        totalApplications: job.applicationCount,
+        totalViews: job.viewCount,
+        conversionRate:
+          job.viewCount > 0
+            ? ((job.applicationCount / job.viewCount) * 100).toFixed(1)
+            : "0",
+      }))
+      .filter((job) => job.weeklyApplications > 0);
+  }
+
+  /**
+   * Get jobs that need attention (low applications)
+   */
+  async getLowPerformingJobs() {
+    const lowApplicationThreshold = await getSystemSetting(
+      "low_application_threshold_count",
+      2
+    );
+    const lowApplicationDays = await getSystemSetting(
+      "low_application_threshold_days",
+      7
+    );
+
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() - lowApplicationDays);
+
+    const lowJobs = await appPrisma.job.findMany({
+      where: {
+        status: "Active",
+        createdAt: { lte: thresholdDate },
+        applicationCount: { lt: lowApplicationThreshold },
+      },
+      select: {
+        id: true,
+        title: true,
+        department: true,
+        applicationCount: true,
+        viewCount: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    return lowJobs.map((job) => ({
+      title: job.title,
+      department: job.department,
+      applications: job.applicationCount,
+      views: job.viewCount,
+      daysLive: Math.floor(
+        (Date.now() - job.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+      ),
+      conversionRate:
+        job.viewCount > 0
+          ? ((job.applicationCount / job.viewCount) * 100).toFixed(1)
+          : "0",
+    }));
+  }
+
+  /**
+   * Get department statistics
+   */
+  async getDepartmentStats() {
+    const departmentData = await appPrisma.application.groupBy({
+      by: ["jobId"],
+      where: {
+        appliedAt: {
+          gte: this.weekStart,
+          lte: this.weekEnd,
+        },
+      },
+      _count: { id: true },
+    });
+
+    // Get job details for department grouping
+    const jobIds = departmentData.map((d) => d.jobId);
+    const jobs = await appPrisma.job.findMany({
+      where: { id: { in: jobIds } },
+      select: { id: true, department: true },
+    });
+
+    const jobDeptMap = jobs.reduce((map, job) => {
+      map[job.id] = job.department;
+      return map;
+    }, {});
+
+    const deptStats = {};
+    departmentData.forEach((item) => {
+      const dept = jobDeptMap[item.jobId] || "Unknown";
+      deptStats[dept] = (deptStats[dept] || 0) + item._count.id;
+    });
+
+    return Object.entries(deptStats)
+      .map(([department, applications]) => ({ department, applications }))
+      .sort((a, b) => b.applications - a.applications);
+  }
+
+  /**
+   * Get daily application breakdown for the week
+   */
+  async getDailyApplicationBreakdown() {
+    const dailyData = [];
+    const currentDate = new Date(this.weekStart);
+
+    while (currentDate <= this.weekEnd) {
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const count = await appPrisma.application.count({
+        where: {
+          appliedAt: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
+        },
+      });
+
+      dailyData.push({
+        date: dayStart.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        applications: count,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dailyData;
+  }
+
+  /**
+   * Get system health metrics
+   */
+  async getSystemHealthMetrics() {
+    const [activeJobs, totalUsers, totalApplications] = await Promise.all([
+      appPrisma.job.count({ where: { status: "Active" } }),
+      appPrisma.user.count(),
+      appPrisma.application.count(),
+    ]);
+
+    return {
+      activeJobs,
+      totalUsers,
+      totalApplications,
+      systemStatus: "healthy", // Could add more sophisticated health checks
+    };
+  }
+
+  /**
    * Collect all data needed for the digest
    */
   async collectWeeklyData(config) {
     console.log("📊 Collecting weekly digest data...");
+
+    if (!config || !config.sections) {
+      console.warn("⚠️ No config provided, using defaults");
+      config = {
+        sections: {
+          jobMetrics: true,
+          userMetrics: true,
+          applicationData: true,
+          systemHealth: true,
+        },
+        sectionCustomizations: {},
+      };
+    }
 
     try {
       const dataPromises = [];
@@ -296,9 +588,6 @@ export class WeeklyDigestService {
       throw error;
     }
   }
-
-  // ... (keep all your existing methods: getJobStats, getApplicationStats, etc.)
-  // They remain the same - just add the config parameter where needed
 
   /**
    * Get job statistics for current and previous week
