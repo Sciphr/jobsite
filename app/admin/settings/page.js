@@ -6,6 +6,9 @@ import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import WeeklyDigestTester, {
+  WeeklyDigestButton,
+} from "@/app/components/WeeklyDigestTester";
 import {
   Settings,
   Save,
@@ -34,6 +37,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import WeeklyDigestSettings from "./components/WeeklyDigestSettings";
 
 export default function AdminSettings() {
   const { data: session } = useSession();
@@ -845,6 +849,7 @@ export default function AdminSettings() {
                   <Mail className="h-4 w-4" />
                   <span>Test Email</span>
                 </button>
+                <WeeklyDigestButton getButtonClasses={getButtonClasses} />
               </div>
             )}
           </div>
@@ -962,6 +967,7 @@ export default function AdminSettings() {
               {organizeNotificationSettings(activeSettings).map(
                 ([sectionId, section]) => renderSection(sectionId, section)
               )}
+              <WeeklyDigestSettings />
             </div>
           ) : activeSettings.length > 0 ? (
             <div className="space-y-6">

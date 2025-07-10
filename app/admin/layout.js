@@ -23,7 +23,6 @@ import {
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
 import { usePrefetchAdminData } from "../hooks/useAdminData";
-import ThemeToggle from "../components/ThemeToggle";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
@@ -147,7 +146,7 @@ function AdminLayoutContent({ children }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex transition-colors duration-200">
       {/* Themed Sidebar */}
-      <div className="w-64 shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200">
+      <div className="w-64 shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -232,7 +231,7 @@ function AdminLayoutContent({ children }) {
         </nav>
 
         {/* User Info at Bottom */}
-        <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors duration-200">
+        <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200">
           <div className="flex items-center space-x-3">
             <div
               className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
@@ -255,7 +254,7 @@ function AdminLayoutContent({ children }) {
 
           <Link
             href="/"
-            className={`mt-3 w-full flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium transition-colors duration-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300`}
+            className={`mt-3 w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${getButtonClasses("accent")} border border-opacity-20`}
           >
             <Building2 className="h-4 w-4 mr-2" />
             Back to Site
