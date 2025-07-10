@@ -1,6 +1,7 @@
 // app/admin/jobs/page.js - Updated to use React Query
 "use client";
 
+import Pagination from "./components/ui/Pagination";
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -45,8 +46,8 @@ export default function AdminJobs() {
   const { data: jobs = [], isLoading, isError, error, refetch } = useJobs();
 
   const { data: categories = [] } = useCategories();
-  // const updateJobMutation = useUpdateJob();
- // const deleteJobMutation = useDeleteJob();
+  const updateJobMutation = useUpdateJob();
+  const deleteJobMutation = useDeleteJob();
   const { invalidateJobs } = useInvalidateAdminData();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,6 +56,8 @@ export default function AdminJobs() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [featuredError, setFeaturedError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
 
   // ✅ REPLACE WITH THIS:
   const filteredJobs = useMemo(() => {
@@ -88,7 +91,30 @@ export default function AdminJobs() {
     return filtered;
   }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]); // ✅ Depend on actual data, not .length
 
-/*  const updateJobStatus = async (jobId, newStatus) => {
+  // CLIENT-SIDE pagination
+  const paginatedJobs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredJobs.slice(startIndex, endIndex);
+  }, [filteredJobs, currentPage, itemsPerPage]);
+
+  // PAGINATION metadata
+  const pagination = useMemo(() => {
+    const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+    return {
+      page: currentPage,
+      pages: totalPages,
+      total: filteredJobs.length,
+      hasNext: currentPage < totalPages,
+      hasPrev: currentPage > 1,
+    };
+  }, [filteredJobs.length, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter, departmentFilter]);
+
+  const updateJobStatus = async (jobId, newStatus) => {
     try {
       await updateJobMutation.mutateAsync({
         jobId,
@@ -97,7 +123,7 @@ export default function AdminJobs() {
     } catch (error) {
       console.error("Error updating job status:", error);
     }
-  }; */
+  };
 
   const toggleFeatured = async (jobId, featured) => {
     try {
@@ -139,7 +165,7 @@ export default function AdminJobs() {
     }
   };
 
-  /* const deleteJob = async (jobId) => {
+  const deleteJob = async (jobId) => {
     if (
       !confirm(
         "Are you sure you want to delete this job? This action cannot be undone."
@@ -154,7 +180,7 @@ export default function AdminJobs() {
     } catch (error) {
       console.error("Error deleting job:", error);
     }
-  }; */
+  };
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -455,7 +481,7 @@ export default function AdminJobs() {
 
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredJobs.map((job) => {
+        {paginatedJobs.map((job) => {
           const StatusIcon = memoizedThemeData.statusIconMap[job.status];
           return (
             <div
@@ -670,8 +696,20 @@ export default function AdminJobs() {
         })}
       </div>
 
+      {/* Pagination */}
+      {filteredJobs.length > itemsPerPage && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          totalItems={filteredJobs.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          className="mt-8"
+        />
+      )}
+
       {/* Empty State */}
-      {filteredJobs.length === 0 && !isLoading && (
+      {paginatedJobs.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium admin-text mb-2">No jobs found</h3>

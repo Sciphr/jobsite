@@ -28,6 +28,121 @@ export default function ProfileClient({ session }) {
     "docx",
   ]);
 
+  // Add these state variables after your existing useState declarations
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Add these functions after your existing functions (before the JSX return)
+  const handlePasswordInputChange = (e) => {
+    setPasswordForm({
+      ...passwordForm,
+      [e.target.name]: e.target.value,
+    });
+    // Clear errors when user starts typing
+    if (passwordErrors[e.target.name]) {
+      setPasswordErrors({
+        ...passwordErrors,
+        [e.target.name]: "",
+      });
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const errors = {};
+
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = "Current password is required";
+    }
+
+    if (!passwordForm.newPassword) {
+      errors.newPassword = "New password is required";
+    } else if (passwordForm.newPassword.length < 6) {
+      errors.newPassword = "Password must be at least 6 characters";
+    }
+
+    if (!passwordForm.confirmPassword) {
+      errors.confirmPassword = "Please confirm your new password";
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      errors.newPassword =
+        "New password must be different from current password";
+    }
+
+    return errors;
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+
+    const errors = validatePasswordForm();
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordErrors({});
+
+    try {
+      const response = await fetch("/api/profile/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Success
+        alert("Password changed successfully!");
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setShowChangePassword(false);
+      } else {
+        // Handle specific errors
+        if (result.field) {
+          setPasswordErrors({ [result.field]: result.message });
+        } else {
+          setPasswordErrors({
+            general: result.message || "Failed to change password",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error changing password:", error);
+      setPasswordErrors({
+        general: "An error occurred while changing password",
+      });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const resetPasswordForm = () => {
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setPasswordErrors({});
+    setShowChangePassword(false);
+  };
+
   useEffect(() => {
     if (!session) {
       router.push("/auth/signin");
@@ -347,33 +462,33 @@ export default function ProfileClient({ session }) {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "applied":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300";
       case "reviewing":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300";
       case "interview":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300";
       case "rejected":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300";
       case "hired":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300";
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Skeleton */}
-          <div className="bg-white shadow rounded-lg mb-6">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 transition-colors duration-200">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-                  <div className="h-5 bg-gray-200 rounded w-64 animate-pulse"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-48 mb-2 animate-pulse"></div>
+                  <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-64 animate-pulse"></div>
                 </div>
-                <div className="h-10 bg-gray-200 rounded w-20 animate-pulse"></div>
+                <div className="h-10 bg-gray-200 dark:bg-gray-600 rounded w-20 animate-pulse"></div>
               </div>
             </div>
 
@@ -382,7 +497,7 @@ export default function ProfileClient({ session }) {
               <div className="flex space-x-8">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="py-4">
-                    <div className="h-5 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-20 animate-pulse"></div>
                   </div>
                 ))}
               </div>
@@ -390,18 +505,18 @@ export default function ProfileClient({ session }) {
           </div>
 
           {/* Content Skeleton */}
-          <div className="bg-white shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg transition-colors duration-200">
             <div className="px-6 py-4">
               <div className="flex justify-between items-center mb-6">
-                <div className="h-7 bg-gray-200 rounded w-40 animate-pulse"></div>
-                <div className="h-10 bg-gray-200 rounded w-24 animate-pulse"></div>
+                <div className="h-7 bg-gray-200 dark:bg-gray-600 rounded w-40 animate-pulse"></div>
+                <div className="h-10 bg-gray-200 dark:bg-gray-600 rounded w-24 animate-pulse"></div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i}>
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-2 animate-pulse"></div>
-                    <div className="h-5 bg-gray-200 rounded w-full animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-2 animate-pulse"></div>
+                    <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded w-full animate-pulse"></div>
                   </div>
                 ))}
               </div>
@@ -409,10 +524,10 @@ export default function ProfileClient({ session }) {
           </div>
 
           {/* Small loading indicator in bottom right */}
-          <div className="fixed bottom-4 right-4 bg-white rounded-full p-3 shadow-lg border">
+          <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200">
             <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-              <span className="text-gray-600 text-sm font-medium">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+              <span className="text-gray-600 dark:text-gray-400 text-sm font-medium transition-colors duration-200">
                 Loading...
               </span>
             </div>
@@ -423,21 +538,23 @@ export default function ProfileClient({ session }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 transition-colors duration-200">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
                   {profile?.firstName} {profile?.lastName}
                 </h1>
-                <p className="text-gray-600">{profile?.email}</p>
+                <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                  {profile?.email}
+                </p>
               </div>
               <button
                 onClick={() => signOut()}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                className="bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
                 Sign Out
               </button>
@@ -452,10 +569,10 @@ export default function ProfileClient({ session }) {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${
+                    className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors duration-200 ${
                       activeTab === tab
-                        ? "border-indigo-500 text-indigo-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        ? "border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400"
+                        : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                   >
                     {tab.replace("-", " ")}
@@ -467,25 +584,33 @@ export default function ProfileClient({ session }) {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg transition-colors duration-200">
           {activeTab === "overview" && (
             <div className="px-6 py-4">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white transition-colors duration-200">
                   Profile Information
                 </h2>
                 {!editMode ? (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Edit Profile
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setShowChangePassword(!showChangePassword)}
+                      className="bg-gray-600 dark:bg-gray-500 hover:bg-gray-700 dark:hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                    >
+                      {showChangePassword ? "Cancel" : "Change Password"}
+                    </button>
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                    >
+                      Edit Profile
+                    </button>
+                  </div>
                 ) : (
                   <div className="space-x-2">
                     <button
                       onClick={() => setEditMode(false)}
-                      className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium"
+                      className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
                     >
                       Cancel
                     </button>
@@ -493,52 +618,164 @@ export default function ProfileClient({ session }) {
                 )}
               </div>
 
+              {/* Password Change Form */}
+              {showChangePassword && !editMode && (
+                <div className="mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 transition-colors duration-200">
+                    Change Password
+                  </h3>
+
+                  {passwordErrors.general && (
+                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-md">
+                      <p className="text-red-600 dark:text-red-400 text-sm">
+                        {passwordErrors.general}
+                      </p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                        Current Password
+                      </label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordForm.currentPassword}
+                        onChange={handlePasswordInputChange}
+                        className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-white focus:outline-none focus:ring-2 transition-colors duration-200 ${
+                          passwordErrors.currentPassword
+                            ? "border-red-300 dark:border-red-600 focus:ring-red-500"
+                            : "border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                        }`}
+                        placeholder="Enter your current password"
+                      />
+                      {passwordErrors.currentPassword && (
+                        <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                          {passwordErrors.currentPassword}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordInputChange}
+                        className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-white focus:outline-none focus:ring-2 transition-colors duration-200 ${
+                          passwordErrors.newPassword
+                            ? "border-red-300 dark:border-red-600 focus:ring-red-500"
+                            : "border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                        }`}
+                        placeholder="Enter your new password (min 6 characters)"
+                      />
+                      {passwordErrors.newPassword && (
+                        <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                          {passwordErrors.newPassword}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordInputChange}
+                        className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-white focus:outline-none focus:ring-2 transition-colors duration-200 ${
+                          passwordErrors.confirmPassword
+                            ? "border-red-300 dark:border-red-600 focus:ring-red-500"
+                            : "border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                        }`}
+                        placeholder="Confirm your new password"
+                      />
+                      {passwordErrors.confirmPassword && (
+                        <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                          {passwordErrors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <button
+                        type="button"
+                        onClick={resetPasswordForm}
+                        className="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={passwordLoading}
+                        className={`bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                          passwordLoading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        {passwordLoading ? "Changing..." : "Change Password"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Rest of your existing overview content */}
               {!editMode ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Your existing profile display fields remain the same */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                       First Name
                     </label>
-                    <p className="text-gray-900">
+                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.firstName || "Not provided"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                       Last Name
                     </label>
-                    <p className="text-gray-900">
+                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.lastName || "Not provided"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                       Email
                     </label>
-                    <p className="text-gray-900">{profile?.email}</p>
+                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                      {profile?.email}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                       Phone
                     </label>
-                    <p className="text-gray-900">
+                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.phone || "Not provided"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                       Member Since
                     </label>
-                    <p className="text-gray-900">
+                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
                       {formatDate(profile?.createdAt)}
                     </p>
                   </div>
                 </div>
               ) : (
                 <form onSubmit={handleEditSubmit} className="space-y-6">
+                  {/* Your existing edit form remains the same */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                         First Name
                       </label>
                       <input
@@ -546,11 +783,11 @@ export default function ProfileClient({ session }) {
                         name="firstName"
                         value={editForm.firstName}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                         Last Name
                       </label>
                       <input
@@ -558,11 +795,11 @@ export default function ProfileClient({ session }) {
                         name="lastName"
                         value={editForm.lastName}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-700  focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                         Email
                       </label>
                       <input
@@ -570,11 +807,11 @@ export default function ProfileClient({ session }) {
                         name="email"
                         value={editForm.email}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-700  focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
                         Phone
                       </label>
                       <input
@@ -582,14 +819,14 @@ export default function ProfileClient({ session }) {
                         name="phone"
                         value={editForm.phone}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-700  focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
                       />
                     </div>
                   </div>
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md text-sm font-medium"
+                      className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200"
                     >
                       Save Changes
                     </button>
@@ -602,7 +839,7 @@ export default function ProfileClient({ session }) {
           {activeTab === "resume" && (
             <div className="px-6 py-4">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white transition-colors duration-200">
                   My Resume
                 </h2>
                 {(!resume || !resume.fileName || !resume.id) && (
@@ -619,13 +856,13 @@ export default function ProfileClient({ session }) {
                     />
                     <label
                       htmlFor="resume-upload"
-                      className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer ${
+                      className={`bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors duration-200 ${
                         uploading ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       {uploading ? "Uploading..." : "Upload Resume"}
                     </label>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200">
                       Max: {maxResumeSize}MB
                     </span>
                   </div>
@@ -635,7 +872,7 @@ export default function ProfileClient({ session }) {
               {!resume || !resume.fileName || !resume.id ? (
                 <div className="text-center py-8">
                   <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
+                    className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 transition-colors duration-200"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -647,23 +884,25 @@ export default function ProfileClient({ session }) {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <p className="text-gray-500 mt-2">No resume uploaded yet.</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 transition-colors duration-200">
+                    No resume uploaded yet.
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm transition-colors duration-200">
                     Upload your resume to get started.
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 transition-colors duration-200">
                     Maximum file size: {maxResumeSize}MB. Accepted formats:{" "}
                     {allowedFileTypes.join(", ").toUpperCase()}
                   </p>
                 </div>
               ) : (
-                <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-6 bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
                   <div className="flex items-start space-x-4">
                     {/* File Icon */}
                     <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center transition-colors duration-200">
                         <svg
-                          className="w-6 h-6 text-red-600"
+                          className="w-6 h-6 text-red-600 dark:text-red-400 transition-colors duration-200"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -680,22 +919,22 @@ export default function ProfileClient({ session }) {
 
                     {/* File Details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-medium text-gray-900 truncate">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate transition-colors duration-200">
                         {resume.fileName}
                       </h3>
                       <div className="flex items-center space-x-4 mt-1">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 transition-colors duration-200">
                           {resume.fileType?.includes("pdf")
                             ? "PDF"
                             : resume.fileType?.includes("word")
                               ? "DOC"
                               : resume.fileType?.toUpperCase() || "UNKNOWN"}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
                           {formatFileSize(resume.fileSize)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-200">
                         Uploaded on {formatDate(resume.uploadedAt)}
                       </p>
                     </div>
@@ -705,7 +944,7 @@ export default function ProfileClient({ session }) {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleDownloadResume(resume.fileName)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900 hover:bg-indigo-200 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
                         >
                           <svg
                             className="w-4 h-4 mr-1"
@@ -724,7 +963,7 @@ export default function ProfileClient({ session }) {
                         </button>
                         <button
                           onClick={handleDeleteResume}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200"
                         >
                           <svg
                             className="w-4 h-4 mr-1"
@@ -757,7 +996,7 @@ export default function ProfileClient({ session }) {
                         />
                         <label
                           htmlFor="resume-replace"
-                          className={`inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer transition-colors ${
+                          className={`inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer transition-colors duration-200 ${
                             uploading ? "opacity-50 cursor-not-allowed" : ""
                           }`}
                         >
@@ -803,7 +1042,7 @@ export default function ProfileClient({ session }) {
                             </>
                           )}
                         </label>
-                        <p className="text-xs text-gray-500 mt-1 text-center">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center transition-colors duration-200">
                           Max: {maxResumeSize}MB, Types:{" "}
                           {allowedFileTypes.join(", ").toUpperCase()}
                         </p>
@@ -817,13 +1056,13 @@ export default function ProfileClient({ session }) {
 
           {activeTab === "saved-jobs" && (
             <div className="px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-200">
                 Saved Jobs ({savedJobs.length})
               </h2>
               {savedJobs.length === 0 ? (
                 <div className="text-center py-8">
                   <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
+                    className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 transition-colors duration-200"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -835,8 +1074,10 @@ export default function ProfileClient({ session }) {
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                     />
                   </svg>
-                  <p className="text-gray-500 mt-2">No saved jobs yet.</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 transition-colors duration-200">
+                    No saved jobs yet.
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm transition-colors duration-200">
                     Browse jobs and save the ones you're interested in.
                   </p>
                 </div>
@@ -845,18 +1086,18 @@ export default function ProfileClient({ session }) {
                   {savedJobs.map((savedJob) => (
                     <div
                       key={savedJob.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200">
                             {savedJob.job?.title || "Job Title Not Available"}
                           </h3>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
                             {savedJob.job?.department ||
                               "Department Not Available"}
                           </p>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
                             <span>
                               {savedJob.job?.location ||
                                 "Location Not Available"}
@@ -874,13 +1115,13 @@ export default function ProfileClient({ session }) {
                           </div>
                           {savedJob.job?.salaryMin &&
                             savedJob.job?.salaryMax && (
-                              <p className="text-green-600 text-sm mt-1">
+                              <p className="text-green-600 dark:text-green-400 text-sm mt-1 transition-colors duration-200">
                                 ${savedJob.job.salaryMin.toLocaleString()} - $
                                 {savedJob.job.salaryMax.toLocaleString()}{" "}
                                 {savedJob.job.salaryCurrency}
                               </p>
                             )}
-                          <p className="text-gray-500 text-sm mt-2">
+                          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 transition-colors duration-200">
                             Saved on {formatDate(savedJob.savedAt)}
                           </p>
                         </div>
@@ -889,7 +1130,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${savedJob.job?.slug}`)
                             }
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-medium"
+                            className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors duration-200"
                           >
                             View Job
                           </button>
@@ -904,13 +1145,13 @@ export default function ProfileClient({ session }) {
 
           {activeTab === "applications" && (
             <div className="px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-200">
                 Job Applications ({applications.length})
               </h2>
               {applications.length === 0 ? (
                 <div className="text-center py-8">
                   <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
+                    className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 transition-colors duration-200"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -922,8 +1163,10 @@ export default function ProfileClient({ session }) {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <p className="text-gray-500 mt-2">No applications yet.</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 transition-colors duration-200">
+                    No applications yet.
+                  </p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm transition-colors duration-200">
                     Apply to jobs to track your application status here.
                   </p>
                 </div>
@@ -932,19 +1175,19 @@ export default function ProfileClient({ session }) {
                   {applications.map((application) => (
                     <div
                       key={application.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200">
                             {application.job?.title ||
                               "Job Title Not Available"}
                           </h3>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
                             {application.job?.department ||
                               "Department Not Available"}
                           </p>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
                             <span>
                               {application.job?.location ||
                                 "Location Not Available"}
@@ -960,7 +1203,7 @@ export default function ProfileClient({ session }) {
                                 "Policy Not Available"}
                             </span>
                           </div>
-                          <p className="text-gray-500 text-sm mt-2">
+                          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 transition-colors duration-200">
                             Applied on {formatDate(application.appliedAt)}
                           </p>
                         </div>
@@ -976,7 +1219,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                            className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors duration-200"
                           >
                             View Job
                           </button>
