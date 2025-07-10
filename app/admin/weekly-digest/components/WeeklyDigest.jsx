@@ -214,85 +214,350 @@ const WeeklyDigest = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {emailThemes.map((emailTheme) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* PROFESSIONAL THEME CARD */}
+          <div
+            onClick={() => onThemeChange("professional")}
+            className={`relative cursor-pointer transition-all duration-300 ${
+              selectedTheme === "professional"
+                ? "scale-105 shadow-xl"
+                : "hover:scale-102 hover:shadow-lg"
+            }`}
+          >
+            {/* Professional Preview - Corporate & Blocky */}
+
+            {/* Professional Preview - Corporate & Blocky */}
             <div
-              key={emailTheme.id}
-              onClick={() => onThemeChange(emailTheme.id)}
-              className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 overflow-hidden ${
-                selectedTheme === emailTheme.id
-                  ? "border-blue-500 shadow-lg scale-105"
-                  : theme === "dark"
-                    ? "border-gray-600 hover:border-gray-500"
-                    : "border-gray-200 hover:border-gray-300"
-              }`}
+              className="h-56 bg-white border-2 border-gray-300 overflow-hidden"
+              style={{ borderRadius: "0px" }}
             >
-              {/* Theme Preview */}
-              <div
-                className={`h-32 bg-gradient-to-br ${emailTheme.preview.gradient} relative`}
-              >
-                <div className="absolute inset-4">
-                  <div className="bg-white/90 rounded p-2 mb-2">
-                    <div className="h-2 bg-gray-300 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-200 rounded w-3/4"></div>
+              {/* Header - Corporate Navy */}
+              <div className="h-16 bg-gradient-to-r from-blue-800 to-blue-900 relative border-t-4 border-blue-800">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-white text-xs font-bold tracking-wider">
+                    WEEKLY DIGEST
                   </div>
-                  <div className="flex space-x-1">
+                </div>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-white"></div>
+              </div>
+
+              {/* Content Area */}
+              <div className="p-4 bg-gray-50">
+                {/* Metric Cards - Blocky */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div
+                    className="bg-white border-2 border-gray-300 p-2"
+                    style={{ borderRadius: "0px" }}
+                  >
+                    <div className="h-1 bg-blue-800 mb-1"></div>
+                    <div className="text-xs font-bold text-blue-800">42</div>
+                    <div className="text-xs text-gray-600 font-medium">
+                      JOBS
+                    </div>
+                  </div>
+                  <div
+                    className="bg-white border-2 border-gray-300 p-2"
+                    style={{ borderRadius: "0px" }}
+                  >
+                    <div className="h-1 bg-blue-800 mb-1"></div>
+                    <div className="text-xs font-bold text-blue-800">156</div>
+                    <div className="text-xs text-gray-600 font-medium">
+                      APPS
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chart Preview */}
+                <div className="bg-white border border-gray-300 p-2 mb-2">
+                  <div className="flex items-end justify-between h-6 space-x-1">
                     <div
-                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-80`}
+                      className="bg-blue-800 w-2"
+                      style={{ height: "60%" }}
                     ></div>
                     <div
-                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-60`}
+                      className="bg-blue-700 w-2"
+                      style={{ height: "40%" }}
                     ></div>
                     <div
-                      className={`w-12 h-8 ${emailTheme.preview.accent} rounded opacity-40`}
+                      className="bg-blue-800 w-2"
+                      style={{ height: "80%" }}
+                    ></div>
+                    <div
+                      className="bg-blue-700 w-2"
+                      style={{ height: "30%" }}
+                    ></div>
+                    <div
+                      className="bg-blue-800 w-2"
+                      style={{ height: "70%" }}
                     ></div>
                   </div>
                 </div>
 
-                {/* Selected indicator */}
-                {selectedTheme === emailTheme.id && (
-                  <div className="absolute top-2 right-2">
-                    <div className="bg-blue-500 text-white rounded-full p-1">
-                      <Check className="w-4 h-4" />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Theme Info */}
-              <div
-                className={`p-4 ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
-              >
-                <h4
-                  className={`font-semibold mb-1 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
-                >
-                  {emailTheme.name}
-                </h4>
-                <p
-                  className={`text-xs mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
-                >
-                  {emailTheme.description}
-                </p>
-
-                <div className="space-y-1">
-                  {emailTheme.features.map((feature, index) => (
-                    <div key={index} className="flex items-center text-xs">
-                      <div
-                        className={`w-1 h-1 rounded-full mr-2 ${emailTheme.preview.accent}`}
-                      ></div>
-                      <span
-                        className={
-                          theme === "dark" ? "text-gray-300" : "text-gray-700"
-                        }
-                      >
-                        {feature}
-                      </span>
-                    </div>
-                  ))}
+                {/* Button */}
+                <div className="bg-blue-800 text-white text-xs text-center py-1 font-bold">
+                  VIEW DASHBOARD
                 </div>
               </div>
             </div>
-          ))}
+
+            {/* Selection Indicator */}
+            {selectedTheme === "professional" && (
+              <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg">
+                <Check className="w-4 h-4" />
+              </div>
+            )}
+
+            {/* Theme Info */}
+            <div
+              className={`mt-4 p-4 h-40 flex flex-col justify-between rounded-lg ${theme === "dark" ? "bg-gray-800" : "bg-white"} border`}
+            >
+              <h4
+                className={`font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+              >
+                Professional
+              </h4>
+              <p
+                className={`text-sm mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+              >
+                Corporate design with sharp edges and traditional styling
+              </p>
+              <div className="flex flex-wrap gap-1 text-xs">
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-sm">
+                  Blocky
+                </span>
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-sm">
+                  Formal
+                </span>
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-sm">
+                  Corporate
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* MINIMALIST THEME CARD */}
+          <div
+            onClick={() => onThemeChange("minimalist")}
+            className={`relative cursor-pointer transition-all duration-300 ${
+              selectedTheme === "minimalist"
+                ? "scale-105 shadow-xl"
+                : "hover:scale-102 hover:shadow-lg"
+            }`}
+          >
+            {/* Minimalist Preview - Clean & Spacious */}
+            {/* Minimalist Preview - Clean & Spacious */}
+            <div className="h-56 bg-white border border-gray-200 rounded-sm overflow-hidden shadow-sm">
+              {/* Header - Clean Gray */}
+              <div className="h-16 bg-gradient-to-b from-gray-600 to-gray-700 relative">
+                <div className="absolute inset-0 flex flex-col justify-center px-4">
+                  <div className="text-white text-sm font-light">
+                    Weekly Review
+                  </div>
+                  <div className="text-white text-xs opacity-75">
+                    Hello there
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <div className="p-6 bg-white">
+                {/* Metric Cards - Clean */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-50 border border-gray-100 rounded-sm p-3 hover:shadow-sm transition-shadow">
+                    <div className="text-lg font-semibold text-gray-700 mb-1">
+                      42
+                    </div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      New Jobs
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-100 rounded-sm p-3 hover:shadow-sm transition-shadow">
+                    <div className="text-lg font-semibold text-gray-700 mb-1">
+                      156
+                    </div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      Applications
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Header */}
+                <div className="border-b border-gray-200 pb-2 mb-3">
+                  <div className="text-sm text-gray-700 font-normal">
+                    Performance Overview
+                  </div>
+                </div>
+
+                {/* Clean Chart */}
+                <div className="bg-gray-50 rounded-sm p-3">
+                  <div className="flex items-end justify-between h-8 space-x-2">
+                    <div
+                      className="bg-gray-500 w-3 rounded-sm"
+                      style={{ height: "60%" }}
+                    ></div>
+                    <div
+                      className="bg-gray-400 w-3 rounded-sm"
+                      style={{ height: "40%" }}
+                    ></div>
+                    <div
+                      className="bg-gray-500 w-3 rounded-sm"
+                      style={{ height: "80%" }}
+                    ></div>
+                    <div
+                      className="bg-gray-400 w-3 rounded-sm"
+                      style={{ height: "30%" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Selection Indicator */}
+            {selectedTheme === "minimalist" && (
+              <div className="absolute -top-2 -right-2 bg-gray-500 text-white rounded-full p-2 shadow-lg">
+                <Check className="w-4 h-4" />
+              </div>
+            )}
+
+            {/* Theme Info */}
+            <div
+              className={`mt-4 p-5 h-40 flex flex-col justify-between rounded-lg ${theme === "dark" ? "bg-gray-800" : "bg-white"} border`}
+            >
+              <h4
+                className={`font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+              >
+                Minimalist
+              </h4>
+              <p
+                className={`text-sm mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+              >
+                Clean design with subtle shadows and plenty of space
+              </p>
+              <div className="flex flex-wrap gap-1 text-xs">
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-sm">
+                  Clean
+                </span>
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-sm">
+                  Spacious
+                </span>
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-sm">
+                  Subtle
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* MODERN THEME CARD */}
+          <div
+            onClick={() => onThemeChange("modern")}
+            className={`relative cursor-pointer transition-all duration-300 ${
+              selectedTheme === "modern"
+                ? "scale-105 shadow-xl"
+                : "hover:scale-102 hover:shadow-lg"
+            }`}
+          >
+            {/* Modern Preview - Vibrant & Rounded */}
+            <div className="h-56 bg-white rounded-2xl overflow-hidden shadow-lg border border-purple-100">
+              {/* Header - Vibrant Gradient */}
+              <div className="h-16 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 relative rounded-t-2xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-transparent to-blue-500/20"></div>
+                <div className="absolute inset-0 flex flex-col justify-center items-center text-white">
+                  <div className="text-sm font-bold">🚀 Weekly Highlights</div>
+                  <div className="text-xs opacity-90">Hey there! ✨</div>
+                </div>
+                {/* Animated glow effect */}
+                <div className="absolute top-2 left-2 w-4 h-4 bg-white/30 rounded-full animate-pulse"></div>
+              </div>
+
+              {/* Content Area */}
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50">
+                {/* Metric Cards - Glassmorphism */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-white/70 backdrop-blur-sm border border-purple-200 rounded-xl p-3 shadow-lg">
+                    <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      42
+                    </div>
+                    <div className="text-xs text-gray-600 font-medium">
+                      NEW JOBS ✨
+                    </div>
+                  </div>
+                  <div className="bg-white/70 backdrop-blur-sm border border-purple-200 rounded-xl p-3 shadow-lg">
+                    <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      156
+                    </div>
+                    <div className="text-xs text-gray-600 font-medium">
+                      APPS 🎉
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vibrant Chart */}
+                <div className="bg-white/50 backdrop-blur-sm rounded-xl p-3 mb-3 border border-purple-100">
+                  <div className="flex items-end justify-between h-8 space-x-1">
+                    <div
+                      className="bg-gradient-to-t from-purple-600 to-purple-400 w-2 rounded-full"
+                      style={{ height: "60%" }}
+                    ></div>
+                    <div
+                      className="bg-gradient-to-t from-pink-500 to-pink-300 w-2 rounded-full"
+                      style={{ height: "40%" }}
+                    ></div>
+                    <div
+                      className="bg-gradient-to-t from-purple-600 to-purple-400 w-2 rounded-full"
+                      style={{ height: "80%" }}
+                    ></div>
+                    <div
+                      className="bg-gradient-to-t from-blue-500 to-blue-300 w-2 rounded-full"
+                      style={{ height: "30%" }}
+                    ></div>
+                    <div
+                      className="bg-gradient-to-t from-pink-500 to-pink-300 w-2 rounded-full"
+                      style={{ height: "70%" }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Animated Button */}
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs text-center py-2 rounded-xl font-bold shadow-lg">
+                  VIEW DASHBOARD 🚀
+                </div>
+              </div>
+            </div>
+
+            {/* Selection Indicator */}
+            {selectedTheme === "modern" && (
+              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full p-2 shadow-lg">
+                <Check className="w-4 h-4" />
+              </div>
+            )}
+
+            {/* Theme Info */}
+            <div
+              className={`mt-4 p-5 h-40 flex flex-col justify-between rounded-lg ${theme === "dark" ? "bg-gray-800" : "bg-white"} border`}
+            >
+              <h4
+                className={`font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+              >
+                Modern
+              </h4>
+              <p
+                className={`text-sm mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}
+              >
+                Vibrant gradients with glassmorphism and animations
+              </p>
+              <div className="flex flex-wrap gap-1 text-xs">
+                <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 px-2 py-1 rounded-lg">
+                  Vibrant
+                </span>
+                <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 px-2 py-1 rounded-lg">
+                  Animated
+                </span>
+                <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 px-2 py-1 rounded-lg">
+                  Bold
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Theme Description */}

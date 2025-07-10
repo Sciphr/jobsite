@@ -37,7 +37,6 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import WeeklyDigestSettings from "./components/WeeklyDigestSettings";
 
 export default function AdminSettings() {
   const { data: session } = useSession();
@@ -226,15 +225,7 @@ export default function AdminSettings() {
         borderColor: "var(--admin-stat-2-border)",
         settings: [],
       },
-      digestNotifications: {
-        title: "Digest & Alerts",
-        description: "Configure periodic summaries and threshold alerts",
-        icon: Calendar,
-        color: "var(--admin-stat-3)",
-        bgColor: "var(--admin-stat-3-bg)",
-        borderColor: "var(--admin-stat-3-border)",
-        settings: [],
-      },
+
       systemNotifications: {
         title: "System & Emergency",
         description: "Critical system notifications and rate limiting",
@@ -260,7 +251,6 @@ export default function AdminSettings() {
         setting.key.includes("low_application") ||
         setting.key === "notification_frequency_limit"
       ) {
-        sections.digestNotifications.settings.push(setting);
       } else if (
         setting.key.includes("emergency") ||
         setting.key === "job_approval_required" ||
@@ -967,7 +957,6 @@ export default function AdminSettings() {
               {organizeNotificationSettings(activeSettings).map(
                 ([sectionId, section]) => renderSection(sectionId, section)
               )}
-              <WeeklyDigestSettings />
             </div>
           ) : activeSettings.length > 0 ? (
             <div className="space-y-6">

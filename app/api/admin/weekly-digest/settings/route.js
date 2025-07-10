@@ -104,6 +104,7 @@ export async function GET(req) {
             break;
           case "weekly_digest_theme": // Add this case
             digestConfig.emailTheme = setting.value || "professional";
+            console.log("📧 Loaded email theme:", setting.value); // Add this debug lin
             break;
           case "weekly_digest_sections":
             const sections = JSON.parse(setting.value || "{}");

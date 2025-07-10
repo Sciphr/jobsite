@@ -1,4 +1,4 @@
-// app/hooks/useAdminData.js - Complete implementation
+// app/hooks/useAdminData.js - Fixed to prevent unnecessary refetches
 import {
   useQuery,
   useQueries,
@@ -17,13 +17,15 @@ const fetcher = async (url) => {
   return response.json();
 };
 
-// Individual hooks for each data type
+// Individual hooks with optimized cache settings
 export const useJobs = () => {
   return useQuery({
     queryKey: ["admin", "jobs"],
     queryFn: () => fetcher("/api/admin/jobs"),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - jobs don't change frequently
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // Only refetch if stale
   });
 };
 
@@ -31,8 +33,10 @@ export const useApplications = () => {
   return useQuery({
     queryKey: ["admin", "applications"],
     queryFn: () => fetcher("/api/admin/applications"),
-    staleTime: 2 * 60 * 1000, // 2 minutes (more dynamic data)
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - more dynamic data
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -40,8 +44,10 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ["admin", "users"],
     queryFn: () => fetcher("/api/admin/users"),
-    staleTime: 10 * 60 * 1000, // 10 minutes (changes less frequently)
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 15 * 60 * 1000, // 15 minutes - changes less frequently
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -49,8 +55,10 @@ export const useAnalytics = (timeRange = "30d") => {
   return useQuery({
     queryKey: ["admin", "analytics", timeRange],
     queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -58,8 +66,10 @@ export const useDashboardStats = () => {
   return useQuery({
     queryKey: ["admin", "dashboard-stats"],
     queryFn: () => fetcher("/api/admin/dashboard-stats"),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -67,8 +77,10 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ["admin", "categories"],
     queryFn: () => fetcher("/api/admin/categories"),
-    staleTime: 30 * 60 * 1000, // 30 minutes (rarely changes)
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    staleTime: 60 * 60 * 1000, // 1 hour - rarely changes
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -76,8 +88,10 @@ export const useJobsSimple = () => {
   return useQuery({
     queryKey: ["admin", "jobs-simple"],
     queryFn: () => fetcher("/api/admin/jobs-simple"),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
@@ -93,113 +107,106 @@ export const useSettings = (category = null) => {
   return useQuery({
     queryKey,
     queryFn: () => fetcher(url),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 30 * 60 * 1000, // 30 minutes - settings rarely change
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
-// Specific job hook
+// Specific item hooks with conditional fetching
 export const useJob = (jobId) => {
   return useQuery({
     queryKey: ["admin", "job", jobId],
     queryFn: () => fetcher(`/api/admin/jobs/${jobId}`),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
     enabled: !!jobId, // Only run if jobId exists
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
-// Specific user hook
 export const useUser = (userId) => {
   return useQuery({
     queryKey: ["admin", "user", userId],
     queryFn: () => fetcher(`/api/admin/users/${userId}`),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
     enabled: !!userId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
-// Specific application hook
 export const useApplication = (applicationId) => {
   return useQuery({
     queryKey: ["admin", "application", applicationId],
     queryFn: () => fetcher(`/api/admin/applications/${applicationId}`),
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     enabled: !!applicationId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };
 
-// Combined data hook for dashboard
-export const useDashboardData = () => {
-  return useQueries({
-    queries: [
-      {
-        queryKey: ["admin", "dashboard-stats"],
-        queryFn: () => fetcher("/api/admin/dashboard-stats"),
-        staleTime: 2 * 60 * 1000,
-      },
-      {
-        queryKey: ["admin", "applications"],
-        queryFn: () => fetcher("/api/admin/applications"),
-        staleTime: 2 * 60 * 1000,
-      },
-      {
-        queryKey: ["admin", "jobs"],
-        queryFn: () => fetcher("/api/admin/jobs"),
-        staleTime: 5 * 60 * 1000,
-      },
-    ],
-  });
-};
-
-// Prefetch hook - call this early to load all data
+// Prefetch hook with better caching strategy
 export const usePrefetchAdminData = () => {
   const queryClient = useQueryClient();
 
   const prefetchAll = async () => {
     const prefetchPromises = [
-      // Core admin data
+      // Only prefetch essential data
       queryClient.prefetchQuery({
         queryKey: ["admin", "dashboard-stats"],
         queryFn: () => fetcher("/api/admin/dashboard-stats"),
-        staleTime: 2 * 60 * 1000,
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ["admin", "jobs"],
-        queryFn: () => fetcher("/api/admin/jobs"),
         staleTime: 5 * 60 * 1000,
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ["admin", "applications"],
-        queryFn: () => fetcher("/api/admin/applications"),
-        staleTime: 2 * 60 * 1000,
       }),
       queryClient.prefetchQuery({
         queryKey: ["admin", "categories"],
         queryFn: () => fetcher("/api/admin/categories"),
-        staleTime: 30 * 60 * 1000,
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ["admin", "jobs-simple"],
-        queryFn: () => fetcher("/api/admin/jobs-simple"),
-        staleTime: 5 * 60 * 1000,
+        staleTime: 60 * 60 * 1000,
       }),
     ];
 
-    // Only prefetch users if we might need them (to avoid unnecessary requests)
+    // Only prefetch specific data based on current route
+    const currentPath = window.location.pathname;
+
+    if (currentPath.includes("/admin/jobs")) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "jobs"],
+          queryFn: () => fetcher("/api/admin/jobs"),
+          staleTime: 10 * 60 * 1000,
+        })
+      );
+    }
+
+    if (currentPath.includes("/admin/applications")) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "applications"],
+          queryFn: () => fetcher("/api/admin/applications"),
+          staleTime: 5 * 60 * 1000,
+        })
+      );
+    }
+
+    // Check user privileges for conditional prefetching
     try {
-      // Check if user has privilege to see users
       const userResponse = await fetch("/api/profile");
       if (userResponse.ok) {
         const profile = await userResponse.json();
-        if (profile.privilegeLevel >= 3) {
+        if (
+          profile.privilegeLevel >= 3 &&
+          currentPath.includes("/admin/users")
+        ) {
           prefetchPromises.push(
             queryClient.prefetchQuery({
               queryKey: ["admin", "users"],
               queryFn: () => fetcher("/api/admin/users"),
-              staleTime: 10 * 60 * 1000,
+              staleTime: 15 * 60 * 1000,
             })
           );
         }
@@ -208,20 +215,20 @@ export const usePrefetchAdminData = () => {
       console.warn("Could not check user privileges for prefetching");
     }
 
-    // Execute all prefetch operations
     try {
       await Promise.allSettled(prefetchPromises);
-      console.log("✅ Successfully prefetched admin data");
+      console.log("✅ Successfully prefetched relevant admin data");
     } catch (error) {
       console.warn("⚠️ Some prefetch operations failed:", error);
     }
   };
 
+  // More targeted prefetch functions
   const prefetchJobs = () => {
     queryClient.prefetchQuery({
       queryKey: ["admin", "jobs"],
       queryFn: () => fetcher("/api/admin/jobs"),
-      staleTime: 5 * 60 * 1000,
+      staleTime: 10 * 60 * 1000,
     });
   };
 
@@ -229,7 +236,7 @@ export const usePrefetchAdminData = () => {
     queryClient.prefetchQuery({
       queryKey: ["admin", "applications"],
       queryFn: () => fetcher("/api/admin/applications"),
-      staleTime: 2 * 60 * 1000,
+      staleTime: 5 * 60 * 1000,
     });
   };
 
@@ -237,7 +244,7 @@ export const usePrefetchAdminData = () => {
     queryClient.prefetchQuery({
       queryKey: ["admin", "users"],
       queryFn: () => fetcher("/api/admin/users"),
-      staleTime: 10 * 60 * 1000,
+      staleTime: 15 * 60 * 1000,
     });
   };
 
@@ -245,7 +252,7 @@ export const usePrefetchAdminData = () => {
     queryClient.prefetchQuery({
       queryKey: ["admin", "analytics", timeRange],
       queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
-      staleTime: 5 * 60 * 1000,
+      staleTime: 10 * 60 * 1000,
     });
   };
 
@@ -258,7 +265,7 @@ export const usePrefetchAdminData = () => {
   };
 };
 
-// Utility hook to invalidate specific data (useful for mutations)
+// Rest of the hooks remain the same...
 export const useInvalidateAdminData = () => {
   const queryClient = useQueryClient();
 
@@ -306,7 +313,7 @@ export const useInvalidateAdminData = () => {
   };
 };
 
-// Mutation hooks for common admin operations
+// Mutation hooks remain the same...
 export const useCreateJob = () => {
   const queryClient = useQueryClient();
 

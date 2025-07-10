@@ -67,6 +67,7 @@ export class WeeklyDigestService {
               "weekly_digest_recipients",
               "weekly_digest_sections",
               "weekly_digest_customizations",
+              "weekly_digest_theme",
             ],
           },
           userId: null,
@@ -127,6 +128,10 @@ export class WeeklyDigestService {
           switch (setting.key) {
             case "weekly_digest_enabled":
               config.enabled = setting.value === "true";
+              break;
+            case "weekly_digest_theme":
+              config.emailTheme = setting.value || "professional";
+              console.log("📧 Loaded email theme:", setting.value); // Add this debug line
               break;
             case "weekly_digest_recipients":
               const recipients = JSON.parse(setting.value || "[]");

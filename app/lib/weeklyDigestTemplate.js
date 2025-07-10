@@ -7,44 +7,52 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
   const { configuration } = digestData;
   const selectedTheme = configuration?.emailTheme || "professional";
 
-  // Theme configurations
+  // Dramatically different theme configurations
   const themes = {
     professional: {
+      // Corporate, blocky, traditional
       headerGradient:
-        "background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);",
+        "background: linear-gradient(90deg, #1e3a8a 0%, #1e40af 100%);",
       primaryColor: "#1e40af",
       accentColor: "#3b82f6",
       backgroundColor: "#f8fafc",
       cardBackground: "#ffffff",
       textColor: "#1f2937",
-      borderRadius: "8px",
-      fontFamily:
-        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      spacing: "standard",
+      borderRadius: "0px", // Sharp, blocky corners
+      fontFamily: "'Times New Roman', Times, serif", // Traditional serif font
+      spacing: "tight",
+      headerStyle: "corporate",
+      cardStyle: "bordered-blocks",
     },
     minimalist: {
+      // Clean, spacious, minimal
       headerGradient:
-        "background: linear-gradient(135deg, #374151 0%, #1f2937 100%);",
+        "background: linear-gradient(180deg, #6b7280 0%, #374151 100%);",
       primaryColor: "#374151",
       accentColor: "#6b7280",
       backgroundColor: "#ffffff",
-      cardBackground: "#f9fafb",
+      cardBackground: "#fafafa",
       textColor: "#111827",
-      borderRadius: "4px",
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      spacing: "compact",
+      borderRadius: "2px", // Minimal rounding
+      fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      spacing: "spacious",
+      headerStyle: "minimal",
+      cardStyle: "subtle-shadows",
     },
     modern: {
+      // Bold, curved, gradients, vibrant
       headerGradient:
-        "background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);",
+        "background: linear-gradient(135deg, #7c3aed 0%, #ec4899 20%, #f59e0b 40%, #10b981 60%, #3b82f6 80%, #8b5cf6 100%);",
       primaryColor: "#7c3aed",
-      accentColor: "#a855f7",
+      accentColor: "#ec4899",
       backgroundColor: "#faf5ff",
-      cardBackground: "#ffffff",
+      cardBackground: "linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)",
       textColor: "#1f2937",
-      borderRadius: "12px",
-      fontFamily: "'Poppins', -apple-system, BlinkMacSystemFont, sans-serif",
-      spacing: "spacious",
+      borderRadius: "16px", // Very rounded
+      fontFamily: "'Poppins', 'Inter', sans-serif",
+      spacing: "dynamic",
+      headerStyle: "animated",
+      cardStyle: "glass-morphism",
     },
   };
 
@@ -56,21 +64,19 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
 
   const { summary, insights, systemHealth, dateRange } = digestData;
 
-  // Helper function to format percentage change
+  // Helper functions remain the same
   const formatChange = (change) => {
     if (change > 0) return `<span style="color: #10b981;">+${change}%</span>`;
     if (change < 0) return `<span style="color: #ef4444;">${change}%</span>`;
     return '<span style="color: #6b7280;">0%</span>';
   };
 
-  // Helper function to format number change
   const formatNumberChange = (change) => {
     if (change > 0) return `<span style="color: #10b981;">+${change}</span>`;
     if (change < 0) return `<span style="color: #ef4444;">${change}</span>`;
     return '<span style="color: #6b7280;">±0</span>';
   };
 
-  // Helper function to check if a section/customization is enabled
   const isEnabled = (section, customization = null) => {
     if (!configuration.sections[section]) return false;
     if (customization && configuration.sectionCustomizations[section]) {
@@ -79,16 +85,31 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     return true;
   };
 
-  // Build metrics grid based on enabled customizations
+  // Theme-specific metric card styles
+  const getMetricCardClass = () => {
+    switch (selectedTheme) {
+      case "professional":
+        return "metric-card-professional";
+      case "minimalist":
+        return "metric-card-minimalist";
+      case "modern":
+        return "metric-card-modern";
+      default:
+        return "metric-card-professional";
+    }
+  };
+
+  // Build metrics grid with theme-specific styling
   const buildMetricsGrid = () => {
     const metrics = [];
+    const cardClass = getMetricCardClass();
 
     // Job metrics
     if (isEnabled("jobMetrics", "newJobs") && summary.jobs) {
       metrics.push(`
-        <div class="metric-card">
+        <div class="${cardClass}">
           <div class="metric-number">${summary.jobs.thisWeek.total}</div>
-          <div class="metric-label">New Jobs Posted</div>
+          <div class="metric-label">NEW JOBS POSTED</div>
           <div class="metric-change">
             ${formatNumberChange(summary.jobs.change.total)} from last week
             (${formatChange(summary.jobs.change.totalPercent)})
@@ -102,20 +123,19 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
       summary.jobs?.thisWeek.totalViews
     ) {
       metrics.push(`
-        <div class="metric-card">
+        <div class="${cardClass}">
           <div class="metric-number">${summary.jobs.thisWeek.totalViews}</div>
-          <div class="metric-label">Total Job Views</div>
-          <div class="metric-change">📊 This week</div>
+          <div class="metric-label">TOTAL JOB VIEWS</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "🔥" : "📊"} This week</div>
         </div>
       `);
     }
 
-    // Application metrics
     if (isEnabled("applicationData", "totalApps") && summary.applications) {
       metrics.push(`
-        <div class="metric-card">
+        <div class="${cardClass}">
           <div class="metric-number">${summary.applications.thisWeek.total}</div>
-          <div class="metric-label">Applications Received</div>
+          <div class="metric-label">APPLICATIONS RECEIVED</div>
           <div class="metric-change">
             ${formatNumberChange(summary.applications.change.total)} from last week
             (${formatChange(summary.applications.change.totalPercent)})
@@ -126,20 +146,19 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
 
     if (isEnabled("applicationData", "hired") && summary.applications) {
       metrics.push(`
-        <div class="metric-card">
+        <div class="${cardClass}">
           <div class="metric-number">${summary.applications.thisWeek.hired}</div>
-          <div class="metric-label">New Hires</div>
-          <div class="metric-change">🎉 Congratulations!</div>
+          <div class="metric-label">NEW HIRES</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "🎉✨" : selectedTheme === "professional" ? "Success" : "🎉"} Congratulations!</div>
         </div>
       `);
     }
 
-    // User metrics
     if (isEnabled("userMetrics", "newUsers") && summary.users) {
       metrics.push(`
-        <div class="metric-card">
+        <div class="${cardClass}">
           <div class="metric-number">${summary.users.thisWeek.total}</div>
-          <div class="metric-label">New Users</div>
+          <div class="metric-label">NEW USERS</div>
           <div class="metric-change">
             ${formatNumberChange(summary.users.change.total)} from last week
             (${formatChange(summary.users.change.totalPercent)})
@@ -151,91 +170,356 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     return metrics.join("");
   };
 
-  // Build application status breakdown
-  const buildApplicationStatusBreakdown = () => {
-    if (!isEnabled("applicationData") || !summary.applications) return "";
-
-    const statusCards = [];
-    const customs = configuration.sectionCustomizations.applicationData || {};
-
-    if (customs.applied) {
-      statusCards.push(`
-        <div class="metric-card">
-          <div class="metric-number" style="color: ${currentTheme.accentColor};">${summary.applications.thisWeek.applied}</div>
-          <div class="metric-label">Applied</div>
-        </div>
-      `);
+  // Theme-specific headers
+  const getThemeHeader = () => {
+    switch (selectedTheme) {
+      case "professional":
+        return `
+          <div class="header-professional">
+            <div class="header-content">
+              <h1>📊 WEEKLY BUSINESS DIGEST</h1>
+              <div class="header-divider"></div>
+              <p>Executive Summary for ${adminName}</p>
+              <p class="header-date">REPORTING PERIOD: ${dateRange.formatted}</p>
+            </div>
+          </div>
+        `;
+      case "minimalist":
+        return `
+          <div class="header-minimalist">
+            <h1>Weekly Review</h1>
+            <p>Hello ${adminName}</p>
+            <p class="header-date">${dateRange.formatted}</p>
+          </div>
+        `;
+      case "modern":
+        return `
+          <div class="header-modern">
+            <div class="header-glow"></div>
+            <h1>🚀 Weekly Highlights</h1>
+            <p class="header-subtitle">Hey ${adminName}! Your week in data ✨</p>
+            <div class="header-badge">${dateRange.formatted}</div>
+          </div>
+        `;
+      default:
+        return `<div class="header"><h1>Weekly Digest</h1></div>`;
     }
-
-    if (customs.reviewing) {
-      statusCards.push(`
-        <div class="metric-card">
-          <div class="metric-number" style="color: #f59e0b;">${summary.applications.thisWeek.reviewing}</div>
-          <div class="metric-label">Reviewing</div>
-        </div>
-      `);
-    }
-
-    if (customs.interview) {
-      statusCards.push(`
-        <div class="metric-card">
-          <div class="metric-number" style="color: #8b5cf6;">${summary.applications.thisWeek.interview}</div>
-          <div class="metric-label">Interview</div>
-        </div>
-      `);
-    }
-
-    if (customs.hired) {
-      statusCards.push(`
-        <div class="metric-card">
-          <div class="metric-number" style="color: #10b981;">${summary.applications.thisWeek.hired}</div>
-          <div class="metric-label">Hired</div>
-        </div>
-      `);
-    }
-
-    if (customs.rejected) {
-      statusCards.push(`
-        <div class="metric-card">
-          <div class="metric-number" style="color: #ef4444;">${summary.applications.thisWeek.rejected}</div>
-          <div class="metric-label">Rejected</div>
-        </div>
-      `);
-    }
-
-    if (statusCards.length === 0) return "";
-
-    return `
-      <div class="section">
-        <h2>📋 Application Status Breakdown</h2>
-        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
-          ${statusCards.join("")}
-        </div>
-      </div>
-    `;
   };
 
-  // Theme-specific header content
-  const getThemeHeader = () => {
-    const emoji =
-      selectedTheme === "professional"
-        ? "📊"
-        : selectedTheme === "minimalist"
-          ? "📈"
-          : "🚀";
-    const subtitle =
-      selectedTheme === "professional"
-        ? "Weekly Performance Summary"
-        : selectedTheme === "minimalist"
-          ? "Week in Review"
-          : "Your Weekly Highlights";
+  // Enhanced CSS with dramatic theme differences
+  const getThemeCSS = () => {
+    const baseCSS = `
+      body {
+        font-family: ${currentTheme.fontFamily};
+        background-color: ${currentTheme.backgroundColor};
+        color: ${currentTheme.textColor};
+        line-height: 1.6;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        border-radius: ${currentTheme.borderRadius};
+        overflow: hidden;
+        background: ${currentTheme.cardBackground.includes("gradient") ? currentTheme.cardBackground : currentTheme.cardBackground};
+      }
+    `;
 
+    const professionalCSS = `
+      /* PROFESSIONAL THEME - Corporate, Blocky, Traditional */
+      .header-professional {
+        ${currentTheme.headerGradient}
+        color: white;
+        padding: 40px 30px;
+        text-align: center;
+        position: relative;
+        border-top: 5px solid #1e3a8a;
+        border-bottom: 3px solid #3b82f6;
+      }
+      .header-professional h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .header-divider {
+        width: 100px;
+        height: 3px;
+        background: white;
+        margin: 15px auto;
+      }
+      .header-date {
+        font-size: 12px;
+        letter-spacing: 1px;
+        margin-top: 10px;
+        opacity: 0.9;
+      }
+      .metric-card-professional {
+        background: white;
+        border: 3px solid #e5e7eb;
+        border-radius: 0px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+      }
+      .metric-card-professional::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #1e40af, #3b82f6);
+      }
+      .metric-card-professional .metric-number {
+        font-size: 36px;
+        font-weight: bold;
+        color: #1e40af;
+        font-family: 'Georgia', serif;
+      }
+      .metric-card-professional .metric-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #374151;
+        letter-spacing: 1px;
+        margin: 10px 0;
+      }
+      .section h2 {
+        color: #1e40af;
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 3px solid #1e40af;
+        padding-bottom: 10px;
+        margin-bottom: 25px;
+      }
+    `;
+
+    const minimalistCSS = `
+      /* MINIMALIST THEME - Clean, Spacious, Subtle */
+      .header-minimalist {
+        ${currentTheme.headerGradient}
+        color: white;
+        padding: 50px 40px;
+        text-align: left;
+      }
+      .header-minimalist h1 {
+        margin: 0 0 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+        letter-spacing: -0.5px;
+      }
+      .header-minimalist p {
+        margin: 5px 0;
+        font-weight: 300;
+        opacity: 0.9;
+      }
+      .header-date {
+        font-size: 14px;
+        margin-top: 15px;
+        opacity: 0.7;
+      }
+      .metric-card-minimalist {
+        background: white;
+        border: 1px solid #f3f4f6;
+        border-radius: 2px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+      }
+      .metric-card-minimalist:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+      }
+      .metric-card-minimalist .metric-number {
+        font-size: 32px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 15px;
+      }
+      .metric-card-minimalist .metric-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+      .section h2 {
+        color: #374151;
+        font-size: 22px;
+        font-weight: 400;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 15px;
+        margin-bottom: 30px;
+      }
+    `;
+
+    const modernCSS = `
+      /* MODERN THEME - Bold, Animated, Vibrant */
+      .header-modern {
+        ${currentTheme.headerGradient}
+        color: white;
+        padding: 50px 30px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border-radius: 16px 16px 0 0;
+      }
+      .header-glow {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: pulse 4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+      }
+      .header-modern h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        background: linear-gradient(45deg, #ffffff, #f0f9ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+        z-index: 2;
+      }
+      .header-subtitle {
+        font-size: 18px;
+        margin: 15px 0;
+        font-weight: 400;
+        position: relative;
+        z-index: 2;
+      }
+      .header-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 25px;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 10px;
+        position: relative;
+        z-index: 2;
+      }
+      .metric-card-modern {
+        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid rgba(139, 92, 246, 0.1);
+        border-radius: 16px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+      .metric-card-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+        transition: left 0.5s ease;
+      }
+      .metric-card-modern:hover::before {
+        left: 100%;
+      }
+      .metric-card-modern:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+      }
+      .metric-card-modern .metric-number {
+        font-size: 38px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #7c3aed, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+        position: relative;
+        z-index: 2;
+      }
+      .metric-card-modern .metric-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
+      }
+      .section h2 {
+        color: #7c3aed;
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c3aed, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        border-bottom: 2px solid transparent;
+        border-image: linear-gradient(135deg, #7c3aed, #ec4899) 1;
+        padding-bottom: 12px;
+        margin-bottom: 25px;
+      }
+    `;
+
+    // Combine all CSS
     return `
-      <div class="header">
-        <h1>${emoji} Weekly Digest</h1>
-        <p>Hi ${adminName}! ${subtitle}</p>
-        <p style="font-size: 14px; opacity: 0.8;">${dateRange.formatted}</p>
-      </div>
+      ${baseCSS}
+      ${selectedTheme === "professional" ? professionalCSS : ""}
+      ${selectedTheme === "minimalist" ? minimalistCSS : ""}
+      ${selectedTheme === "modern" ? modernCSS : ""}
+      
+      /* Common styles */
+      .content {
+        padding: ${currentTheme.spacing === "tight" ? "25px" : currentTheme.spacing === "spacious" ? "40px" : "30px"};
+        background: ${currentTheme.cardBackground.includes("gradient") ? "transparent" : currentTheme.cardBackground};
+      }
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: ${currentTheme.spacing === "tight" ? "15px" : currentTheme.spacing === "spacious" ? "30px" : "20px"};
+        margin: 30px 0;
+      }
+      .section {
+        margin: 40px 0;
+      }
+      .button {
+        display: inline-block;
+        background: ${currentTheme.primaryColor};
+        color: white;
+        padding: 12px 24px;
+        border-radius: ${currentTheme.borderRadius};
+        text-decoration: none;
+        font-weight: 600;
+        margin: 10px 5px;
+        ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3); transition: all 0.3s ease;" : ""}
+      }
+      ${selectedTheme === "modern" ? ".button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4); }" : ""}
+      .footer {
+        background: ${selectedTheme === "minimalist" ? "#f9fafb" : selectedTheme === "modern" ? "linear-gradient(135deg, #f3f4f6, #e5e7eb)" : "#f7fafc"};
+        padding: 30px;
+        text-align: center;
+        color: #718096;
+        font-size: 14px;
+        ${selectedTheme === "modern" ? "border-radius: 0 0 16px 16px;" : ""}
+      }
+      @media (max-width: 600px) {
+        .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        .content { padding: 20px; }
+      }
     `;
   };
 
@@ -247,228 +531,7 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Digest - ${dateRange.formatted}</title>
     <style>
-        body {
-            font-family: ${currentTheme.fontFamily};
-            background-color: ${currentTheme.backgroundColor};
-            color: ${currentTheme.textColor};
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .container {
-            background: ${currentTheme.cardBackground};
-            border-radius: ${currentTheme.borderRadius};
-            overflow: hidden;
-            ${selectedTheme === "modern" ? "box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);" : "box-shadow: 0 2px 4px rgba(0,0,0,0.1);"}
-        }
-        .header {
-            ${currentTheme.headerGradient}
-            color: white;
-            padding: ${currentTheme.spacing === "compact" ? "20px" : currentTheme.spacing === "spacious" ? "40px" : "30px"};
-            text-align: center;
-            border-radius: ${currentTheme.borderRadius} ${currentTheme.borderRadius} 0 0;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: ${selectedTheme === "modern" ? "32px" : "28px"};
-            font-weight: ${selectedTheme === "minimalist" ? "500" : "600"};
-        }
-        .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.9;
-            font-size: 16px;
-        }
-        .content {
-            padding: ${currentTheme.spacing === "compact" ? "20px" : currentTheme.spacing === "spacious" ? "40px" : "30px"};
-            background: ${currentTheme.cardBackground};
-        }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: ${currentTheme.spacing === "compact" ? "15px" : currentTheme.spacing === "spacious" ? "25px" : "20px"};
-            margin: 30px 0;
-        }
-        .metric-card {
-            background: ${selectedTheme === "minimalist" ? "#ffffff" : currentTheme.cardBackground};
-            border: ${selectedTheme === "minimalist" ? "1px solid #e5e7eb" : "none"};
-            border-radius: ${currentTheme.borderRadius};
-            padding: ${currentTheme.spacing === "compact" ? "15px" : currentTheme.spacing === "spacious" ? "25px" : "20px"};
-            text-align: center;
-            transition: all 0.2s;
-            ${selectedTheme === "modern" ? "box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" : ""}
-            ${selectedTheme === "professional" ? "border: 2px solid #e2e8f0;" : ""}
-        }
-        .metric-number {
-            font-size: ${selectedTheme === "modern" ? "36px" : "32px"};
-            font-weight: ${selectedTheme === "minimalist" ? "600" : "700"};
-            color: ${currentTheme.primaryColor};
-            margin-bottom: 5px;
-        }
-        .metric-label {
-            font-size: 14px;
-            color: ${currentTheme.textColor};
-            opacity: 0.7;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-        .metric-change {
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .section {
-            margin: ${currentTheme.spacing === "compact" ? "30px 0" : "40px 0"};
-        }
-        .section h2 {
-            color: ${currentTheme.primaryColor};
-            font-size: ${selectedTheme === "modern" ? "24px" : "22px"};
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid ${currentTheme.accentColor};
-            font-weight: ${selectedTheme === "minimalist" ? "500" : "600"};
-        }
-        .chart-container {
-            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f8fafc"};
-            border-radius: ${currentTheme.borderRadius};
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        .daily-chart {
-            display: flex;
-            justify-content: space-between;
-            align-items: end;
-            height: 100px;
-            margin: 20px 0;
-            padding: 0 10px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .day-bar {
-            flex: 1;
-            margin: 0 2px;
-            text-align: center;
-        }
-        .bar {
-            background: ${currentTheme.headerGradient.replace("background: ", "")};
-            border-radius: 2px;
-            margin-bottom: 5px;
-            min-height: 4px;
-        }
-        .day-label {
-            font-size: 11px;
-            color: #718096;
-            font-weight: 500;
-        }
-        .day-count {
-            font-size: 12px;
-            color: ${currentTheme.textColor};
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            background: ${currentTheme.cardBackground};
-            border-radius: ${currentTheme.borderRadius};
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .table th {
-            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f7fafc"};
-            color: ${currentTheme.textColor};
-            font-weight: 600;
-            padding: 12px;
-            text-align: left;
-            font-size: 14px;
-        }
-        .table td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 14px;
-        }
-        .table tr:last-child td {
-            border-bottom: none;
-        }
-        .department-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .dept-card {
-            background: ${selectedTheme === "minimalist" ? "#ffffff" : "#f8fafc"};
-            border-radius: ${currentTheme.borderRadius};
-            padding: 15px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-        }
-        .dept-name {
-            font-weight: 600;
-            color: ${currentTheme.textColor};
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-        .dept-count {
-            font-size: 20px;
-            font-weight: 700;
-            color: ${currentTheme.accentColor};
-        }
-        .alert-box {
-            border-radius: ${currentTheme.borderRadius};
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .alert-box.warning {
-            background: #fffbeb;
-            border: 1px solid #fed7aa;
-        }
-        .alert-box.info {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-        }
-        .alert-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .alert-box.warning .alert-title {
-            color: #92400e;
-        }
-        .alert-box.info .alert-title {
-            color: #1e40af;
-        }
-        .button {
-            display: inline-block;
-            background: ${currentTheme.primaryColor};
-            color: white;
-            padding: ${selectedTheme === "modern" ? "14px 28px" : "12px 24px"};
-            border-radius: ${currentTheme.borderRadius};
-            text-decoration: none;
-            font-weight: 600;
-            margin: 10px 5px;
-        }
-        .footer {
-            background: ${selectedTheme === "minimalist" ? "#f9fafb" : "#f7fafc"};
-            padding: 30px;
-            text-align: center;
-            color: #718096;
-            font-size: 14px;
-        }
-        .footer a {
-            color: ${currentTheme.accentColor};
-            text-decoration: none;
-            font-weight: 600;
-        }
-        @media (max-width: 600px) {
-            .metrics-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .department-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .content {
-                padding: 20px;
-            }
-        }
+        ${getThemeCSS()}
     </style>
 </head>
 <body>
@@ -487,15 +550,15 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                 : ""
             }
 
-            <!-- Daily Applications Chart -->
+            <!-- Rest of sections remain the same but will use theme-specific styling -->
             ${
               isEnabled("applicationData", "dailyBreakdown") &&
               insights.dailyApplications
                 ? `
             <div class="section">
-                <h2>📈 Daily Application Activity</h2>
-                <div class="chart-container">
-                    <div class="daily-chart">
+                <h2>${selectedTheme === "modern" ? "📈✨" : "📈"} Daily Application Activity</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f9fafb" : selectedTheme === "modern" ? "linear-gradient(145deg, #ffffff, #f8fafc)" : "#f8fafc"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; text-align: center; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: end; height: 100px; margin: 20px 0; padding: 0 10px; border-bottom: 1px solid #e2e8f0;">
                         ${insights.dailyApplications
                           .map((day) => {
                             const maxApplications = Math.max(
@@ -511,12 +574,12 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                                   )
                                 : 4;
                             return `
-                                <div class="day-bar">
-                                    <div class="day-count">${day.applications}</div>
-                                    <div class="bar" style="height: ${height}px;"></div>
-                                    <div class="day-label">${day.date}</div>
-                                </div>
-                            `;
+                            <div style="flex: 1; margin: 0 2px; text-align: center;">
+                                <div style="font-size: 12px; color: ${currentTheme.textColor}; font-weight: 600; margin-bottom: 2px;">${day.applications}</div>
+                                <div style="background: ${selectedTheme === "modern" ? "linear-gradient(to top, #7c3aed, #ec4899)" : currentTheme.headerGradient.replace("background: ", "")}; border-radius: ${selectedTheme === "professional" ? "0px" : "2px"}; margin-bottom: 5px; min-height: 4px; height: ${height}px;"></div>
+                                <div style="font-size: 11px; color: #718096; font-weight: 500;">${day.date}</div>
+                            </div>
+                          `;
                           })
                           .join("")}
                     </div>
@@ -529,235 +592,27 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                 : ""
             }
 
-            <!-- Application Status Breakdown -->
-            ${buildApplicationStatusBreakdown()}
-
-            <!-- User Growth -->
-            ${
-              isEnabled("userMetrics", "userGrowth") && summary.users
-                ? `
-            <div class="section">
-                <h2>👥 User Growth</h2>
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-number" style="color: #10b981;">${summary.users.thisWeek.total}</div>
-                        <div class="metric-label">New Registrations</div>
-                        <div class="metric-change">This week</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-number" style="color: ${currentTheme.accentColor};">${formatChange(summary.users.change.totalPercent)}</div>
-                        <div class="metric-label">Growth Rate</div>
-                        <div class="metric-change">vs. last week</div>
-                    </div>
-                </div>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- Department Performance -->
-            ${
-              isEnabled("jobMetrics", "jobsByDepartment") &&
-              insights.departmentStats?.length > 0
-                ? `
-            <div class="section">
-                <h2>🏢 Applications by Department</h2>
-                <div class="department-stats">
-                    ${insights.departmentStats
-                      .slice(0, 6)
-                      .map(
-                        (dept) => `
-                        <div class="dept-card">
-                            <div class="dept-name">${dept.department}</div>
-                            <div class="dept-count">${dept.applications}</div>
-                        </div>
-                    `
-                      )
-                      .join("")}
-                </div>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- Top Performing Jobs -->
-            ${
-              isEnabled("jobMetrics", "topJobs") && insights.topJobs?.length > 0
-                ? `
-            <div class="section">
-                <h2>🚀 Top Performing Jobs This Week</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Job Title</th>
-                            <th>Department</th>
-                            <th>Weekly Apps</th>
-                            <th>Total Apps</th>
-                            <th>Conversion</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${insights.topJobs
-                          .slice(0, 5)
-                          .map(
-                            (job) => `
-                            <tr>
-                                <td><strong>${job.title}</strong></td>
-                                <td>${job.department}</td>
-                                <td style="color: #10b981; font-weight: 600;">${job.weeklyApplications}</td>
-                                <td>${job.totalApplications}</td>
-                                <td>${job.conversionRate}%</td>
-                            </tr>
-                        `
-                          )
-                          .join("")}
-                    </tbody>
-                </table>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- Jobs Needing Attention -->
-            ${
-              isEnabled("jobMetrics", "lowJobs") &&
-              insights.lowPerformingJobs?.length > 0
-                ? `
-            <div class="section">
-                <h2>⚠️ Jobs Needing Attention</h2>
-                <div class="alert-box warning">
-                    <div class="alert-title">Low Application Alert</div>
-                    <p>These jobs may need review - consider updating descriptions, salary ranges, or requirements.</p>
-                </div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Job Title</th>
-                            <th>Department</th>
-                            <th>Days Live</th>
-                            <th>Applications</th>
-                            <th>Views</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${insights.lowPerformingJobs
-                          .slice(0, 5)
-                          .map(
-                            (job) => `
-                            <tr>
-                                <td><strong>${job.title}</strong></td>
-                                <td>${job.department}</td>
-                                <td>${job.daysLive} days</td>
-                                <td style="color: #ef4444; font-weight: 600;">${job.applications}</td>
-                                <td>${job.views}</td>
-                            </tr>
-                        `
-                          )
-                          .join("")}
-                    </tbody>
-                </table>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- Average Time to Hire -->
-            ${
-              isEnabled("applicationData", "avgTimeToHire")
-                ? `
-            <div class="section">
-                <h2>⏱️ Hiring Process Performance</h2>
-                <div class="alert-box info">
-                    <div class="alert-title">Time to Hire Metrics</div>
-                    <p>Monitor your hiring process efficiency and candidate experience.</p>
-                </div>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- System Health -->
-            ${
-              isEnabled("systemHealth") && systemHealth
-                ? `
-            <div class="section">
-                <h2>🔧 System Overview</h2>
-                <div class="alert-box info">
-                    <div class="alert-title">System Status: ${systemHealth.systemStatus.toUpperCase()}</div>
-                    <p>
-                        ${isEnabled("systemHealth", "systemStatus") ? `<strong>${systemHealth.activeJobs}</strong> active jobs • ` : ""}
-                        <strong>${systemHealth.totalUsers}</strong> total users • 
-                        <strong>${systemHealth.totalApplications}</strong> total applications
-                    </p>
-                    ${
-                      isEnabled("systemHealth", "alerts")
-                        ? `
-                    <p style="margin-top: 10px; color: #10b981; font-weight: 600;">✅ No system alerts</p>
-                    `
-                        : ""
-                    }
-                </div>
-            </div>
-            `
-                : ""
-            }
-
-            <!-- Action Items -->
-            <div class="section">
-                <h2>🎯 Recommended Actions</h2>
-                <div class="alert-box">
-                    <div class="alert-title">This Week's Focus:</div>
-                    <ul style="margin: 10px 0; padding-left: 20px;">
-                        ${
-                          insights.lowPerformingJobs?.length > 0
-                            ? `<li>Review ${insights.lowPerformingJobs.length} jobs with low application rates</li>`
-                            : "<li>✅ All jobs are performing well!</li>"
-                        }
-                        ${
-                          summary.applications &&
-                          summary.applications.thisWeek.applied >
-                            summary.applications.thisWeek.reviewing
-                            ? '<li>Process pending applications in "Applied" status</li>'
-                            : "<li>✅ Application processing is on track</li>"
-                        }
-                        ${
-                          summary.applications &&
-                          summary.applications.thisWeek.interview > 0
-                            ? `<li>Follow up on ${summary.applications.thisWeek.interview} candidates in interview stage</li>`
-                            : ""
-                        }
-                        ${
-                          summary.jobs && summary.jobs.thisWeek.total === 0
-                            ? "<li>Consider posting new jobs to maintain hiring momentum</li>"
-                            : "<li>✅ Job posting activity looks healthy</li>"
-                        }
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
+            <!-- Quick Actions with theme-specific styling -->
             <div style="text-align: center; margin: 40px 0;">
                 <a href="${adminUrl}/admin/dashboard" class="button">
-                    📊 View Full Dashboard
+                    ${selectedTheme === "modern" ? "📊✨" : "📊"} View Full Dashboard
                 </a>
                 <a href="${adminUrl}/admin/applications" class="button">
-                    📋 Review Applications
+                    ${selectedTheme === "modern" ? "📋💫" : "📋"} Review Applications
                 </a>
                 <a href="${adminUrl}/admin/jobs" class="button">
-                    💼 Manage Jobs
+                    ${selectedTheme === "modern" ? "💼🚀" : "💼"} Manage Jobs
                 </a>
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="footer">
             <p>
                 This digest was generated on ${digestData.generatedAt.toLocaleString()}<br>
-                <a href="${adminUrl}/admin/weekly-digest">Update digest preferences</a> • 
-                <a href="${adminUrl}/admin/analytics">View detailed analytics</a>
+                <a href="${adminUrl}/admin/weekly-digest" style="color: ${currentTheme.accentColor}; text-decoration: none; font-weight: 600;">Update digest preferences</a>
             </p>
             <p style="font-size: 12px; margin-top: 15px; color: #a0aec0;">
-                ${siteName} Weekly Digest • ${selectedTheme.charAt(0).toUpperCase() + selectedTheme.slice(1)} Theme
+                ${siteName} Weekly Digest • ${selectedTheme.charAt(0).toUpperCase() + selectedTheme.slice(1)} Theme ${selectedTheme === "modern" ? "✨" : ""}
             </p>
         </div>
     </div>
