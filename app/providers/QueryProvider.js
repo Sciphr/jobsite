@@ -9,20 +9,17 @@ export function QueryProvider({ children }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        // ✅ REPLACE WITH THIS:
+        // ✅ SUPER AGGRESSIVE CACHING for instant navigation:
         defaultOptions: {
           queries: {
-            // ✅ FIXED: More aggressive caching to prevent unnecessary API calls
-            staleTime: 10 * 60 * 1000, // 10 minutes - data stays fresh longer
-            gcTime: 60 * 60 * 1000, // 1 hour - keep in cache longer
-
-            // ✅ FIXED: Prevent refetching on navigation
-            refetchOnMount: false, // ❌ WAS: true - this was causing refetch on page navigation
-            refetchOnWindowFocus: false, // Already correctly set
-            refetchOnReconnect: false, // Already correctly set
-
-            // ✅ Keep these settings
-            retry: 3,
+            staleTime: 10 * 60 * 1000, // 10 minutes before considering stale
+            gcTime: 60 * 60 * 1000, // 1 hour in cache
+            refetchOnMount: false, // ✅ Never refetch on component mount
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
             refetchInterval: false,
+            retry: 1, // Fail fast
             networkMode: "online",
           },
           mutations: {

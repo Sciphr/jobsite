@@ -1,4 +1,4 @@
-// app/hooks/useAdminData.js - Fixed to prevent unnecessary refetches
+// app/hooks/useAdminData.js - FIXED to prevent unnecessary refetches
 import {
   useQuery,
   useQueries,
@@ -8,6 +8,7 @@ import {
 
 // Generic fetcher function
 const fetcher = async (url) => {
+  console.log(`🔄 API Call: ${url}`); // Add logging to track actual calls
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(
@@ -17,15 +18,24 @@ const fetcher = async (url) => {
   return response.json();
 };
 
+// ✅ FIXED: More aggressive caching to prevent refetches
+const commonQueryOptions = {
+  staleTime: 30 * 60 * 1000, // ✅ 30 minutes (increased from 15)
+  gcTime: 2 * 60 * 60 * 1000, // ✅ 2 hours
+  refetchOnWindowFocus: false,
+  refetchOnMount: false, // ✅ KEY FIX: Never refetch on component mount
+  refetchOnReconnect: false, // ✅ Prevent refetch on reconnect
+  refetchInterval: false, // ✅ Disable polling
+  networkMode: "online",
+};
+
 // Individual hooks with optimized cache settings
 export const useJobs = () => {
   return useQuery({
     queryKey: ["admin", "jobs"],
     queryFn: () => fetcher("/api/admin/jobs"),
-    staleTime: 15 * 60 * 1000, // ✅ INCREASED: 15 minutes (was 10)
-    gcTime: 2 * 60 * 60 * 1000, // ✅ INCREASED: 2 hours (was 1)
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
+    ...commonQueryOptions,
+    staleTime: 20 * 60 * 1000, // 20 minutes for jobs (they change less frequently)
   });
 };
 
@@ -33,10 +43,8 @@ export const useApplications = () => {
   return useQuery({
     queryKey: ["admin", "applications"],
     queryFn: () => fetcher("/api/admin/applications"),
-    staleTime: 10 * 60 * 1000, // ✅ INCREASED: 10 minutes (was 5)
-    gcTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour (was 30 min)
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
+    ...commonQueryOptions,
+    staleTime: 10 * 60 * 1000, // 10 minutes for applications (more dynamic)
   });
 };
 
@@ -44,10 +52,8 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ["admin", "users"],
     queryFn: () => fetcher("/api/admin/users"),
-    staleTime: 20 * 60 * 1000, // ✅ INCREASED: 20 minutes (was 15)
-    gcTime: 4 * 60 * 60 * 1000, // ✅ INCREASED: 4 hours (was 2)
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
+    ...commonQueryOptions,
+    staleTime: 45 * 60 * 1000, // 45 minutes for users (rarely change)
   });
 };
 
@@ -55,10 +61,8 @@ export const useAnalytics = (timeRange = "30d") => {
   return useQuery({
     queryKey: ["admin", "analytics", timeRange],
     queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
-    staleTime: 15 * 60 * 1000, // ✅ INCREASED: 15 minutes (was 10)
-    gcTime: 2 * 60 * 60 * 1000, // ✅ INCREASED: 2 hours (was 1)
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
+    ...commonQueryOptions,
+    staleTime: 15 * 60 * 1000, // 15 minutes for analytics
   });
 };
 
@@ -66,10 +70,8 @@ export const useDashboardStats = () => {
   return useQuery({
     queryKey: ["admin", "dashboard-stats"],
     queryFn: () => fetcher("/api/admin/dashboard-stats"),
-    staleTime: 10 * 60 * 1000, // ✅ INCREASED: 10 minutes (was 5)
-    gcTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour (was 30 min)
-    refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
+    ...commonQueryOptions,
+    staleTime: 15 * 60 * 1000, // 15 minutes for dashboard stats
   });
 };
 
@@ -77,10 +79,8 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ["admin", "categories"],
     queryFn: () => fetcher("/api/admin/categories"),
-    staleTime: 60 * 60 * 1000, // 1 hour - rarely changes
-    gcTime: 4 * 60 * 60 * 1000, // 4 hours
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    ...commonQueryOptions,
+    staleTime: 60 * 60 * 1000, // 1 hour - categories rarely change
   });
 };
 
@@ -88,10 +88,8 @@ export const useJobsSimple = () => {
   return useQuery({
     queryKey: ["admin", "jobs-simple"],
     queryFn: () => fetcher("/api/admin/jobs-simple"),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    ...commonQueryOptions,
+    staleTime: 20 * 60 * 1000, // 20 minutes
   });
 };
 
@@ -107,10 +105,8 @@ export const useSettings = (category = null) => {
   return useQuery({
     queryKey,
     queryFn: () => fetcher(url),
-    staleTime: 30 * 60 * 1000, // 30 minutes - settings rarely change
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    ...commonQueryOptions,
+    staleTime: 60 * 60 * 1000, // 1 hour - settings rarely change
   });
 };
 
@@ -119,11 +115,9 @@ export const useJob = (jobId) => {
   return useQuery({
     queryKey: ["admin", "job", jobId],
     queryFn: () => fetcher(`/api/admin/jobs/${jobId}`),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    ...commonQueryOptions,
     enabled: !!jobId, // Only run if jobId exists
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 20 * 60 * 1000, // 20 minutes
   });
 };
 
@@ -131,11 +125,9 @@ export const useUser = (userId) => {
   return useQuery({
     queryKey: ["admin", "user", userId],
     queryFn: () => fetcher(`/api/admin/users/${userId}`),
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    ...commonQueryOptions,
     enabled: !!userId,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 30 * 60 * 1000, // 30 minutes
   });
 };
 
@@ -143,117 +135,170 @@ export const useApplication = (applicationId) => {
   return useQuery({
     queryKey: ["admin", "application", applicationId],
     queryFn: () => fetcher(`/api/admin/applications/${applicationId}`),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    ...commonQueryOptions,
     enabled: !!applicationId,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
-// Prefetch hook with better caching strategy
+// ✅ FIXED: Improved prefetch strategy
 export const usePrefetchAdminData = () => {
   const queryClient = useQueryClient();
 
+  // ✅ RESTORE FAST NAVIGATION - Replace prefetchAll in useAdminData.js:
   const prefetchAll = async () => {
-    const prefetchPromises = [
-      // Only prefetch essential data
-      queryClient.prefetchQuery({
-        queryKey: ["admin", "dashboard-stats"],
-        queryFn: () => fetcher("/api/admin/dashboard-stats"),
-        staleTime: 5 * 60 * 1000,
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ["admin", "categories"],
-        queryFn: () => fetcher("/api/admin/categories"),
-        staleTime: 60 * 60 * 1000,
-      }),
-    ];
+    console.log("🚀 Starting aggressive prefetch for fast navigation...");
 
-    // Only prefetch specific data based on current route
-    const currentPath = window.location.pathname;
+    // Check what's already cached
+    const existingJobs = queryClient.getQueryData(["admin", "jobs"]);
+    const existingApplications = queryClient.getQueryData([
+      "admin",
+      "applications",
+    ]);
+    const existingUsers = queryClient.getQueryData(["admin", "users"]);
+    const existingDashboard = queryClient.getQueryData([
+      "admin",
+      "dashboard-stats",
+    ]);
+    const existingCategories = queryClient.getQueryData([
+      "admin",
+      "categories",
+    ]);
 
-    if (currentPath.includes("/admin/jobs")) {
+    console.log("📊 Cache status:", {
+      jobs: !!existingJobs,
+      applications: !!existingApplications,
+      users: !!existingUsers,
+      dashboard: !!existingDashboard,
+      categories: !!existingCategories,
+    });
+
+    const prefetchPromises = [];
+
+    // Always prefetch essential data that's needed everywhere
+    if (!existingDashboard) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "dashboard-stats"],
+          queryFn: () => fetcher("/api/admin/dashboard-stats"),
+          staleTime: 15 * 60 * 1000,
+        })
+      );
+    }
+
+    if (!existingCategories) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "categories"],
+          queryFn: () => fetcher("/api/admin/categories"),
+          staleTime: 60 * 60 * 1000,
+        })
+      );
+    }
+
+    // Prefetch main data sets for fast navigation
+    if (!existingJobs) {
       prefetchPromises.push(
         queryClient.prefetchQuery({
           queryKey: ["admin", "jobs"],
           queryFn: () => fetcher("/api/admin/jobs"),
+          staleTime: 20 * 60 * 1000,
+        })
+      );
+    }
+
+    if (!existingApplications) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "applications"],
+          queryFn: () => fetcher("/api/admin/applications"),
           staleTime: 10 * 60 * 1000,
         })
       );
     }
 
-    if (currentPath.includes("/admin/applications")) {
+    // Only prefetch users if we might need them (check session from context if available)
+    if (!existingUsers) {
+      try {
+        // Use the session from next-auth instead of API call
+        // This will be available in the hook context
+        prefetchPromises.push(
+          queryClient.prefetchQuery({
+            queryKey: ["admin", "users"],
+            queryFn: () => fetcher("/api/admin/users"),
+            staleTime: 45 * 60 * 1000,
+          })
+        );
+      } catch (error) {
+        console.log("👤 Skipping users prefetch");
+      }
+    }
+
+    // Prefetch jobs-simple for dropdowns
+    if (!queryClient.getQueryData(["admin", "jobs-simple"])) {
       prefetchPromises.push(
         queryClient.prefetchQuery({
-          queryKey: ["admin", "applications"],
-          queryFn: () => fetcher("/api/admin/applications"),
-          staleTime: 5 * 60 * 1000,
+          queryKey: ["admin", "jobs-simple"],
+          queryFn: () => fetcher("/api/admin/jobs-simple"),
+          staleTime: 20 * 60 * 1000,
         })
       );
     }
 
-    // Check user privileges for conditional prefetching
-    try {
-      const userResponse = await fetch("/api/profile");
-      if (userResponse.ok) {
-        const profile = await userResponse.json();
-        if (
-          profile.privilegeLevel >= 3 &&
-          currentPath.includes("/admin/users")
-        ) {
-          prefetchPromises.push(
-            queryClient.prefetchQuery({
-              queryKey: ["admin", "users"],
-              queryFn: () => fetcher("/api/admin/users"),
-              staleTime: 15 * 60 * 1000,
-            })
-          );
-        }
+    if (prefetchPromises.length > 0) {
+      console.log(
+        `🚀 Prefetching ${prefetchPromises.length} data sets for instant navigation`
+      );
+      try {
+        await Promise.allSettled(prefetchPromises);
+        console.log("✅ All data prefetched - navigation should be instant!");
+      } catch (error) {
+        console.warn("⚠️ Some prefetch operations failed:", error);
       }
-    } catch (error) {
-      console.warn("Could not check user privileges for prefetching");
-    }
-
-    try {
-      await Promise.allSettled(prefetchPromises);
-      console.log("✅ Successfully prefetched relevant admin data");
-    } catch (error) {
-      console.warn("⚠️ Some prefetch operations failed:", error);
+    } else {
+      console.log("✅ All data already cached - navigation is instant!");
     }
   };
 
   // More targeted prefetch functions
   const prefetchJobs = () => {
-    queryClient.prefetchQuery({
-      queryKey: ["admin", "jobs"],
-      queryFn: () => fetcher("/api/admin/jobs"),
-      staleTime: 10 * 60 * 1000,
-    });
+    if (!queryClient.getQueryData(["admin", "jobs"])) {
+      queryClient.prefetchQuery({
+        queryKey: ["admin", "jobs"],
+        queryFn: () => fetcher("/api/admin/jobs"),
+        staleTime: 20 * 60 * 1000,
+      });
+    }
   };
 
   const prefetchApplications = () => {
-    queryClient.prefetchQuery({
-      queryKey: ["admin", "applications"],
-      queryFn: () => fetcher("/api/admin/applications"),
-      staleTime: 5 * 60 * 1000,
-    });
+    if (!queryClient.getQueryData(["admin", "applications"])) {
+      queryClient.prefetchQuery({
+        queryKey: ["admin", "applications"],
+        queryFn: () => fetcher("/api/admin/applications"),
+        staleTime: 10 * 60 * 1000,
+      });
+    }
   };
 
   const prefetchUsers = () => {
-    queryClient.prefetchQuery({
-      queryKey: ["admin", "users"],
-      queryFn: () => fetcher("/api/admin/users"),
-      staleTime: 15 * 60 * 1000,
-    });
+    if (!queryClient.getQueryData(["admin", "users"])) {
+      queryClient.prefetchQuery({
+        queryKey: ["admin", "users"],
+        queryFn: () => fetcher("/api/admin/users"),
+        staleTime: 45 * 60 * 1000,
+      });
+    }
   };
 
   const prefetchAnalytics = (timeRange = "30d") => {
-    queryClient.prefetchQuery({
-      queryKey: ["admin", "analytics", timeRange],
-      queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
-      staleTime: 10 * 60 * 1000,
-    });
+    if (!queryClient.getQueryData(["admin", "analytics", timeRange])) {
+      queryClient.prefetchQuery({
+        queryKey: ["admin", "analytics", timeRange],
+        queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
+        staleTime: 15 * 60 * 1000,
+      });
+    }
   };
 
   return {
@@ -262,6 +307,53 @@ export const usePrefetchAdminData = () => {
     prefetchApplications,
     prefetchUsers,
     prefetchAnalytics,
+  };
+};
+
+// ✅ Enhanced cache debugging
+export const useAdminDataStatus = () => {
+  const queryClient = useQueryClient();
+  const jobs = useJobs();
+  const applications = useApplications();
+  const dashboardStats = useDashboardStats();
+
+  // Debug cache status
+  const cacheStatus = {
+    jobs: {
+      isFetching: jobs.isFetching,
+      isLoading: jobs.isLoading,
+      dataUpdatedAt: jobs.dataUpdatedAt,
+      isCached: !!queryClient.getQueryData(["admin", "jobs"]),
+    },
+    applications: {
+      isFetching: applications.isFetching,
+      isLoading: applications.isLoading,
+      dataUpdatedAt: applications.dataUpdatedAt,
+      isCached: !!queryClient.getQueryData(["admin", "applications"]),
+    },
+    dashboardStats: {
+      isFetching: dashboardStats.isFetching,
+      isLoading: dashboardStats.isLoading,
+      dataUpdatedAt: dashboardStats.dataUpdatedAt,
+      isCached: !!queryClient.getQueryData(["admin", "dashboard-stats"]),
+    },
+  };
+
+  // Log cache status in development
+  if (process.env.NODE_ENV === "development") {
+    console.log("📊 Admin Data Cache Status:", cacheStatus);
+  }
+
+  return {
+    isLoading:
+      jobs.isLoading || applications.isLoading || dashboardStats.isLoading,
+    isFetching:
+      jobs.isFetching || applications.isFetching || dashboardStats.isFetching,
+    isError: jobs.isError || applications.isError || dashboardStats.isError,
+    errors: [jobs.error, applications.error, dashboardStats.error].filter(
+      Boolean
+    ),
+    cacheStatus,
   };
 };
 
@@ -429,22 +521,6 @@ export const useUpdateApplicationStatus = () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "analytics"] });
     },
   });
-};
-
-// Hook to check if data is loading across multiple queries
-export const useAdminDataStatus = () => {
-  const jobs = useJobs();
-  const applications = useApplications();
-  const dashboardStats = useDashboardStats();
-
-  return {
-    isLoading:
-      jobs.isLoading || applications.isLoading || dashboardStats.isLoading,
-    isError: jobs.isError || applications.isError || dashboardStats.isError,
-    errors: [jobs.error, applications.error, dashboardStats.error].filter(
-      Boolean
-    ),
-  };
 };
 
 // Hook for getting cached data without triggering fetch

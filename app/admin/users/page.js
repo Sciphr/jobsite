@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
@@ -29,7 +29,6 @@ import {
 export default function AdminUsers() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
-  const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -38,7 +37,8 @@ export default function AdminUsers() {
   const { data: users = [], isLoading, isError, error, refetch } = useUsers();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  // ✅ REPLACE WITH THIS:
+  const filteredUsers = useMemo(() => {
     let filtered = users;
 
     // Search filter
@@ -62,8 +62,8 @@ export default function AdminUsers() {
       filtered = filtered.filter((user) => user.isActive === isActive);
     }
 
-    setFilteredUsers(filtered);
-  }, [users.length, searchTerm, roleFilter, statusFilter]);
+    return filtered;
+  }, [users, searchTerm, roleFilter, statusFilter]); // ✅ Depend on actual data, not .length
 
   const handleRefresh = async () => {
     setRefreshing(true);

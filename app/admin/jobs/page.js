@@ -49,7 +49,6 @@ export default function AdminJobs() {
   const deleteJobMutation = useDeleteJob();
   const { invalidateJobs } = useInvalidateAdminData();
 
-  const [filteredJobs, setFilteredJobs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -57,7 +56,8 @@ export default function AdminJobs() {
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [featuredError, setFeaturedError] = useState(null);
 
-  useEffect(() => {
+  // ✅ REPLACE WITH THIS:
+  const filteredJobs = useMemo(() => {
     let filtered = jobs;
 
     // Search filter
@@ -85,8 +85,8 @@ export default function AdminJobs() {
       filtered = filtered.filter((job) => job.department === departmentFilter);
     }
 
-    setFilteredJobs(filtered);
-  }, [jobs.length, searchTerm, statusFilter, categoryFilter, departmentFilter]);
+    return filtered;
+  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]); // ✅ Depend on actual data, not .length
 
   const updateJobStatus = async (jobId, newStatus) => {
     try {

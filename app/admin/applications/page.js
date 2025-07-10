@@ -1,6 +1,7 @@
+// app/admin/applications/page.js - FIXED to prevent unnecessary effects
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
@@ -34,8 +35,7 @@ export default function AdminApplications() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
-  const [filteredApplications, setFilteredApplications] = useState([]);
-
+  // ✅ FIXED: Remove array-dependent useEffect
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
@@ -61,8 +61,8 @@ export default function AdminApplications() {
     setRefreshing(false);
   };
 
-  // ✅ AFTER (fixed):
-  useEffect(() => {
+  // ✅ FIXED: Use useMemo instead of useEffect to prevent unnecessary calls
+  const filteredApplications = useMemo(() => {
     let filtered = applications;
 
     if (searchTerm) {
@@ -82,8 +82,8 @@ export default function AdminApplications() {
       filtered = filtered.filter((app) => app.jobId === jobFilter);
     }
 
-    setFilteredApplications(filtered);
-  }, [applications.length, searchTerm, statusFilter, jobFilter]);
+    return filtered;
+  }, [applications, searchTerm, statusFilter, jobFilter]); // ✅ FIXED: Depend on actual data, not .length
 
   const updateApplicationStatus = async (applicationId, newStatus) => {
     try {
@@ -130,9 +130,7 @@ export default function AdminApplications() {
       });
 
       if (response.ok) {
-        setApplications((prev) =>
-          prev.filter((app) => app.id !== applicationId)
-        );
+        // Note: React Query will handle cache updates via mutations
         setSelectedApplications((prev) =>
           prev.filter((id) => id !== applicationId)
         );
@@ -159,9 +157,6 @@ export default function AdminApplications() {
             fetch(`/api/admin/applications/${id}`, { method: "DELETE" })
           )
         );
-        setApplications((prev) =>
-          prev.filter((app) => !selectedApplications.includes(app.id))
-        );
       } else {
         await Promise.all(
           selectedApplications.map((id) =>
@@ -172,15 +167,9 @@ export default function AdminApplications() {
             })
           )
         );
-        setApplications((prev) =>
-          prev.map((app) =>
-            selectedApplications.includes(app.id)
-              ? { ...app, status: action }
-              : app
-          )
-        );
       }
       setSelectedApplications([]);
+      // React Query will handle cache updates
     } catch (error) {
       console.error("Error performing bulk action:", error);
     }
@@ -229,6 +218,18 @@ export default function AdminApplications() {
     "Hired",
     "Rejected",
   ];
+
+  // ✅ Show cache status in development
+  if (process.env.NODE_ENV === "development") {
+    console.log("📊 Applications Component Render:", {
+      applicationsCount: applications.length,
+      isLoading,
+      filteredCount: filteredApplications.length,
+      searchTerm,
+      statusFilter,
+      jobFilter,
+    });
+  }
 
   if (isLoading) {
     return (

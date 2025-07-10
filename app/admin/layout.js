@@ -40,50 +40,14 @@ function AdminLayoutContent({ children }) {
     prefetchAnalytics,
   } = usePrefetchAdminData();
 
+  // ✅ REPLACE your useEffect with this ONE-TIME prefetch:
   useEffect(() => {
-    // Only prefetch if we have a valid admin session
+    // Only prefetch once when admin layout first loads
     if (session?.user?.privilegeLevel >= 1) {
-      // Always prefetch essential dashboard data
-      const prefetchPromises = [];
-
-      // Route-based prefetching (only prefetch what's needed for current/likely next routes)
-      if (pathname.includes("/admin/dashboard")) {
-        // Dashboard needs stats
-        prefetchPromises.push(prefetchAll());
-      } else if (pathname.includes("/admin/jobs")) {
-        // Jobs page
-        prefetchPromises.push(prefetchJobs());
-      } else if (pathname.includes("/admin/applications")) {
-        // Applications page
-        prefetchPromises.push(prefetchApplications());
-      } else if (pathname.includes("/admin/analytics")) {
-        // Analytics page
-        prefetchPromises.push(prefetchAnalytics());
-      } else if (
-        pathname.includes("/admin/users") &&
-        session.user.privilegeLevel >= 3
-      ) {
-        // Users page (super admin only)
-        prefetchPromises.push(prefetchUsers());
-      } else {
-        // For other routes, just prefetch minimal data
-        prefetchPromises.push(prefetchAll());
-      }
-
-      // Execute prefetching
-      Promise.allSettled(prefetchPromises).catch((error) => {
-        console.warn("Prefetch failed:", error);
-      });
+      console.log("🎯 Admin layout loaded - starting one-time prefetch");
+      prefetchAll();
     }
-  }, [
-    pathname,
-    session?.user?.privilegeLevel,
-    prefetchAll,
-    prefetchJobs,
-    prefetchApplications,
-    prefetchUsers,
-    prefetchAnalytics,
-  ]);
+  }, [session?.user?.privilegeLevel, prefetchAll]); // Only run when session changes
 
   // Show loading while checking session
   if (status === "loading") {
