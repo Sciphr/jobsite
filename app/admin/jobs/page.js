@@ -56,6 +56,11 @@ export default function AdminJobs() {
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [featuredError, setFeaturedError] = useState(null);
 
+  // ✅ QUICK FIX - Add this line right after your hooks:
+  const memoizedJobs = useMemo(() => filteredJobs, [filteredJobs]);
+
+  // Then use memoizedJobs instead of filteredJobs in your .map()
+
   // ✅ REPLACE WITH THIS:
   const filteredJobs = useMemo(() => {
     let filtered = jobs;
@@ -442,7 +447,7 @@ export default function AdminJobs() {
 
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredJobs.map((job) => {
+        {memoizedJobs.map((job) => {
           const StatusIcon = getStatusIcon(job.status);
           return (
             <div
