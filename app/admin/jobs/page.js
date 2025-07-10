@@ -45,8 +45,8 @@ export default function AdminJobs() {
   const { data: jobs = [], isLoading, isError, error, refetch } = useJobs();
 
   const { data: categories = [] } = useCategories();
-  const updateJobMutation = useUpdateJob();
-  const deleteJobMutation = useDeleteJob();
+  // const updateJobMutation = useUpdateJob();
+ // const deleteJobMutation = useDeleteJob();
   const { invalidateJobs } = useInvalidateAdminData();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,7 +88,7 @@ export default function AdminJobs() {
     return filtered;
   }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]); // ✅ Depend on actual data, not .length
 
-  const updateJobStatus = async (jobId, newStatus) => {
+/*  const updateJobStatus = async (jobId, newStatus) => {
     try {
       await updateJobMutation.mutateAsync({
         jobId,
@@ -97,7 +97,7 @@ export default function AdminJobs() {
     } catch (error) {
       console.error("Error updating job status:", error);
     }
-  };
+  }; */
 
   const toggleFeatured = async (jobId, featured) => {
     try {
@@ -139,7 +139,7 @@ export default function AdminJobs() {
     }
   };
 
-  const deleteJob = async (jobId) => {
+  /* const deleteJob = async (jobId) => {
     if (
       !confirm(
         "Are you sure you want to delete this job? This action cannot be undone."
@@ -154,7 +154,7 @@ export default function AdminJobs() {
     } catch (error) {
       console.error("Error deleting job:", error);
     }
-  };
+  }; */
 
   const handleSelectAll = (checked) => {
     if (checked) {
