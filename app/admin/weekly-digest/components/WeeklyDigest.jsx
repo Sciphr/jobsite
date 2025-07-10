@@ -9,7 +9,7 @@ import {
   Users,
   Activity,
   Calendar,
-  Edit3,
+  X,
   Check,
   Send,
   Eye,
@@ -97,53 +97,62 @@ const WeeklyDigest = () => {
 
   const loadDigestSettings = async () => {
     try {
-      const response = await fetch(
-        "/api/admin/settings?category=notifications"
-      );
+      setLoading(true);
+      const response = await fetch("/api/admin/weekly-digest/settings");
+
       if (response.ok) {
         const data = await response.json();
-        const notificationSettings = data.grouped?.notifications || [];
-
-        const enabled =
-          notificationSettings.find((s) => s.key === "weekly_digest_enabled")
-            ?.parsedValue ?? true;
-        const recipients =
-          notificationSettings.find((s) => s.key === "weekly_digest_recipients")
-            ?.parsedValue ?? [];
-        const day =
-          notificationSettings.find((s) => s.key === "weekly_digest_day")
-            ?.parsedValue ?? "monday";
-        const time =
-          notificationSettings.find((s) => s.key === "weekly_digest_time")
-            ?.parsedValue ?? "09:00";
-
-        setDigestConfig((prev) => ({
-          ...prev,
-          enabled,
-          recipients: Array.isArray(recipients) ? recipients : [],
-          schedule: {
-            dayOfWeek:
-              day === "monday"
-                ? 1
-                : day === "tuesday"
-                  ? 2
-                  : day === "wednesday"
-                    ? 3
-                    : day === "thursday"
-                      ? 4
-                      : day === "friday"
-                        ? 5
-                        : day === "saturday"
-                          ? 6
-                          : 0,
-            time,
-          },
-        }));
+        if (data.success && data.data) {
+          setDigestConfig(data.data);
+          console.log("✅ Loaded digest settings:", data.data);
+        }
+      } else {
+        console.error("Failed to load digest settings:", response.statusText);
       }
     } catch (error) {
       console.error("Error loading digest settings:", error);
     } finally {
+      setLoading(false);
       setSettingsLoaded(true);
+    }
+  };
+
+  const saveDigestSettings = async () => {
+    try {
+      setLoading(true);
+      console.log("💾 Saving digest configuration:", digestConfig);
+
+      const response = await fetch("/api/admin/weekly-digest/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ digestConfig }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Show success message
+        setTestResult({
+          success: true,
+          message: "Settings saved successfully!",
+        });
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setTestResult(null), 3000);
+      } else {
+        setTestResult({
+          success: false,
+          message: data.message || "Failed to save settings",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      setTestResult({
+        success: false,
+        message: "Network error occurred while saving",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -152,6 +161,10 @@ const WeeklyDigest = () => {
     setTestResult(null);
 
     try {
+      // Save current settings first
+      await saveDigestSettings();
+
+      // Then send test
       const response = await fetch("/api/admin/weekly-digest/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,7 +175,7 @@ const WeeklyDigest = () => {
       if (response.ok) {
         setTestResult({
           success: true,
-          message: `Test digest sent to ${data.sent} recipient(s)!`,
+          message: `Test digest sent to ${data.sent} recipient(s) using your current settings!`,
         });
       } else {
         setTestResult({
@@ -199,10 +212,20 @@ const WeeklyDigest = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={saveDigestSettings}
+            disabled={loading}
+            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium disabled:opacity-50"
+          >
+            <Settings className="w-4 h-4" />
+            <span>{loading ? "Saving..." : "Save Settings"}</span>
+          </button>
+
           <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800">
             <Eye className="w-4 h-4" />
             <span>Preview</span>
           </button>
+
           <button
             onClick={handleSendTest}
             disabled={testing}
@@ -214,6 +237,24 @@ const WeeklyDigest = () => {
         </div>
       </div>
 
+      {testResult && (
+        <div
+          className={`rounded-lg p-4 mb-6 ${
+            testResult.success
+              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
+              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200"
+          }`}
+        >
+          <div className="flex items-center">
+            {testResult.success ? (
+              <Check className="w-5 h-5 mr-2" />
+            ) : (
+              <X className="w-5 h-5 mr-2" />
+            )}
+            <span className="font-medium">{testResult.message}</span>
+          </div>
+        </div>
+      )}
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Configuration Panel */}
