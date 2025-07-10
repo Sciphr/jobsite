@@ -22,10 +22,10 @@ export const useJobs = () => {
   return useQuery({
     queryKey: ["admin", "jobs"],
     queryFn: () => fetcher("/api/admin/jobs"),
-    staleTime: 10 * 60 * 1000, // 10 minutes - jobs don't change frequently
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 15 * 60 * 1000, // ✅ INCREASED: 15 minutes (was 10)
+    gcTime: 2 * 60 * 60 * 1000, // ✅ INCREASED: 2 hours (was 1)
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Only refetch if stale
+    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
   });
 };
 
@@ -33,10 +33,10 @@ export const useApplications = () => {
   return useQuery({
     queryKey: ["admin", "applications"],
     queryFn: () => fetcher("/api/admin/applications"),
-    staleTime: 5 * 60 * 1000, // 5 minutes - more dynamic data
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 10 * 60 * 1000, // ✅ INCREASED: 10 minutes (was 5)
+    gcTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour (was 30 min)
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
   });
 };
 
@@ -44,10 +44,10 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ["admin", "users"],
     queryFn: () => fetcher("/api/admin/users"),
-    staleTime: 15 * 60 * 1000, // 15 minutes - changes less frequently
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    staleTime: 20 * 60 * 1000, // ✅ INCREASED: 20 minutes (was 15)
+    gcTime: 4 * 60 * 60 * 1000, // ✅ INCREASED: 4 hours (was 2)
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
   });
 };
 
@@ -55,10 +55,10 @@ export const useAnalytics = (timeRange = "30d") => {
   return useQuery({
     queryKey: ["admin", "analytics", timeRange],
     queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 15 * 60 * 1000, // ✅ INCREASED: 15 minutes (was 10)
+    gcTime: 2 * 60 * 60 * 1000, // ✅ INCREASED: 2 hours (was 1)
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
   });
 };
 
@@ -66,10 +66,10 @@ export const useDashboardStats = () => {
   return useQuery({
     queryKey: ["admin", "dashboard-stats"],
     queryFn: () => fetcher("/api/admin/dashboard-stats"),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 10 * 60 * 1000, // ✅ INCREASED: 10 minutes (was 5)
+    gcTime: 60 * 60 * 1000, // ✅ INCREASED: 1 hour (was 30 min)
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: false, // ✅ ADDED: Prevent refetch on component mount
   });
 };
 

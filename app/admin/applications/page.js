@@ -61,11 +61,8 @@ export default function AdminApplications() {
     setRefreshing(false);
   };
 
+  // ✅ AFTER (fixed):
   useEffect(() => {
-    filterApplications();
-  }, [applications, searchTerm, statusFilter, jobFilter]);
-
-  const filterApplications = () => {
     let filtered = applications;
 
     if (searchTerm) {
@@ -86,7 +83,7 @@ export default function AdminApplications() {
     }
 
     setFilteredApplications(filtered);
-  };
+  }, [applications.length, searchTerm, statusFilter, jobFilter]);
 
   const updateApplicationStatus = async (applicationId, newStatus) => {
     try {

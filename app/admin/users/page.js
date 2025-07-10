@@ -39,25 +39,6 @@ export default function AdminUsers() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    filterUsers();
-  }, [users, searchTerm, roleFilter, statusFilter]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const response = await fetch("/api/admin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
-    } catch (error) {
-      console.error("Error refreshing users:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const filterUsers = () => {
     let filtered = users;
 
     // Search filter
@@ -82,6 +63,21 @@ export default function AdminUsers() {
     }
 
     setFilteredUsers(filtered);
+  }, [users.length, searchTerm, roleFilter, statusFilter]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch("/api/admin/users");
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error("Error refreshing users:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const updateUserStatus = async (userId, isActive) => {

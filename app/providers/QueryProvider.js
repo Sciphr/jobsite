@@ -1,4 +1,4 @@
-// app/providers/QueryProvider.js - Fixed configuration
+// app/providers/QueryProvider.js - FIXED VERSION
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,25 +11,22 @@ export function QueryProvider({ children }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Keep data fresh for 5 minutes before considering it stale
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            // Keep data in cache for 30 minutes after it becomes inactive
-            gcTime: 30 * 60 * 1000, // 30 minutes
-            // Retry failed requests up to 3 times
+            // ✅ FIXED: More aggressive caching to prevent unnecessary API calls
+            staleTime: 10 * 60 * 1000, // 10 minutes - data stays fresh longer
+            gcTime: 60 * 60 * 1000, // 1 hour - keep in cache longer
+
+            // ✅ FIXED: Prevent refetching on navigation
+            refetchOnMount: false, // ❌ WAS: true - this was causing refetch on page navigation
+            refetchOnWindowFocus: false, // Already correctly set
+            refetchOnReconnect: false, // Already correctly set
+
+            // ✅ Keep these settings
             retry: 3,
-            // CRITICAL: Disable automatic refetching on navigation
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false, // Disable for admin dashboard
-            refetchOnMount: true, // Only refetch if data is stale
-            // Don't refetch interval
             refetchInterval: false,
-            // Network mode - online only (prevents unnecessary calls)
             networkMode: "online",
           },
           mutations: {
-            // Retry failed mutations once
             retry: 1,
-            // Network mode for mutations
             networkMode: "online",
           },
         },

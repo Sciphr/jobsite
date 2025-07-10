@@ -86,7 +86,7 @@ export default function AdminJobs() {
     }
 
     setFilteredJobs(filtered);
-  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]);
+  }, [jobs.length, searchTerm, statusFilter, categoryFilter, departmentFilter]);
 
   const updateJobStatus = async (jobId, newStatus) => {
     try {
