@@ -35,11 +35,7 @@ class EmailService {
         ]);
 
         // Validate SMTP configuration
-        if (
-          smtpSettings.smtp_host &&
-          smtpSettings.smtp_username &&
-          smtpSettings.smtp_from_email
-        ) {
+        if (smtpSettings.smtp_host && smtpSettings.smtp_from_email) {
           this.provider = "smtp";
           await this.initializeSMTP(smtpSettings);
           console.log("📧 Using custom SMTP server:", smtpSettings.smtp_host);
@@ -70,10 +66,12 @@ class EmailService {
         host: settings.smtp_host,
         port: parseInt(settings.smtp_port) || 587,
         secure: settings.smtp_secure, // true for 465, false for other ports
-        auth: {
-          user: settings.smtp_username,
-          pass: settings.smtp_password,
-        },
+        auth: settings.smtp_username
+          ? {
+              user: settings.smtp_username,
+              pass: settings.smtp_password,
+            }
+          : undefined,
         // Additional options for better compatibility
         tls: {
           rejectUnauthorized: false, // Allow self-signed certificates
