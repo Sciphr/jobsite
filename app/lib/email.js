@@ -66,7 +66,7 @@ class EmailService {
    */
   async initializeSMTP(settings) {
     try {
-      this.smtpTransporter = nodemailer.createTransporter({
+      this.smtpTransporter = nodemailer.createTransport({
         host: settings.smtp_host,
         port: parseInt(settings.smtp_port) || 587,
         secure: settings.smtp_secure, // true for 465, false for other ports
