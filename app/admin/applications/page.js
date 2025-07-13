@@ -1,10 +1,10 @@
 // app/admin/applications/page.js - FIXED to prevent unnecessary effects
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   useApplications,
   useJobsSimple,
@@ -13,7 +13,6 @@ import {
 import {
   FileText,
   Search,
-  Filter,
   Eye,
   Download,
   Mail,
@@ -21,18 +20,21 @@ import {
   Calendar,
   User,
   Briefcase,
-  ChevronDown,
   RefreshCw,
   MoreHorizontal,
   X,
-  Trash2,
-  Clock,
   CheckCircle,
   XCircle,
+  Settings,
+  BarChart3,
+  Zap,
+  ArrowRight,
+  Target,
 } from "lucide-react";
 
 export default function AdminApplications() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
   // ✅ FIXED: Remove array-dependent useEffect
@@ -250,32 +252,81 @@ export default function AdminApplications() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header with Applications Manager CTA */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold admin-text">Applications</h1>
           <p className="admin-text-light mt-2">
-            Manage job applications and candidate pipeline
+            Quick overview and basic application management
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          {/* NEW: Applications Manager CTA */}
+          <button
+            onClick={() => router.push("/applications-manager")}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-all duration-200 shadow-md ${getButtonClasses("primary")} hover:shadow-lg transform hover:-translate-y-0.5`}
+          >
+            <Zap className="h-5 w-5" />
+            <span className="font-semibold">Applications Manager</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")} ${refreshing ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             />
             <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
-          {selectedApplications.length > 0 && (
-            <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
-              <span className="text-sm text-blue-800">
-                {selectedApplications.length} selected
-              </span>
+        </div>
+      </div>
+
+      {/* NEW: Applications Manager Promotion Card */}
+      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-xl shadow-lg overflow-hidden">
+        <div className="px-6 py-8 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-white bg-opacity-20 p-2 rounded-lg">
+                  <Target className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold">
+                  Upgrade to Applications Manager
+                </h3>
+              </div>
+              <p className="text-blue-100 mb-4 max-w-2xl">
+                Get enterprise-level application management with job-specific
+                views, pipeline workflows, advanced analytics, bulk operations,
+                and automated communication tools.
+              </p>
+              <div className="flex items-center space-x-6 text-sm text-blue-100">
+                <div className="flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Advanced Analytics</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Settings className="h-4 w-4" />
+                  <span>Pipeline Management</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4" />
+                  <span>Automated Communications</span>
+                </div>
+              </div>
             </div>
-          )}
+            <div className="flex-shrink-0 ml-6">
+              <button
+                onClick={() => router.push("/applications-manager")}
+                className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
+              >
+                <span>Open Manager</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

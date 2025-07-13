@@ -37,6 +37,11 @@ model User {
   
   // Admin relations
   createdJobs  Job[]        @relation("JobCreator")
+
+  // New relations for communication
+  emailTemplates     EmailTemplate[] @relation("EmailTemplateCreator")
+  sentEmails         Email[]         @relation("SentEmails") 
+  emailCampaigns     EmailCampaign[] @relation("EmailCampaigns")
   
   @@map("users")
 }
@@ -145,6 +150,10 @@ model SavedJob {
   // Relations
   user      User     @relation(fields: [userId], references: [id])
   job       Job      @relation(fields: [jobId], references: [id])
+
+   // New relations  
+  emails             Email[]         @relation("JobEmails")
+  emailCampaigns     EmailCampaign[] @relation("JobCampaigns")
   
   // Ensure one save per user per job
   @@unique([userId, jobId])
@@ -189,4 +198,134 @@ model Setting {
   @@unique([key, userId])
   
   @@map("settings")
+}
+
+// Email templates for different scenarios
+model EmailTemplate {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   // "Interview Invitation", "Rejection - No Experience", etc.
+  subject     String   // Email subject line with variables
+  content     String   // Email body with variables {{name}}, {{jobTitle}}, etc.
+  type        String   // "interview_invite", "rejection", "offer", "status_update", "custom"
+  isDefault   Boolean  @default(false) // System default templates
+  isActive    Boolean  @default(true)
+  
+  // Customization
+  variables   String?  // JSON array of available variables
+  description String?  // What this template is for
+  
+  // Audit fields
+  createdBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  creator     User?    @relation("EmailTemplateCreator", fields: [createdBy], references: [id])
+  emails      Email[]  @relation("TemplateEmails")
+  
+  @@map("email_templates")
+}
+
+// Individual emails sent to candidates
+model Email {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject       String
+  content       String   // Final email content (after variable substitution)
+  htmlContent   String?  // HTML version if available
+  
+  // Recipients
+  recipientEmail String
+  recipientName  String?
+  
+  // Context
+  applicationId  String?  @db.Uuid  // If sent to specific application
+  jobId         String?  @db.Uuid  // If sent to multiple candidates for a job
+  templateId    String?  @db.Uuid  // If based on template
+  
+  // Email metadata
+  emailProvider String?  // "resend", "smtp", etc.
+  messageId     String?  // Provider's message ID
+  status        String   @default("pending") // "pending", "sent", "delivered", "failed", "bounced"
+  failureReason String?
+  
+  // Tracking (for future features)
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  repliedAt     DateTime?
+  
+  // Audit fields
+  sentBy        String   @db.Uuid
+  sentAt        DateTime @default(now())
+  
+  // Relations
+  application   Application? @relation("ApplicationEmails", fields: [applicationId], references: [id])
+  job           Job?         @relation("JobEmails", fields: [jobId], references: [id])
+  template      EmailTemplate? @relation("TemplateEmails", fields: [templateId], references: [id])
+  sender        User         @relation("SentEmails", fields: [sentBy], references: [id])
+  
+  @@map("emails")
+}
+
+// Bulk email campaigns (for sending to multiple candidates)
+model EmailCampaign {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   // "Interview Invitations - Senior Developer Role"
+  subject     String
+  content     String
+  
+  // Targeting
+  jobId       String?  @db.Uuid  // If targeting specific job
+  status      String?  // If targeting specific status
+  filters     String?  // JSON of additional filters
+  
+  // Campaign metadata
+  totalRecipients    Int      @default(0)
+  successfulSends    Int      @default(0)
+  failedSends        Int      @default(0)
+  
+  // Audit fields
+  createdBy   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  sentAt      DateTime?
+  
+  // Relations
+  job         Job?     @relation("JobCampaigns", fields: [jobId], references: [id])
+  creator     User     @relation("EmailCampaigns", fields: [createdBy], references: [id])
+  emails      Email[]  @relation("CampaignEmails")
+  
+  @@map("email_campaigns")
+}
+
+// Communication preferences and settings
+model CommunicationSetting {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key            String   // "default_from_name", "email_signature", "auto_send_on_status_change"
+  value          String
+  category       String   // "email", "sms", "automation"
+  description    String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([key])
+  @@map("communication_settings")
+}
+
+// Optional: Email automation rules
+model EmailAutomationRule {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   // "Send rejection after 7 days in Applied"
+  trigger     String   // "status_change", "time_delay", "manual"
+  conditions  String   // JSON of conditions
+  templateId  String   @db.Uuid
+  isActive    Boolean  @default(true)
+  
+  createdBy   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  template    EmailTemplate @relation(fields: [templateId], references: [id])
+  creator     User          @relation(fields: [createdBy], references: [id])
+  
+  @@map("email_automation_rules")
 }
