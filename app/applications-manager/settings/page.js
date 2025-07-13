@@ -6,6 +6,7 @@ import { useSettings } from "@/app/hooks/useAdminData";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { motion } from "framer-motion";
 import {
   Settings,
   Workflow,
@@ -409,256 +410,263 @@ export default function ApplicationsManagerSettings() {
   const filteredSettings = getFilteredSettings();
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
-            <Settings className="h-8 w-8 text-blue-600" />
-            <span>Hiring Settings</span>
-          </h1>
-          <p className="admin-text-light mt-2">
-            Configure automation, workflows, and preferences for your hiring
-            process
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => resetCategory(activeTab)}
-            disabled={isLoading}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Reset Category</span>
-          </button>
-          <button
-            onClick={() => router.push("/applications-manager")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
-          >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            <span>Back to Overview</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Save Status Alert */}
-      {saveStatus && (
-        <div
-          className={`p-4 rounded-lg border ${
-            saveStatus.type === "success"
-              ? "bg-green-50 border-green-200 text-green-800"
-              : saveStatus.type === "info"
-                ? "bg-blue-50 border-blue-200 text-blue-800"
-                : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          <div className="flex items-center space-x-2">
-            {saveStatus.type === "success" ? (
-              <CheckCircle className="h-5 w-5" />
-            ) : saveStatus.type === "info" ? (
-              <Info className="h-5 w-5" />
-            ) : (
-              <AlertCircle className="h-5 w-5" />
-            )}
-            <span>{saveStatus.message}</span>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
+              <Settings className="h-8 w-8 text-blue-600" />
+              <span>Hiring Settings</span>
+            </h1>
+            <p className="admin-text-light mt-2">
+              Configure automation, workflows, and preferences for your hiring
+              process
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => resetCategory(activeTab)}
+              disabled={isLoading}
+              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Reset Category</span>
+            </button>
+            <button
+              onClick={() => router.push("/applications-manager")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" />
+              <span>Back to Overview</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Search */}
-      <div className="admin-card p-4 rounded-lg shadow">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search settings..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Navigation */}
-        <div className="lg:col-span-1">
-          <div className="admin-card rounded-lg shadow overflow-hidden sticky top-6">
-            <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600">
-              <h3 className="font-semibold text-white flex items-center space-x-2">
-                <Zap className="h-5 w-5" />
-                <span>Settings Categories</span>
-              </h3>
+        {/* Save Status Alert */}
+        {saveStatus && (
+          <div
+            className={`p-4 rounded-lg border ${
+              saveStatus.type === "success"
+                ? "bg-green-50 border-green-200 text-green-800"
+                : saveStatus.type === "info"
+                  ? "bg-blue-50 border-blue-200 text-blue-800"
+                  : "bg-red-50 border-red-200 text-red-800"
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              {saveStatus.type === "success" ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : saveStatus.type === "info" ? (
+                <Info className="h-5 w-5" />
+              ) : (
+                <AlertCircle className="h-5 w-5" />
+              )}
+              <span>{saveStatus.message}</span>
             </div>
-            <nav className="p-2">
-              {settingCategories.map((category) => {
-                const Icon = category.icon;
-                const isActive = activeTab === category.id;
-                const categorySettings = settings.filter(
-                  (s) => s.category === category.id
-                );
+          </div>
+        )}
 
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveTab(category.id)}
-                    className={`w-full text-left px-3 py-3 rounded-lg transition-colors mb-1 ${
-                      isActive
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Icon
-                        className={`h-5 w-5 ${isActive ? "text-blue-600" : "text-gray-400"}`}
-                      />
-                      <div className="flex-1">
-                        <div
-                          className={`text-sm font-medium ${isActive ? "text-blue-900" : "text-gray-900"}`}
-                        >
-                          {category.label}
-                        </div>
-                        <div
-                          className={`text-xs ${isActive ? "text-blue-600" : "text-gray-500"}`}
-                        >
-                          {categorySettings.length} settings
+        {/* Search */}
+        <div className="admin-card p-4 rounded-lg shadow">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search settings..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar Navigation */}
+          <div className="lg:col-span-1">
+            <div className="admin-card rounded-lg shadow overflow-hidden sticky top-6">
+              <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600">
+                <h3 className="font-semibold text-white flex items-center space-x-2">
+                  <Zap className="h-5 w-5" />
+                  <span>Settings Categories</span>
+                </h3>
+              </div>
+              <nav className="p-2">
+                {settingCategories.map((category) => {
+                  const Icon = category.icon;
+                  const isActive = activeTab === category.id;
+                  const categorySettings = settings.filter(
+                    (s) => s.category === category.id
+                  );
+
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => setActiveTab(category.id)}
+                      className={`w-full text-left px-3 py-3 rounded-lg transition-colors mb-1 ${
+                        isActive
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Icon
+                          className={`h-5 w-5 ${isActive ? "text-blue-600" : "text-gray-400"}`}
+                        />
+                        <div className="flex-1">
+                          <div
+                            className={`text-sm font-medium ${isActive ? "text-blue-900" : "text-gray-900"}`}
+                          >
+                            {category.label}
+                          </div>
+                          <div
+                            className={`text-xs ${isActive ? "text-blue-600" : "text-gray-500"}`}
+                          >
+                            {categorySettings.length} settings
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </nav>
+                    </button>
+                  );
+                })}
+              </nav>
 
-            {/* Save Actions */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              {hasChanges() && (
-                <div className="mb-3 flex items-center space-x-2 text-amber-700 text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>You have unsaved changes</span>
-                </div>
-              )}
-              <button
-                onClick={saveSettings}
-                disabled={isSaving || !hasChanges()}
-                className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                  hasChanges() && !isSaving
-                    ? getButtonClasses("primary")
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    <span>Save Changes</span>
-                  </>
+              {/* Save Actions */}
+              <div className="p-4 border-t border-gray-200 bg-gray-50">
+                {hasChanges() && (
+                  <div className="mb-3 flex items-center space-x-2 text-amber-700 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>You have unsaved changes</span>
+                  </div>
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Settings Content */}
-        <div className="lg:col-span-3">
-          <div className="admin-card rounded-lg shadow">
-            {/* Tab Header */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                {currentCategory && (
-                  <currentCategory.icon className="h-6 w-6 text-blue-600" />
-                )}
-                <div>
-                  <h3 className="text-lg font-semibold admin-text">
-                    {currentCategory?.label}
-                  </h3>
-                  <p className="text-sm admin-text-light mt-1">
-                    {currentCategory?.description}
-                  </p>
-                </div>
+                <button
+                  onClick={saveSettings}
+                  disabled={isSaving || !hasChanges()}
+                  className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    hasChanges() && !isSaving
+                      ? getButtonClasses("primary")
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+          </div>
 
-            {/* Settings List */}
-            <div className="p-6">
-              {filteredSettings.length === 0 ? (
-                <div className="text-center py-12">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm
-                      ? "No settings found"
-                      : "No settings configured"}
-                  </h3>
-                  <p className="text-gray-500">
-                    {searchTerm
-                      ? "Try adjusting your search terms"
-                      : "Settings for this category will appear here once loaded from the database"}
-                  </p>
+          {/* Settings Content */}
+          <div className="lg:col-span-3">
+            <div className="admin-card rounded-lg shadow">
+              {/* Tab Header */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  {currentCategory && (
+                    <currentCategory.icon className="h-6 w-6 text-blue-600" />
+                  )}
+                  <div>
+                    <h3 className="text-lg font-semibold admin-text">
+                      {currentCategory?.label}
+                    </h3>
+                    <p className="text-sm admin-text-light mt-1">
+                      {currentCategory?.description}
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {filteredSettings.map((setting) => (
-                    <div
-                      key={setting.id}
-                      className="border border-gray-200 rounded-lg p-6"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 flex items-center space-x-2">
-                            <span>
-                              {setting.key
-                                .replace(/_/g, " ")
-                                .replace(/\b\w/g, (l) => l.toUpperCase())}
+              </div>
+
+              {/* Settings List */}
+              <div className="p-6">
+                {filteredSettings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {searchTerm
+                        ? "No settings found"
+                        : "No settings configured"}
+                    </h3>
+                    <p className="text-gray-500">
+                      {searchTerm
+                        ? "Try adjusting your search terms"
+                        : "Settings for this category will appear here once loaded from the database"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {filteredSettings.map((setting) => (
+                      <div
+                        key={setting.id}
+                        className="border border-gray-200 rounded-lg p-6"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                              <span>
+                                {setting.key
+                                  .replace(/_/g, " ")
+                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </span>
+                              {setting.privilegeLevel >= 3 && (
+                                <Lock
+                                  className="h-4 w-4 text-red-500"
+                                  title="Requires super admin privileges"
+                                />
+                              )}
+                              {setting.privilegeLevel === 2 && (
+                                <Shield
+                                  className="h-4 w-4 text-orange-500"
+                                  title="Requires admin privileges"
+                                />
+                              )}
+                            </h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {setting.description}
+                            </p>
+                          </div>
+                          <div className="ml-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                setting.dataType === "boolean"
+                                  ? "bg-green-100 text-green-800"
+                                  : setting.dataType === "number"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : setting.dataType === "json"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {setting.dataType}
                             </span>
-                            {setting.privilegeLevel >= 3 && (
-                              <Lock
-                                className="h-4 w-4 text-red-500"
-                                title="Requires super admin privileges"
-                              />
-                            )}
-                            {setting.privilegeLevel === 2 && (
-                              <Shield
-                                className="h-4 w-4 text-orange-500"
-                                title="Requires admin privileges"
-                              />
-                            )}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {setting.description}
-                          </p>
+                          </div>
                         </div>
-                        <div className="ml-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              setting.dataType === "boolean"
-                                ? "bg-green-100 text-green-800"
-                                : setting.dataType === "number"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : setting.dataType === "json"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {setting.dataType}
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        {renderSettingField(setting)}
+                        <div className="space-y-2">
+                          {renderSettingField(setting)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

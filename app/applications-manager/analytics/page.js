@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
+import { motion } from "framer-motion";
 import {
   BarChart3,
   TrendingUp,
@@ -246,456 +247,580 @@ export default function AnalyticsPage() {
   }, [jobs]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-            <span>Analytics Dashboard</span>
-          </h1>
-          <p className="admin-text-light mt-2">
-            Comprehensive insights into your hiring performance and trends
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
-          >
-            <Filter className="h-4 w-4" />
-            <span>Filters</span>
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`}
-            />
-          </button>
-          <button
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("primary")}`}
-          >
-            <Download className="h-4 w-4" />
-            <span>Export Report</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="admin-card p-6 rounded-lg shadow">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Range
-              </label>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {timeRanges.map((range) => (
-                  <option key={range.value} value={range.value}>
-                    {range.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department
-              </label>
-              <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Departments</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Metric Focus
-              </label>
-              <select
-                value={selectedMetric}
-                onChange={(e) => setSelectedMetric(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="overview">Overview</option>
-                <option value="conversion">Conversion Funnel</option>
-                <option value="performance">Job Performance</option>
-                <option value="sources">Source Analysis</option>
-              </select>
-            </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+              <span>Analytics Dashboard</span>
+            </h1>
+            <p className="admin-text-light mt-2">
+              Comprehensive insights into your hiring performance and trends
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
+            >
+              <Filter className="h-4 w-4" />
+              <span>Filters</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`}
+              />
+            </button>
+            <button
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("primary")}`}
+            >
+              <Download className="h-4 w-4" />
+              <span>Export Report</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div
-          className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(0).border}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold admin-text">
-                {analytics.totalApplications}
-              </div>
-              <div className="text-sm admin-text-light font-medium">
-                Total Applications
-              </div>
-              <div className="flex items-center mt-2">
-                {analytics.weeklyGrowth >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                )}
-                <span
-                  className={`text-sm ${analytics.weeklyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
+        {/* Filters */}
+        {showFilters && (
+          <div className="admin-card p-6 rounded-lg shadow">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Time Range
+                </label>
+                <select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {analytics.weeklyGrowth >= 0 ? "+" : ""}
-                  {analytics.weeklyGrowth.toFixed(1)}% this week
-                </span>
+                  {timeRanges.map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Department
+                </label>
+                <select
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Metric Focus
+                </label>
+                <select
+                  value={selectedMetric}
+                  onChange={(e) => setSelectedMetric(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="overview">Overview</option>
+                  <option value="conversion">Conversion Funnel</option>
+                  <option value="performance">Job Performance</option>
+                  <option value="sources">Source Analysis</option>
+                </select>
               </div>
             </div>
-            <div
-              className={`stat-icon p-3 rounded-lg ${getStatCardClasses(0).bg}`}
-            >
-              <Users className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
+          </div>
+        )}
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div
+            className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(0).border}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold admin-text">
+                  {analytics.totalApplications}
+                </div>
+                <div className="text-sm admin-text-light font-medium">
+                  Total Applications
+                </div>
+                <div className="flex items-center mt-2">
+                  {analytics.weeklyGrowth >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                  )}
+                  <span
+                    className={`text-sm ${analytics.weeklyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {analytics.weeklyGrowth >= 0 ? "+" : ""}
+                    {analytics.weeklyGrowth.toFixed(1)}% this week
+                  </span>
+                </div>
+              </div>
+              <div
+                className={`stat-icon p-3 rounded-lg ${getStatCardClasses(0).bg}`}
+              >
+                <Users className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(1).border}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold admin-text">
+                  {analytics.conversionRates.overallConversion.toFixed(1)}%
+                </div>
+                <div className="text-sm admin-text-light font-medium">
+                  Overall Hire Rate
+                </div>
+                <div className="text-xs admin-text-light mt-2">
+                  {analytics.statusCounts.Hired || 0} hired from{" "}
+                  {analytics.totalApplications} applications
+                </div>
+              </div>
+              <div
+                className={`stat-icon p-3 rounded-lg ${getStatCardClasses(1).bg}`}
+              >
+                <Target className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(2).border}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold admin-text">
+                  {analytics.timeToHire.average}
+                </div>
+                <div className="text-sm admin-text-light font-medium">
+                  Avg. Days to Hire
+                </div>
+                <div className="text-xs admin-text-light mt-2">
+                  Median: {analytics.timeToHire.median} days
+                </div>
+              </div>
+              <div
+                className={`stat-icon p-3 rounded-lg ${getStatCardClasses(2).bg}`}
+              >
+                <Clock className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(3).border}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold admin-text">
+                  {analytics.activeJobs}
+                </div>
+                <div className="text-sm admin-text-light font-medium">
+                  Active Jobs
+                </div>
+                <div className="text-xs admin-text-light mt-2">
+                  {analytics.totalJobs} total positions
+                </div>
+              </div>
+              <div
+                className={`stat-icon p-3 rounded-lg ${getStatCardClasses(3).bg}`}
+              >
+                <Briefcase
+                  className={`h-6 w-6 ${getStatCardClasses(3).icon}`}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <div
-          className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(1).border}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold admin-text">
-                {analytics.conversionRates.overallConversion.toFixed(1)}%
+        {/* Main Analytics Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Conversion Funnel */}
+          <div className="lg:col-span-2">
+            <div className="admin-card rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                  <span>Hiring Funnel</span>
+                </h3>
               </div>
-              <div className="text-sm admin-text-light font-medium">
-                Overall Hire Rate
-              </div>
-              <div className="text-xs admin-text-light mt-2">
-                {analytics.statusCounts.Hired || 0} hired from{" "}
-                {analytics.totalApplications} applications
+              <div className="p-6">
+                <div className="space-y-6">
+                  {/* Funnel Stages */}
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Applications Received
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {analytics.totalApplications}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-blue-600 h-3 rounded-full"
+                        style={{ width: "100%" }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Under Review
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {analytics.statusCounts.Reviewing || 0} (
+                        {analytics.conversionRates.applicationToReview.toFixed(
+                          1
+                        )}
+                        %)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-yellow-500 h-3 rounded-full"
+                        style={{
+                          width: `${analytics.conversionRates.applicationToReview}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Interview Stage
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {analytics.statusCounts.Interview || 0} (
+                        {analytics.conversionRates.reviewToInterview.toFixed(1)}
+                        %)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-green-500 h-3 rounded-full"
+                        style={{
+                          width: `${analytics.conversionRates.reviewToInterview}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Hired
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {analytics.statusCounts.Hired || 0} (
+                        {analytics.conversionRates.interviewToHire.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-emerald-600 h-3 rounded-full"
+                        style={{
+                          width: `${analytics.conversionRates.interviewToHire}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Funnel Insights */}
+                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">
+                    Funnel Insights
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-blue-700">Biggest drop-off:</span>
+                      <span className="font-medium text-blue-900">
+                        {analytics.conversionRates.applicationToReview <
+                        analytics.conversionRates.reviewToInterview
+                          ? "Application → Review"
+                          : "Review → Interview"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-blue-700">
+                        Strongest conversion:
+                      </span>
+                      <span className="font-medium text-blue-900">
+                        Interview → Hire
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div
-              className={`stat-icon p-3 rounded-lg ${getStatCardClasses(1).bg}`}
-            >
-              <Target className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
+          </div>
+
+          {/* Quick Actions & Status */}
+          <div className="space-y-6">
+            {/* Status Distribution */}
+            <div className="admin-card rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                  <PieChart className="h-5 w-5 text-green-600" />
+                  <span>Application Status</span>
+                </h3>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  {Object.entries(analytics.statusCounts).map(
+                    ([status, count]) => {
+                      const percentage =
+                        analytics.totalApplications > 0
+                          ? (count / analytics.totalApplications) * 100
+                          : 0;
+
+                      const colors = {
+                        Applied: "bg-blue-500",
+                        Reviewing: "bg-yellow-500",
+                        Interview: "bg-green-500",
+                        Hired: "bg-emerald-600",
+                        Rejected: "bg-red-500",
+                      };
+
+                      return (
+                        <div
+                          key={status}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className={`w-3 h-3 rounded-full ${colors[status]}`}
+                            ></div>
+                            <span className="text-sm font-medium text-gray-700">
+                              {status}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-gray-900">
+                              {count}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {percentage.toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="admin-card rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold admin-text">
+                  Quick Actions
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
+                <button
+                  onClick={() => router.push("/applications-manager/pipeline")}
+                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Layers className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium">View Pipeline</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </button>
+
+                <button
+                  onClick={() =>
+                    router.push("/applications-manager/communication")
+                  }
+                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-5 w-5 text-green-600" />
+                    <span className="font-medium">Send Emails</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </button>
+
+                <button className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                    <span className="font-medium">Export Data</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div
-          className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(2).border}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold admin-text">
-                {analytics.timeToHire.average}
-              </div>
-              <div className="text-sm admin-text-light font-medium">
-                Avg. Days to Hire
-              </div>
-              <div className="text-xs admin-text-light mt-2">
-                Median: {analytics.timeToHire.median} days
-              </div>
-            </div>
-            <div
-              className={`stat-icon p-3 rounded-lg ${getStatCardClasses(2).bg}`}
-            >
-              <Clock className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(3).border}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold admin-text">
-                {analytics.activeJobs}
-              </div>
-              <div className="text-sm admin-text-light font-medium">
-                Active Jobs
-              </div>
-              <div className="text-xs admin-text-light mt-2">
-                {analytics.totalJobs} total positions
-              </div>
-            </div>
-            <div
-              className={`stat-icon p-3 rounded-lg ${getStatCardClasses(3).bg}`}
-            >
-              <Briefcase className={`h-6 w-6 ${getStatCardClasses(3).icon}`} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Analytics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Conversion Funnel */}
-        <div className="lg:col-span-2">
+        {/* Additional Analytics Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Performing Jobs */}
           <div className="admin-card rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-                <Activity className="h-5 w-5 text-blue-600" />
-                <span>Hiring Funnel</span>
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="space-y-6">
-                {/* Funnel Stages */}
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Applications Received
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {analytics.totalApplications}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-blue-600 h-3 rounded-full"
-                      style={{ width: "100%" }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Under Review
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {analytics.statusCounts.Reviewing || 0} (
-                      {analytics.conversionRates.applicationToReview.toFixed(1)}
-                      %)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-yellow-500 h-3 rounded-full"
-                      style={{
-                        width: `${analytics.conversionRates.applicationToReview}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Interview Stage
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {analytics.statusCounts.Interview || 0} (
-                      {analytics.conversionRates.reviewToInterview.toFixed(1)}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-green-500 h-3 rounded-full"
-                      style={{
-                        width: `${analytics.conversionRates.reviewToInterview}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Hired
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {analytics.statusCounts.Hired || 0} (
-                      {analytics.conversionRates.interviewToHire.toFixed(1)}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-emerald-600 h-3 rounded-full"
-                      style={{
-                        width: `${analytics.conversionRates.interviewToHire}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Funnel Insights */}
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">
-                  Funnel Insights
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-700">Biggest drop-off:</span>
-                    <span className="font-medium text-blue-900">
-                      {analytics.conversionRates.applicationToReview <
-                      analytics.conversionRates.reviewToInterview
-                        ? "Application → Review"
-                        : "Review → Interview"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-700">Strongest conversion:</span>
-                    <span className="font-medium text-blue-900">
-                      Interview → Hire
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions & Status */}
-        <div className="space-y-6">
-          {/* Status Distribution */}
-          <div className="admin-card rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-                <PieChart className="h-5 w-5 text-green-600" />
-                <span>Application Status</span>
+                <Award className="h-5 w-5 text-yellow-600" />
+                <span>Top Performing Jobs</span>
               </h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {Object.entries(analytics.statusCounts).map(
-                  ([status, count]) => {
-                    const percentage =
-                      analytics.totalApplications > 0
-                        ? (count / analytics.totalApplications) * 100
-                        : 0;
-
-                    const colors = {
-                      Applied: "bg-blue-500",
-                      Reviewing: "bg-yellow-500",
-                      Interview: "bg-green-500",
-                      Hired: "bg-emerald-600",
-                      Rejected: "bg-red-500",
-                    };
-
-                    return (
-                      <div
-                        key={status}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-3 h-3 rounded-full ${colors[status]}`}
-                          ></div>
-                          <span className="text-sm font-medium text-gray-700">
-                            {status}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-gray-900">
-                            {count}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {percentage.toFixed(1)}%
-                          </div>
-                        </div>
+                {analytics.jobPerformance.map((job, index) => (
+                  <div
+                    key={job.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() =>
+                      router.push(`/applications-manager/jobs/${job.id}`)
+                    }
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-bold">
+                        {index + 1}
                       </div>
-                    );
-                  }
-                )}
+                      <div>
+                        <h4 className="font-medium text-gray-900">
+                          {job.title}
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          {job.department}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-900">
+                        {job.applicationsCount}
+                      </div>
+                      <div className="text-xs text-gray-500">applications</div>
+                      <div className="text-xs text-green-600 font-medium">
+                        {job.conversionRate.toFixed(1)}% hire rate
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Department Performance */}
           <div className="admin-card rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold admin-text">
-                Quick Actions
+              <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                <Building className="h-5 w-5 text-indigo-600" />
+                <span>Department Performance</span>
               </h3>
             </div>
-            <div className="p-6 space-y-3">
-              <button
-                onClick={() => router.push("/applications-manager/pipeline")}
-                className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <Layers className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium">View Pipeline</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
-
-              <button
-                onClick={() =>
-                  router.push("/applications-manager/communication")
-                }
-                className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Send Emails</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
-
-              <button className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-purple-600" />
-                  <span className="font-medium">Export Data</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
+            <div className="p-6">
+              <div className="space-y-4">
+                {Object.entries(analytics.departmentStats).map(
+                  ([dept, stats]) => (
+                    <div
+                      key={dept}
+                      className="p-4 border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-gray-900">{dept}</h4>
+                        <span className="text-sm text-gray-500">
+                          {stats.jobs} jobs
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div>
+                          <div className="text-lg font-bold text-blue-600">
+                            {stats.applications}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Applications
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-green-600">
+                            {stats.hired}
+                          </div>
+                          <div className="text-xs text-gray-500">Hired</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-purple-600">
+                            {stats.applications > 0
+                              ? (
+                                  (stats.hired / stats.applications) *
+                                  100
+                                ).toFixed(1)
+                              : 0}
+                            %
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Success Rate
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Additional Analytics Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Performing Jobs */}
+        {/* Source Analysis */}
         <div className="admin-card rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-              <Award className="h-5 w-5 text-yellow-600" />
-              <span>Top Performing Jobs</span>
+              <Globe className="h-5 w-5 text-cyan-600" />
+              <span>Application Sources</span>
             </h3>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              {analytics.jobPerformance.map((job, index) => (
-                <div
-                  key={job.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() =>
-                    router.push(`/applications-manager/jobs/${job.id}`)
-                  }
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">{job.title}</h4>
-                      <p className="text-sm text-gray-500">{job.department}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              {analytics.sourceAnalysis.map((source, index) => (
+                <div key={source.source} className="text-center">
+                  <div className="mb-4">
+                    <div
+                      className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${getStatCardClasses(index % 4).bg}`}
+                    >
+                      <Globe
+                        className={`h-8 w-8 ${getStatCardClasses(index % 4).icon}`}
+                      />
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-gray-900">
-                      {job.applicationsCount}
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    {source.source}
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="text-2xl font-bold text-gray-900">
+                      {source.applications}
                     </div>
-                    <div className="text-xs text-gray-500">applications</div>
-                    <div className="text-xs text-green-600 font-medium">
-                      {job.conversionRate.toFixed(1)}% hire rate
+                    <div className="text-sm text-gray-500">applications</div>
+                    <div className="text-sm font-medium text-green-600">
+                      {source.hired} hired
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {source.applications > 0
+                        ? ((source.hired / source.applications) * 100).toFixed(
+                            1
+                          )
+                        : 0}
+                      % success
                     </div>
                   </div>
                 </div>
@@ -704,396 +829,302 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Department Performance */}
-        <div className="admin-card rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-              <Building className="h-5 w-5 text-indigo-600" />
-              <span>Department Performance</span>
-            </h3>
+        {/* Time-based Analysis */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Time to Hire Analysis */}
+          <div className="admin-card rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                <Timer className="h-5 w-5 text-orange-600" />
+                <span>Time to Hire Analysis</span>
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-orange-600">
+                    {analytics.timeToHire.average}
+                  </div>
+                  <div className="text-sm text-gray-500">Average Days</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {analytics.timeToHire.median}
+                  </div>
+                  <div className="text-sm text-gray-500">Median Days</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-800">
+                      Fastest Hire
+                    </span>
+                  </div>
+                  <span className="text-green-800 font-bold">
+                    {analytics.timeToHire.fastest} days
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <span className="font-medium text-red-800">
+                      Slowest Hire
+                    </span>
+                  </div>
+                  <span className="text-red-800 font-bold">
+                    {analytics.timeToHire.slowest} days
+                  </span>
+                </div>
+              </div>
+
+              {/* Time Range Breakdown */}
+              <div className="mt-6">
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Hiring Speed Distribution
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">≤ 7 days (Fast)</span>
+                    <span className="font-medium">25%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">8-14 days (Normal)</span>
+                    <span className="font-medium">45%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">15-21 days (Slow)</span>
+                    <span className="font-medium">20%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      &gt; 21 days (Very Slow)
+                    </span>
+                    <span className="font-medium">10%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {Object.entries(analytics.departmentStats).map(
-                ([dept, stats]) => (
-                  <div
-                    key={dept}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900">{dept}</h4>
-                      <span className="text-sm text-gray-500">
-                        {stats.jobs} jobs
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 text-center">
+
+          {/* Trends & Predictions */}
+          <div className="admin-card rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+                <span>Trends & Insights</span>
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-6">
+                {/* Key Insights */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Key Insights
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                      <Star className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <div className="text-lg font-bold text-blue-600">
-                          {stats.applications}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Applications
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-green-600">
-                          {stats.hired}
-                        </div>
-                        <div className="text-xs text-gray-500">Hired</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-purple-600">
-                          {stats.applications > 0
+                        <p className="font-medium text-blue-800">
+                          Strong Performance
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          LinkedIn referrals have the highest conversion rate at{" "}
+                          {analytics.sourceAnalysis.find(
+                            (s) => s.source === "LinkedIn"
+                          )
                             ? (
-                                (stats.hired / stats.applications) *
+                                (analytics.sourceAnalysis.find(
+                                  (s) => s.source === "LinkedIn"
+                                ).hired /
+                                  analytics.sourceAnalysis.find(
+                                    (s) => s.source === "LinkedIn"
+                                  ).applications) *
                                 100
                               ).toFixed(1)
                             : 0}
                           %
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Success Rate
-                        </div>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-yellow-800">
+                          Opportunity
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          {analytics.conversionRates.applicationToReview < 50
+                            ? "Low review rate suggests need for better initial screening"
+                            : "Consider automating more of the initial review process"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-green-800">
+                          Recommendation
+                        </p>
+                        <p className="text-sm text-green-700">
+                          Focus recruitment efforts on top-performing
+                          departments and sources
+                        </p>
                       </div>
                     </div>
                   </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                </div>
 
-      {/* Source Analysis */}
-      <div className="admin-card rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-            <Globe className="h-5 w-5 text-cyan-600" />
-            <span>Application Sources</span>
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {analytics.sourceAnalysis.map((source, index) => (
-              <div key={source.source} className="text-center">
-                <div className="mb-4">
-                  <div
-                    className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${getStatCardClasses(index % 4).bg}`}
-                  >
-                    <Globe
-                      className={`h-8 w-8 ${getStatCardClasses(index % 4).icon}`}
-                    />
+                {/* Monthly Predictions */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Monthly Forecast
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {Math.round(analytics.totalApplications * 1.15)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Projected Applications
+                      </div>
+                      <div className="text-xs text-green-600 font-medium">
+                        +15% growth
+                      </div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {Math.round((analytics.statusCounts.Hired || 0) * 1.2)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Projected Hires
+                      </div>
+                      <div className="text-xs text-green-600 font-medium">
+                        +20% growth
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <h4 className="font-medium text-gray-900 mb-2">
-                  {source.source}
-                </h4>
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold text-gray-900">
-                    {source.applications}
-                  </div>
-                  <div className="text-sm text-gray-500">applications</div>
-                  <div className="text-sm font-medium text-green-600">
-                    {source.hired} hired
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {source.applications > 0
-                      ? ((source.hired / source.applications) * 100).toFixed(1)
-                      : 0}
-                    % success
+
+                {/* Action Items */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Recommended Actions
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span>Review slow-moving applications in pipeline</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span>
+                        Optimize job postings for underperforming roles
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Increase recruitment focus on LinkedIn</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>
+                        Implement automated screening for high-volume roles
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Time-based Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Time to Hire Analysis */}
+        {/* Detailed Reports Section */}
         <div className="admin-card rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-              <Timer className="h-5 w-5 text-orange-600" />
-              <span>Time to Hire Analysis</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-gray-600" />
+                <span>Detailed Reports</span>
+              </h3>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")}`}
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Refresh Data</span>
+              </button>
+            </div>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-600">
-                  {analytics.timeToHire.average}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium">Candidate Report</span>
                 </div>
-                <div className="text-sm text-gray-500">Average Days</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">
-                  {analytics.timeToHire.median}
-                </div>
-                <div className="text-sm text-gray-500">Median Days</div>
-              </div>
-            </div>
+                <p className="text-sm text-gray-600">
+                  Detailed breakdown of all candidates and their journey
+                </p>
+              </button>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800">
-                    Fastest Hire
-                  </span>
+              <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Briefcase className="h-5 w-5 text-green-600" />
+                  <span className="font-medium">Job Performance</span>
                 </div>
-                <span className="text-green-800 font-bold">
-                  {analytics.timeToHire.fastest} days
-                </span>
-              </div>
+                <p className="text-sm text-gray-600">
+                  Analysis of individual job posting effectiveness
+                </p>
+              </button>
 
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <span className="font-medium text-red-800">Slowest Hire</span>
+              <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium">Time Analysis</span>
                 </div>
-                <span className="text-red-800 font-bold">
-                  {analytics.timeToHire.slowest} days
-                </span>
-              </div>
-            </div>
+                <p className="text-sm text-gray-600">
+                  Deep dive into hiring timelines and bottlenecks
+                </p>
+              </button>
 
-            {/* Time Range Breakdown */}
-            <div className="mt-6">
-              <h4 className="font-medium text-gray-900 mb-3">
-                Hiring Speed Distribution
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">≤ 7 days (Fast)</span>
-                  <span className="font-medium">25%</span>
+              <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                <div className="flex items-center space-x-3 mb-2">
+                  <Globe className="h-5 w-5 text-purple-600" />
+                  <span className="font-medium">Source Analysis</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">8-14 days (Normal)</span>
-                  <span className="font-medium">45%</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">15-21 days (Slow)</span>
-                  <span className="font-medium">20%</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">
-                    &gt; 21 days (Very Slow)
-                  </span>
-                  <span className="font-medium">10%</span>
-                </div>
-              </div>
+                <p className="text-sm text-gray-600">
+                  ROI and effectiveness of different recruitment channels
+                </p>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Trends & Predictions */}
-        <div className="admin-card rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
-              <span>Trends & Insights</span>
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-6">
-              {/* Key Insights */}
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Key Insights</h4>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                    <Star className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-blue-800">
-                        Strong Performance
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        LinkedIn referrals have the highest conversion rate at{" "}
-                        {analytics.sourceAnalysis.find(
-                          (s) => s.source === "LinkedIn"
-                        )
-                          ? (
-                              (analytics.sourceAnalysis.find(
-                                (s) => s.source === "LinkedIn"
-                              ).hired /
-                                analytics.sourceAnalysis.find(
-                                  (s) => s.source === "LinkedIn"
-                                ).applications) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-yellow-800">Opportunity</p>
-                      <p className="text-sm text-yellow-700">
-                        {analytics.conversionRates.applicationToReview < 50
-                          ? "Low review rate suggests need for better initial screening"
-                          : "Consider automating more of the initial review process"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-green-800">
-                        Recommendation
-                      </p>
-                      <p className="text-sm text-green-700">
-                        Focus recruitment efforts on top-performing departments
-                        and sources
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monthly Predictions */}
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">
-                  Monthly Forecast
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {Math.round(analytics.totalApplications * 1.15)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Projected Applications
-                    </div>
-                    <div className="text-xs text-green-600 font-medium">
-                      +15% growth
-                    </div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {Math.round((analytics.statusCounts.Hired || 0) * 1.2)}
-                    </div>
-                    <div className="text-sm text-gray-500">Projected Hires</div>
-                    <div className="text-xs text-green-600 font-medium">
-                      +20% growth
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Items */}
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">
-                  Recommended Actions
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span>Review slow-moving applications in pipeline</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span>Optimize job postings for underperforming roles</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Increase recruitment focus on LinkedIn</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>
-                      Implement automated screening for high-volume roles
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Footer Actions */}
+        <div className="flex items-center justify-center space-x-4 pt-6">
+          <button
+            onClick={() => router.push("/applications-manager")}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("secondary")}`}
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            <span>Back to Overview</span>
+          </button>
+          <button
+            onClick={() => router.push("/applications-manager/pipeline")}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("primary")}`}
+          >
+            <Layers className="h-4 w-4" />
+            <span>View Pipeline</span>
+          </button>
         </div>
       </div>
-
-      {/* Detailed Reports Section */}
-      <div className="admin-card rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-gray-600" />
-              <span>Detailed Reports</span>
-            </h3>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")}`}
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span>Refresh Data</span>
-            </button>
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="flex items-center space-x-3 mb-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">Candidate Report</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Detailed breakdown of all candidates and their journey
-              </p>
-            </button>
-
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="flex items-center space-x-3 mb-2">
-                <Briefcase className="h-5 w-5 text-green-600" />
-                <span className="font-medium">Job Performance</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Analysis of individual job posting effectiveness
-              </p>
-            </button>
-
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="flex items-center space-x-3 mb-2">
-                <Clock className="h-5 w-5 text-orange-600" />
-                <span className="font-medium">Time Analysis</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Deep dive into hiring timelines and bottlenecks
-              </p>
-            </button>
-
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <div className="flex items-center space-x-3 mb-2">
-                <Globe className="h-5 w-5 text-purple-600" />
-                <span className="font-medium">Source Analysis</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                ROI and effectiveness of different recruitment channels
-              </p>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="flex items-center justify-center space-x-4 pt-6">
-        <button
-          onClick={() => router.push("/applications-manager")}
-          className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("secondary")}`}
-        >
-          <ArrowRight className="h-4 w-4 rotate-180" />
-          <span>Back to Overview</span>
-        </button>
-        <button
-          onClick={() => router.push("/applications-manager/pipeline")}
-          className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("primary")}`}
-        >
-          <Layers className="h-4 w-4" />
-          <span>View Pipeline</span>
-        </button>
-      </div>
-    </div>
+    </motion.div>
   );
 }
