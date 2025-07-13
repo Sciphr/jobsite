@@ -30,6 +30,7 @@ model User {
   savedJobs              SavedJob[]
   settings               Setting[]
   resumes                UserResume[]
+  createdJobs            Job[]                 @relation("JobCreator") // Add this line
 
   @@map("users")
 }
@@ -86,6 +87,7 @@ model Job {
   emails                  Email[]
   category                Category        @relation(fields: [categoryId], references: [id])
   savedJobs               SavedJob[]
+  creator                 User?           @relation("JobCreator", fields: [createdBy], references: [id]) // Add this line
 
   @@map("jobs")
 }
