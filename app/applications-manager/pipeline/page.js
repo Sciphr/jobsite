@@ -529,7 +529,7 @@ export default function PipelineView() {
             </motion.div>
 
             {/* Enhanced Applications List */}
-            <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto">
+            <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto overflow-x-hidden">
               <AnimatePresence mode="popLayout">
                 {applicationsByStatus.grouped[stage.id]?.map(
                   (application, index) => (
@@ -550,8 +550,8 @@ export default function PipelineView() {
                         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
                       }}
                       whileDrag={{
-                        scale: 1.05,
-                        rotate: 5,
+                        scale: 1.02, // Reduced scale to prevent overflow
+                        rotate: 2, // Reduced rotation
                         zIndex: 1000,
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                       }}
