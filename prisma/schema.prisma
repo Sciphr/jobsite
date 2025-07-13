@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../app/generated/prisma"
@@ -15,147 +9,116 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  password  String?
-  firstName String?
-  lastName  String?
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Admin fields
-  role            String  @default("user") // "user", "admin", "hr", "super_admin"
-  privilegeLevel  Int     @default(0)     // 0 = regular user, 1 = HR (applications only), 2 = admin (jobs + applications), 3 = super admin (everything)
-  isActive        Boolean @default(true)  // Allow deactivating admin accounts
-  
-  // Relations
-  applications Application[]
-  savedJobs    SavedJob[]
-  resumes      UserResume[]
-  settings     Setting[]    // Add this line
-  
-  // Admin relations
-  createdJobs  Job[]        @relation("JobCreator")
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                  String                @unique
+  password               String?
+  firstName              String?
+  lastName               String?
+  phone                  String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  role                   String?               @default("user") @db.VarChar
+  privilegeLevel         Int?                  @default(0)
+  isActive               Boolean?              @default(true)
+  privilege_level        Int?                  @default(0)
+  is_active              Boolean?              @default(true)
+  applications           Application[]
+  email_automation_rules EmailAutomationRule[]
+  email_campaigns        EmailCampaign[]
+  email_templates        EmailTemplate[]
+  emails                 Email[]
+  savedJobs              SavedJob[]
+  settings               Setting[]
+  resumes                UserResume[]
 
-  // New relations for communication
-  emailTemplates     EmailTemplate[] @relation("EmailTemplateCreator")
-  sentEmails         Email[]         @relation("SentEmails") 
-  emailCampaigns     EmailCampaign[] @relation("EmailCampaigns")
-  
   @@map("users")
 }
 
-// Remove AdminUser model entirely and update Job model
 model Category {
-  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String @unique
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @unique
   description String?
-  
-  // Relations
-  jobs Job[]
-  
+  jobs        Job[]
+
   @@map("categories")
 }
 
 model Job {
-  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title                     String
-  slug                      String   @unique
-  description               String
-  summary                   String?
-  department                String
-  employmentType           String   // "Full-time", "Part-time", "Contract", "Internship"
-  experienceLevel          String   // "Entry", "Mid", "Senior", "Executive"
-  location                  String
-  remotePolicy             String   // "Remote", "Hybrid", "On-site"
-  
-  salaryMin                Int?
-  salaryMax                Int?
-  salaryCurrency           String   @default("CAD")
-  salaryType               String   @default("Annual")
-  benefits                  String?
-  
-  requirements              String
-  preferredQualifications  String?
-  educationRequired        String?
-  yearsExperienceRequired  Int?
-  
-  applicationDeadline      DateTime?
+  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                   String
+  slug                    String          @unique
+  description             String
+  summary                 String?
+  department              String
+  employmentType          String
+  experienceLevel         String
+  location                String
+  remotePolicy            String
+  salaryMin               Int?
+  salaryMax               Int?
+  salaryCurrency          String          @default("USD")
+  salaryType              String          @default("Annual")
+  benefits                String?
+  requirements            String
+  preferredQualifications String?
+  educationRequired       String?
+  yearsExperienceRequired Int?
+  applicationDeadline     DateTime?
   startDate               DateTime?
-  applicationInstructions  String?
-  
-  status                   String   @default("Draft") // "Active", "Paused", "Closed", "Draft"
-  featured                 Boolean  @default(false)
-  showSalary              Boolean  @default(true) 
-  priority                 Int      @default(0)
-  viewCount               Int      @default(0)
-  applicationCount        Int      @default(0)
-  
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  applicationInstructions String?
+  status                  String          @default("Draft")
+  featured                Boolean         @default(false)
+  priority                Int             @default(0)
+  viewCount               Int             @default(0)
+  applicationCount        Int             @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
   postedAt                DateTime?
-
-  autoExpiresAt     DateTime? // When the job should auto-expire
-  lastExpiredCheck  DateTime? // Last time expiration was checked (optional, for tracking)
-  
-  // Foreign Keys
-  categoryId              String   @db.Uuid
-  createdBy               String?  @db.Uuid  // Made nullable
-  
-  // Relations
-  category                Category      @relation(fields: [categoryId], references: [id])
-  creator                 User?         @relation("JobCreator", fields: [createdBy], references: [id])  // Made nullable
+  categoryId              String          @db.Uuid
+  createdBy               String?         @db.Uuid
+  autoExpiresAt           DateTime?
+  lastExpiredCheck        DateTime?
+  showSalary              Boolean         @default(true)
+  auto_expires_at         DateTime?       @db.Timestamp(6)
+  last_expired_check      DateTime?       @db.Timestamp(6)
   applications            Application[]
+  email_campaigns         EmailCampaign[]
+  emails                  Email[]
+  category                Category        @relation(fields: [categoryId], references: [id])
   savedJobs               SavedJob[]
-  
+
   @@map("jobs")
 }
 
 model Application {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status      String   @default("Applied") // "Applied", "Reviewing", "Interview", "Rejected", "Hired"
+  status      String   @default("Applied")
   coverLetter String?
   resumeUrl   String?
   notes       String?
   appliedAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  // New fields for applicant info
+  userId      String?  @db.Uuid
+  jobId       String   @db.Uuid
   name        String?
   email       String?
   phone       String?
-
-  // Foreign Keys
-  userId      String?  @db.Uuid // made optional for guests
-  jobId       String   @db.Uuid
-
-  // Relations
-  user        User?    @relation(fields: [userId], references: [id])
   job         Job      @relation(fields: [jobId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
+  emails      Email[]
 
-  // Ensure one application per user per job (only for signed-in users)
   @@unique([userId, jobId])
   @@map("applications")
 }
 
 model SavedJob {
-  id        String   @id @default(dbgenerated("gen_random_uuid")) @db.Uuid
-  savedAt   DateTime @default(now())
-  
-  // Foreign Keys
-  userId    String   @db.Uuid
-  jobId     String   @db.Uuid
-  
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  job       Job      @relation(fields: [jobId], references: [id])
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  savedAt DateTime @default(now())
+  userId  String   @db.Uuid
+  jobId   String   @db.Uuid
+  job     Job      @relation(fields: [jobId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
 
-   // New relations  
-  emails             Email[]         @relation("JobEmails")
-  emailCampaigns     EmailCampaign[] @relation("JobCampaigns")
-  
-  // Ensure one save per user per job
   @@unique([userId, jobId])
   @@map("saved_jobs")
 }
@@ -170,9 +133,7 @@ model UserResume {
   isDefault   Boolean  @default(false) @map("is_default")
   uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamp(6)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-
-  // Relation to User
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_user_resumes_user_id")
   @@index([userId, isDefault], map: "idx_user_resumes_default")
@@ -181,151 +142,125 @@ model UserResume {
 
 model Setting {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key            String   // "currency_default", "show_salary_default", etc.
-  value          String   // Stored as JSON string for complex data
-  category       String   // "system", "jobs", "personal", "notifications"
-  userId         String?  @db.Uuid // NULL for system settings, user ID for personal
-  privilegeLevel Int      @default(0) // Minimum privilege to modify this setting
-  dataType       String   @default("string") // "string", "boolean", "number", "json"
-  description    String?  // Human-readable description
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  // Relations
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Ensure unique settings per user (or global if userId is null)
+  key            String
+  value          String
+  category       String
+  userId         String?  @db.Uuid
+  privilegeLevel Int      @default(0)
+  dataType       String   @default("string")
+  description    String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@unique([key, userId])
-  
   @@map("settings")
 }
 
-// Email templates for different scenarios
 model EmailTemplate {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   // "Interview Invitation", "Rejection - No Experience", etc.
-  subject     String   // Email subject line with variables
-  content     String   // Email body with variables {{name}}, {{jobTitle}}, etc.
-  type        String   // "interview_invite", "rejection", "offer", "status_update", "custom"
-  isDefault   Boolean  @default(false) // System default templates
-  isActive    Boolean  @default(true)
-  
-  // Customization
-  variables   String?  // JSON array of available variables
-  description String?  // What this template is for
-  
-  // Audit fields
-  createdBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  creator     User?    @relation("EmailTemplateCreator", fields: [createdBy], references: [id])
-  emails      Email[]  @relation("TemplateEmails")
-  
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String                @db.VarChar(255)
+  subject                String
+  content                String
+  type                   String                @db.VarChar(100)
+  is_default             Boolean?              @default(false)
+  is_active              Boolean?              @default(true)
+  variables              String?
+  description            String?
+  created_by             String?               @db.Uuid
+  created_at             DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?             @default(now()) @db.Timestamp(6)
+  email_automation_rules EmailAutomationRule[]
+  users                  User?                 @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  emails                 Email[]
+
+  @@index([is_active], map: "idx_email_templates_is_active")
+  @@index([type], map: "idx_email_templates_type")
   @@map("email_templates")
 }
 
-// Individual emails sent to candidates
 model Email {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  subject       String
-  content       String   // Final email content (after variable substitution)
-  htmlContent   String?  // HTML version if available
-  
-  // Recipients
-  recipientEmail String
-  recipientName  String?
-  
-  // Context
-  applicationId  String?  @db.Uuid  // If sent to specific application
-  jobId         String?  @db.Uuid  // If sent to multiple candidates for a job
-  templateId    String?  @db.Uuid  // If based on template
-  
-  // Email metadata
-  emailProvider String?  // "resend", "smtp", etc.
-  messageId     String?  // Provider's message ID
-  status        String   @default("pending") // "pending", "sent", "delivered", "failed", "bounced"
-  failureReason String?
-  
-  // Tracking (for future features)
-  openedAt      DateTime?
-  clickedAt     DateTime?
-  repliedAt     DateTime?
-  
-  // Audit fields
-  sentBy        String   @db.Uuid
-  sentAt        DateTime @default(now())
-  
-  // Relations
-  application   Application? @relation("ApplicationEmails", fields: [applicationId], references: [id])
-  job           Job?         @relation("JobEmails", fields: [jobId], references: [id])
-  template      EmailTemplate? @relation("TemplateEmails", fields: [templateId], references: [id])
-  sender        User         @relation("SentEmails", fields: [sentBy], references: [id])
-  
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject         String
+  content         String
+  html_content    String?
+  recipient_email String         @db.VarChar(255)
+  recipient_name  String?        @db.VarChar(255)
+  application_id  String?        @db.Uuid
+  job_id          String?        @db.Uuid
+  template_id     String?        @db.Uuid
+  email_provider  String?        @db.VarChar(100)
+  message_id      String?        @db.VarChar(255)
+  status          String?        @default("pending") @db.VarChar(50)
+  failure_reason  String?
+  opened_at       DateTime?      @db.Timestamp(6)
+  clicked_at      DateTime?      @db.Timestamp(6)
+  replied_at      DateTime?      @db.Timestamp(6)
+  sent_by         String         @db.Uuid
+  sent_at         DateTime?      @default(now()) @db.Timestamp(6)
+  campaign_id     String?        @db.Uuid
+  applications    Application?   @relation(fields: [application_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email_campaigns EmailCampaign? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobs            Job?           @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users           User           @relation(fields: [sent_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email_templates EmailTemplate? @relation(fields: [template_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([application_id], map: "idx_emails_application_id")
+  @@index([job_id], map: "idx_emails_job_id")
+  @@index([sent_at], map: "idx_emails_sent_at")
+  @@index([sent_by], map: "idx_emails_sent_by")
+  @@index([status], map: "idx_emails_status")
+  @@index([template_id], map: "idx_emails_template_id")
   @@map("emails")
 }
 
-// Bulk email campaigns (for sending to multiple candidates)
 model EmailCampaign {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   // "Interview Invitations - Senior Developer Role"
-  subject     String
-  content     String
-  
-  // Targeting
-  jobId       String?  @db.Uuid  // If targeting specific job
-  status      String?  // If targeting specific status
-  filters     String?  // JSON of additional filters
-  
-  // Campaign metadata
-  totalRecipients    Int      @default(0)
-  successfulSends    Int      @default(0)
-  failedSends        Int      @default(0)
-  
-  // Audit fields
-  createdBy   String   @db.Uuid
-  createdAt   DateTime @default(now())
-  sentAt      DateTime?
-  
-  // Relations
-  job         Job?     @relation("JobCampaigns", fields: [jobId], references: [id])
-  creator     User     @relation("EmailCampaigns", fields: [createdBy], references: [id])
-  emails      Email[]  @relation("CampaignEmails")
-  
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String    @db.VarChar(255)
+  subject          String
+  content          String
+  job_id           String?   @db.Uuid
+  status           String?   @db.VarChar(50)
+  filters          String?
+  total_recipients Int?      @default(0)
+  successful_sends Int?      @default(0)
+  failed_sends     Int?      @default(0)
+  created_by       String    @db.Uuid
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  sent_at          DateTime? @db.Timestamp(6)
+  users            User      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobs             Job?      @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  emails           Email[]
+
+  @@index([created_by], map: "idx_email_campaigns_created_by")
+  @@index([job_id], map: "idx_email_campaigns_job_id")
   @@map("email_campaigns")
 }
 
-// Communication preferences and settings
 model CommunicationSetting {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key            String   // "default_from_name", "email_signature", "auto_send_on_status_change"
-  value          String
-  category       String   // "email", "sms", "automation"
-  description    String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  @@unique([key])
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String    @unique @db.VarChar(255)
+  value       String
+  category    String    @db.VarChar(100)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+
   @@map("communication_settings")
 }
 
-// Optional: Email automation rules
 model EmailAutomationRule {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   // "Send rejection after 7 days in Applied"
-  trigger     String   // "status_change", "time_delay", "manual"
-  conditions  String   // JSON of conditions
-  templateId  String   @db.Uuid
-  isActive    Boolean  @default(true)
-  
-  createdBy   String   @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  template    EmailTemplate @relation(fields: [templateId], references: [id])
-  creator     User          @relation(fields: [createdBy], references: [id])
-  
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String        @db.VarChar(255)
+  trigger         String        @db.VarChar(100)
+  conditions      String
+  template_id     String        @db.Uuid
+  is_active       Boolean?      @default(true)
+  created_by      String        @db.Uuid
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?     @default(now()) @db.Timestamp(6)
+  users           User          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email_templates EmailTemplate @relation(fields: [template_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@map("email_automation_rules")
 }
