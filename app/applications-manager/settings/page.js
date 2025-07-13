@@ -46,6 +46,55 @@ export default function ApplicationsManagerSettings() {
   const [searchTerm, setSearchTerm] = useState("");
   const [saveStatus, setSaveStatus] = useState(null);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      },
+    },
+  };
+
+  const sidebarVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.05,
+      },
+    },
+  };
+
+  const settingCardVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 20,
+      },
+    },
+  };
+
   // Hiring-specific setting categories
   const settingCategories = [
     {
@@ -411,14 +460,17 @@ export default function ApplicationsManagerSettings() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
       className="space-y-6"
     >
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center justify-between"
+        >
           <div>
             <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
               <Settings className="h-8 w-8 text-blue-600" />
@@ -446,11 +498,14 @@ export default function ApplicationsManagerSettings() {
               <span>Back to Overview</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Save Status Alert */}
         {saveStatus && (
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             className={`p-4 rounded-lg border ${
               saveStatus.type === "success"
                 ? "bg-green-50 border-green-200 text-green-800"
@@ -469,11 +524,14 @@ export default function ApplicationsManagerSettings() {
               )}
               <span>{saveStatus.message}</span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Search */}
-        <div className="admin-card p-4 rounded-lg shadow">
+        <motion.div
+          variants={itemVariants}
+          className="admin-card p-4 rounded-lg shadow"
+        >
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -484,7 +542,7 @@ export default function ApplicationsManagerSettings() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -497,8 +555,13 @@ export default function ApplicationsManagerSettings() {
                   <span>Settings Categories</span>
                 </h3>
               </div>
-              <nav className="p-2">
-                {settingCategories.map((category) => {
+              <motion.nav
+                variants={sidebarVariants}
+                initial="hidden"
+                animate="visible"
+                className="p-2"
+              >
+                {settingCategories.map((category, index) => {
                   const Icon = category.icon;
                   const isActive = activeTab === category.id;
                   const categorySettings = settings.filter(
@@ -506,8 +569,11 @@ export default function ApplicationsManagerSettings() {
                   );
 
                   return (
-                    <button
+                    <motion.button
                       key={category.id}
+                      variants={itemVariants}
+                      whileHover={{ scale: 1.02, x: 2 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setActiveTab(category.id)}
                       className={`w-full text-left px-3 py-3 rounded-lg transition-colors mb-1 ${
                         isActive
@@ -532,10 +598,10 @@ export default function ApplicationsManagerSettings() {
                           </div>
                         </div>
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
-              </nav>
+              </motion.nav>
 
               {/* Save Actions */}
               <div className="p-4 border-t border-gray-200 bg-gray-50">
@@ -608,9 +674,14 @@ export default function ApplicationsManagerSettings() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {filteredSettings.map((setting) => (
-                      <div
+                    {filteredSettings.map((setting, index) => (
+                      <motion.div
                         key={setting.id}
+                        variants={settingCardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ scale: 1.01, y: -2 }}
                         className="border border-gray-200 rounded-lg p-6"
                       >
                         <div className="flex items-start justify-between mb-4">
@@ -658,7 +729,7 @@ export default function ApplicationsManagerSettings() {
                         <div className="space-y-2">
                           {renderSettingField(setting)}
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}

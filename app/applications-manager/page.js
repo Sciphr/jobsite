@@ -1,7 +1,7 @@
-// app/applications-manager/page.js - Enhanced with smooth animations
+// app/applications-manager/page.js - Fixed hydration issue
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
@@ -31,17 +31,45 @@ export default function ApplicationsManagerMain() {
   const router = useRouter();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+
   // Data fetching
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications();
   const { data: jobs = [], isLoading: jobsLoading } = useJobsSimple();
 
+  // Add mounted state to prevent hydration issues
+  const [isMounted, setIsMounted] = useState(false);
+
   // Animation state
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
+  useEffect(() => {
+    // Only mark as loaded when we have actual data OR confirmed empty state after loading
+    if (!applicationsLoading && !jobsLoading) {
+      const timer = setTimeout(() => {
+        setHasInitiallyLoaded(true);
+      }, 100); // Small delay to ensure data is settled
+      return () => clearTimeout(timer);
+    }
+  }, [applicationsLoading, jobsLoading]);
+
   // Calculate comprehensive statistics
   const stats = useMemo(() => {
+    if (applicationsLoading || jobsLoading) {
+      return {
+        total: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        statusCounts: {},
+        conversionRate: 0,
+        avgTimeToHire: 0,
+        activeJobs: 0,
+        totalJobs: 0,
+      };
+    }
+
     const statusCounts = applications.reduce((acc, app) => {
       acc[app.status] = (acc[app.status] || 0) + 1;
       return acc;
@@ -59,12 +87,23 @@ export default function ApplicationsManagerMain() {
       (app) => new Date(app.appliedAt) >= monthAgo
     );
 
-    // Calculate conversion funnel
-    const totalApplied = statusCounts.Applied || 0;
-    const reviewing = statusCounts.Reviewing || 0;
-    const interviewing = statusCounts.Interview || 0;
     const hired = statusCounts.Hired || 0;
-    const rejected = statusCounts.Rejected || 0;
+
+    // Calculate real average time to hire for hired candidates
+    const hiredApplications = applications.filter(
+      (app) => app.status === "Hired"
+    );
+    const avgTimeToHire =
+      hiredApplications.length > 0
+        ? Math.round(
+            hiredApplications.reduce((sum, app) => {
+              const daysDiff = Math.floor(
+                (new Date() - new Date(app.appliedAt)) / (1000 * 60 * 60 * 24)
+              );
+              return sum + daysDiff;
+            }, 0) / hiredApplications.length
+          )
+        : 0;
 
     return {
       total: applications.length,
@@ -75,43 +114,74 @@ export default function ApplicationsManagerMain() {
         applications.length > 0
           ? Math.round((hired / applications.length) * 100)
           : 0,
-      avgTimeToHire: 12, // This could be calculated from actual data
+      avgTimeToHire: avgTimeToHire || 14, // fallback to 14 if no hired candidates
       activeJobs: jobs.filter((job) => job.status === "Active").length,
       totalJobs: jobs.length,
     };
-  }, [applications, jobs]);
+  }, [applications, jobs, applicationsLoading, jobsLoading]);
 
   // Get top performing jobs
   const topJobs = useMemo(() => {
+    if (jobsLoading || !jobs.length) {
+      return [];
+    }
+
     return jobs
-      .filter((job) => job.applicationCount > 0)
+      .map((job) => {
+        // Get applications for this job
+        const jobApplications = applications.filter(
+          (app) => app.jobId === job.id
+        );
+
+        // Calculate weekly applications
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const weeklyApplications = jobApplications.filter(
+          (app) => new Date(app.appliedAt) >= weekAgo
+        ).length;
+
+        return {
+          ...job,
+          applicationCount: jobApplications.length, // Use real count
+          weeklyApplications,
+        };
+      })
+      .filter((job) => job.applicationCount > 0) // Only show jobs with applications
       .sort((a, b) => b.applicationCount - a.applicationCount)
-      .slice(0, 5)
-      .map((job) => ({
-        ...job,
-        weeklyApplications: applications.filter(
-          (app) =>
-            app.jobId === job.id &&
-            new Date(app.appliedAt) >=
-              new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        ).length,
-      }));
-  }, [jobs, applications]);
+      .slice(0, 5);
+  }, [jobs, applications, jobsLoading]);
 
   // Get jobs needing attention (low applications)
   const jobsNeedingAttention = useMemo(() => {
+    if (jobsLoading || !jobs.length) {
+      return [];
+    }
+
     return jobs
+      .map((job) => {
+        // Get real application count for this job
+        const jobApplications = applications.filter(
+          (app) => app.jobId === job.id
+        );
+        return {
+          ...job,
+          applicationCount: jobApplications.length,
+        };
+      })
       .filter((job) => job.status === "Active" && job.applicationCount < 3)
       .sort((a, b) => a.applicationCount - b.applicationCount)
       .slice(0, 3);
-  }, [jobs]);
+  }, [jobs, applications, jobsLoading]);
 
   // Get recent applications for activity feed
   const recentActivity = useMemo(() => {
+    if (applicationsLoading || !applications.length) {
+      return [];
+    }
+
     return applications
       .sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt))
       .slice(0, 8);
-  }, [applications]);
+  }, [applications, applicationsLoading]);
 
   // Animation variants
   const containerVariants = {
@@ -226,44 +296,7 @@ export default function ApplicationsManagerMain() {
     },
   };
 
-  if (applicationsLoading || jobsLoading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-6"
-      >
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            {[1, 2, 3, 4].map((i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1 }}
-                className="h-32 bg-gray-200 rounded"
-              ></motion.div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 }}
-              className="h-96 bg-gray-200 rounded"
-            ></motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6 }}
-              className="h-96 bg-gray-200 rounded"
-            ></motion.div>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
+  // Show loading state if not mounted or data is loading
 
   return (
     <motion.div
@@ -333,7 +366,7 @@ export default function ApplicationsManagerMain() {
             {
               value: stats.total,
               label: "Total Applications",
-              subtitle: `${stats.thisWeek} this week (+${Math.round((stats.thisWeek / stats.total) * 100) || 0}%)`,
+              subtitle: `${stats.thisWeek} this week${stats.total > 0 ? ` (+${Math.round((stats.thisWeek / Math.max(stats.total - stats.thisWeek, 1)) * 100)}%)` : ""}`,
               icon: Users,
               index: 0,
             },

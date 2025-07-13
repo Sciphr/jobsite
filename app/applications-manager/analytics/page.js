@@ -58,6 +58,57 @@ export default function AnalyticsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("all");
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.08,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      },
+    },
+  };
+
+  const statCardVariants = {
+    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 20,
+      },
+    },
+  };
+
+  const chartVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      },
+    },
+  };
+
   // Time range options
   const timeRanges = [
     { value: "7d", label: "Last 7 days" },
@@ -248,14 +299,17 @@ export default function AnalyticsPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
       className="space-y-6"
     >
-      <div className="space-y-6">
+      <motion.div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center justify-between"
+        >
           <div>
             <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
               <BarChart3 className="h-8 w-8 text-blue-600" />
@@ -283,12 +337,18 @@ export default function AnalyticsPage() {
               <span>Export Report</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters */}
         {showFilters && (
-          <div className="admin-card p-6 rounded-lg shadow">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div
+            variants={itemVariants}
+            className="admin-card p-6 rounded-lg shadow"
+          >
+            <motion.div
+              variants={containerVariants}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Time Range
@@ -337,13 +397,22 @@ export default function AnalyticsPage() {
                   <option value="sources">Source Analysis</option>
                 </select>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div
+        <motion.div
+          variants={containerVariants}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          <motion.div
+            variants={statCardVariants}
+            whileHover={{
+              scale: 1.02,
+              y: -4,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
             className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(0).border}`}
           >
             <div className="flex items-center justify-between">
@@ -374,9 +443,15 @@ export default function AnalyticsPage() {
                 <Users className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
+          <motion.div
+            variants={statCardVariants}
+            whileHover={{
+              scale: 1.02,
+              y: -4,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
             className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(1).border}`}
           >
             <div className="flex items-center justify-between">
@@ -398,9 +473,15 @@ export default function AnalyticsPage() {
                 <Target className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
+          <motion.div
+            variants={statCardVariants}
+            whileHover={{
+              scale: 1.02,
+              y: -4,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
             className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(2).border}`}
           >
             <div className="flex items-center justify-between">
@@ -421,9 +502,15 @@ export default function AnalyticsPage() {
                 <Clock className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div
+          <motion.div
+            variants={statCardVariants}
+            whileHover={{
+              scale: 1.02,
+              y: -4,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+            }}
             className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(3).border}`}
           >
             <div className="flex items-center justify-between">
@@ -446,13 +533,13 @@ export default function AnalyticsPage() {
                 />
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Main Analytics Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Conversion Funnel */}
-          <div className="lg:col-span-2">
+          <motion.div variants={chartVariants} className="lg:col-span-2">
             <div className="admin-card rounded-lg shadow">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
@@ -494,12 +581,17 @@ export default function AnalyticsPage() {
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{
+                          width: `${analytics.conversionRates.applicationToReview}%`,
+                        }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
                         className="bg-yellow-500 h-3 rounded-full"
                         style={{
                           width: `${analytics.conversionRates.applicationToReview}%`,
                         }}
-                      ></div>
+                      ></motion.div>
                     </div>
                   </div>
 
@@ -515,12 +607,14 @@ export default function AnalyticsPage() {
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-green-500 h-3 rounded-full"
-                        style={{
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{
                           width: `${analytics.conversionRates.reviewToInterview}%`,
                         }}
-                      ></div>
+                        transition={{ duration: 0.8, delay: 0.4 }}
+                        className="bg-green-500 h-3 rounded-full"
+                      ></motion.div>
                     </div>
                   </div>
 
@@ -535,12 +629,14 @@ export default function AnalyticsPage() {
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-emerald-600 h-3 rounded-full"
-                        style={{
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{
                           width: `${analytics.conversionRates.interviewToHire}%`,
                         }}
-                      ></div>
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                        className="bg-emerald-600 h-3 rounded-full"
+                      ></motion.div>
                     </div>
                   </div>
                 </div>
@@ -572,7 +668,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Quick Actions & Status */}
           <div className="space-y-6">
@@ -638,7 +734,9 @@ export default function AnalyticsPage() {
                 </h3>
               </div>
               <div className="p-6 space-y-3">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02, x: 2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => router.push("/applications-manager/pipeline")}
                   className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
                 >
@@ -647,9 +745,11 @@ export default function AnalyticsPage() {
                     <span className="font-medium">View Pipeline</span>
                   </div>
                   <ArrowRight className="h-4 w-4 text-gray-400" />
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02, x: 2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() =>
                     router.push("/applications-manager/communication")
                   }
@@ -660,22 +760,26 @@ export default function AnalyticsPage() {
                     <span className="font-medium">Send Emails</span>
                   </div>
                   <ArrowRight className="h-4 w-4 text-gray-400" />
-                </button>
+                </motion.button>
 
-                <button className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
+                <motion.button
+                  whileHover={{ scale: 1.02, x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
                   <div className="flex items-center space-x-3">
                     <FileText className="h-5 w-5 text-purple-600" />
                     <span className="font-medium">Export Data</span>
                   </div>
                   <ArrowRight className="h-4 w-4 text-gray-400" />
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Additional Analytics Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Performing Jobs */}
           <div className="admin-card rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
@@ -687,8 +791,12 @@ export default function AnalyticsPage() {
             <div className="p-6">
               <div className="space-y-4">
                 {analytics.jobPerformance.map((job, index) => (
-                  <div
+                  <motion.div
                     key={job.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 4 }}
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                     onClick={() =>
                       router.push(`/applications-manager/jobs/${job.id}`)
@@ -716,14 +824,14 @@ export default function AnalyticsPage() {
                         {job.conversionRate.toFixed(1)}% hire rate
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </div>
 
           {/* Department Performance */}
-          <div className="admin-card rounded-lg shadow">
+          <motion.div className="admin-card rounded-lg shadow">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
                 <Building className="h-5 w-5 text-indigo-600" />
@@ -733,9 +841,13 @@ export default function AnalyticsPage() {
             <div className="p-6">
               <div className="space-y-4">
                 {Object.entries(analytics.departmentStats).map(
-                  ([dept, stats]) => (
-                    <div
+                  ([dept, stats], index) => (
+                    <motion.div
                       key={dept}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ scale: 1.02, y: -2 }}
                       className="p-4 border border-gray-200 rounded-lg"
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -774,13 +886,13 @@ export default function AnalyticsPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   )
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Source Analysis */}
         <div className="admin-card rounded-lg shadow">
@@ -793,7 +905,14 @@ export default function AnalyticsPage() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {analytics.sourceAnalysis.map((source, index) => (
-                <div key={source.source} className="text-center">
+                <motion.div
+                  key={source.source}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  className="text-center"
+                >
                   <div className="mb-4">
                     <div
                       className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${getStatCardClasses(index % 4).bg}`}
@@ -823,7 +942,7 @@ export default function AnalyticsPage() {
                       % success
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -1124,7 +1243,7 @@ export default function AnalyticsPage() {
             <span>View Pipeline</span>
           </button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
