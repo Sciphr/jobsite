@@ -1,0 +1,147 @@
+import { NextResponse } from "next/server";
+import { emailService } from "@/app/lib/email";
+import { PrismaClient } from "@/app/generated/prisma";
+
+const prisma = new PrismaClient();
+
+export async function POST(request) {
+  try {
+    const { recipients, subject, content, templateId, sentBy } = await request.json();
+
+    if (!recipients || recipients.length === 0) {
+      return NextResponse.json({ error: "No recipients provided" }, { status: 400 });
+    }
+
+    if (!subject || !content) {
+      return NextResponse.json({ error: "Subject and content are required" }, { status: 400 });
+    }
+
+    // Generate a placeholder UUID if sentBy is not provided or invalid
+    const validSentBy = sentBy && sentBy.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) 
+      ? sentBy 
+      : '00000000-0000-0000-0000-000000000000'; // Placeholder UUID for system-sent emails
+
+    const results = [];
+    
+    // Send emails to all recipients
+    for (const recipient of recipients) {
+      try {
+        // Replace variables in subject and content for this specific recipient
+        const processedSubject = replaceVariables(subject, recipient);
+        const processedContent = replaceVariables(content, recipient);
+
+        // Send the email
+        const emailResult = await emailService.sendEmail({
+          to: recipient.email,
+          subject: processedSubject,
+          html: processedContent.replace(/\n/g, '<br>'),
+          text: processedContent,
+        });
+
+        if (emailResult.success) {
+          // Save email record to database
+          const emailRecord = await prisma.email.create({
+            data: {
+              subject: processedSubject,
+              content: processedContent,
+              html_content: processedContent.replace(/\n/g, '<br>'),
+              recipient_email: recipient.email,
+              recipient_name: recipient.name,
+              application_id: recipient.applicationId || null,
+              job_id: recipient.jobId || null,
+              template_id: templateId || null,
+              email_provider: emailResult.provider,
+              message_id: emailResult.data?.id || emailResult.data?.messageId,
+              status: 'sent',
+              sent_by: validSentBy,
+              sent_at: new Date(),
+            },
+          });
+
+          results.push({
+            recipient: recipient.email,
+            success: true,
+            emailId: emailRecord.id,
+            messageId: emailResult.data?.id || emailResult.data?.messageId,
+          });
+        } else {
+          // Save failed email record
+          const emailRecord = await prisma.email.create({
+            data: {
+              subject: processedSubject,
+              content: processedContent,
+              html_content: processedContent.replace(/\n/g, '<br>'),
+              recipient_email: recipient.email,
+              recipient_name: recipient.name,
+              application_id: recipient.applicationId || null,
+              job_id: recipient.jobId || null,
+              template_id: templateId || null,
+              status: 'failed',
+              failure_reason: emailResult.error,
+              sent_by: validSentBy,
+              sent_at: new Date(),
+            },
+          });
+
+          results.push({
+            recipient: recipient.email,
+            success: false,
+            error: emailResult.error,
+            emailId: emailRecord.id,
+          });
+        }
+      } catch (error) {
+        console.error(`Error sending email to ${recipient.email}:`, error);
+        results.push({
+          recipient: recipient.email,
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+
+    return NextResponse.json({
+      success: true,
+      message: `Sent ${successful} emails successfully, ${failed} failed`,
+      results,
+      summary: {
+        total: recipients.length,
+        successful,
+        failed,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error in send-email API:", error);
+    return NextResponse.json(
+      { error: "Failed to send emails", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Helper function to replace template variables
+function replaceVariables(content, recipient) {
+  if (!content || !recipient) return content;
+
+  const variables = {
+    candidateName: recipient.name || "Candidate",
+    jobTitle: recipient.jobTitle || "Position",
+    companyName: "Your Company", // Can be made configurable
+    department: recipient.department || "Department",
+    senderName: "Hiring Manager", // Can be made configurable
+    reviewTimeframe: "1-2 weeks",
+    recipientEmail: recipient.email,
+  };
+
+  let processedContent = content;
+  Object.entries(variables).forEach(([key, value]) => {
+    const regex = new RegExp(`{{${key}}}`, "g");
+    processedContent = processedContent.replace(regex, value);
+  });
+
+  return processedContent;
+}
