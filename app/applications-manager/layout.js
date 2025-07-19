@@ -54,7 +54,7 @@ function ApplicationsManagerLayoutContent({ children }) {
       label: "Overview",
       icon: LayoutGrid,
       path: "/applications-manager",
-      active: pathname === "/applications-manager",
+      active: pathname === "/applications-manager" || pathname.startsWith("/applications-manager/jobs/"),
       description: "Main dashboard and quick stats",
       color: "blue",
     },

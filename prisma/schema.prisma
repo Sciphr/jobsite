@@ -71,7 +71,6 @@ model Job {
   featured                Boolean         @default(false)
   priority                Int             @default(0)
   viewCount               Int             @default(0)
-  applicationCount        Int             @default(0)
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
   postedAt                DateTime?

@@ -38,7 +38,7 @@ export default function PipelineView() {
   const { data: jobs = [] } = useJobsSimple();
 
   // Local state with enhanced drag tracking
-  const [selectedJob, setSelectedJob] = useState("all");
+  const [selectedJob, setSelectedJob] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showJobFilter, setShowJobFilter] = useState(false);
   const [draggedApplication, setDraggedApplication] = useState(null);
@@ -106,7 +106,7 @@ export default function PipelineView() {
   const filteredApplications = useMemo(() => {
     let filtered = applications;
 
-    if (selectedJob !== "all") {
+    if (selectedJob && selectedJob !== "all") {
       filtered = filtered.filter((app) => app.jobId === selectedJob);
     }
 
@@ -117,6 +117,11 @@ export default function PipelineView() {
           app.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           app.job?.title?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    // If no job is selected, return empty array
+    if (!selectedJob) {
+      return [];
     }
 
     return filtered;
@@ -253,6 +258,35 @@ export default function PipelineView() {
     }
   };
 
+  const handleDownloadResume = async (application) => {
+    if (!application.resumeUrl) {
+      console.error("No resume URL found for this application");
+      return;
+    }
+
+    try {
+      // Call the download API to get the signed URL
+      const response = await fetch(`/api/resume-download?path=${encodeURIComponent(application.resumeUrl)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate download URL');
+      }
+
+      const data = await response.json();
+      
+      if (data.downloadUrl) {
+        // Open download in a new tab
+        window.open(data.downloadUrl, '_blank');
+      } else {
+        throw new Error('No download URL received');
+      }
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      // You could add a toast notification here for better UX
+      alert('Failed to download resume. Please try again.');
+    }
+  };
+
   const selectedJobData = jobs.find((job) => job.id === selectedJob);
 
   // Animation variants
@@ -375,7 +409,9 @@ export default function PipelineView() {
                 <span>
                   {selectedJob === "all"
                     ? "All Jobs"
-                    : selectedJobData?.title || "Select Job"}
+                    : selectedJob
+                      ? selectedJobData?.title || "Select Job"
+                      : "Select Job"}
                 </span>
                 <motion.div
                   animate={{ rotate: showJobFilter ? 180 : 0 }}
@@ -463,21 +499,59 @@ export default function PipelineView() {
           </div>
 
           <div className="text-sm admin-text-light">
-            Showing {filteredApplications.length} applications
-            {selectedJob !== "all" && selectedJobData && (
-              <span> for {selectedJobData.title}</span>
+            {selectedJob ? (
+              <>
+                Showing {filteredApplications.length} applications
+                {selectedJob !== "all" && selectedJobData && (
+                  <span> for {selectedJobData.title}</span>
+                )}
+              </>
+            ) : (
+              "Select a job to view applications"
             )}
           </div>
         </div>
       </motion.div>
 
-      {/* Pipeline Board - keeping original functionality for now */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[600px]"
-      >
+      {/* Pipeline Board */}
+      {!selectedJob ? (
+        /* Empty State - No Job Selected */
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="admin-card rounded-xl shadow-lg p-12 text-center min-h-[600px] flex flex-col justify-center"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="mx-auto mb-6 w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center"
+          >
+            <Briefcase className="h-12 w-12 text-white" />
+          </motion.div>
+          <h3 className="text-2xl font-bold admin-text mb-4">
+            Choose a Job to View Pipeline
+          </h3>
+          <p className="admin-text-light mb-8 max-w-md mx-auto">
+            Select a specific job from the dropdown above to see its application pipeline,
+            or choose "All Jobs" to view applications across all positions.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowJobFilter(true)}
+            className={`mx-auto flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("primary")}`}
+          >
+            <Search className="h-5 w-5" />
+            <span>Select Job</span>
+          </motion.button>
+        </motion.div>
+      ) : (
+        /* Pipeline Board */
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[600px]"
+        >
         {applicationsByStatus.stages.map((stage, stageIndex) => (
           <motion.div
             key={stage.id}
@@ -554,7 +628,7 @@ export default function PipelineView() {
                       }`}
                       onClick={() =>
                         router.push(
-                          `/applications-manager/jobs/${application.jobId}`
+                          `/applications-manager/jobs/${application.jobId}?from=pipeline`
                         )
                       }
                     >
@@ -645,6 +719,7 @@ export default function PipelineView() {
                                 whileTap={{ scale: 0.9 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleDownloadResume(application);
                                 }}
                                 className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                                 title="Download resume"
@@ -692,7 +767,8 @@ export default function PipelineView() {
             </div>
           </motion.div>
         ))}
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Floating Ghost Card */}
       <AnimatePresence>
@@ -729,13 +805,14 @@ export default function PipelineView() {
         )}
       </AnimatePresence>
 
-      {/* Pipeline Stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="admin-card p-6 rounded-lg shadow"
-      >
+      {/* Pipeline Stats - Only show when job is selected */}
+      {selectedJob && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="admin-card p-6 rounded-lg shadow"
+        >
         <h3 className="text-lg font-semibold admin-text mb-4">
           Pipeline Summary
         </h3>
@@ -777,7 +854,8 @@ export default function PipelineView() {
             </motion.div>
           ))}
         </motion.div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Application Detail Modal */}
       <AnimatePresence>

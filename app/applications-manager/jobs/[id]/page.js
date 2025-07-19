@@ -1,8 +1,8 @@
 // app/applications-manager/job/[jobId]/page.js
 "use client";
 
-import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJob } from "@/app/hooks/useAdminData";
 import {
@@ -28,7 +28,18 @@ import {
 export default function JobSpecificApplications() {
   const { id: jobId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
+
+  // Track where user came from
+  const [referrer, setReferrer] = useState("overview");
+
+  useEffect(() => {
+    const from = searchParams.get("from");
+    if (from) {
+      setReferrer(from);
+    }
+  }, [searchParams]);
 
   // Data fetching
   const { data: allApplications = [], isLoading: applicationsLoading } =
@@ -242,16 +253,39 @@ export default function JobSpecificApplications() {
     );
   }
 
+  // Determine back navigation based on referrer
+  const getBackNavigation = () => {
+    switch (referrer) {
+      case "pipeline":
+        return {
+          path: "/applications-manager/pipeline",
+          label: "Back to Pipeline"
+        };
+      case "analytics":
+        return {
+          path: "/applications-manager/analytics", 
+          label: "Back to Analytics"
+        };
+      default:
+        return {
+          path: "/applications-manager",
+          label: "Back to Overview"
+        };
+    }
+  };
+
+  const backNav = getBackNavigation();
+
   return (
     <div className="space-y-6">
       {/* Back Navigation */}
       <div className="flex items-center space-x-4">
         <button
-          onClick={() => router.push("/applications-manager")}
+          onClick={() => router.push(backNav.path)}
           className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Overview</span>
+          <span>{backNav.label}</span>
         </button>
       </div>
 
