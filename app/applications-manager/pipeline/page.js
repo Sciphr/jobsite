@@ -1,4 +1,4 @@
-// app/applications-manager/pipeline/page.js - Enhanced with smooth animations
+// app/applications-manager/pipeline/page.js - Enhanced with advanced drag feedback
 "use client";
 
 import { useState, useMemo } from "react";
@@ -37,12 +37,14 @@ export default function PipelineView() {
     useApplications();
   const { data: jobs = [] } = useJobsSimple();
 
-  // Local state
+  // Local state with enhanced drag tracking
   const [selectedJob, setSelectedJob] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showJobFilter, setShowJobFilter] = useState(false);
   const [draggedApplication, setDraggedApplication] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [ghostPreview, setGhostPreview] = useState(null);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
 
@@ -104,12 +106,10 @@ export default function PipelineView() {
   const filteredApplications = useMemo(() => {
     let filtered = applications;
 
-    // Filter by job
     if (selectedJob !== "all") {
       filtered = filtered.filter((app) => app.jobId === selectedJob);
     }
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (app) =>
@@ -132,7 +132,6 @@ export default function PipelineView() {
       return acc;
     }, {});
 
-    // Update stage counts
     const updatedStages = pipelineStages.map((stage) => ({
       ...stage,
       count: grouped[stage.id]?.length || 0,
@@ -142,16 +141,13 @@ export default function PipelineView() {
   }, [filteredApplications]);
 
   const handleStatusChange = async (applicationId, newStatus) => {
-    // Get current applications data
     const currentApplications = queryClient.getQueryData([
       "admin",
       "applications",
     ]);
 
-    // Optimistically update the cache immediately
     queryClient.setQueryData(["admin", "applications"], (oldData) => {
       if (!oldData) return oldData;
-
       return oldData.map((app) =>
         app.id === applicationId ? { ...app, status: newStatus } : app
       );
@@ -165,7 +161,6 @@ export default function PipelineView() {
       });
 
       if (!response.ok) {
-        // Revert the optimistic update on error
         queryClient.setQueryData(
           ["admin", "applications"],
           currentApplications
@@ -173,7 +168,6 @@ export default function PipelineView() {
         console.error("Failed to update status, reverting changes");
       }
     } catch (error) {
-      // Revert the optimistic update on error
       queryClient.setQueryData(["admin", "applications"], currentApplications);
       console.error(
         "Error updating application status, reverting changes:",
@@ -182,9 +176,16 @@ export default function PipelineView() {
     }
   };
 
-  // Enhanced Drag and Drop handlers with animations
+  // Enhanced Drag and Drop handlers with ghost preview
   const handleDragStart = (e, application) => {
     setDraggedApplication(application);
+    setGhostPreview(application);
+
+    const dragImage = new Image();
+    dragImage.src =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/html", e.target.outerHTML);
   };
@@ -193,7 +194,15 @@ export default function PipelineView() {
     setTimeout(() => {
       setDraggedApplication(null);
       setDragOverColumn(null);
-    }, 50);
+      setGhostPreview(null);
+      setDragPosition({ x: 0, y: 0 });
+    }, 100);
+  };
+
+  const handleDrag = (e) => {
+    if (e.clientX !== 0 && e.clientY !== 0) {
+      setDragPosition({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleDragOver = (e) => {
@@ -290,23 +299,6 @@ export default function PipelineView() {
     },
   };
 
-  const columnVariants = {
-    normal: {
-      scale: 1,
-      boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-    },
-    dragOver: {
-      scale: 1.02,
-      boxShadow:
-        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 20,
-      },
-    },
-  };
-
   if (applicationsLoading) {
     return (
       <div className="space-y-6">
@@ -324,7 +316,7 @@ export default function PipelineView() {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Header */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -358,7 +350,7 @@ export default function PipelineView() {
         </div>
       </motion.div>
 
-      {/* Enhanced Filters */}
+      {/* Filters */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -367,7 +359,7 @@ export default function PipelineView() {
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
-            {/* Enhanced Job Filter */}
+            {/* Job Filter */}
             <div className="relative">
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -456,7 +448,7 @@ export default function PipelineView() {
               </AnimatePresence>
             </div>
 
-            {/* Enhanced Search */}
+            {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <motion.input
@@ -479,7 +471,7 @@ export default function PipelineView() {
         </div>
       </motion.div>
 
-      {/* Enhanced Pipeline Board */}
+      {/* Pipeline Board - keeping original functionality for now */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -490,7 +482,6 @@ export default function PipelineView() {
           <motion.div
             key={stage.id}
             variants={itemVariants}
-            animate={dragOverColumn === stage.id ? "dragOver" : "normal"}
             className={`admin-card rounded-lg shadow overflow-hidden transition-all duration-200 ${
               dragOverColumn === stage.id
                 ? `ring-2 ring-blue-400 ${stage.bgColor} bg-opacity-20`
@@ -501,7 +492,7 @@ export default function PipelineView() {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, stage.id)}
           >
-            {/* Enhanced Column Header */}
+            {/* Column Header */}
             <motion.div
               className={`p-4 ${stage.bgColor} ${stage.borderColor} border-b`}
               whileHover={{ scale: 1.01 }}
@@ -528,7 +519,7 @@ export default function PipelineView() {
               </div>
             </motion.div>
 
-            {/* Enhanced Applications List */}
+            {/* Applications List */}
             <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto overflow-x-hidden">
               <AnimatePresence mode="popLayout">
                 {applicationsByStatus.grouped[stage.id]?.map(
@@ -543,6 +534,7 @@ export default function PipelineView() {
                       layoutId={`application-${application.id}`}
                       draggable
                       onDragStart={(e) => handleDragStart(e, application)}
+                      onDrag={handleDrag}
                       onDragEnd={handleDragEnd}
                       whileHover={{
                         scale: 1.02,
@@ -550,8 +542,8 @@ export default function PipelineView() {
                         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
                       }}
                       whileDrag={{
-                        scale: 1.02, // Reduced scale to prevent overflow
-                        rotate: 2, // Reduced rotation
+                        scale: 1.02,
+                        rotate: 2,
                         zIndex: 1000,
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                       }}
@@ -627,7 +619,7 @@ export default function PipelineView() {
                         </div>
                       </div>
 
-                      {/* Enhanced Actions (shown on hover) */}
+                      {/* Actions */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
@@ -653,7 +645,6 @@ export default function PipelineView() {
                                 whileTap={{ scale: 0.9 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // Handle download action
                                 }}
                                 className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                                 title="Download resume"
@@ -661,67 +652,6 @@ export default function PipelineView() {
                                 <Download className="h-3 w-3" />
                               </motion.button>
                             )}
-                            <div className="w-px h-4 bg-gray-300"></div>
-                            <div className="text-xs text-gray-400 flex items-center space-x-1">
-                              <span>Drag to move</span>
-                            </div>
-                          </div>
-
-                          {/* Quick Status Actions */}
-                          <div className="flex items-center space-x-1">
-                            {stage.id !== "Hired" &&
-                              stage.id !== "Rejected" && (
-                                <>
-                                  {stage.id === "Applied" && (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusChange(
-                                          application.id,
-                                          "Reviewing"
-                                        );
-                                      }}
-                                      className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
-                                    >
-                                      Review
-                                    </motion.button>
-                                  )}
-                                  {stage.id === "Reviewing" && (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusChange(
-                                          application.id,
-                                          "Interview"
-                                        );
-                                      }}
-                                      className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                    >
-                                      Interview
-                                    </motion.button>
-                                  )}
-                                  {stage.id === "Interview" && (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusChange(
-                                          application.id,
-                                          "Hired"
-                                        );
-                                      }}
-                                      className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors"
-                                    >
-                                      Hire
-                                    </motion.button>
-                                  )}
-                                </>
-                              )}
                           </div>
                         </div>
                       </motion.div>
@@ -764,7 +694,42 @@ export default function PipelineView() {
         ))}
       </motion.div>
 
-      {/* Enhanced Pipeline Stats Summary */}
+      {/* Floating Ghost Card */}
+      <AnimatePresence>
+        {ghostPreview && draggedApplication && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed pointer-events-none z-[9999] transform -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: dragPosition.x,
+              top: dragPosition.y,
+            }}
+          >
+            <div className="bg-white border-2 border-blue-400 rounded-lg p-3 shadow-2xl max-w-[250px]">
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold bg-blue-500">
+                  {ghostPreview.name?.charAt(0)?.toUpperCase() ||
+                    ghostPreview.email?.charAt(0)?.toUpperCase() ||
+                    "A"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900 truncate">
+                    {ghostPreview.name || "Anonymous"}
+                  </h4>
+                  <div className="text-xs text-gray-600 flex items-center space-x-1">
+                    <Mail className="h-3 w-3" />
+                    <span className="truncate">{ghostPreview.email}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pipeline Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -814,7 +779,7 @@ export default function PipelineView() {
         </motion.div>
       </motion.div>
 
-      {/* Application Detail Modal with Animation */}
+      {/* Application Detail Modal */}
       <AnimatePresence>
         {showApplicationModal && (
           <ApplicationDetailModal

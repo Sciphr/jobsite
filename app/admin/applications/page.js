@@ -171,6 +171,11 @@ export default function AdminApplications() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+
+      if (response.ok) {
+        // Refetch the applications data to show the updated status
+        await refetch();
+      }
     } catch (error) {
       console.error("Error updating application status:", error);
     }
@@ -268,16 +273,43 @@ export default function AdminApplications() {
     }
   };
 
-  const downloadResume = (resumeUrl, applicantName) => {
-    if (!resumeUrl) return;
+  const downloadResume = async (storagePath, applicantName) => {
+    console.log("🔍 Download attempt:", { storagePath, applicantName });
 
-    const link = document.createElement("a");
-    link.href = resumeUrl;
-    link.download = `${applicantName || "applicant"}_resume.pdf`;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!storagePath) {
+      console.error("❌ No storage path provided");
+      alert("No resume file path found");
+      return;
+    }
+
+    try {
+      const url = `/api/resume-download?path=${encodeURIComponent(storagePath)}`;
+      console.log("🌐 Calling API:", url);
+
+      const response = await fetch(url);
+      console.log("📡 Response:", response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ API Error:", errorData);
+        throw new Error(`API Error: ${errorData.error}`);
+      }
+
+      const { downloadUrl } = await response.json();
+      console.log("✅ Got download URL");
+
+      // Create download link
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `${applicantName || "applicant"}_resume.pdf`;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("❌ Download error:", error);
+      alert(`Failed to download resume: ${error.message}`);
+    }
   };
 
   const getStatusColor = (status) => {

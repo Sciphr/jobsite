@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
-import {
-  uploadToSupabase,
-  deleteFromSupabase,
-} from "../../lib/supabase-storage";
+import { uploadToMinio, deleteFromMinio } from "../../lib/minio-storage";
 import { getSystemSetting } from "../../lib/settings";
 
 //const prisma = new prismaClient();
@@ -113,9 +110,9 @@ export async function POST(request) {
       );
     }
 
-    // Upload new file to Supabase Storage FIRST
+    // Upload new file to  Storage FIRST
     ("Uploading new file to storage...");
-    const { data: uploadData, error: uploadError } = await uploadToSupabase(
+    const { data: uploadData, error: uploadError } = await uploadToMinio(
       file,
       filePath
     );
@@ -165,8 +162,8 @@ export async function POST(request) {
 
       // If we had an old resume, delete it from storage AFTER successful database update
       if (oldStoragePath) {
-        "Deleting old file from storage:", oldStoragePath;
-        const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
+        ("Deleting old file from storage:", oldStoragePath);
+        const { error: deleteError } = await deleteFromMinio(oldStoragePath);
 
         if (deleteError) {
           console.error(
@@ -193,7 +190,7 @@ export async function POST(request) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded file:", dbError);
 
-      const { error: cleanupError } = await deleteFromSupabase(filePath);
+      const { error: cleanupError } = await deleteFromMinio(filePath);
       if (cleanupError) {
         console.error("Failed to cleanup uploaded file:", cleanupError);
       }
@@ -238,9 +235,9 @@ export async function DELETE() {
 
     ("Resume deleted from database successfully");
 
-    // Then delete from Supabase Storage
-    "Deleting file from storage:", storagePath;
-    const { error: deleteError } = await deleteFromSupabase(storagePath);
+    // Then delete from  Storage
+    ("Deleting file from storage:", storagePath);
+    const { error: deleteError } = await deleteFromStorage(storagePath);
 
     if (deleteError) {
       console.error(

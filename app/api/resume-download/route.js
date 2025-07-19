@@ -1,14 +1,8 @@
-// app/api/resume-download/route.js
+// Replace the entire file with:
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { createClient } from "@supabase/supabase-js";
-
-// Use service role key for admin operations (same as upload)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // Changed from ANON_KEY to SERVICE_ROLE_KEY
-);
+import { getMinioDownloadUrl } from "../../lib/minio-storage";
 
 export async function GET(request) {
   try {
@@ -28,40 +22,13 @@ export async function GET(request) {
       );
     }
 
-    "Attempting to download file from path:", storagePath;
-
-    // First, check if the file exists
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from("resumes")
-      .list(storagePath.split("/")[0], {
-        search: storagePath.split("/")[1],
-      });
-
-    if (fileError) {
-      console.error("Error checking file existence:", fileError);
-    } else {
-      "Files found in directory:", fileData;
-    }
+    console.log("Attempting to download file from path:", storagePath);
 
     // Generate signed URL for file download (valid for 1 hour)
-    const { data, error } = await supabase.storage
-      .from("resumes")
-      .createSignedUrl(storagePath, 3600);
+    const { data, error } = await getMinioDownloadUrl(storagePath, 3600);
 
     if (error) {
       console.error("Error generating download URL:", error);
-      console.error("Storage path attempted:", storagePath);
-
-      // Try to get more information about available files
-      const userId = storagePath.split("/")[0];
-      const { data: userFiles, error: listError } = await supabase.storage
-        .from("resumes")
-        .list(userId);
-
-      if (!listError && userFiles) {
-        "Available files for user:", userFiles;
-      }
-
       return NextResponse.json(
         {
           error: "File not found in storage",
@@ -72,7 +39,7 @@ export async function GET(request) {
       );
     }
 
-    ("Download URL generated successfully");
+    console.log("Download URL generated successfully");
 
     return NextResponse.json({
       downloadUrl: data.signedUrl,
