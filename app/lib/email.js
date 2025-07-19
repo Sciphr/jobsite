@@ -13,6 +13,17 @@ class EmailService {
   constructor() {
     this.provider = null; // Will be determined dynamically
     this.smtpTransporter = null;
+    this.lastInitialized = null; // Track when last initialized
+  }
+
+  /**
+   * Force re-initialization (useful when settings change)
+   */
+  forceReinitialize() {
+    this.provider = null;
+    this.smtpTransporter = null;
+    this.lastInitialized = null;
+    console.log("🔄 Email service forced to reinitialize");
   }
 
   /**
@@ -474,3 +485,4 @@ export const sendJobPublishedNotification = (params) =>
 export const sendTestEmail = (email) => emailService.sendTestEmail(email);
 export const testEmailConfiguration = () =>
   emailService.testEmailConfiguration();
+export const forceEmailReinitialize = () => emailService.forceReinitialize();

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import QuickEmailModal from "./QuickEmailModal";
 import {
   X,
   User,
@@ -11,20 +12,15 @@ import {
   MapPin,
   Calendar,
   Clock,
-  Briefcase,
   FileText,
   Download,
   Star,
   MessageSquare,
   Send,
-  Edit3,
   Save,
   AlertCircle,
-  CheckCircle,
   Eye,
   ExternalLink,
-  Trash2,
-  Flag,
   Phone as PhoneIcon,
   Video,
   Plus,
@@ -47,6 +43,7 @@ export default function ApplicationDetailModal({
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState("");
   const [isSchedulingInterview, setIsSchedulingInterview] = useState(false);
+  const [showQuickEmail, setShowQuickEmail] = useState(false);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -128,6 +125,24 @@ export default function ApplicationDetailModal({
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
+  const handleCallCandidate = () => {
+    if (application.phone) {
+      // Use tel: protocol to trigger phone call
+      window.location.href = `tel:${application.phone}`;
+    } else {
+      alert("No phone number available for this candidate");
+    }
+  };
+
+  const handleSendEmail = () => {
+    setShowQuickEmail(true);
+  };
+
+  const handleEmailSent = () => {
+    // Optionally add a success message or update application status
+    console.log("Email sent successfully!");
+  };
+
   const formatSalary = (min, max, currency) => {
     if (!min && !max) return "Not specified";
     const formatter = new Intl.NumberFormat("en-US", {
@@ -192,6 +207,7 @@ export default function ApplicationDetailModal({
               </h3>
               <div className="space-y-2">
                 <button
+                  onClick={handleSendEmail}
                   className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${getButtonClasses("primary")}`}
                 >
                   <Send className="h-4 w-4" />
@@ -201,7 +217,15 @@ export default function ApplicationDetailModal({
                   <Video className="h-4 w-4" />
                   <span>Schedule Interview</span>
                 </button>
-                <button className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                <button 
+                  onClick={handleCallCandidate}
+                  disabled={!application.phone}
+                  className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    application.phone 
+                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                      : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
                   <PhoneIcon className="h-4 w-4" />
                   <span>Call Candidate</span>
                 </button>
@@ -608,6 +632,14 @@ export default function ApplicationDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Quick Email Modal */}
+      <QuickEmailModal
+        application={application}
+        isOpen={showQuickEmail}
+        onClose={() => setShowQuickEmail(false)}
+        onSent={handleEmailSent}
+      />
     </div>
   );
 }

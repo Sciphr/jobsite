@@ -221,6 +221,16 @@ export async function DELETE(req, { params }) {
       where: { id },
     });
 
+    // Decrement application count for the job
+    await appPrisma.job.update({
+      where: { id: application.jobId },
+      data: {
+        applicationCount: {
+          decrement: 1,
+        },
+      },
+    });
+
     return new Response(
       JSON.stringify({ message: "Application deleted successfully" }),
       {

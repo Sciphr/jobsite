@@ -1,7 +1,7 @@
 // app/api/test-email/route.js
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { sendTestEmail, testEmailConfiguration } from "../../lib/email";
+import { sendTestEmail, testEmailConfiguration, forceEmailReinitialize } from "../../lib/email";
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
@@ -21,8 +21,9 @@ export async function POST(req) {
     const { email, testType } = await req.json();
 
     if (testType === "configuration") {
-      // Test email configuration without sending an email
+      // Force re-initialization to pick up any setting changes
       console.log("🧪 Testing email configuration...");
+      forceEmailReinitialize();
       const result = await testEmailConfiguration();
 
       return new Response(

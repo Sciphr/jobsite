@@ -25,6 +25,13 @@ export async function GET(req) {
             title: true,
             department: true,
             slug: true,
+            employmentType: true,
+            experienceLevel: true,
+            location: true,
+            remotePolicy: true,
+            salaryMin: true,
+            salaryMax: true,
+            salaryCurrency: true,
           },
         },
         user: {

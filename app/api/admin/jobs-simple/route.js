@@ -23,27 +23,16 @@ export async function GET(req) {
         title: true,
         department: true,
         status: true,
+        applicationCount: true,
         createdAt: true,
         slug: true,
-        _count: {
-          select: {
-            applications: true,
-          },
-        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    // Transform the result to include dynamic applicationCount
-    const jobsWithCount = jobs.map(job => ({
-      ...job,
-      applicationCount: job._count.applications,
-      _count: undefined, // Remove the _count object from response
-    }));
-
-    return new Response(JSON.stringify(jobsWithCount), { status: 200 });
+    return new Response(JSON.stringify(jobs), { status: 200 });
   } catch (error) {
     console.error("Jobs fetch error:", error);
     return new Response(JSON.stringify({ message: "Internal server error" }), {
