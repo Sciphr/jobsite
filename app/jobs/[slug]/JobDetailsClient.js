@@ -486,7 +486,7 @@ export default function JobDetailsClient({
                     Salary Range
                   </h3>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-400">
-                    {job.salaryCurrency} {job.salaryMin.toLocaleString()} -{" "}
+                    {job.salaryCurrency} ${job.salaryMin.toLocaleString()}-
                     {job.salaryMax.toLocaleString()}
                   </p>
                   {job.salaryPeriod && (

@@ -1,7 +1,7 @@
-// app/admin/applications/page.js - FIXED to prevent unnecessary effects
+// app/admin/applications/page.js - FIXED to prevent unnecessary effects + Added Pagination
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
@@ -30,6 +30,8 @@ import {
   Zap,
   ArrowRight,
   Target,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function AdminApplications() {
@@ -41,6 +43,10 @@ export default function AdminApplications() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
+
+  // ✅ NEW: Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [selectedApplications, setSelectedApplications] = useState([]);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
@@ -56,6 +62,36 @@ export default function AdminApplications() {
   } = useApplications();
   const { data: jobs = [] } = useJobsSimple();
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (showApplicationModal) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+
+      // Scroll to top and prevent body scroll
+      window.scrollTo(0, 0);
+      document.body.style.overflow = "hidden";
+
+      // Store scroll position for restoration
+      document.body.setAttribute("data-scroll-y", scrollY.toString());
+    } else {
+      // Restore body scroll
+      document.body.style.overflow = "unset";
+
+      // Restore previous scroll position
+      const scrollY = document.body.getAttribute("data-scroll-y");
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY));
+        document.body.removeAttribute("data-scroll-y");
+      }
+    }
+
+    // Cleanup function to restore scroll on unmount
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.removeAttribute("data-scroll-y");
+    };
+  }, [showApplicationModal]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -87,6 +123,47 @@ export default function AdminApplications() {
     return filtered;
   }, [applications, searchTerm, statusFilter, jobFilter]); // ✅ FIXED: Depend on actual data, not .length
 
+  // ✅ NEW: Pagination calculations
+  const paginationData = useMemo(() => {
+    const totalItems = filteredApplications.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = filteredApplications.slice(startIndex, endIndex);
+
+    return {
+      totalItems,
+      totalPages,
+      startIndex,
+      endIndex,
+      currentItems,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1,
+    };
+  }, [filteredApplications, currentPage, itemsPerPage]);
+
+  // ✅ NEW: Reset to first page when filters change
+  const resetPagination = () => {
+    setCurrentPage(1);
+    setSelectedApplications([]); // Clear selections when changing pages
+  };
+
+  // Update filter handlers to reset pagination
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    resetPagination();
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    resetPagination();
+  };
+
+  const handleJobFilterChange = (value) => {
+    setJobFilter(value);
+    resetPagination();
+  };
+
   const updateApplicationStatus = async (applicationId, newStatus) => {
     try {
       const response = await fetch(`/api/admin/applications/${applicationId}`, {
@@ -101,7 +178,8 @@ export default function AdminApplications() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedApplications(filteredApplications.map((app) => app.id));
+      // Only select items on current page
+      setSelectedApplications(paginationData.currentItems.map((app) => app.id));
     } else {
       setSelectedApplications([]);
     }
@@ -227,6 +305,9 @@ export default function AdminApplications() {
       applicationsCount: applications.length,
       isLoading,
       filteredCount: filteredApplications.length,
+      currentPageItems: paginationData.currentItems.length,
+      currentPage,
+      totalPages: paginationData.totalPages,
       searchTerm,
       statusFilter,
       jobFilter,
@@ -395,21 +476,21 @@ export default function AdminApplications() {
 
       {/* Filters */}
       <div className="admin-card p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name, email, or job title..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
             />
           </div>
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text bg-white dark:bg-gray-700"
           >
             <option value="all">All Statuses</option>
@@ -422,7 +503,7 @@ export default function AdminApplications() {
 
           <select
             value={jobFilter}
-            onChange={(e) => setJobFilter(e.target.value)}
+            onChange={(e) => handleJobFilterChange(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text"
           >
             <option value="all">All Jobs</option>
@@ -431,6 +512,21 @@ export default function AdminApplications() {
                 {job.title}
               </option>
             ))}
+          </select>
+
+          {/* ✅ NEW: Items per page selector */}
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none admin-text"
+          >
+            <option value={10}>10 per page</option>
+            <option value={20}>20 per page</option>
+            <option value={50}>50 per page</option>
+            <option value={100}>100 per page</option>
           </select>
         </div>
       </div>
@@ -477,26 +573,37 @@ export default function AdminApplications() {
       <div className="admin-card rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b admin-text-light">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold admin-text">
-              Applications ({filteredApplications.length})
-            </h2>
+            <div className="flex items-center space-x-4">
+              <h2 className="text-lg font-semibold admin-text">
+                Applications ({paginationData.totalItems})
+              </h2>
+              {/* ✅ NEW: Current page info */}
+              <span className="text-sm admin-text-light">
+                Showing {paginationData.startIndex + 1}-
+                {Math.min(paginationData.endIndex, paginationData.totalItems)}{" "}
+                of {paginationData.totalItems}
+              </span>
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 checked={
-                  selectedApplications.length === filteredApplications.length &&
-                  filteredApplications.length > 0
+                  selectedApplications.length ===
+                    paginationData.currentItems.length &&
+                  paginationData.currentItems.length > 0
                 }
                 onChange={(e) => handleSelectAll(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm admin-text-light">Select all</span>
+              <span className="text-sm admin-text-light">
+                Select all (current page)
+              </span>
             </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          {filteredApplications.length > 0 ? (
+          {paginationData.currentItems.length > 0 ? (
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
@@ -521,7 +628,7 @@ export default function AdminApplications() {
                 </tr>
               </thead>
               <tbody className="admin-card divide-y divide-gray-200">
-                {filteredApplications.map((application) => (
+                {paginationData.currentItems.map((application) => (
                   <tr
                     key={application.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -663,6 +770,140 @@ export default function AdminApplications() {
             </div>
           )}
         </div>
+
+        {/* ✅ NEW: Pagination Controls */}
+        {paginationData.totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="text-sm admin-text-light">
+                Showing {paginationData.startIndex + 1} to{" "}
+                {Math.min(paginationData.endIndex, paginationData.totalItems)}{" "}
+                of {paginationData.totalItems} results
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {/* Previous button */}
+                <button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={!paginationData.hasPrevPage}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                    paginationData.hasPrevPage
+                      ? "admin-text hover:bg-gray-200 dark:hover:bg-gray-700"
+                      : "admin-text-light cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Previous</span>
+                </button>
+
+                {/* Page numbers */}
+                <div className="flex items-center space-x-1">
+                  {(() => {
+                    const pages = [];
+                    const totalPages = paginationData.totalPages;
+                    const current = currentPage;
+
+                    // Always show first page
+                    if (totalPages > 1) {
+                      pages.push(
+                        <button
+                          key={1}
+                          onClick={() => setCurrentPage(1)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                            current === 1
+                              ? "bg-blue-600 text-white"
+                              : "admin-text hover:bg-gray-200 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          1
+                        </button>
+                      );
+                    }
+
+                    // Show ellipsis if there's a gap
+                    if (current > 3) {
+                      pages.push(
+                        <span
+                          key="ellipsis1"
+                          className="px-2 py-2 text-sm admin-text-light"
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+
+                    // Show pages around current page
+                    const start = Math.max(2, current - 1);
+                    const end = Math.min(totalPages - 1, current + 1);
+
+                    for (let i = start; i <= end; i++) {
+                      if (i !== 1 && i !== totalPages) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i)}
+                            className={`px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                              current === i
+                                ? "bg-blue-600 text-white"
+                                : "admin-text hover:bg-gray-200 dark:hover:bg-gray-700"
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                    }
+
+                    // Show ellipsis if there's a gap
+                    if (current < totalPages - 2) {
+                      pages.push(
+                        <span
+                          key="ellipsis2"
+                          className="px-2 py-2 text-sm admin-text-light"
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+
+                    // Always show last page
+                    if (totalPages > 1) {
+                      pages.push(
+                        <button
+                          key={totalPages}
+                          onClick={() => setCurrentPage(totalPages)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                            current === totalPages
+                              ? "bg-blue-600 text-white"
+                              : "admin-text hover:bg-gray-200 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {totalPages}
+                        </button>
+                      );
+                    }
+
+                    return pages;
+                  })()}
+                </div>
+
+                {/* Next button */}
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!paginationData.hasNextPage}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                    paginationData.hasNextPage
+                      ? "admin-text hover:bg-gray-200 dark:hover:bg-gray-700"
+                      : "admin-text-light cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Application Details Modal */}
@@ -673,219 +914,221 @@ export default function AdminApplications() {
             onClick={() => setShowApplicationModal(false)}
           ></div>
 
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="admin-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header with theme-aware gradient */}
+          <div className="fixed inset-0 z-50">
+            <div className="flex items-center justify-center p-4">
               <div
-                className={`px-6 py-5 text-white ${getButtonClasses("primary")}`}
+                className="admin-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] transform overflow-hidden relative"
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded-full bg-white bg-opacity-30 flex items-center justify-center theme-primary-text font-semibold">
-                      {selectedApplication.name?.charAt(0)?.toUpperCase() ||
-                        selectedApplication.email?.charAt(0)?.toUpperCase() ||
-                        "A"}
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        Application Details
-                      </h2>
-                      <p className="text-white text-opacity-80 text-sm">
-                        {selectedApplication.job?.title}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowApplicationModal(false)}
-                    className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors duration-200"
-                  >
-                    <X className="h-5 w-5 text-white" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 overflow-y-auto max-h-[70vh]">
-                <div className="space-y-6">
-                  {/* Applicant Info Card */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <User className="h-5 w-5 text-blue-600" />
+                {/* Header with theme-aware gradient */}
+                <div
+                  className={`px-6 py-5 text-white ${getButtonClasses("primary")}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-10 w-10 rounded-full bg-white bg-opacity-30 flex items-center justify-center theme-primary-text font-semibold">
+                        {selectedApplication.name?.charAt(0)?.toUpperCase() ||
+                          selectedApplication.email?.charAt(0)?.toUpperCase() ||
+                          "A"}
                       </div>
-                      <h3 className="text-lg font-semibold admin-text">
-                        Applicant Information
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="admin-card rounded-lg p-3 border border-blue-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Name
-                        </span>
-                        <p className="admin-text">
-                          {selectedApplication.name || "Not provided"}
-                        </p>
-                      </div>
-                      <div className="admin-card rounded-lg p-3 border border-blue-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Email
-                        </span>
-                        <p className="admin-text">
-                          {selectedApplication.email}
-                        </p>
-                      </div>
-                      <div className="admin-card rounded-lg p-3 border border-blue-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Phone
-                        </span>
-                        <p className="admin-text">
-                          {selectedApplication.phone || "Not provided"}
-                        </p>
-                      </div>
-                      <div className="admin-card rounded-lg p-3 border border-blue-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Applied
-                        </span>
-                        <p className="admin-text">
-                          {new Date(
-                            selectedApplication.appliedAt
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Job Info Card */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-100">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Briefcase className="h-5 w-5 text-green-600" />
-                      </div>
-                      <h3 className="text-lg font-semibold admin-text">
-                        Position Details
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="admin-card rounded-lg p-3 border border-green-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Position
-                        </span>
-                        <p className="admin-text">
+                      <div>
+                        <h2 className="text-lg font-semibold">
+                          Application Details
+                        </h2>
+                        <p className="text-white text-opacity-80 text-sm">
                           {selectedApplication.job?.title}
                         </p>
                       </div>
-                      <div className="admin-card rounded-lg p-3 border border-green-100">
-                        <span className="admin-text-light font-medium block mb-1">
-                          Department
-                        </span>
-                        <p className="admin-text">
-                          {selectedApplication.job?.department}
-                        </p>
-                      </div>
                     </div>
+                    <button
+                      onClick={() => setShowApplicationModal(false)}
+                      className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors duration-200"
+                    >
+                      <X className="h-5 w-5 text-white" />
+                    </button>
                   </div>
-
-                  {/* Cover Letter */}
-                  {selectedApplication.coverLetter && (
-                    <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-5 border border-purple-100">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Mail className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold admin-text">
-                          Cover Letter
-                        </h3>
-                      </div>
-                      <div className="admin-card rounded-lg p-4 border border-purple-100">
-                        <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
-                          {selectedApplication.coverLetter}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Internal Notes */}
-                  {selectedApplication.notes && (
-                    <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-5 border border-yellow-200">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 bg-yellow-100 rounded-lg">
-                          <FileText className="h-5 w-5 text-yellow-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold admin-text">
-                          Internal Notes
-                        </h3>
-                      </div>
-                      <div className="admin-card rounded-lg p-4 border border-yellow-200">
-                        <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
-                          {selectedApplication.notes}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Resume */}
-                  {selectedApplication.resumeUrl && (
-                    <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-5 border border-orange-100">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 bg-orange-100 rounded-lg">
-                          <Download className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold admin-text">
-                          Resume
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() =>
-                          downloadResume(
-                            selectedApplication.resumeUrl,
-                            selectedApplication.name
-                          )
-                        }
-                        className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>Download Resume</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {/* Footer */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm admin-text-light font-medium">
-                    Current Status:
-                  </span>
-                  <select
-                    value={selectedApplication.status}
-                    onChange={(e) => {
-                      updateApplicationStatus(
-                        selectedApplication.id,
-                        e.target.value
-                      );
-                      setSelectedApplication((prev) => ({
-                        ...prev,
-                        status: e.target.value,
-                      }));
-                    }}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text font-medium"
+                <div className="p-6 overflow-y-auto max-h-[60vh]">
+                  <div className="space-y-6">
+                    {/* Applicant Info Card */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <User className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold admin-text">
+                          Applicant Information
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="admin-card rounded-lg p-3 border border-blue-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Name
+                          </span>
+                          <p className="admin-text">
+                            {selectedApplication.name || "Not provided"}
+                          </p>
+                        </div>
+                        <div className="admin-card rounded-lg p-3 border border-blue-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Email
+                          </span>
+                          <p className="admin-text">
+                            {selectedApplication.email}
+                          </p>
+                        </div>
+                        <div className="admin-card rounded-lg p-3 border border-blue-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Phone
+                          </span>
+                          <p className="admin-text">
+                            {selectedApplication.phone || "Not provided"}
+                          </p>
+                        </div>
+                        <div className="admin-card rounded-lg p-3 border border-blue-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Applied
+                          </span>
+                          <p className="admin-text">
+                            {new Date(
+                              selectedApplication.appliedAt
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Job Info Card */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-100">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Briefcase className="h-5 w-5 text-green-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold admin-text">
+                          Position Details
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="admin-card rounded-lg p-3 border border-green-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Position
+                          </span>
+                          <p className="admin-text">
+                            {selectedApplication.job?.title}
+                          </p>
+                        </div>
+                        <div className="admin-card rounded-lg p-3 border border-green-100">
+                          <span className="admin-text-light font-medium block mb-1">
+                            Department
+                          </span>
+                          <p className="admin-text">
+                            {selectedApplication.job?.department}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cover Letter */}
+                    {selectedApplication.coverLetter && (
+                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-5 border border-purple-100">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="p-2 bg-purple-100 rounded-lg">
+                            <Mail className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold admin-text">
+                            Cover Letter
+                          </h3>
+                        </div>
+                        <div className="admin-card rounded-lg p-4 border border-purple-100">
+                          <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
+                            {selectedApplication.coverLetter}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Internal Notes */}
+                    {selectedApplication.notes && (
+                      <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-5 border border-yellow-200">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="p-2 bg-yellow-100 rounded-lg">
+                            <FileText className="h-5 w-5 text-yellow-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold admin-text">
+                            Internal Notes
+                          </h3>
+                        </div>
+                        <div className="admin-card rounded-lg p-4 border border-yellow-200">
+                          <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
+                            {selectedApplication.notes}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resume */}
+                    {selectedApplication.resumeUrl && (
+                      <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-5 border border-orange-100">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="p-2 bg-orange-100 rounded-lg">
+                            <Download className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold admin-text">
+                            Resume
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() =>
+                            downloadResume(
+                              selectedApplication.resumeUrl,
+                              selectedApplication.name
+                            )
+                          }
+                          className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span>Download Resume</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm admin-text-light font-medium">
+                      Current Status:
+                    </span>
+                    <select
+                      value={selectedApplication.status}
+                      onChange={(e) => {
+                        updateApplicationStatus(
+                          selectedApplication.id,
+                          e.target.value
+                        );
+                        setSelectedApplication((prev) => ({
+                          ...prev,
+                          status: e.target.value,
+                        }));
+                      }}
+                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text font-medium"
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setShowApplicationModal(false)}
+                    className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
                   >
-                    {statusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
+                    Close
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowApplicationModal(false)}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>

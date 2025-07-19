@@ -2,15 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Briefcase,
-  Menu,
-  X,
-  User,
-  Settings,
-  Users,
-  FileText,
-} from "lucide-react";
+import { Briefcase, Menu, X, User, Settings } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useSetting } from "../hooks/useSettings";
