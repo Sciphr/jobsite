@@ -23,6 +23,8 @@ model User {
   privilege_level        Int?                  @default(0)
   is_active              Boolean?              @default(true)
   applications           Application[]
+  auditLogsAsActor       AuditLog[]            @relation("AuditLogActor")
+  auditLogsAsRelatedUser AuditLog[]            @relation("AuditLogRelatedUser")
   email_automation_rules EmailAutomationRule[]
   email_campaigns        EmailCampaign[]
   email_templates        EmailTemplate[]
@@ -31,10 +33,6 @@ model User {
   savedJobs              SavedJob[]
   settings               Setting[]
   resumes                UserResume[]
-  
-  // Audit log relations
-  audit_logs_as_actor       AuditLog[] @relation("AuditLogActor")
-  audit_logs_as_related     AuditLog[] @relation("AuditLogRelatedUser")
 
   @@map("users")
 }
@@ -87,37 +85,33 @@ model Job {
   last_expired_check      DateTime?       @db.Timestamp(6)
   applicationCount        Int?            @default(0)
   applications            Application[]
+  auditLogs               AuditLog[]      @relation("AuditLogRelatedJob")
   email_campaigns         EmailCampaign[]
   emails                  Email[]
   category                Category        @relation(fields: [categoryId], references: [id])
   creator                 User?           @relation("JobCreator", fields: [createdBy], references: [id])
   savedJobs               SavedJob[]
-  
-  // Audit log relations
-  audit_logs              AuditLog[]      @relation("AuditLogRelatedJob")
 
   @@map("jobs")
 }
 
 model Application {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status      String   @default("Applied")
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status      String     @default("Applied")
   coverLetter String?
   resumeUrl   String?
   notes       String?
-  appliedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String?  @db.Uuid
-  jobId       String   @db.Uuid
+  appliedAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userId      String?    @db.Uuid
+  jobId       String     @db.Uuid
   name        String?
   email       String?
   phone       String?
-  job         Job      @relation(fields: [jobId], references: [id])
-  user        User?    @relation(fields: [userId], references: [id])
+  job         Job        @relation(fields: [jobId], references: [id])
+  user        User?      @relation(fields: [userId], references: [id])
+  auditLogs   AuditLog[] @relation("AuditLogRelatedApplication")
   emails      Email[]
-  
-  // Audit log relations
-  audit_logs  AuditLog[] @relation("AuditLogRelatedApplication")
 
   @@unique([userId, jobId])
   @@map("applications")
@@ -278,71 +272,45 @@ model EmailAutomationRule {
 }
 
 model AuditLog {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  
-  // Event Classification
-  event_type     String    @db.VarChar(100)  // CREATE, UPDATE, DELETE, LOGIN, SEND_EMAIL, etc.
-  category       String    @db.VarChar(50)   // USER, JOB, APPLICATION, EMAIL, SYSTEM, etc.
-  subcategory    String?   @db.VarChar(50)   // STATUS_CHANGE, TEMPLATE_CREATE, etc.
-  
-  // Entity Information
-  entity_type    String?   @db.VarChar(50)   // application, job, user, email_template, etc.
-  entity_id      String?   @db.Uuid          // ID of the entity being acted upon
-  entity_name    String?   @db.VarChar(255)  // Human readable name/title of entity
-  
-  // Actor Information
-  actor_id       String?   @db.Uuid          // Who performed the action
-  actor_type     String    @default("user") @db.VarChar(20)  // user, system, api, cron
-  actor_name     String?   @db.VarChar(255)  // Actor's name for quick reference
-  
-  // Action Details
-  action         String    @db.VarChar(255)  // Brief description of what happened
-  description    String?                     // Detailed description
-  
-  // Change Tracking
-  old_values     Json?                       // Previous state (for updates)
-  new_values     Json?                       // New state (for updates/creates)
-  changes        Json?                       // Specific fields that changed
-  
-  // Context & Metadata
-  ip_address     String?   @db.VarChar(45)   // IPv4/IPv6 address
-  user_agent     String?   @db.VarChar(500)  // Browser/client info
-  session_id     String?   @db.VarChar(255)  // Session identifier
-  request_id     String?   @db.VarChar(255)  // Request tracing ID
-  
-  // Relationships (for easy filtering)
-  related_user_id        String? @db.Uuid   // Related user (for application actions, etc.)
-  related_job_id         String? @db.Uuid   // Related job
-  related_application_id String? @db.Uuid   // Related application
-  
-  // Timestamps
-  created_at     DateTime  @default(now()) @db.Timestamp(6)
-  
-  // Severity & Status
-  severity       String    @default("info") @db.VarChar(20)  // info, warning, error, critical
-  status         String    @default("success") @db.VarChar(20)  // success, failure, partial
-  
-  // Additional Context
-  tags           String[]  @default([])      // Searchable tags
-  metadata       Json?                       // Flexible additional data
-  
-  // Relations (optional, for complex queries)
-  actor          User?     @relation("AuditLogActor", fields: [actor_id], references: [id], onDelete: SetNull)
-  related_user   User?     @relation("AuditLogRelatedUser", fields: [related_user_id], references: [id], onDelete: SetNull)
-  related_job    Job?      @relation("AuditLogRelatedJob", fields: [related_job_id], references: [id], onDelete: SetNull)
-  related_application Application? @relation("AuditLogRelatedApplication", fields: [related_application_id], references: [id], onDelete: SetNull)
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType            String       @map("event_type") @db.VarChar(100)
+  category             String       @db.VarChar(50)
+  subcategory          String?      @db.VarChar(50)
+  entityType           String?      @map("entity_type") @db.VarChar(50)
+  entityId             String?      @map("entity_id") @db.Uuid
+  entityName           String?      @map("entity_name") @db.VarChar(255)
+  actorId              String?      @map("actor_id") @db.Uuid
+  actorType            String       @default("user") @map("actor_type") @db.VarChar(20)
+  actorName            String?      @map("actor_name") @db.VarChar(255)
+  action               String       @db.VarChar(255)
+  description          String?
+  oldValues            Json?        @map("old_values")
+  newValues            Json?        @map("new_values")
+  changes              Json?
+  ipAddress            String?      @map("ip_address") @db.VarChar(45)
+  userAgent            String?      @map("user_agent") @db.VarChar(500)
+  sessionId            String?      @map("session_id") @db.VarChar(255)
+  requestId            String?      @map("request_id") @db.VarChar(255)
+  relatedUserId        String?      @map("related_user_id") @db.Uuid
+  relatedJobId         String?      @map("related_job_id") @db.Uuid
+  relatedApplicationId String?      @map("related_application_id") @db.Uuid
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  severity             String       @default("info") @db.VarChar(20)
+  status               String       @default("success") @db.VarChar(20)
+  tags                 String[]     @default([])
+  metadata             Json?
+  actor                User?        @relation("AuditLogActor", fields: [actorId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_actor")
+  relatedApplication   Application? @relation("AuditLogRelatedApplication", fields: [relatedApplicationId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_application")
+  relatedJob           Job?         @relation("AuditLogRelatedJob", fields: [relatedJobId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_job")
+  relatedUser          User?        @relation("AuditLogRelatedUser", fields: [relatedUserId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_user")
 
-  // Indexes for performance
-  @@index([event_type], map: "idx_audit_logs_event_type")
-  @@index([category], map: "idx_audit_logs_category")
-  @@index([entity_type, entity_id], map: "idx_audit_logs_entity")
-  @@index([actor_id], map: "idx_audit_logs_actor")
-  @@index([created_at], map: "idx_audit_logs_created_at")
-  @@index([related_application_id], map: "idx_audit_logs_related_application")
-  @@index([related_job_id], map: "idx_audit_logs_related_job")
-  @@index([related_user_id], map: "idx_audit_logs_related_user")
-  @@index([category, created_at], map: "idx_audit_logs_category_date")
-  @@index([entity_type, entity_id, created_at], map: "idx_audit_logs_entity_timeline")
-
+  @@index([actorId], map: "idx_audit_logs_actor")
+  @@index([category, createdAt], map: "idx_audit_logs_category_date")
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([entityType, entityId, createdAt], map: "idx_audit_logs_entity_timeline")
+  @@index([relatedApplicationId], map: "idx_audit_logs_related_application")
+  @@index([relatedJobId], map: "idx_audit_logs_related_job")
+  @@index([relatedUserId], map: "idx_audit_logs_related_user")
   @@map("audit_logs")
 }

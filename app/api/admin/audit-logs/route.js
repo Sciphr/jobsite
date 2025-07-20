@@ -43,29 +43,29 @@ export async function GET(request) {
     const relatedApplicationId = searchParams.get("relatedApplicationId");
     
     // Sorting
-    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     
     // Build where clause
     const where = {};
     
     if (category) where.category = category;
-    if (eventType) where.event_type = eventType;
+    if (eventType) where.eventType = eventType;
     if (subcategory) where.subcategory = subcategory;
-    if (entityType) where.entity_type = entityType;
-    if (entityId) where.entity_id = entityId;
-    if (actorId) where.actor_id = actorId;
+    if (entityType) where.entityType = entityType;
+    if (entityId) where.entityId = entityId;
+    if (actorId) where.actorId = actorId;
     if (severity) where.severity = severity;
     if (status) where.status = status;
-    if (relatedUserId) where.related_user_id = relatedUserId;
-    if (relatedJobId) where.related_job_id = relatedJobId;
-    if (relatedApplicationId) where.related_application_id = relatedApplicationId;
+    if (relatedUserId) where.relatedUserId = relatedUserId;
+    if (relatedJobId) where.relatedJobId = relatedJobId;
+    if (relatedApplicationId) where.relatedApplicationId = relatedApplicationId;
     
     // Date range filter
     if (dateFrom || dateTo) {
-      where.created_at = {};
-      if (dateFrom) where.created_at.gte = new Date(dateFrom);
-      if (dateTo) where.created_at.lte = new Date(dateTo);
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
     
     // Search filter (across multiple text fields)
@@ -73,8 +73,8 @@ export async function GET(request) {
       where.OR = [
         { action: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
-        { entity_name: { contains: search, mode: "insensitive" } },
-        { actor_name: { contains: search, mode: "insensitive" } }
+        { entityName: { contains: search, mode: "insensitive" } },
+        { actorName: { contains: search, mode: "insensitive" } }
       ];
     }
     
@@ -100,7 +100,7 @@ export async function GET(request) {
             email: true
           }
         },
-        related_user: {
+        relatedUser: {
           select: {
             id: true,
             firstName: true,
@@ -108,14 +108,14 @@ export async function GET(request) {
             email: true
           }
         },
-        related_job: {
+        relatedJob: {
           select: {
             id: true,
             title: true,
             department: true
           }
         },
-        related_application: {
+        relatedApplication: {
           select: {
             id: true,
             name: true,
@@ -129,28 +129,28 @@ export async function GET(request) {
     // Transform data for frontend
     const transformedLogs = auditLogs.map(log => ({
       id: log.id,
-      eventType: log.event_type,
+      eventType: log.eventType,
       category: log.category,
       subcategory: log.subcategory,
-      entityType: log.entity_type,
-      entityId: log.entity_id,
-      entityName: log.entity_name,
-      actorId: log.actor_id,
-      actorType: log.actor_type,
-      actorName: log.actor_name,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      entityName: log.entityName,
+      actorId: log.actorId,
+      actorType: log.actorType,
+      actorName: log.actorName,
       action: log.action,
       description: log.description,
-      oldValues: log.old_values,
-      newValues: log.new_values,
+      oldValues: log.oldValues,
+      newValues: log.newValues,
       changes: log.changes,
-      ipAddress: log.ip_address,
-      userAgent: log.user_agent,
-      sessionId: log.session_id,
-      requestId: log.request_id,
-      relatedUserId: log.related_user_id,
-      relatedJobId: log.related_job_id,
-      relatedApplicationId: log.related_application_id,
-      createdAt: log.created_at,
+      ipAddress: log.ipAddress,
+      userAgent: log.userAgent,
+      sessionId: log.sessionId,
+      requestId: log.requestId,
+      relatedUserId: log.relatedUserId,
+      relatedJobId: log.relatedJobId,
+      relatedApplicationId: log.relatedApplicationId,
+      createdAt: log.createdAt,
       severity: log.severity,
       status: log.status,
       tags: log.tags,
@@ -161,18 +161,18 @@ export async function GET(request) {
         name: `${log.actor.firstName || ''} ${log.actor.lastName || ''}`.trim() || log.actor.email,
         email: log.actor.email
       } : null,
-      relatedUser: log.related_user ? {
-        name: `${log.related_user.firstName || ''} ${log.related_user.lastName || ''}`.trim() || log.related_user.email,
-        email: log.related_user.email
+      relatedUser: log.relatedUser ? {
+        name: `${log.relatedUser.firstName || ''} ${log.relatedUser.lastName || ''}`.trim() || log.relatedUser.email,
+        email: log.relatedUser.email
       } : null,
-      relatedJob: log.related_job ? {
-        title: log.related_job.title,
-        department: log.related_job.department
+      relatedJob: log.relatedJob ? {
+        title: log.relatedJob.title,
+        department: log.relatedJob.department
       } : null,
-      relatedApplication: log.related_application ? {
-        name: log.related_application.name,
-        email: log.related_application.email,
-        status: log.related_application.status
+      relatedApplication: log.relatedApplication ? {
+        name: log.relatedApplication.name,
+        email: log.relatedApplication.email,
+        status: log.relatedApplication.status
       } : null
     }));
     
@@ -238,7 +238,7 @@ async function getAuditLogStats(where) {
     
     // Get counts by event type
     const eventTypeStats = await prisma.auditLog.groupBy({
-      by: ['event_type'],
+      by: ['eventType'],
       where,
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } }
@@ -265,13 +265,13 @@ async function getAuditLogStats(where) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     const activityStats = await prisma.auditLog.groupBy({
-      by: ['created_at'],
+      by: ['createdAt'],
       where: {
         ...where,
-        created_at: { gte: thirtyDaysAgo }
+        createdAt: { gte: thirtyDaysAgo }
       },
       _count: { id: true },
-      orderBy: { created_at: 'asc' }
+      orderBy: { createdAt: 'asc' }
     });
     
     return {
@@ -280,7 +280,7 @@ async function getAuditLogStats(where) {
         count: stat._count.id
       })),
       byEventType: eventTypeStats.map(stat => ({
-        eventType: stat.event_type,
+        eventType: stat.eventType,
         count: stat._count.id
       })),
       bySeverity: severityStats.map(stat => ({
@@ -292,7 +292,7 @@ async function getAuditLogStats(where) {
         count: stat._count.id
       })),
       recentActivity: activityStats.map(stat => ({
-        date: stat.created_at,
+        date: stat.createdAt,
         count: stat._count.id
       }))
     };
@@ -327,9 +327,9 @@ export async function OPTIONS(request) {
       statuses
     ] = await Promise.all([
       prisma.auditLog.findMany({ distinct: ['category'], select: { category: true } }),
-      prisma.auditLog.findMany({ distinct: ['event_type'], select: { event_type: true } }),
+      prisma.auditLog.findMany({ distinct: ['eventType'], select: { eventType: true } }),
       prisma.auditLog.findMany({ distinct: ['subcategory'], select: { subcategory: true }, where: { subcategory: { not: null } } }),
-      prisma.auditLog.findMany({ distinct: ['entity_type'], select: { entity_type: true }, where: { entity_type: { not: null } } }),
+      prisma.auditLog.findMany({ distinct: ['entityType'], select: { entityType: true }, where: { entityType: { not: null } } }),
       prisma.auditLog.findMany({ distinct: ['severity'], select: { severity: true } }),
       prisma.auditLog.findMany({ distinct: ['status'], select: { status: true } })
     ]);
@@ -338,9 +338,9 @@ export async function OPTIONS(request) {
       success: true,
       filterOptions: {
         categories: categories.map(c => c.category).sort(),
-        eventTypes: eventTypes.map(e => e.event_type).sort(),
+        eventTypes: eventTypes.map(e => e.eventType).sort(),
         subcategories: subcategories.map(s => s.subcategory).sort(),
-        entityTypes: entityTypes.map(e => e.entity_type).sort(),
+        entityTypes: entityTypes.map(e => e.entityType).sort(),
         severities: severities.map(s => s.severity).sort(),
         statuses: statuses.map(s => s.status).sort()
       },

@@ -17,6 +17,7 @@ import {
   Shield,
   Building2,
   Mail,
+  FileSearch,
 } from "lucide-react";
 import {
   AdminThemeProvider,
@@ -115,6 +116,13 @@ function AdminLayoutContent({ children }) {
       icon: Mail, // You'll need to import Mail from lucide-react
       requiredLevel: 1,
       description: "Configure digest emails",
+    },
+    {
+      name: "Audit Logs",
+      href: "/admin/audit-logs",
+      icon: FileSearch,
+      requiredLevel: 2,
+      description: "View system activity logs",
     },
     {
       name: "Settings",
