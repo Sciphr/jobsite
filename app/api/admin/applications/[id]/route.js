@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
+import { auditApplication, extractRequestContext } from "../../../../lib/auditLog";
 
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -21,11 +22,29 @@ export async function PATCH(req, { params }) {
   try {
     const body = await req.json();
     const { status, notes } = body;
+    
+    // Extract request context for audit logging
+    const { ipAddress, userAgent, requestId } = extractRequestContext(req);
+
+    // Get current application data for audit logging
+    const currentApplication = await appPrisma.application.findUnique({
+      where: { id },
+      include: {
+        job: { select: { id: true, title: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } }
+      }
+    });
+
+    if (!currentApplication) {
+      return new Response(JSON.stringify({ message: "Application not found" }), {
+        status: 404,
+      });
+    }
 
     // Validate status
     const validStatuses = [
       "Applied",
-      "Reviewing",
+      "Reviewing", 
       "Interview",
       "Hired",
       "Rejected",
@@ -62,6 +81,36 @@ export async function PATCH(req, { params }) {
         },
       },
     });
+
+    // Create audit logs for the changes
+    const applicantName = updatedApplication.name || 
+      (updatedApplication.user ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim() : 'Unknown');
+    const actorName = `${session.user.firstName} ${session.user.lastName}`.trim() || session.user.email;
+
+    // Log status change if status was updated
+    if (status && status !== currentApplication.status) {
+      await auditApplication.statusChange(
+        updatedApplication.id,
+        applicantName,
+        currentApplication.status,
+        status,
+        session.user.id,
+        actorName,
+        updatedApplication.jobId
+      );
+    }
+
+    // Log note update if notes were changed
+    if (notes !== undefined && notes !== currentApplication.notes) {
+      await auditApplication.noteUpdate(
+        updatedApplication.id,
+        applicantName,
+        currentApplication.notes,
+        notes,
+        session.user.id,
+        actorName
+      );
+    }
 
     // Format the response
     const formattedApplication = {

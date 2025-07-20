@@ -76,13 +76,20 @@ export default function TemplateModal({
                       required
                     >
                       <option value="">Select type...</option>
-                      <option value="welcome">Welcome</option>
-                      <option value="confirmation">Application Confirmation</option>
-                      <option value="interview_invite">Interview Invitation</option>
-                      <option value="rejection">Rejection</option>
-                      <option value="offer">Job Offer</option>
+                      <option value="application_received">Application Received</option>
+                      <option value="application_under_review">Application Under Review</option>
+                      <option value="interview_invitation">Interview Invitation</option>
+                      <option value="interview_reminder">Interview Reminder</option>
+                      <option value="interview_feedback">Interview Feedback</option>
+                      <option value="offer_extended">Offer Extended</option>
+                      <option value="offer_accepted">Offer Accepted</option>
+                      <option value="offer_declined">Offer Declined</option>
+                      <option value="rejection_general">Rejection - General</option>
+                      <option value="rejection_interview">Rejection - Post Interview</option>
+                      <option value="onboarding_welcome">Onboarding Welcome</option>
+                      <option value="document_request">Document Request</option>
                       <option value="follow_up">Follow Up</option>
-                      <option value="general">General</option>
+                      <option value="custom">Custom</option>
                     </select>
                   </div>
 

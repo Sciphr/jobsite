@@ -67,12 +67,6 @@ export async function GET(request) {
         [sortBy]: sortOrder,
       },
       include: {
-        email_templates: {
-          select: {
-            name: true,
-            type: true,
-          },
-        },
         jobs: {
           select: {
             title: true,
@@ -95,6 +89,25 @@ export async function GET(request) {
       },
     });
 
+    // Get unique template IDs to fetch template data
+    const templateIds = [...new Set(emails.map(email => email.template_id).filter(Boolean))];
+    const templates = templateIds.length > 0 ? await prisma.emailTemplate.findMany({
+      where: {
+        id: { in: templateIds }
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+      }
+    }) : [];
+
+    // Create a map for easy template lookup
+    const templateMap = templates.reduce((acc, template) => {
+      acc[template.id] = template;
+      return acc;
+    }, {});
+
     // Transform data for frontend
     const transformedEmails = emails.map((email) => ({
       id: email.id,
@@ -116,9 +129,9 @@ export async function GET(request) {
       sentBy: email.sent_by,
       sentAt: email.sent_at,
       campaignId: email.campaign_id,
-      template: email.email_templates ? {
-        name: email.email_templates.name,
-        type: email.email_templates.type,
+      template: email.template_id && templateMap[email.template_id] ? {
+        name: templateMap[email.template_id].name,
+        type: templateMap[email.template_id].type,
       } : null,
       job: email.jobs ? {
         title: email.jobs.title,

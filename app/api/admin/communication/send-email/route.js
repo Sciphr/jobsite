@@ -58,6 +58,17 @@ export async function POST(request) {
             },
           });
 
+          // Update template usage count if template was used
+          if (templateId) {
+            await prisma.emailTemplate.update({
+              where: { id: templateId },
+              data: {
+                usage_count: { increment: 1 },
+                last_used_at: new Date(),
+              },
+            });
+          }
+
           results.push({
             recipient: recipient.email,
             success: true,
@@ -127,14 +138,61 @@ export async function POST(request) {
 function replaceVariables(content, recipient) {
   if (!content || !recipient) return content;
 
+  // Basic variables
   const variables = {
     candidateName: recipient.name || "Candidate",
     jobTitle: recipient.jobTitle || "Position",
     companyName: "Your Company", // Can be made configurable
     department: recipient.department || "Department",
     senderName: "Hiring Manager", // Can be made configurable
-    reviewTimeframe: "1-2 weeks",
     recipientEmail: recipient.email,
+    
+    // Application-related variables
+    reviewTimeframe: "1-2 weeks",
+    timeframe: "1-2 weeks",
+    currentStage: "review phase",
+    expectedDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 2 weeks from now
+    nextSteps: "• Initial review by hiring team\n• Technical assessment (if applicable)\n• Interview scheduling",
+    timeline: "• Application review: 3-5 business days\n• Initial interview: 1-2 weeks\n• Final decision: 2-3 weeks",
+    
+    // Interview-related variables
+    interviewDate: "TBD",
+    interviewTime: "TBD",
+    duration: "45-60 minutes",
+    interviewFormat: "Video call via Zoom",
+    interviewLocation: "Virtual",
+    interviewDetails: "The interview will include a technical discussion and cultural fit assessment",
+    interviewExpectations: "• Brief introduction and background discussion\n• Technical questions related to the role\n• Questions about your experience and projects\n• Opportunity for you to ask questions",
+    originalDate: "TBD",
+    originalTime: "TBD",
+    option1: "Option 1: TBD",
+    option2: "Option 2: TBD", 
+    option3: "Option 3: TBD",
+    
+    // Onboarding variables
+    startDate: "TBD",
+    officeAddress: "123 Business St, City, State 12345",
+    startTime: "9:00 AM",
+    supervisor: "Team Lead",
+    supervisorEmail: "supervisor@company.com",
+    parkingInfo: "Visitor parking available in front lot",
+    missingDocuments: "• ID verification\n• Tax forms\n• Emergency contact information",
+    hrEmail: "hr@company.com",
+    portalLink: "https://portal.company.com/onboarding",
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 1 week from now
+    
+    // Offer-related variables
+    salary: "Competitive salary based on experience",
+    benefits: "Health insurance, 401k, paid time off",
+    
+    // General variables
+    retentionPeriod: "6 months",
+    requestedInfo: "Portfolio links, references, or additional documents",
+    
+    // Reference check variables
+    referenceName: "Reference",
+    phoneNumber: "(555) 123-4567",
+    email: "hiring@company.com",
   };
 
   let processedContent = content;
