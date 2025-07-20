@@ -12,7 +12,11 @@
       "Bash(npx prisma migrate dev --name add-audit-logging-system)",
       "Bash(prisma generate:*)",
       "Bash(psql:*)",
-      "Bash(npx prisma db execute:*)"
+      "Bash(npx prisma db execute:*)",
+      "Bash(tasklist:*)",
+      "Bash(ls:*)",
+      "Bash(icacls:*)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

@@ -7,6 +7,8 @@ import {
   sendNewApplicationNotification,
 } from "../../lib/email";
 import { getSystemSetting } from "../../lib/settings";
+import { logAuditEvent } from "../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../lib/auditLog";
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -15,6 +17,7 @@ export async function POST(request) {
   try {
     const { jobId, name, email, phone, coverLetter, resumeUrl } =
       await request.json();
+    const requestContext = extractRequestContext(request);
 
     if (!jobId || !resumeUrl) {
       return Response.json(
@@ -203,9 +206,71 @@ export async function POST(request) {
       }
     }
 
+    // Log successful application submission
+    await logAuditEvent(
+      {
+        eventType: "CREATE",
+        category: "APPLICATION",
+        entityType: "application",
+        entityId: application.id,
+        entityName: `Application by ${applicantName}`,
+        action: "Job application submitted",
+        description: `New application submitted for ${job.title} by ${applicantName}`,
+        newValues: {
+          applicantName,
+          applicantEmail,
+          jobTitle: job.title,
+          department: job.department,
+          userType: userId ? "authenticated" : "guest",
+        },
+        relatedUserId: userId,
+        relatedJobId: jobId,
+        relatedApplicationId: application.id,
+        severity: "info",
+        status: "success",
+        tags: [
+          "application",
+          "create",
+          "job_application",
+          userId ? "authenticated" : "guest",
+        ],
+        metadata: {
+          jobTitle: job.title,
+          department: job.department,
+          hasCoverLetter: !!coverLetter,
+          confirmationEmailSent: confirmationEmailEnabled && applicantEmail,
+          adminNotificationSent: adminNotificationEnabled,
+          userType: userId ? "authenticated_user" : "guest_user",
+        },
+        ...requestContext,
+      },
+      request
+    );
+
     return Response.json(application, { status: 201 });
   } catch (error) {
     console.error("Apply to job error:", error);
+
+    // Log the error
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "APPLICATION",
+        entityType: "application",
+        action: "Failed to submit application",
+        description: `Application submission failed: ${error.message}`,
+        severity: "error",
+        status: "failure",
+        tags: ["application", "create", "error"],
+        metadata: {
+          errorMessage: error.message,
+          attempted: { jobId, applicantName: name, applicantEmail: email },
+          userType: userId ? "authenticated_user" : "guest_user",
+        },
+      },
+      request
+    );
+
     return Response.json({ message: "Internal server error" }, { status: 500 });
   }
 }

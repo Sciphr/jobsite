@@ -4,6 +4,8 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { getSystemSetting } from "../../../lib/settings";
 import { sendJobPublishedNotification } from "../../../lib/email";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -82,6 +84,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
+    const requestContext = extractRequestContext(req);
 
     // Get relevant settings
     const [
@@ -311,9 +314,73 @@ export async function POST(req) {
       }
     }
 
+    // Log successful job creation
+    await logAuditEvent(
+      {
+        eventType: "CREATE",
+        category: "JOB",
+        subcategory: newJob.status === "Active" ? "JOB_PUBLISH" : null,
+        entityType: "job",
+        entityId: newJob.id,
+        entityName: newJob.title,
+        action:
+          newJob.status === "Active"
+            ? "Job created and published"
+            : "Job created as draft",
+        description: `Created job posting: ${newJob.title} in ${newJob.department} department`,
+        newValues: {
+          title: newJob.title,
+          department: newJob.department,
+          status: newJob.status,
+          location: newJob.location,
+          employmentType: newJob.employmentType,
+        },
+        relatedJobId: newJob.id,
+        severity: "info",
+        status: "success",
+        tags: ["job", "create", newJob.status.toLowerCase(), "admin_action"],
+        metadata: {
+          autoPublished: autoPublishJobs && newJob.status === "Active",
+          category: newJob.category.name,
+          salary:
+            newJob.salaryMin && newJob.salaryMax
+              ? `${newJob.salaryMin}-${newJob.salaryMax} ${newJob.salaryCurrency}`
+              : null,
+          featured: newJob.featured,
+          emailSent: jobPublishedEmailEnabled && newJob.status === "Active",
+        },
+        ...requestContext,
+      },
+      req
+    );
+
     return new Response(JSON.stringify(newJob), { status: 201 });
   } catch (error) {
     console.error("Job creation error:", error);
+
+    // Log the error
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "JOB",
+        entityType: "job",
+        action: "Failed to create job",
+        description: `Job creation failed: ${error.message}`,
+        severity: "error",
+        status: "failure",
+        tags: ["job", "create", "error"],
+        metadata: {
+          errorCode: error.code,
+          errorMessage: error.message,
+          attempted: {
+            title: body?.title,
+            department: body?.department,
+            slug: body?.slug,
+          },
+        },
+      },
+      req
+    );
 
     if (error.code === "P2002") {
       return new Response(

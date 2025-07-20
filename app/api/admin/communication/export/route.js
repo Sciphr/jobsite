@@ -58,12 +58,6 @@ export async function GET(request) {
         [sortBy]: sortOrder,
       },
       include: {
-        email_templates: {
-          select: {
-            name: true,
-            type: true,
-          },
-        },
         jobs: {
           select: {
             title: true,
@@ -85,6 +79,25 @@ export async function GET(request) {
         },
       },
     });
+
+    // Get unique template IDs from emails
+    const templateIds = [...new Set(emails.map(email => email.template_id).filter(Boolean))];
+    const emailTemplates = templateIds.length > 0 ? await prisma.emailTemplate.findMany({
+      where: {
+        id: { in: templateIds }
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+      }
+    }) : [];
+
+    // Create a map for easy template lookup
+    const templateMap = emailTemplates.reduce((acc, template) => {
+      acc[template.id] = template;
+      return acc;
+    }, {});
 
     // Create workbook
     const workbook = new ExcelJS.Workbook();
@@ -137,7 +150,7 @@ export async function GET(request) {
         recipientName: email.recipient_name || "",
         recipientEmail: email.recipient_email,
         status: email.status,
-        template: email.email_templates?.name || "",
+        template: email.template_id && templateMap[email.template_id] ? templateMap[email.template_id].name : "",
         jobTitle: email.jobs?.title || "",
         department: email.jobs?.department || "",
         sentAt: email.sent_at ? new Date(email.sent_at).toLocaleString() : "",

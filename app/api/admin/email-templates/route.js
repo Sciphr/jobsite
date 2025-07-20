@@ -19,14 +19,19 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const applicationStatus = searchParams.get("status");
+    const defaultOnly = searchParams.get("default_only");
 
     // Build where clause
     const where = {
       is_active: true,
     };
 
-    // Filter by application status if provided
-    if (applicationStatus && applicationStatus !== "all") {
+    // Filter by default templates if requested
+    if (defaultOnly === "true") {
+      where.is_default = true;
+    }
+    // Otherwise filter by application status if provided
+    else if (applicationStatus && applicationStatus !== "all") {
       where.type = applicationStatus;
     }
 

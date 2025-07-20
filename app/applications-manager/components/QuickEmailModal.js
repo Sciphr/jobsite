@@ -44,7 +44,7 @@ export default function QuickEmailModal({
     
     try {
       const response = await fetch(
-        `/api/admin/email-templates?status=${application.status}`
+        `/api/admin/email-templates?default_only=true`
       );
       
       if (!response.ok) throw new Error("Failed to load templates");

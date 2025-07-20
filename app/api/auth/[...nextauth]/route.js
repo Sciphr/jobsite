@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
 
 export const authOptions = {
   adapter: PrismaAdapter(authPrisma),
@@ -55,11 +56,40 @@ export const authOptions = {
 
           if (!user || !user.password) {
             ("❌ User not found or no password");
+            // Log failed login attempt - user not found
+            await logAuditEvent({
+              eventType: "LOGIN",
+              category: "SECURITY",
+              action: "Failed login attempt - user not found",
+              description: `Failed login attempt for non-existent email: ${credentials.email}`,
+              actorType: "user",
+              actorName: credentials.email,
+              severity: "warning",
+              status: "failure",
+              tags: ["authentication", "login", "failed", "user_not_found"]
+            }).catch(console.error);
             return null;
           }
 
           if (!user.isActive) {
             ("❌ User account is deactivated");
+            // Log failed login attempt - account deactivated
+            await logAuditEvent({
+              eventType: "LOGIN",
+              category: "SECURITY", 
+              entityType: "user",
+              entityId: user.id,
+              entityName: credentials.email,
+              actorId: user.id,
+              actorType: "user",
+              actorName: credentials.email,
+              action: "Failed login attempt - account deactivated",
+              description: `Login attempt blocked for deactivated account: ${credentials.email}`,
+              relatedUserId: user.id,
+              severity: "warning",
+              status: "failure",
+              tags: ["authentication", "login", "failed", "account_deactivated"]
+            }).catch(console.error);
             return null;
           }
 
@@ -73,6 +103,23 @@ export const authOptions = {
 
           if (!isPasswordValid) {
             ("❌ Invalid password");
+            // Log failed login attempt - invalid password
+            await logAuditEvent({
+              eventType: "LOGIN",
+              category: "SECURITY",
+              entityType: "user", 
+              entityId: user.id,
+              entityName: credentials.email,
+              actorId: user.id,
+              actorType: "user",
+              actorName: credentials.email,
+              action: "Failed login attempt - invalid password",
+              description: `Login failed due to invalid password for: ${credentials.email}`,
+              relatedUserId: user.id,
+              severity: "warning",
+              status: "failure",
+              tags: ["authentication", "login", "failed", "invalid_password"]
+            }).catch(console.error);
             return null;
           }
 
@@ -85,6 +132,23 @@ export const authOptions = {
           };
 
           "✅ Authorization successful:", returnUser;
+          // Log successful login attempt
+          await logAuditEvent({
+            eventType: "LOGIN",
+            category: "USER",
+            entityType: "user",
+            entityId: user.id,
+            entityName: credentials.email,
+            actorId: user.id,
+            actorType: "user",
+            actorName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || credentials.email,
+            action: "User logged in successfully",
+            description: `Successful login for user: ${credentials.email}`,
+            relatedUserId: user.id,
+            severity: "info",
+            status: "success",
+            tags: ["authentication", "login", "success"]
+          }).catch(console.error);
           return returnUser;
         } catch (error) {
           console.error("❌ Auth error:", error);

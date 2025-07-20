@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
-import { useEmailTemplates, useEmailHistory, useEmailSender, useEmailExport } from "@/app/hooks/useCommunicationData";
+import { useApplications, useJobsSimple, useUsers } from "@/app/hooks/useAdminData";
+import { useEmailTemplates, useEmailHistory, useEmailAuditHistory, useEmailSender, useEmailExport } from "@/app/hooks/useCommunicationData";
 import {
   Target,
   ArrowRight,
@@ -31,6 +31,7 @@ import {
   TemplateModal,
   EmailPreviewModal,
 } from "./components";
+import EnhancedEmailHistory from "./components/EnhancedEmailHistory";
 
 export default function CommunicationHub() {
   const router = useRouter();
@@ -70,10 +71,17 @@ export default function CommunicationHub() {
   const [historyTemplate, setHistoryTemplate] = useState("");
   const [historyDateFrom, setHistoryDateFrom] = useState("");
   const [historyDateTo, setHistoryDateTo] = useState("");
+  
+  // Enhanced audit history states
+  const [useAuditData, setUseAuditData] = useState(false);
+  const [historySeverity, setHistorySeverity] = useState("");
+  const [historyActor, setHistoryActor] = useState("");
+  const [includeFailures, setIncludeFailures] = useState(true);
 
   // Data fetching
   const { data: applications = [] } = useApplications();
   const { data: jobs = [] } = useJobsSimple();
+  const { data: users = [] } = useUsers();
 
   // Communication data
   const { data: emailTemplates = [], loading: templatesLoading, refetch: refetchTemplates, createTemplate, updateTemplate, deleteTemplate } = useEmailTemplates();
@@ -85,6 +93,20 @@ export default function CommunicationHub() {
     dateFrom: historyDateFrom,
     dateTo: historyDateTo,
   }, { page: 1, limit: 50 });
+  
+  // Enhanced audit-based email history
+  const { data: auditEmailHistory = [], stats: auditEmailStats, loading: auditHistoryLoading } = useEmailAuditHistory({
+    search: historySearch,
+    status: historyStatus,
+    jobId: historyJob,
+    templateId: historyTemplate,
+    dateFrom: historyDateFrom,
+    dateTo: historyDateTo,
+    actorId: historyActor,
+    severity: historySeverity,
+    includeFailures: includeFailures,
+  }, { page: 1, limit: 50 });
+  
   const { sendEmail, loading: sendingEmail } = useEmailSender();
   const { exportEmails, loading: exportingEmails } = useEmailExport();
 
@@ -166,6 +188,10 @@ export default function CommunicationHub() {
       bounced: "text-red-600 bg-red-100",
     };
     return colors[status] || "text-gray-600 bg-gray-100";
+  };
+
+  const handleToggleAuditData = () => {
+    setUseAuditData(!useAuditData);
   };
 
   const replaceVariables = (content, recipient) => {
@@ -678,7 +704,7 @@ export default function CommunicationHub() {
               )}
 
               {activeTab === "history" && (
-                <EmailHistory
+                <EnhancedEmailHistory
                   emails={emailHistory}
                   loading={historyLoading}
                   jobs={jobs}
@@ -698,6 +724,20 @@ export default function CommunicationHub() {
                   onExport={handleExportEmails}
                   exportingEmails={exportingEmails}
                   getEmailStatusColor={getEmailStatusColor}
+                  stats={emailStats}
+                  users={users}
+                  // Enhanced audit props
+                  auditEmails={auditEmailHistory}
+                  auditLoading={auditHistoryLoading}
+                  auditStats={auditEmailStats}
+                  useAuditData={useAuditData}
+                  onToggleAuditData={handleToggleAuditData}
+                  historySeverity={historySeverity}
+                  setHistorySeverity={setHistorySeverity}
+                  historyActor={historyActor}
+                  setHistoryActor={setHistoryActor}
+                  includeFailures={includeFailures}
+                  setIncludeFailures={setIncludeFailures}
                 />
               )}
 

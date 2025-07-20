@@ -277,3 +277,78 @@ export function useEmailExport() {
     error,
   };
 }
+
+// Enhanced hook for audit-based email history
+export function useEmailAuditHistory(filters = {}, pagination = { page: 1, limit: 50 }) {
+  const [data, setData] = useState([]);
+  const [stats, setStats] = useState({});
+  const [paginationInfo, setPaginationInfo] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchAuditEmails = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.append("page", pagination.page.toString());
+      params.append("limit", pagination.limit.toString());
+      
+      if (filters.search) params.append("search", filters.search);
+      if (filters.status) params.append("status", filters.status);
+      if (filters.jobId) params.append("jobId", filters.jobId);
+      if (filters.templateId) params.append("templateId", filters.templateId);
+      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.sortBy) params.append("sortBy", filters.sortBy);
+      if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      if (filters.actorId) params.append("actorId", filters.actorId);
+      if (filters.severity) params.append("severity", filters.severity);
+      if (filters.includeFailures !== undefined) params.append("includeFailures", filters.includeFailures);
+
+      const response = await fetch(`/api/admin/communication/emails/audit?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setData(result.data);
+        setStats(result.stats);
+        setPaginationInfo(result.pagination);
+      } else {
+        throw new Error(result.error || "Failed to fetch email audit history");
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching email audit history:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    pagination.page,
+    pagination.limit,
+    filters.search,
+    filters.status,
+    filters.jobId,
+    filters.templateId,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.sortBy,
+    filters.sortOrder,
+    filters.actorId,
+    filters.severity,
+    filters.includeFailures,
+  ]);
+
+  useEffect(() => {
+    fetchAuditEmails();
+  }, [fetchAuditEmails]);
+
+  return {
+    data,
+    stats,
+    pagination: paginationInfo,
+    loading,
+    error,
+    refetch: fetchAuditEmails,
+  };
+}

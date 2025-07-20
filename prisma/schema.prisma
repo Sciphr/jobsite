@@ -33,6 +33,7 @@ model User {
   savedJobs              SavedJob[]
   settings               Setting[]
   resumes                UserResume[]
+  applicationNotes       ApplicationNote[]     @relation("ApplicationNoteAuthor")
 
   @@map("users")
 }
@@ -108,13 +109,31 @@ model Application {
   name        String?
   email       String?
   phone       String?
-  job         Job        @relation(fields: [jobId], references: [id])
-  user        User?      @relation(fields: [userId], references: [id])
-  auditLogs   AuditLog[] @relation("AuditLogRelatedApplication")
+  job         Job              @relation(fields: [jobId], references: [id])
+  user        User?            @relation(fields: [userId], references: [id])
+  auditLogs   AuditLog[]       @relation("AuditLogRelatedApplication")
   emails      Email[]
+  applicationNotes ApplicationNote[]
 
   @@unique([userId, jobId])
   @@map("applications")
+}
+
+model ApplicationNote {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId     String       @map("application_id") @db.Uuid
+  content           String
+  type              String       @default("note") @db.VarChar(50)
+  authorId          String?      @map("author_id") @db.Uuid
+  authorName        String?      @map("author_name") @db.VarChar(255)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  metadata          Json?
+  isSystemGenerated Boolean?     @default(false) @map("is_system_generated")
+  application       Application  @relation(fields: [applicationId], references: [id])
+  author            User?        @relation("ApplicationNoteAuthor", fields: [authorId], references: [id])
+
+  @@map("application_notes")
 }
 
 model SavedJob {

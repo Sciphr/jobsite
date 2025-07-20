@@ -3,6 +3,8 @@ import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
 import { deleteFromMinio } from "../../../../lib/minio-storage";
 import bcrypt from "bcryptjs";
+import { logAuditEvent, calculateChanges } from "../../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../../lib/auditLog";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -101,6 +103,42 @@ export async function PATCH(req, { params }) {
 
   try {
     const body = await req.json();
+    const requestContext = extractRequestContext(req);
+
+    // Get current user data for audit logging
+    const currentUser = await appPrisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        privilegeLevel: true,
+        isActive: true,
+      },
+    });
+
+    if (!currentUser) {
+      // Log failed attempt to update non-existent user
+      await logAuditEvent({
+        eventType: 'UPDATE',
+        category: 'USER',
+        entityType: 'user',
+        entityId: id,
+        action: 'Failed to update user - User not found',
+        description: `Attempted to update non-existent user with ID: ${id}`,
+        severity: 'warning',
+        status: 'failure',
+        tags: ['user', 'update', 'not_found'],
+        ...requestContext
+      }, req);
+
+      return new Response(JSON.stringify({ message: "User not found" }), {
+        status: 404,
+      });
+    }
 
     // Extract fields that can be updated
     const updateData = {};
@@ -207,9 +245,56 @@ export async function PATCH(req, { params }) {
       },
     });
 
+    // Calculate what changed for audit log
+    const changes = calculateChanges(currentUser, updateData);
+    const changedFields = Object.keys(changes || {});
+    
+    // Log successful user update
+    await logAuditEvent({
+      eventType: 'UPDATE',
+      category: 'USER',
+      subcategory: changedFields.includes('privilegeLevel') ? 'PRIVILEGE_CHANGE' : 'PROFILE_UPDATE',
+      entityType: 'user',
+      entityId: id,
+      entityName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.email,
+      action: `User updated: ${changedFields.join(', ')}`,
+      description: `Updated user profile. Changed fields: ${changedFields.join(', ')}`,
+      oldValues: currentUser,
+      newValues: updateData,
+      changes,
+      relatedUserId: id,
+      severity: changedFields.includes('privilegeLevel') || changedFields.includes('role') ? 'warning' : 'info',
+      status: 'success',
+      tags: ['user', 'update', 'admin_action', ...changedFields],
+      metadata: {
+        changedFields,
+        updateData: { ...updateData, password: updateData.password ? '[REDACTED]' : undefined },
+        isSelfUpdate: id === session.user.id
+      },
+      ...requestContext
+    }, req);
+
     return new Response(JSON.stringify(updatedUser), { status: 200 });
   } catch (error) {
     console.error("User update error:", error);
+
+    // Log the error
+    await logAuditEvent({
+      eventType: 'ERROR',
+      category: 'USER',
+      entityType: 'user',
+      entityId: id,
+      action: 'Failed to update user',
+      description: `User update failed: ${error.message}`,
+      severity: 'error',
+      status: 'failure',
+      tags: ['user', 'update', 'error'],
+      metadata: {
+        errorCode: error.code,
+        errorMessage: error.message,
+        attempted: body
+      }
+    }, req);
 
     if (error.code === "P2025") {
       return new Response(JSON.stringify({ message: "User not found" }), {

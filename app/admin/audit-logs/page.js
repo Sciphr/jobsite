@@ -14,7 +14,9 @@ import {
   Clock,
   Eye,
   Search,
-  RefreshCw
+  RefreshCw,
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 export default function AuditLogsPage() {
@@ -32,6 +34,8 @@ export default function AuditLogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const loadAuditLogs = async () => {
     setLoading(true);
@@ -91,6 +95,16 @@ export default function AuditLogsPage() {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const openDetailsModal = (log) => {
+    setSelectedLog(log);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedLog(null);
+    setShowDetailsModal(false);
   };
 
   const exportLogs = async () => {
@@ -341,7 +355,11 @@ export default function AuditLogsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                        <button 
+                          onClick={() => openDetailsModal(log)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title="View details"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
                       </td>
@@ -403,6 +421,253 @@ export default function AuditLogsPage() {
           </>
         )}
       </div>
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedLog && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Audit Log Details
+              </h3>
+              <button
+                onClick={closeDetailsModal}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Event Type
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.eventType}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Category
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.category}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Severity
+                  </label>
+                  <div className="mt-1">
+                    <span className={getSeverityBadge(selectedLog.severity)}>
+                      {selectedLog.severity}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Status
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.status}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Timestamp
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{formatDate(selectedLog.createdAt)}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Actor
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedLog.actorName || 'System'} ({selectedLog.actorType})
+                  </p>
+                </div>
+              </div>
+
+              {/* Action & Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Action
+                </label>
+                <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.action}</p>
+              </div>
+
+              {selectedLog.description && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Description
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.description}</p>
+                </div>
+              )}
+
+              {/* Entity Information */}
+              {(selectedLog.entityType || selectedLog.entityName) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Entity
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedLog.entityName} {selectedLog.entityType && `(${selectedLog.entityType})`}
+                  </p>
+                  {selectedLog.entityId && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">ID: {selectedLog.entityId}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Changes */}
+              {selectedLog.changes && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Changes
+                  </label>
+                  <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                      {JSON.stringify(selectedLog.changes, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Old Values */}
+              {selectedLog.oldValues && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Previous Values
+                  </label>
+                  <div className="mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
+                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                      {JSON.stringify(selectedLog.oldValues, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* New Values */}
+              {selectedLog.newValues && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    New Values
+                  </label>
+                  <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
+                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                      {JSON.stringify(selectedLog.newValues, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Technical Details */}
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Technical Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  {selectedLog.ipAddress && (
+                    <div>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">IP Address:</span>
+                      <span className="ml-2 text-gray-900 dark:text-white">{selectedLog.ipAddress}</span>
+                    </div>
+                  )}
+                  {selectedLog.userAgent && (
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">User Agent:</span>
+                      <span className="ml-2 text-gray-900 dark:text-white break-all">{selectedLog.userAgent}</span>
+                    </div>
+                  )}
+                  {selectedLog.sessionId && (
+                    <div>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Session ID:</span>
+                      <span className="ml-2 text-gray-900 dark:text-white font-mono">{selectedLog.sessionId}</span>
+                    </div>
+                  )}
+                  {selectedLog.requestId && (
+                    <div>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Request ID:</span>
+                      <span className="ml-2 text-gray-900 dark:text-white font-mono">{selectedLog.requestId}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedLog.tags && selectedLog.tags.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedLog.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              {selectedLog.metadata && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Metadata
+                  </label>
+                  <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                      {JSON.stringify(selectedLog.metadata, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Related Entities */}
+              {(selectedLog.relatedUser || selectedLog.relatedJob || selectedLog.relatedApplication) && (
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related Entities</h4>
+                  <div className="space-y-2 text-sm">
+                    {selectedLog.relatedUser && (
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">User:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white">
+                          {selectedLog.relatedUser.name} ({selectedLog.relatedUser.email})
+                        </span>
+                      </div>
+                    )}
+                    {selectedLog.relatedJob && (
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Job:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white">
+                          {selectedLog.relatedJob.title} - {selectedLog.relatedJob.department}
+                        </span>
+                      </div>
+                    )}
+                    {selectedLog.relatedApplication && (
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Application:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white">
+                          {selectedLog.relatedApplication.name} ({selectedLog.relatedApplication.email}) - {selectedLog.relatedApplication.status}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={closeDetailsModal}
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useApplicationTimeline } from "@/app/hooks/useApplicationTimeline";
 import QuickEmailModal from "./QuickEmailModal";
 import {
   X,
@@ -26,6 +27,13 @@ import {
   Plus,
   Hash,
   DollarSign,
+  Activity,
+  Shield,
+  RefreshCw,
+  Filter,
+  ToggleLeft,
+  ToggleRight,
+  Edit,
 } from "lucide-react";
 
 export default function ApplicationDetailModal({
@@ -38,35 +46,30 @@ export default function ApplicationDetailModal({
   const [activeTab, setActiveTab] = useState("overview");
   const [notes, setNotes] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [applicationNotes, setApplicationNotes] = useState([]);
   const [rating, setRating] = useState(0);
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState("");
   const [isSchedulingInterview, setIsSchedulingInterview] = useState(false);
   const [showQuickEmail, setShowQuickEmail] = useState(false);
+  const [showAuditLogs, setShowAuditLogs] = useState(true);
+  const [includeSystemLogs, setIncludeSystemLogs] = useState(true);
+
+  // Use the timeline hook for audit logs and notes
+  const {
+    timelineItems,
+    applicationInfo,
+    loading: timelineLoading,
+    error: timelineError,
+    addNote,
+    refetch: refetchTimeline,
+  } = useApplicationTimeline(application?.id, {
+    includeSystem: includeSystemLogs,
+  });
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen && application) {
-      setNotes(application.notes || "");
-      setApplicationNotes([
-        // Mock timeline data - in real app this would come from API
-        {
-          id: 1,
-          type: "status_change",
-          content: "Application received",
-          status: "Applied",
-          timestamp: application.appliedAt,
-          author: "System",
-        },
-        {
-          id: 2,
-          type: "note",
-          content: "Strong technical background, good communication skills",
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          author: "Sarah Wilson",
-        },
-      ]);
+      setNotes("");
       setRating(3); // Default rating
       setTags(["Remote OK", "Senior Level"]);
     }
@@ -99,18 +102,16 @@ export default function ApplicationDetailModal({
     }
   };
 
-  const handleAddNote = () => {
-    if (notes.trim()) {
-      const newNote = {
-        id: Date.now(),
-        type: "note",
-        content: notes.trim(),
-        timestamp: new Date(),
-        author: "Current User", // Would be actual user name
-      };
-      setApplicationNotes((prev) => [...prev, newNote]);
+  const handleAddNote = async () => {
+    if (!notes.trim()) return;
+
+    try {
+      await addNote(notes.trim());
       setNotes("");
       setIsAddingNote(false);
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      // You could add a toast notification here
     }
   };
 
@@ -123,6 +124,73 @@ export default function ApplicationDetailModal({
 
   const removeTag = (tagToRemove) => {
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
+  };
+
+  // Helper functions for timeline display
+  const getTimelineItemStyle = (type, severity) => {
+    const baseClasses = "w-8 h-8 rounded-full flex items-center justify-center";
+    
+    if (severity === "error") return `${baseClasses} bg-red-100 text-red-600`;
+    if (severity === "warning") return `${baseClasses} bg-yellow-100 text-yellow-600`;
+    if (severity === "success") return `${baseClasses} bg-green-100 text-green-600`;
+    
+    switch (type) {
+      case "note":
+        return `${baseClasses} bg-blue-100 text-blue-600`;
+      case "status_change":
+        return `${baseClasses} bg-purple-100 text-purple-600`;
+      case "email":
+        return `${baseClasses} bg-indigo-100 text-indigo-600`;
+      case "created":
+        return `${baseClasses} bg-green-100 text-green-600`;
+      case "updated":
+        return `${baseClasses} bg-yellow-100 text-yellow-600`;
+      case "deleted":
+        return `${baseClasses} bg-red-100 text-red-600`;
+      case "login":
+        return `${baseClasses} bg-gray-100 text-gray-600`;
+      case "viewed":
+        return `${baseClasses} bg-cyan-100 text-cyan-600`;
+      default:
+        return `${baseClasses} bg-gray-100 text-gray-600`;
+    }
+  };
+
+  const getTimelineIcon = (type, eventType) => {
+    switch (type) {
+      case "note":
+        return <MessageSquare className="h-4 w-4" />;
+      case "status_change":
+        return <RefreshCw className="h-4 w-4" />;
+      case "email":
+        return <Mail className="h-4 w-4" />;
+      case "created":
+        return <Plus className="h-4 w-4" />;
+      case "updated":
+        return <Edit className="h-4 w-4" />;
+      case "deleted":
+        return <X className="h-4 w-4" />;
+      case "login":
+        return <User className="h-4 w-4" />;
+      case "viewed":
+        return <Eye className="h-4 w-4" />;
+      default:
+        return <Activity className="h-4 w-4" />;
+    }
+  };
+
+  const getSeverityColor = (severity) => {
+    switch (severity) {
+      case "error":
+        return "bg-red-100 text-red-700";
+      case "warning":
+        return "bg-yellow-100 text-yellow-700";
+      case "success":
+        return "bg-green-100 text-green-700";
+      case "info":
+      default:
+        return "bg-blue-100 text-blue-700";
+    }
   };
 
   const handleCallCandidate = () => {
@@ -142,6 +210,27 @@ export default function ApplicationDetailModal({
     // Optionally add a success message or update application status
     console.log("Email sent successfully!");
   };
+
+  const handleViewResume = async (application) => {
+    if (!application.resumeUrl) {
+      console.error("No resume URL found for this application");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/resume-download?path=${encodeURIComponent(application.resumeUrl)}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to get resume URL');
+      }
+
+      const data = await response.json();
+      window.open(data.downloadUrl, '_blank');
+    } catch (error) {
+      console.error('Error viewing resume:', error);
+    }
+  };
+
 
   const formatSalary = (min, max, currency) => {
     if (!min && !max) return "Not specified";
@@ -457,19 +546,59 @@ export default function ApplicationDetailModal({
 
               {activeTab === "timeline" && (
                 <div className="space-y-4">
+                  {/* Timeline Header */}
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">
                       Application Timeline
                     </h3>
-                    <button
-                      onClick={() => setIsAddingNote(!isAddingNote)}
-                      className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")}`}
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Note</span>
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      {/* Filter Controls */}
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setShowAuditLogs(!showAuditLogs)}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                            showAuditLogs 
+                              ? "bg-blue-100 text-blue-700" 
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          <span>Audit</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setIncludeSystemLogs(!includeSystemLogs)}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                            includeSystemLogs 
+                              ? "bg-green-100 text-green-700" 
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {includeSystemLogs ? <ToggleRight className="h-3 w-3" /> : <ToggleLeft className="h-3 w-3" />}
+                          <span>System</span>
+                        </button>
+
+                        <button
+                          onClick={refetchTimeline}
+                          disabled={timelineLoading}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Refresh timeline"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${timelineLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => setIsAddingNote(!isAddingNote)}
+                        className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Add Note</span>
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Add Note Panel */}
                   {isAddingNote && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <textarea
@@ -497,47 +626,119 @@ export default function ApplicationDetailModal({
                     </div>
                   )}
 
-                  <div className="space-y-4">
-                    {applicationNotes.map((note) => (
-                      <div key={note.id} className="flex space-x-4">
-                        <div className="flex-shrink-0">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              note.type === "status_change"
-                                ? "bg-blue-100"
-                                : "bg-green-100"
-                            }`}
-                          >
-                            {note.type === "status_change" ? (
-                              <AlertCircle className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <MessageSquare className="h-4 w-4 text-green-600" />
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex-1 bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">
-                              {note.author}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(note.timestamp).toLocaleString()}
-                            </span>
-                          </div>
-                          <p className="text-gray-700 text-sm">
-                            {note.content}
-                          </p>
-                          {note.status && (
-                            <span
-                              className={`inline-block mt-2 px-2 py-1 rounded-full text-xs ${getStatusColor(note.status)}`}
-                            >
-                              {note.status}
-                            </span>
-                          )}
-                        </div>
+                  {/* Timeline Loading State */}
+                  {timelineLoading && (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-gray-600">Loading timeline...</span>
+                    </div>
+                  )}
+
+                  {/* Timeline Error State */}
+                  {timelineError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-red-700 font-medium">Error loading timeline</span>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-red-600 text-sm mt-1">{timelineError}</p>
+                    </div>
+                  )}
+
+                  {/* Timeline Items */}
+                  {!timelineLoading && !timelineError && (
+                    <div className="space-y-4">
+                      {timelineItems.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <p>No timeline events yet</p>
+                          <p className="text-sm">Add a note to get started</p>
+                        </div>
+                      ) : (
+                        timelineItems
+                          .filter(item => showAuditLogs || item.type === "note")
+                          .map((item) => (
+                            <div key={`${item.type}-${item.id}`} className="flex space-x-4">
+                              <div className="flex-shrink-0">
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    getTimelineItemStyle(item.type, item.severity)
+                                  }`}
+                                >
+                                  {getTimelineIcon(item.type, item.eventType)}
+                                </div>
+                              </div>
+                              <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-medium text-sm">
+                                      {item.author}
+                                    </span>
+                                    {item.isSystemGenerated && (
+                                      <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
+                                        System
+                                      </span>
+                                    )}
+                                    {item.severity && item.severity !== 'info' && (
+                                      <span className={`px-1.5 py-0.5 text-xs rounded ${getSeverityColor(item.severity)}`}>
+                                        {item.severity}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(item.timestamp).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-gray-700 text-sm">
+                                  {item.content}
+                                </p>
+                                
+                                {/* Additional audit info */}
+                                {item.eventType && item.type !== "note" && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                                      {item.eventType}
+                                    </span>
+                                    {item.category && (
+                                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                                        {item.category}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Status change indicator */}
+                                {item.newValues?.status && (
+                                  <span
+                                    className={`inline-block mt-2 px-2 py-1 rounded-full text-xs ${getStatusColor(item.newValues.status)}`}
+                                  >
+                                    Status: {item.newValues.status}
+                                  </span>
+                                )}
+
+                                {/* Changes details */}
+                                {item.changes && Object.keys(item.changes).length > 0 && (
+                                  <div className="mt-2 text-xs text-gray-600">
+                                    <details className="cursor-pointer">
+                                      <summary className="hover:text-gray-800">View changes</summary>
+                                      <div className="mt-1 pl-2 border-l-2 border-gray-200">
+                                        {Object.entries(item.changes).map(([key, change]) => (
+                                          <div key={key} className="mb-1">
+                                            <span className="font-medium">{key}:</span> 
+                                            <span className="text-red-600"> {change.from}</span> → 
+                                            <span className="text-green-600"> {change.to}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </details>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -561,14 +762,12 @@ export default function ApplicationDetailModal({
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                          <button 
+                            onClick={() => handleViewResume(application)}
+                            className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                            title="View resume"
+                          >
                             <Eye className="h-4 w-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
-                            <ExternalLink className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
