@@ -31,9 +31,33 @@ export default function BulkActionsBar({
   onClearSelection,
   isLoading = false 
 }) {
-  const { getButtonClasses } = useThemeClasses();
+  const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showEmailOptions, setShowEmailOptions] = useState(false);
+  const [defaultTemplates, setDefaultTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Fetch default email templates
+  useEffect(() => {
+    const fetchDefaultTemplates = async () => {
+      setLoadingTemplates(true);
+      try {
+        const response = await fetch('/api/admin/communication/templates?isActive=true');
+        if (response.ok) {
+          const data = await response.json();
+          // Filter for default templates only
+          const defaults = data.data.filter(template => template.isDefault);
+          setDefaultTemplates(defaults);
+        }
+      } catch (error) {
+        console.error('Error fetching default templates:', error);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    fetchDefaultTemplates();
+  }, []);
 
   if (selectedCount === 0) return null;
 
@@ -42,9 +66,9 @@ export default function BulkActionsBar({
     await onBulkStatusChange(statusId);
   };
 
-  const handleBulkEmail = async (emailType) => {
+  const handleBulkEmail = async (emailType, templateId = null) => {
     setShowEmailOptions(false);
-    await onBulkEmail(emailType);
+    await onBulkEmail(emailType, templateId);
   };
 
   return (
@@ -54,7 +78,7 @@ export default function BulkActionsBar({
         animate={{ opacity: 1, y: 0, height: "auto" }}
         exit={{ opacity: 0, y: -20, height: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm"
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 shadow-sm"
       >
         <div className="flex items-center justify-between">
           {/* Selection Summary */}
@@ -89,7 +113,7 @@ export default function BulkActionsBar({
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleStatusChange("Reviewing")}
                 disabled={isLoading}
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center space-x-2 ${getStatCardClasses(1).bg} ${getStatCardClasses(1).icon} hover:opacity-80`}
               >
                 <CheckCircle className="h-4 w-4" />
                 <span>Review</span>
@@ -100,7 +124,7 @@ export default function BulkActionsBar({
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleStatusChange("Interview")}
                 disabled={isLoading}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center space-x-2 ${getStatCardClasses(2).bg} ${getStatCardClasses(2).icon} hover:opacity-80`}
               >
                 <Calendar className="h-4 w-4" />
                 <span>Interview</span>
@@ -111,7 +135,7 @@ export default function BulkActionsBar({
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleStatusChange("Rejected")}
                 disabled={isLoading}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center space-x-2 ${getStatCardClasses(4).bg} ${getStatCardClasses(4).icon} hover:opacity-80`}
               >
                 <X className="h-4 w-4" />
                 <span>Reject</span>
@@ -147,21 +171,21 @@ export default function BulkActionsBar({
                     className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50"
                   >
                     <div className="p-2">
-                      {STATUS_OPTIONS.map((status) => {
+                      {STATUS_OPTIONS.map((status, index) => {
                         const Icon = status.icon;
                         return (
                           <motion.button
                             key={status.id}
                             whileHover={{ scale: 1.02, x: 2 }}
                             onClick={() => handleStatusChange(status.id)}
-                            className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-start space-x-3"
+                            className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-start space-x-3"
                           >
-                            <Icon className={`h-5 w-5 mt-0.5 text-${status.color}-500`} />
+                            <Icon className={`h-5 w-5 mt-0.5 ${getStatCardClasses(index).icon}`} />
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium admin-text">
                                 {status.label}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs admin-text-light">
                                 {status.desc}
                               </div>
                             </div>
@@ -181,7 +205,7 @@ export default function BulkActionsBar({
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowEmailOptions(!showEmailOptions)}
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center space-x-2 ${getStatCardClasses(0).bg} ${getStatCardClasses(0).icon} hover:opacity-80`}
               >
                 <Send className="h-4 w-4" />
                 <span>Send Email</span>
@@ -206,31 +230,30 @@ export default function BulkActionsBar({
                       <motion.button
                         whileHover={{ scale: 1.02, x: 2 }}
                         onClick={() => handleBulkEmail("custom")}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm border-b admin-border"
                       >
                         📝 Custom Email
                       </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02, x: 2 }}
-                        onClick={() => handleBulkEmail("Reviewing")}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                      >
-                        👀 Application Review Update
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02, x: 2 }}
-                        onClick={() => handleBulkEmail("Interview")}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                      >
-                        📅 Interview Invitation
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02, x: 2 }}
-                        onClick={() => handleBulkEmail("Rejected")}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                      >
-                        📋 Application Status Update
-                      </motion.button>
+                      {loadingTemplates ? (
+                        <div className="px-3 py-2 text-sm text-gray-500 flex items-center">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-2"></div>
+                          Loading templates...
+                        </div>
+                      ) : (
+                        defaultTemplates.map((template) => (
+                          <motion.button
+                            key={template.id}
+                            whileHover={{ scale: 1.02, x: 2 }}
+                            onClick={() => handleBulkEmail("template", template.id)}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                          >
+                            <div className="font-medium text-gray-900">{template.name}</div>
+                            {template.description && (
+                              <div className="text-xs text-gray-500 mt-1">{template.description}</div>
+                            )}
+                          </motion.button>
+                        ))
+                      )}
                     </div>
                   </motion.div>
                 )}

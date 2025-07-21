@@ -9,6 +9,8 @@ import {
   AdminThemeProvider,
   useThemeClasses,
 } from "@/app/contexts/AdminThemeContext";
+import { ThemeProvider } from "@/app/contexts/ThemeContext";
+import ThemeToggle from "@/app/components/ThemeToggle";
 import { useJobsSimple } from "@/app/hooks/useAdminData";
 import {
   LayoutGrid,
@@ -27,7 +29,7 @@ function ApplicationsManagerLayoutContent({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { getButtonClasses } = useThemeClasses();
+  const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   const { data: jobs = [] } = useJobsSimple();
   const [showJobPicker, setShowJobPicker] = useState(false);
 
@@ -44,7 +46,10 @@ function ApplicationsManagerLayoutContent({ children }) {
   }
 
   // Check admin permissions only after session is loaded
-  if (status === "authenticated" && (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1)) {
+  if (
+    status === "authenticated" &&
+    (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1)
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -82,7 +87,9 @@ function ApplicationsManagerLayoutContent({ children }) {
       label: "Overview",
       icon: LayoutGrid,
       path: "/applications-manager",
-      active: pathname === "/applications-manager" || pathname.startsWith("/applications-manager/jobs/"),
+      active:
+        pathname === "/applications-manager" ||
+        pathname.startsWith("/applications-manager/jobs/"),
       description: "Main dashboard and quick stats",
       color: "blue",
     },
@@ -199,13 +206,13 @@ function ApplicationsManagerLayoutContent({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Top Navigation Bar */}
       <motion.div
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className="bg-white shadow-sm border-b border-gray-200"
+        className="admin-card shadow-sm border-b admin-border"
       >
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -215,30 +222,30 @@ function ApplicationsManagerLayoutContent({ children }) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBackToDashboard}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center space-x-2 admin-text-light hover:admin-text transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="text-sm">Back to Dashboard</span>
               </motion.button>
 
-              <div className="h-6 border-l border-gray-300"></div>
+              <div className="h-6 border-l admin-border"></div>
 
               <div className="flex items-center space-x-3">
                 <motion.div
                   whileHover={{ rotate: 5 }}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg"
+                  className={`p-2 rounded-lg ${getStatCardClasses(0).bg}`}
                 >
-                  <Target className="h-5 w-5 text-white" />
+                  <Target className={`h-5 w-5 ${getStatCardClasses(0).icon}`} />
                 </motion.div>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">
+                  <h1 className="text-lg font-bold admin-text">
                     Applications Manager
                   </h1>
                   {isJobSpecific && currentJob && (
                     <motion.p
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-xs text-gray-500"
+                      className="text-xs admin-text-light"
                     >
                       {currentJob.title} • {currentJob.department}
                     </motion.p>
@@ -274,14 +281,14 @@ function ApplicationsManagerLayoutContent({ children }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -5, scale: 0.98 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-80 overflow-y-auto"
+                      className="absolute right-0 top-full mt-2 w-80 admin-card rounded-lg shadow-lg border admin-border z-50 max-h-80 overflow-y-auto"
                     >
-                      <div className="p-3 border-b border-gray-200">
-                        <h3 className="text-sm font-semibold text-gray-900">
+                      <div className="p-3 border-b admin-border">
+                        <h3 className="text-sm font-semibold admin-text">
                           Select Job
                         </h3>
                       </div>
-                      <div className="divide-y divide-gray-100">
+                      <div className="divide-y admin-border">
                         {jobs.map((job, index) => (
                           <motion.button
                             key={job.id}
@@ -292,10 +299,10 @@ function ApplicationsManagerLayoutContent({ children }) {
                             onClick={() => handleJobSelect(job.id)}
                             className="w-full text-left px-4 py-3 transition-colors"
                           >
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium admin-text">
                               {job.title}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1 flex items-center space-x-2">
+                            <div className="text-xs admin-text-light mt-1 flex items-center space-x-2">
                               <span>{job.department}</span>
                               <span>•</span>
                               <span>{job.applicationCount} applications</span>
@@ -318,7 +325,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                 </AnimatePresence>
               </div>
 
-              <div className="text-sm text-gray-500">
+              <div className="text-sm admin-text-light">
                 {session.user.firstName} {session.user.lastName}
               </div>
             </div>
@@ -335,14 +342,16 @@ function ApplicationsManagerLayoutContent({ children }) {
             animate="visible"
             className="w-64 flex-shrink-0"
           >
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="admin-card rounded-lg shadow-sm border admin-border overflow-hidden">
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 }}
-                className="p-4 bg-gradient-to-r from-blue-500 to-purple-600"
+                className={`p-4 ${getStatCardClasses(1).bg}`}
               >
-                <div className="flex items-center space-x-2 text-white">
+                <div
+                  className={`flex items-center space-x-2 ${getStatCardClasses(1).icon}`}
+                >
                   <Zap className="h-5 w-5" />
                   <span className="font-semibold">Navigation</span>
                 </div>
@@ -364,7 +373,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                         className={`w-full text-left px-3 py-3 rounded-lg transition-colors mb-1 relative ${
                           item.active
                             ? "text-white"
-                            : "text-gray-700 hover:bg-gray-50"
+                            : "admin-text hover:bg-gray-50 dark:hover:bg-gray-700"
                         }`}
                         style={{ zIndex: item.active ? 10 : 1 }}
                       >
@@ -372,7 +381,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                         {item.active && (
                           <motion.div
                             layoutId="activeNavBackground"
-                            className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600"
+                            className="absolute inset-0 rounded-lg admin-active-tab-bg-dark"
                             style={{ zIndex: -1 }}
                             transition={{
                               type: "spring",
@@ -394,7 +403,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                           <div className="flex-1">
                             <div
                               className={`text-sm font-medium ${
-                                item.active ? "text-white" : "text-gray-900"
+                                item.active ? "text-white" : "admin-text"
                               }`}
                             >
                               {item.label}
@@ -403,7 +412,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                               className={`text-xs ${
                                 item.active
                                   ? "text-white text-opacity-80"
-                                  : "text-gray-500"
+                                  : "admin-text-light"
                               }`}
                             >
                               {item.description}
@@ -421,9 +430,9 @@ function ApplicationsManagerLayoutContent({ children }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="p-4 border-t border-gray-200 bg-gray-50"
+                className="p-4 border-t admin-border bg-gray-50 dark:bg-gray-800"
               >
-                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                <h4 className="text-xs font-semibold admin-text-light uppercase tracking-wide mb-3">
                   Quick Stats
                 </h4>
                 <div className="space-y-2">
@@ -431,8 +440,8 @@ function ApplicationsManagerLayoutContent({ children }) {
                     whileHover={{ scale: 1.01 }}
                     className="flex justify-between text-sm"
                   >
-                    <span className="text-gray-600">Total Applications</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="admin-text-light">Total Applications</span>
+                    <span className="font-medium admin-text">
                       {jobs.reduce((sum, job) => sum + job.applicationCount, 0)}
                     </span>
                   </motion.div>
@@ -440,8 +449,8 @@ function ApplicationsManagerLayoutContent({ children }) {
                     whileHover={{ scale: 1.01 }}
                     className="flex justify-between text-sm"
                   >
-                    <span className="text-gray-600">Active Jobs</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="admin-text-light">Active Jobs</span>
+                    <span className="font-medium admin-text">
                       {jobs.filter((job) => job.status === "Active").length}
                     </span>
                   </motion.div>
@@ -460,10 +469,12 @@ function ApplicationsManagerLayoutContent({ children }) {
 
 export default function ApplicationsManagerLayout({ children }) {
   return (
-    <AdminThemeProvider>
-      <ApplicationsManagerLayoutContent>
-        {children}
-      </ApplicationsManagerLayoutContent>
-    </AdminThemeProvider>
+    <ThemeProvider>
+      <AdminThemeProvider>
+        <ApplicationsManagerLayoutContent>
+          {children}
+        </ApplicationsManagerLayoutContent>
+      </AdminThemeProvider>
+    </ThemeProvider>
   );
 }

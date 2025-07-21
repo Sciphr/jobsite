@@ -30,7 +30,7 @@ import {
 
 export default function PipelineView() {
   const router = useRouter();
-  const { getButtonClasses } = useThemeClasses();
+  const { getButtonClasses, getStatCardClasses } = useThemeClasses();
 
   // Data fetching
   const queryClient = useQueryClient();
@@ -49,56 +49,56 @@ export default function PipelineView() {
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
 
-  // Pipeline stages configuration with enhanced animation data
+  // Pipeline stages configuration with theme-aware colors
   const pipelineStages = [
     {
       id: "Applied",
       title: "New Applications",
-      color: "bg-blue-500",
-      textColor: "text-blue-700",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      glowColor: "shadow-blue-200",
+      color: getStatCardClasses(0).icon,
+      textColor: getStatCardClasses(0).icon,
+      bgColor: getStatCardClasses(0).bg,
+      borderColor: getStatCardClasses(0).border,
+      glowColor: getStatCardClasses(0).bg,
       count: 0,
     },
     {
       id: "Reviewing",
       title: "Under Review",
-      color: "bg-yellow-500",
-      textColor: "text-yellow-700",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      glowColor: "shadow-yellow-200",
+      color: getStatCardClasses(1).icon,
+      textColor: getStatCardClasses(1).icon,
+      bgColor: getStatCardClasses(1).bg,
+      borderColor: getStatCardClasses(1).border,
+      glowColor: getStatCardClasses(1).bg,
       count: 0,
     },
     {
       id: "Interview",
       title: "Interview Stage",
-      color: "bg-green-500",
-      textColor: "text-green-700",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      glowColor: "shadow-green-200",
+      color: getStatCardClasses(2).icon,
+      textColor: getStatCardClasses(2).icon,
+      bgColor: getStatCardClasses(2).bg,
+      borderColor: getStatCardClasses(2).border,
+      glowColor: getStatCardClasses(2).bg,
       count: 0,
     },
     {
       id: "Hired",
       title: "Hired",
-      color: "bg-emerald-500",
-      textColor: "text-emerald-700",
-      bgColor: "bg-emerald-50",
-      borderColor: "border-emerald-200",
-      glowColor: "shadow-emerald-200",
+      color: getStatCardClasses(3).icon,
+      textColor: getStatCardClasses(3).icon,
+      bgColor: getStatCardClasses(3).bg,
+      borderColor: getStatCardClasses(3).border,
+      glowColor: getStatCardClasses(3).bg,
       count: 0,
     },
     {
       id: "Rejected",
       title: "Not Selected",
-      color: "bg-red-500",
-      textColor: "text-red-700",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      glowColor: "shadow-red-200",
+      color: getStatCardClasses(4).icon,
+      textColor: getStatCardClasses(4).icon,
+      bgColor: getStatCardClasses(4).bg,
+      borderColor: getStatCardClasses(4).border,
+      glowColor: getStatCardClasses(4).bg,
       count: 0,
     },
   ];
@@ -343,7 +343,7 @@ export default function PipelineView() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-5 gap-6">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-96 bg-gray-200 rounded"></div>
@@ -564,7 +564,7 @@ export default function PipelineView() {
             variants={itemVariants}
             className={`admin-card rounded-lg shadow overflow-hidden transition-all duration-200 ${
               dragOverColumn === stage.id
-                ? `ring-2 ring-blue-400 ${stage.bgColor} bg-opacity-20`
+                ? `ring-2 ${stage.borderColor} ${stage.bgColor} bg-opacity-20`
                 : ""
             }`}
             onDragOver={handleDragOver}
@@ -674,7 +674,7 @@ export default function PipelineView() {
                           animate={{ opacity: 1 }}
                           className="mt-3 pt-3 border-t border-gray-100"
                         >
-                          <div className="text-xs text-gray-600 flex items-center space-x-1">
+                          <div className="text-xs admin-text-light flex items-center space-x-1">
                             <Briefcase className="h-3 w-3" />
                             <span className="truncate">
                               {application.job.title}
@@ -768,18 +768,18 @@ export default function PipelineView() {
               top: dragPosition.y,
             }}
           >
-            <div className="bg-white border-2 border-blue-400 rounded-lg p-3 shadow-2xl max-w-[250px]">
+            <div className={`admin-card border-2 ${getStatCardClasses(0).border} rounded-lg p-3 shadow-2xl max-w-[250px]`}>
               <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold bg-blue-500">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${getStatCardClasses(0).bg} ${getStatCardClasses(0).icon}`}>
                   {ghostPreview.name?.charAt(0)?.toUpperCase() ||
                     ghostPreview.email?.charAt(0)?.toUpperCase() ||
                     "A"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate">
+                  <h4 className="text-sm font-semibold admin-text truncate">
                     {ghostPreview.name || "Anonymous"}
                   </h4>
-                  <div className="text-xs text-gray-600 flex items-center space-x-1">
+                  <div className="text-xs admin-text-light flex items-center space-x-1">
                     <Mail className="h-3 w-3" />
                     <span className="truncate">{ghostPreview.email}</span>
                   </div>
@@ -825,7 +825,7 @@ export default function PipelineView() {
                   {stage.count}
                 </span>
               </motion.div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm font-medium admin-text">
                 {stage.title}
               </div>
               <div className="text-xs text-gray-500">

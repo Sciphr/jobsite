@@ -206,7 +206,7 @@ export default function JobSpecificApplications() {
     }
   };
 
-  const handleBulkEmail = async (emailType) => {
+  const handleBulkEmail = async (emailType, templateId = null) => {
     if (selectedApplications.length === 0) return;
     
     // Get selected applications with full details
@@ -220,6 +220,11 @@ export default function JobSpecificApplications() {
       emailType: emailType,
       jobId: jobId
     });
+    
+    // Add template ID if provided
+    if (templateId) {
+      params.set('templateId', templateId);
+    }
     
     router.push(`/applications-manager/communication?${params}`);
   };
@@ -254,14 +259,15 @@ export default function JobSpecificApplications() {
   };
 
   const getStatusColor = (status) => {
-    const colors = {
-      Applied: "bg-blue-100 text-blue-800",
-      Reviewing: "bg-yellow-100 text-yellow-800",
-      Interview: "bg-green-100 text-green-800",
-      Hired: "bg-emerald-100 text-emerald-800",
-      Rejected: "bg-red-100 text-red-800",
+    const statusMap = {
+      Applied: 0,
+      Reviewing: 1, 
+      Interview: 2,
+      Hired: 3,
+      Rejected: 4,
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    const statIndex = statusMap[status] || 0;
+    return `${getStatCardClasses(statIndex).bg} ${getStatCardClasses(statIndex).icon} ${getStatCardClasses(statIndex).border}`;
   };
 
   const formatSalary = (min, max, currency) => {
@@ -282,7 +288,7 @@ export default function JobSpecificApplications() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
           <div className="h-32 bg-gray-200 rounded mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {[1, 2, 3, 4].map((i) => (

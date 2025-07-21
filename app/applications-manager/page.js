@@ -402,7 +402,7 @@ export default function ApplicationsManagerMain() {
             >
               {/* Animated background effect */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50"
+                className={`absolute inset-0 bg-gradient-to-br ${getStatCardClasses(metric.index).bg}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: hoveredCard === metric.index ? 1 : 0 }}
                 transition={{ duration: 0.3 }}
@@ -449,14 +449,14 @@ export default function ApplicationsManagerMain() {
           {/* Enhanced Top Performing Jobs */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <div className="admin-card rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b admin-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
                     <motion.div
                       whileHover={{ rotate: 180, scale: 1.1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Star className="h-5 w-5 text-yellow-500" />
+                      <Star className={`h-5 w-5 ${getStatCardClasses(2).icon}`} />
                     </motion.div>
                     <span>Top Performing Jobs</span>
                   </h3>
@@ -466,7 +466,7 @@ export default function ApplicationsManagerMain() {
                     onClick={() =>
                       router.push("/applications-manager/analytics")
                     }
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                    className={`text-sm font-medium flex items-center space-x-1 ${getStatCardClasses(0).icon} hover:opacity-80 transition-opacity`}
                   >
                     <span>View All</span>
                     <motion.div
@@ -491,7 +491,7 @@ export default function ApplicationsManagerMain() {
                         key={job.id}
                         variants={jobCardVariants}
                         whileHover="hover"
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg transition-colors cursor-pointer overflow-hidden relative"
+                        className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer overflow-hidden relative ${getStatCardClasses(index).bg}`}
                         onClick={() =>
                           router.push(`/applications-manager/jobs/${job.id}`)
                         }
@@ -551,7 +551,7 @@ export default function ApplicationsManagerMain() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="text-center py-8"
                   >
-                    <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <Briefcase className="h-12 w-12 admin-text-light mx-auto mb-4" />
                     <p className="admin-text-light">
                       No job performance data available yet.
                     </p>
@@ -564,7 +564,7 @@ export default function ApplicationsManagerMain() {
           {/* Enhanced Jobs Needing Attention */}
           <motion.div variants={itemVariants}>
             <div className="admin-card rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b admin-border">
                 <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0] }}
@@ -685,7 +685,7 @@ export default function ApplicationsManagerMain() {
                       key={application.id}
                       variants={activityCardVariants}
                       whileHover="hover"
-                      className="p-4 border border-gray-200 rounded-lg transition-all cursor-pointer overflow-hidden relative"
+                      className="p-4 border admin-border rounded-lg transition-all cursor-pointer overflow-hidden relative"
                       onClick={() =>
                         router.push(
                           `/applications-manager/jobs/${application.jobId}`
@@ -694,7 +694,7 @@ export default function ApplicationsManagerMain() {
                     >
                       {/* Hover background effect */}
                       <motion.div
-                        className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50"
+                        className={`absolute inset-0 bg-gradient-to-br ${getStatCardClasses(index % 4).bg}`}
                         initial={{ opacity: 0, scale: 0.8 }}
                         whileHover={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3 }}
@@ -740,7 +740,7 @@ export default function ApplicationsManagerMain() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="text-center py-8"
                 >
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <Users className="h-12 w-12 admin-text-light mx-auto mb-4" />
                   <p className="admin-text-light">No recent applications.</p>
                 </motion.div>
               )}
@@ -818,7 +818,7 @@ export default function ApplicationsManagerMain() {
                   whileHover={{ x: 4, scale: 1.1 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                  <ArrowRight className="h-5 w-5 admin-text-light" />
                 </motion.div>
               </div>
             </motion.button>

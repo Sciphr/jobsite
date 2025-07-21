@@ -731,6 +731,16 @@ body {
   background: #9ca3af;
 }
 
+/* Active tab background - theme-aware */
+.admin-active-tab-bg {
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%) !important;
+}
+
+/* Alternative darker active tab background for better contrast */
+.admin-active-tab-bg-dark {
+  background: linear-gradient(135deg, var(--admin-primary-dark) 0%, var(--admin-accent) 100%) !important;
+}
+
 /* Custom scrollbar for light mode */
 ::-webkit-scrollbar {
   width: 8px;

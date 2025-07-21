@@ -75,7 +75,8 @@ export default function AutomationManagement() {
 
       if (templatesRes.ok) {
         const templatesData = await templatesRes.json();
-        setTemplates(templatesData.filter(t => t.isActive));
+        const templates = templatesData.data || templatesData;
+        setTemplates(Array.isArray(templates) ? templates.filter(t => t.isActive) : []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -213,8 +214,8 @@ export default function AutomationManagement() {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Email Automation</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold admin-text">Email Automation</h1>
+          <p className="admin-text-light mt-1">
             Automatically send emails when application statuses change
           </p>
         </div>
@@ -236,15 +237,15 @@ export default function AutomationManagement() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className={`${getStatCardClasses()} p-6`}
+          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(0).border} ${getStatCardClasses(0).hover}`}
         >
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Zap className="h-6 w-6 text-blue-600" />
+            <div className={`p-3 rounded-lg ${getStatCardClasses(0).bg}`}>
+              <Zap className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{rules.length}</p>
-              <p className="text-gray-600 text-sm">Total Rules</p>
+              <p className="text-2xl font-bold admin-text">{rules.length}</p>
+              <p className="admin-text-light text-sm">Total Rules</p>
             </div>
           </div>
         </motion.div>
@@ -253,17 +254,17 @@ export default function AutomationManagement() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className={`${getStatCardClasses()} p-6`}
+          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(1).border} ${getStatCardClasses(1).hover}`}
         >
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className={`p-3 rounded-lg ${getStatCardClasses(1).bg}`}>
+              <CheckCircle className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold admin-text">
                 {rules.filter(r => r.is_active).length}
               </p>
-              <p className="text-gray-600 text-sm">Active Rules</p>
+              <p className="admin-text-light text-sm">Active Rules</p>
             </div>
           </div>
         </motion.div>
@@ -272,15 +273,15 @@ export default function AutomationManagement() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className={`${getStatCardClasses()} p-6`}
+          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(2).border} ${getStatCardClasses(2).hover}`}
         >
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Mail className="h-6 w-6 text-purple-600" />
+            <div className={`p-3 rounded-lg ${getStatCardClasses(2).bg}`}>
+              <Mail className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{templates.length}</p>
-              <p className="text-gray-600 text-sm">Available Templates</p>
+              <p className="text-2xl font-bold admin-text">{templates.length}</p>
+              <p className="admin-text-light text-sm">Available Templates</p>
             </div>
           </div>
         </motion.div>
@@ -291,17 +292,17 @@ export default function AutomationManagement() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white rounded-lg shadow overflow-hidden"
+        className="admin-card rounded-lg shadow overflow-hidden"
       >
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Automation Rules</h2>
+          <h2 className="text-lg font-semibold admin-text">Automation Rules</h2>
         </div>
 
         {rules.length === 0 ? (
           <div className="text-center py-12">
             <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No automation rules</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-medium admin-text mb-2">No automation rules</h3>
+            <p className="admin-text-light mb-4">
               Create your first automation rule to start sending emails automatically
             </p>
             <button
@@ -336,8 +337,8 @@ export default function AutomationManagement() {
                         </div>
                         
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{rule.name}</h3>
-                          <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
+                          <h3 className="text-lg font-semibold admin-text">{rule.name}</h3>
+                          <div className="flex items-center space-x-2 text-sm admin-text-light mt-1">
                             <span>{formatConditions(rule.trigger, rule.conditions)}</span>
                             <ArrowRight className="h-3 w-3" />
                             <span>Send "{template?.name || 'Unknown Template'}"</span>
@@ -402,10 +403,10 @@ export default function AutomationManagement() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="admin-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="text-xl font-semibold admin-text">
                   {editingRule ? 'Edit Automation Rule' : 'Create Automation Rule'}
                 </h3>
               </div>
@@ -413,7 +414,7 @@ export default function AutomationManagement() {
               <div className="p-6 space-y-6">
                 {/* Rule Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium admin-text mb-2">
                     Rule Name *
                   </label>
                   <input
@@ -427,7 +428,7 @@ export default function AutomationManagement() {
 
                 {/* Trigger Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium admin-text mb-2">
                     Trigger Event *
                   </label>
                   <select
@@ -446,7 +447,7 @@ export default function AutomationManagement() {
                 {/* Conditions */}
                 {formData.trigger === 'status_change' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium admin-text mb-2">
                       Condition Type *
                     </label>
                     <select
@@ -468,7 +469,7 @@ export default function AutomationManagement() {
                     <div className="space-y-4">
                       {(formData.conditions.type === 'from_to' || formData.conditions.type === 'from_status') && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium admin-text mb-2">
                             From Status
                           </label>
                           <select
@@ -491,7 +492,7 @@ export default function AutomationManagement() {
 
                       {(formData.conditions.type === 'to_status' || formData.conditions.type === 'from_to' || formData.conditions.type === 'from_any_to') && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium admin-text mb-2">
                             To Status
                           </label>
                           <select
@@ -517,7 +518,7 @@ export default function AutomationManagement() {
 
                 {/* Email Template */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium admin-text mb-2">
                     Email Template *
                   </label>
                   <select

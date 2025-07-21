@@ -137,7 +137,9 @@ export default function CommunicationHub() {
     const recipientId = searchParams.get('recipient');
     const recipientEmails = searchParams.get('recipients'); // For bulk emails
     const emailType = searchParams.get('emailType');
+    const templateId = searchParams.get('templateId');
     const jobId = searchParams.get('jobId');
+    
     
     if (applications.length > 0) {
       // Handle single recipient
@@ -183,30 +185,40 @@ export default function CommunicationHub() {
           console.log('📧 Pre-filled bulk recipients:', newRecipients.length, 'recipients');
         }
       }
+    }
+    
+    // Handle template pre-selection separately - only run when we have templates and URL params
+    if (emailTemplates.length > 0 && (templateId || emailType)) {
+      let template = null;
       
-      // Handle email type and template pre-selection
-      if (emailType && emailTemplates.length > 0 && !selectedTemplate) {
-        const template = emailTemplates.find(t => 
+      // First, try to find template by specific ID
+      if (templateId) {
+        template = emailTemplates.find(t => t.id === templateId);
+      }
+      
+      // Fallback to finding by emailType
+      if (!template && emailType) {
+        template = emailTemplates.find(t => 
           t.type === emailType && t.isDefault
         ) || emailTemplates.find(t => t.type === emailType);
-        
-        if (template) {
-          handleTemplateSelect(template);
-          console.log('📧 Pre-selected template:', template.name);
-        }
       }
       
-      // Clear URL parameters to avoid re-processing on page refresh
-      if (recipientId || recipientEmails || emailType) {
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('recipient');
-        newUrl.searchParams.delete('recipients');
-        newUrl.searchParams.delete('emailType');
-        newUrl.searchParams.delete('jobId');
-        window.history.replaceState({}, '', newUrl);
+      if (template && selectedTemplate !== template.id) {
+        handleTemplateSelect(template);
+        
+        // Clear URL parameters after successful template selection
+        setTimeout(() => {
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('recipient');
+          newUrl.searchParams.delete('recipients');
+          newUrl.searchParams.delete('emailType');
+          newUrl.searchParams.delete('templateId');
+          newUrl.searchParams.delete('jobId');
+          window.history.replaceState({}, '', newUrl);
+        }, 100);
       }
     }
-  }, [searchParams, applications, emailTemplates, recipients.length, selectedTemplate]);
+  }, [searchParams, applications, emailTemplates]);
 
   // Filter applications for recipient selection
   const filteredApplications = useMemo(() => {
@@ -617,7 +629,7 @@ export default function CommunicationHub() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="admin-text-light">Loading...</p>
         </div>
       </div>
     );
@@ -628,8 +640,8 @@ export default function CommunicationHub() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold admin-text mb-4">Access Denied</h1>
+          <p className="admin-text-light">
             You need admin privileges to access the Communication Hub.
           </p>
         </div>
@@ -754,7 +766,7 @@ export default function CommunicationHub() {
         className="admin-card rounded-lg shadow overflow-hidden"
       >
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 bg-white">
+        <div className="border-b admin-border admin-card">
           <nav className="flex px-6 relative">
             {tabs.map((tab) => {
               const Icon = tab.icon;
