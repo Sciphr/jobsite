@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
 import { auditApplication, extractRequestContext } from "../../../../lib/auditLog";
+import { triggerStatusChangeAutomation } from "../../../../lib/emailAutomation";
 
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -98,6 +99,27 @@ export async function PATCH(req, { params }) {
         actorName,
         updatedApplication.jobId
       );
+
+      // Trigger email automation for status changes
+      try {
+        const automationResult = await triggerStatusChangeAutomation(
+          updatedApplication.id,
+          currentApplication.status,
+          status,
+          {
+            userId: session.user.id,
+            userName: actorName,
+            ipAddress,
+            userAgent,
+            requestId,
+          }
+        );
+        
+        console.log(`🤖 Email automation processed: ${automationResult.triggered}/${automationResult.processed} rules triggered`);
+      } catch (automationError) {
+        console.error('Error in email automation:', automationError);
+        // Don't fail the status update if automation fails
+      }
     }
 
     // Log note update if notes were changed

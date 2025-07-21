@@ -1,0 +1,112 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../../auth/[...nextauth]/route";
+import { appPrisma } from "../../../../lib/prisma";
+
+export async function GET(request) {
+  const session = await getServerSession(authOptions);
+
+  // Check if user is admin (privilege level 1 or higher)
+  if (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const rules = await appPrisma.emailAutomationRule.findMany({
+      include: {
+        users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: [
+        { is_active: "desc" },
+        { name: "asc" },
+      ],
+    });
+
+    // Parse conditions from string to JSON for each rule
+    const rulesWithParsedConditions = rules.map(rule => ({
+      ...rule,
+      conditions: rule.conditions ? JSON.parse(rule.conditions) : {},
+    }));
+
+    return NextResponse.json(rulesWithParsedConditions);
+  } catch (error) {
+    console.error("Error fetching automation rules:", error);
+    return NextResponse.json(
+      { message: "Failed to fetch automation rules" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request) {
+  const session = await getServerSession(authOptions);
+
+  // Check if user is admin (privilege level 1 or higher)
+  if (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { name, trigger, conditions, template_id, is_active } = await request.json();
+
+    // Validate required fields
+    if (!name || !trigger || !template_id) {
+      return NextResponse.json(
+        { message: "Name, trigger, and template_id are required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify template exists
+    const template = await appPrisma.emailTemplate.findUnique({
+      where: { id: template_id },
+    });
+
+    if (!template) {
+      return NextResponse.json(
+        { message: "Template not found" },
+        { status: 400 }
+      );
+    }
+
+    const rule = await appPrisma.emailAutomationRule.create({
+      data: {
+        name,
+        trigger,
+        conditions: JSON.stringify(conditions || {}),
+        template_id,
+        is_active: is_active ?? true,
+        created_by: session.user.id,
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    // Parse conditions back to JSON for response
+    const ruleWithParsedConditions = {
+      ...rule,
+      conditions: JSON.parse(rule.conditions),
+    };
+
+    return NextResponse.json(ruleWithParsedConditions, { status: 201 });
+  } catch (error) {
+    console.error("Error creating automation rule:", error);
+    return NextResponse.json(
+      { message: "Failed to create automation rule" },
+      { status: 500 }
+    );
+  }
+}

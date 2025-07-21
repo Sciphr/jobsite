@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Send, Loader2 } from "lucide-react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import VariablesHelper from "./VariablesHelper";
 
 export default function EmailComposer({
   emailTemplates,
@@ -73,9 +74,12 @@ export default function EmailComposer({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             rows={12}
           />
-          <p className="text-xs text-gray-500 mt-2">
-            Use variables like {"{candidateName}"}, {"{jobTitle}"}, {"{companyName}"} in your content
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-gray-500">
+              Use variables like {"{candidateName}"}, {"{jobTitle}"}, {"{companyName}"} in your content
+            </p>
+            <VariablesHelper trigger="button" />
+          </div>
         </div>
 
         {/* Actions */}

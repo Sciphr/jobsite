@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const template = await prisma.emailTemplate.findUnique({
       where: { id },
@@ -63,8 +63,8 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
-    const { name, subject, content, type, description, variables, isDefault, isActive } = await request.json();
+    const { id } = await params;
+    const { name, subject, content, type, category, description, variables, isDefault, isActive } = await request.json();
 
     // Check if template exists
     const existingTemplate = await prisma.emailTemplate.findUnique({
@@ -86,11 +86,11 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // If this template is being set as default, remove default flag from other templates of the same type
+    // If this template is being set as default, remove default flag from other templates of the same category
     if (isDefault && !existingTemplate.is_default) {
       await prisma.emailTemplate.updateMany({
         where: {
-          type: type,
+          category: category || existingTemplate.category || 'general',
           is_default: true,
           id: { not: id },
         },
@@ -108,6 +108,7 @@ export async function PUT(request, { params }) {
         subject,
         content,
         type,
+        category: category || 'general',
         description: description || null,
         variables: variables ? JSON.stringify(variables) : null,
         is_default: isDefault || false,
@@ -162,7 +163,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check if template exists
     const existingTemplate = await prisma.emailTemplate.findUnique({

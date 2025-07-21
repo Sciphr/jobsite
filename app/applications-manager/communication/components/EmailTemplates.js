@@ -5,6 +5,37 @@ import { motion } from "framer-motion";
 import { Plus, Edit, Copy, X, Search, Filter } from "lucide-react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 
+// Function to extract and count variables from template content
+const getVariableCount = (template) => {
+  // First try to use stored variables if available
+  if (template.variables && Array.isArray(template.variables)) {
+    return template.variables.length;
+  }
+  
+  // If variables is a string, try to parse it
+  if (template.variables && typeof template.variables === 'string') {
+    try {
+      const parsed = JSON.parse(template.variables);
+      if (Array.isArray(parsed)) {
+        return parsed.length;
+      }
+    } catch (e) {
+      // Fall through to content parsing
+    }
+  }
+  
+  // Extract variables from content using regex
+  const content = `${template.subject || ''} ${template.content || ''}`;
+  const variableRegex = /\{\{(\w+)\}\}/g;
+  const matches = content.match(variableRegex);
+  
+  if (!matches) return 0;
+  
+  // Get unique variables
+  const uniqueVariables = [...new Set(matches)];
+  return uniqueVariables.length;
+};
+
 export default function EmailTemplates({
   emailTemplates,
   onTemplateSelect,
@@ -244,7 +275,7 @@ export default function EmailTemplates({
 
             <div className="flex items-center justify-between">
               <div className="text-xs text-gray-500">
-                {template.variables?.length || 0} variables
+                {getVariableCount(template)} variables
               </div>
               <div className="flex items-center space-x-2">
                 <motion.button

@@ -104,11 +104,11 @@ export async function POST(request) {
       ? createdBy 
       : '00000000-0000-0000-0000-000000000000'; // Placeholder UUID for system-created templates
 
-    // If this template is being set as default, remove default flag from other templates of the same type
+    // If this template is being set as default, remove default flag from other templates of the same category
     if (isDefault) {
       await prisma.emailTemplate.updateMany({
         where: {
-          type: type,
+          category: category || 'general',
           is_default: true,
         },
         data: {

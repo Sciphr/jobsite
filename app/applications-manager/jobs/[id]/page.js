@@ -5,6 +5,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJob } from "@/app/hooks/useAdminData";
+import BulkActionsBar from "../../components/BulkActionsBar";
+import QuickActions from "../../components/QuickActions";
 import {
   User,
   Mail,
@@ -57,6 +59,7 @@ export default function JobSpecificApplications() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [selectedApplications, setSelectedApplications] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Filter applications for this specific job
   const jobApplications = useMemo(() => {
@@ -168,26 +171,86 @@ export default function JobSpecificApplications() {
     }
   };
 
-  const handleBulkAction = async (action) => {
+  const handleBulkStatusChange = async (status) => {
     if (selectedApplications.length === 0) return;
 
-    const confirmMessage = `Are you sure you want to ${action} ${selectedApplications.length} application(s)?`;
+    const statusLabels = {
+      Applied: "Applied",
+      Reviewing: "Under Review", 
+      Interview: "Interview",
+      Hired: "Hired",
+      Rejected: "Rejected"
+    };
+
+    const confirmMessage = `Are you sure you want to mark ${selectedApplications.length} application(s) as ${statusLabels[status]}?`;
     if (!confirm(confirmMessage)) return;
 
+    setBulkLoading(true);
     try {
       await Promise.all(
         selectedApplications.map((id) =>
           fetch(`/api/admin/applications/${id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: action }),
+            body: JSON.stringify({ status }),
           })
         )
       );
       setSelectedApplications([]);
+      // Note: React Query should automatically refetch and update the UI
     } catch (error) {
-      console.error("Error performing bulk action:", error);
+      console.error("Error performing bulk status change:", error);
+      alert("Failed to update application statuses. Please try again.");
+    } finally {
+      setBulkLoading(false);
     }
+  };
+
+  const handleBulkEmail = async (emailType) => {
+    if (selectedApplications.length === 0) return;
+    
+    // Get selected applications with full details
+    const selectedApps = filteredApplications.filter(app => 
+      selectedApplications.includes(app.id)
+    );
+    
+    // Navigate to communication hub with selected recipients and email type
+    const params = new URLSearchParams({
+      recipients: selectedApps.map(app => app.email).join(','),
+      emailType: emailType,
+      jobId: jobId
+    });
+    
+    router.push(`/applications-manager/communication?${params}`);
+  };
+
+  const handleStatusChange = async (applicationId, newStatus) => {
+    try {
+      await fetch(`/api/admin/applications/${applicationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      // React Query will handle the UI update
+    } catch (error) {
+      console.error("Error updating application status:", error);
+      alert("Failed to update application status. Please try again.");
+    }
+  };
+
+  const handleViewApplication = (application) => {
+    // Navigate to application details or open modal
+    router.push(`/admin/applications/${application.id}`);
+  };
+
+  const handleEmailApplication = (application) => {
+    // Navigate to communication page with pre-filled recipient
+    router.push(`/applications-manager/communication?recipient=${application.id}`);
+  };
+
+  // Legacy handler for backward compatibility
+  const handleBulkAction = async (action) => {
+    await handleBulkStatusChange(action);
   };
 
   const getStatusColor = (status) => {
@@ -496,37 +559,14 @@ export default function JobSpecificApplications() {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedApplications.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-blue-800 font-medium">
-              {selectedApplications.length} application
-              {selectedApplications.length !== 1 ? "s" : ""} selected
-            </span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleBulkAction("Reviewing")}
-                className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
-              >
-                Mark as Reviewing
-              </button>
-              <button
-                onClick={() => handleBulkAction("Interview")}
-                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
-              >
-                Schedule Interview
-              </button>
-              <button
-                onClick={() => handleBulkAction("Rejected")}
-                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enhanced Bulk Actions */}
+      <BulkActionsBar
+        selectedCount={selectedApplications.length}
+        onBulkStatusChange={handleBulkStatusChange}
+        onBulkEmail={handleBulkEmail}
+        onClearSelection={() => setSelectedApplications([])}
+        isLoading={bulkLoading}
+      />
 
       {/* Applications Table */}
       <div className="admin-card rounded-lg shadow overflow-hidden">
@@ -642,19 +682,14 @@ export default function JobSpecificApplications() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        {application.resumeUrl && (
-                          <button className="p-1 text-gray-400 hover:text-green-600 transition-colors">
-                            <Download className="h-4 w-4" />
-                          </button>
-                        )}
-                        <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <QuickActions
+                        application={application}
+                        onStatusChange={handleStatusChange}
+                        onEmail={handleEmailApplication}
+                        onView={handleViewApplication}
+                        compact={true}
+                        showLabels={false}
+                      />
                     </td>
                   </tr>
                 ))}

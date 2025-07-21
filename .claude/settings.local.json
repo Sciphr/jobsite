@@ -16,7 +16,10 @@
       "Bash(tasklist:*)",
       "Bash(ls:*)",
       "Bash(icacls:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(tail:*)",
+      "Bash(node:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

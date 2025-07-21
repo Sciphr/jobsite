@@ -1,8 +1,8 @@
 // app/applications-manager/communication/page.js - Refactored with components
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
@@ -32,9 +32,11 @@ import {
   EmailPreviewModal,
 } from "./components";
 import EnhancedEmailHistory from "./components/EnhancedEmailHistory";
+import DefaultTemplateConfirmModal from "./components/DefaultTemplateConfirmModal";
 
 export default function CommunicationHub() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const { getButtonClasses, getStatCardClasses } = useThemeClasses();
 
@@ -59,10 +61,16 @@ export default function CommunicationHub() {
     subject: "",
     content: "",
     type: "",
+    category: "",
     description: "",
     isDefault: false,
     isActive: true,
   });
+
+  // Default template confirmation modal state
+  const [showDefaultConfirmModal, setShowDefaultConfirmModal] = useState(false);
+  const [existingDefaultTemplate, setExistingDefaultTemplate] = useState(null);
+  const [pendingTemplateData, setPendingTemplateData] = useState(null);
 
   // Filter states for history
   const [historySearch, setHistorySearch] = useState("");
@@ -123,6 +131,82 @@ export default function CommunicationHub() {
     clickRate: emailStats.opened > 0 ? Math.round((emailStats.clicked / emailStats.opened) * 100) : 0,
     bounceRate: emailStats.total > 0 ? Math.round((emailStats.bounced / emailStats.total) * 100) : 0,
   };
+
+  // Handle recipient pre-selection from URL parameters (e.g., from quick actions)
+  useEffect(() => {
+    const recipientId = searchParams.get('recipient');
+    const recipientEmails = searchParams.get('recipients'); // For bulk emails
+    const emailType = searchParams.get('emailType');
+    const jobId = searchParams.get('jobId');
+    
+    if (applications.length > 0) {
+      // Handle single recipient
+      if (recipientId && !recipients.find(r => r.id === recipientId)) {
+        const application = applications.find(app => app.id === recipientId);
+        if (application) {
+          setRecipients([{
+            id: application.id,
+            name: application.name || 'Anonymous',
+            email: application.email,
+            jobTitle: application.job?.title || 'Unknown Position',
+            status: application.status
+          }]);
+          setActiveTab("compose");
+          console.log('📧 Pre-filled recipient from quick action:', application.name || application.email);
+        }
+      }
+      
+      // Handle multiple recipients (bulk email)
+      if (recipientEmails && recipients.length === 0) {
+        const emails = recipientEmails.split(',');
+        const selectedApps = applications.filter(app => emails.includes(app.email));
+        
+        if (selectedApps.length > 0) {
+          const newRecipients = selectedApps.map(app => ({
+            id: app.id,
+            name: app.name || 'Anonymous',
+            email: app.email,
+            jobTitle: app.job?.title || 'Unknown Position',
+            status: app.status,
+            applicationId: app.id,
+            jobId: app.jobId
+          }));
+          
+          setRecipients(newRecipients);
+          setActiveTab("compose");
+          
+          // Pre-select job filter if provided
+          if (jobId) {
+            setSelectedJob(jobId);
+          }
+          
+          console.log('📧 Pre-filled bulk recipients:', newRecipients.length, 'recipients');
+        }
+      }
+      
+      // Handle email type and template pre-selection
+      if (emailType && emailTemplates.length > 0 && !selectedTemplate) {
+        const template = emailTemplates.find(t => 
+          t.type === emailType && t.isDefault
+        ) || emailTemplates.find(t => t.type === emailType);
+        
+        if (template) {
+          handleTemplateSelect(template);
+          console.log('📧 Pre-selected template:', template.name);
+        }
+      }
+      
+      // Clear URL parameters to avoid re-processing on page refresh
+      if (recipientId || recipientEmails || emailType) {
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('recipient');
+        newUrl.searchParams.delete('recipients');
+        newUrl.searchParams.delete('emailType');
+        newUrl.searchParams.delete('jobId');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [searchParams, applications, emailTemplates, recipients.length, selectedTemplate]);
 
   // Filter applications for recipient selection
   const filteredApplications = useMemo(() => {
@@ -319,6 +403,7 @@ export default function CommunicationHub() {
       subject: "",
       content: "",
       type: "",
+      category: "",
       description: "",
       isDefault: false,
       isActive: true,
@@ -334,6 +419,7 @@ export default function CommunicationHub() {
         subject: template.subject,
         content: template.content,
         type: template.type,
+        category: template.category || "",
         description: template.description || "",
         isDefault: template.isDefault,
         isActive: template.isActive,
@@ -352,6 +438,7 @@ export default function CommunicationHub() {
   const handleTemplateSubmit = async (e) => {
     e.preventDefault();
     
+    
     if (!templateForm.name || !templateForm.subject || !templateForm.content || !templateForm.type) {
       alert("Please fill in all required fields.");
       return;
@@ -368,6 +455,39 @@ export default function CommunicationHub() {
         createdBy: session?.user?.id
       };
 
+      // Check if trying to set as default and if there's already a default for this category
+      if (templateForm.isDefault) {
+
+        const response = await fetch('/api/admin/communication/templates/check-default', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: templateForm.category,
+            excludeId: editingTemplate?.id
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.hasExistingDefault) {
+          
+          // Show confirmation modal
+          setExistingDefaultTemplate(result.existingTemplate);
+          setPendingTemplateData(templateData);
+          setShowDefaultConfirmModal(true);
+          return; // Don't save yet, wait for user confirmation
+        }
+      }
+
+      // Save template (either no conflict or not setting as default)
+      await saveTemplateData(templateData);
+    } catch (error) {
+      alert(`Failed to ${editingTemplate ? "update" : "create"} template: ${error.message}`);
+    }
+  };
+
+  const saveTemplateData = async (templateData) => {
+    try {
       if (editingTemplate) {
         await updateTemplate(editingTemplate.id, templateData);
         alert("Template updated successfully!");
@@ -378,9 +498,36 @@ export default function CommunicationHub() {
       
       closeTemplateModal();
       refetchTemplates();
+      
+      // Reset modal states
+      setShowDefaultConfirmModal(false);
+      setExistingDefaultTemplate(null);
+      setPendingTemplateData(null);
     } catch (error) {
-      alert(`Failed to ${editingTemplate ? "update" : "create"} template: ${error.message}`);
+      throw error;
     }
+  };
+
+  const handleConfirmReplaceDefault = async () => {
+    if (pendingTemplateData) {
+      await saveTemplateData(pendingTemplateData);
+    }
+  };
+
+  const handleKeepCurrentDefault = async () => {
+    if (pendingTemplateData) {
+      const templateDataWithoutDefault = {
+        ...pendingTemplateData,
+        isDefault: false
+      };
+      await saveTemplateData(templateDataWithoutDefault);
+    }
+  };
+
+  const handleCloseDefaultConfirm = () => {
+    setShowDefaultConfirmModal(false);
+    setExistingDefaultTemplate(null);
+    setPendingTemplateData(null);
   };
 
   const handleTemplateDelete = async (template) => {
@@ -771,6 +918,17 @@ export default function CommunicationHub() {
         replaceVariables={replaceVariables}
         onClose={() => setShowPreview(false)}
         onSendEmail={handleSendEmail}
+      />
+
+      {/* Default Template Confirmation Modal */}
+      <DefaultTemplateConfirmModal
+        isOpen={showDefaultConfirmModal}
+        onClose={handleCloseDefaultConfirm}
+        onConfirm={handleConfirmReplaceDefault}
+        onCancel={handleKeepCurrentDefault}
+        existingTemplate={existingDefaultTemplate}
+        newTemplateName={templateForm.name}
+        templateType={templateForm.category}
       />
     </div>
   );

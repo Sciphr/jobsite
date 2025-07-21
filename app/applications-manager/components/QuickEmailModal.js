@@ -203,10 +203,10 @@ export default function QuickEmailModal({
               {templates.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Select Template ({application.status} Status)
+                    Select Template (Default Templates)
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {templates.slice(0, 4).map((template) => (
+                    {templates.map((template) => (
                       <button
                         key={template.id}
                         onClick={() => handleTemplateSelect(template)}

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
 import ApplicationDetailModal from "../components/ApplicationDetailModal";
+import QuickActions from "../components/QuickActions";
 import {
   User,
   Mail,
@@ -285,6 +286,11 @@ export default function PipelineView() {
       // You could add a toast notification here for better UX
       alert('Failed to download resume. Please try again.');
     }
+  };
+
+  const handleEmailApplication = (application) => {
+    // Navigate to communication page with pre-filled recipient
+    router.push(`/applications-manager/communication?recipient=${application.id}`);
   };
 
   const selectedJobData = jobs.find((job) => job.id === selectedJob);
@@ -693,42 +699,21 @@ export default function PipelineView() {
                         </div>
                       </div>
 
-                      {/* Actions */}
+                      {/* Enhanced Quick Actions */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
                         className="mt-3 pt-3 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <motion.button
-                              whileHover={{ scale: 1.2 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewApplication(application);
-                              }}
-                              className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                              title="View details"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </motion.button>
-                            {application.resumeUrl && (
-                              <motion.button
-                                whileHover={{ scale: 1.2 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDownloadResume(application);
-                                }}
-                                className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                                title="Download resume"
-                              >
-                                <Download className="h-3 w-3" />
-                              </motion.button>
-                            )}
-                          </div>
-                        </div>
+                        <QuickActions
+                          application={application}
+                          onStatusChange={handleStatusChange}
+                          onEmail={handleEmailApplication}
+                          onView={handleViewApplication}
+                          compact={true}
+                          showLabels={false}
+                        />
                       </motion.div>
                     </motion.div>
                   )

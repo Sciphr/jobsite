@@ -32,6 +32,7 @@ import {
   Zap,
   Archive,
 } from "lucide-react";
+import DefaultTemplateConfirmModal from "../components/DefaultTemplateConfirmModal";
 
 export default function TemplateManagement() {
   const router = useRouter();
@@ -76,6 +77,11 @@ export default function TemplateManagement() {
     isDefault: false,
     isActive: true,
   });
+
+  // Default conflict modal state
+  const [showDefaultConfirmModal, setShowDefaultConfirmModal] = useState(false);
+  const [existingDefaultTemplate, setExistingDefaultTemplate] = useState(null);
+  const [pendingTemplateData, setPendingTemplateData] = useState(null);
 
   // Template categories for organization
   const templateCategories = [
@@ -239,11 +245,60 @@ export default function TemplateManagement() {
 
   const handleSaveTemplate = async () => {
     try {
+      console.log('💾 handleSaveTemplate called with:', {
+        isEditing: !!editingTemplate,
+        templateId: editingTemplate?.id,
+        templateName: templateForm.name,
+        category: templateForm.category,
+        isDefault: templateForm.isDefault
+      });
+
       const templateData = {
         ...templateForm,
         createdBy: session?.user?.id
       };
 
+      // Check if trying to set as default and if there's already a default for this type
+      if (templateForm.isDefault) {
+        console.log('🔍 Checking for existing default template:', {
+          category: templateForm.category,
+          excludeId: editingTemplate?.id,
+          templateName: templateForm.name
+        });
+
+        const response = await fetch('/api/admin/communication/templates/check-default', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: templateForm.category,
+            excludeId: editingTemplate?.id
+          })
+        });
+
+        const result = await response.json();
+        console.log('📋 Default template check result:', result);
+
+        if (result.hasExistingDefault) {
+          console.log('⚠️ Existing default found, showing confirmation modal');
+          // Show confirmation modal
+          setExistingDefaultTemplate(result.existingTemplate);
+          setPendingTemplateData(templateData);
+          setShowDefaultConfirmModal(true);
+          return; // Don't save yet, wait for user confirmation
+        } else {
+          console.log('✅ No existing default found, proceeding with save');
+        }
+      }
+
+      // Save template (either no conflict or not setting as default)
+      await saveTemplateData(templateData);
+    } catch (error) {
+      console.error("Error saving template:", error);
+    }
+  };
+
+  const saveTemplateData = async (templateData) => {
+    try {
       if (editingTemplate) {
         await updateTemplate(editingTemplate.id, templateData);
       } else {
@@ -252,9 +307,36 @@ export default function TemplateManagement() {
 
       setShowCreateModal(false);
       refetchTemplates();
+      
+      // Reset states
+      setShowDefaultConfirmModal(false);
+      setExistingDefaultTemplate(null);
+      setPendingTemplateData(null);
     } catch (error) {
       console.error("Error saving template:", error);
     }
+  };
+
+  const handleConfirmReplaceDefault = async () => {
+    if (pendingTemplateData) {
+      await saveTemplateData(pendingTemplateData);
+    }
+  };
+
+  const handleKeepCurrentDefault = async () => {
+    if (pendingTemplateData) {
+      const templateDataWithoutDefault = {
+        ...pendingTemplateData,
+        isDefault: false
+      };
+      await saveTemplateData(templateDataWithoutDefault);
+    }
+  };
+
+  const handleCloseDefaultConfirm = () => {
+    setShowDefaultConfirmModal(false);
+    setExistingDefaultTemplate(null);
+    setPendingTemplateData(null);
   };
 
   const handleDeleteTemplate = async (template) => {
@@ -1278,7 +1360,10 @@ Best regards,
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveTemplate}
+                  onClick={() => {
+                    console.log('🔘 Save button clicked!');
+                    handleSaveTemplate();
+                  }}
                   disabled={!templateForm.name || !templateForm.subject || !templateForm.content || !templateForm.type}
                   className={`px-4 py-2 rounded-lg transition-colors ${
                     templateForm.name && templateForm.subject && templateForm.content && templateForm.type
@@ -1373,6 +1458,17 @@ Best regards,
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Default Template Confirmation Modal */}
+      <DefaultTemplateConfirmModal
+        isOpen={showDefaultConfirmModal}
+        onClose={handleCloseDefaultConfirm}
+        onConfirm={handleConfirmReplaceDefault}
+        onCancel={handleKeepCurrentDefault}
+        existingTemplate={existingDefaultTemplate}
+        newTemplateName={templateForm.name}
+        templateType={templateForm.category}
+      />
     </div>
   );
 }

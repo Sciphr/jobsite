@@ -26,13 +26,25 @@ import {
 function ApplicationsManagerLayoutContent({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { getButtonClasses } = useThemeClasses();
   const { data: jobs = [] } = useJobsSimple();
   const [showJobPicker, setShowJobPicker] = useState(false);
 
-  // Check admin permissions
-  if (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1) {
+  // Show loading state while session is being fetched
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check admin permissions only after session is loaded
+  if (status === "authenticated" && (!session?.user?.privilegeLevel || session.user.privilegeLevel < 1)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -41,6 +53,22 @@ function ApplicationsManagerLayoutContent({ children }) {
           </h1>
           <p className="text-gray-600">
             You need admin privileges to access the Applications Manager.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, redirect or show login prompt
+  if (status === "unauthenticated") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Authentication Required
+          </h1>
+          <p className="text-gray-600">
+            Please log in to access the Applications Manager.
           </p>
         </div>
       </div>
@@ -74,7 +102,7 @@ function ApplicationsManagerLayoutContent({ children }) {
       path: "/applications-manager/analytics",
       active: pathname === "/applications-manager/analytics",
       description: "Detailed insights and reports",
-      color: "purple",
+      color: "indigo",
     },
     {
       id: "communication",
@@ -84,6 +112,15 @@ function ApplicationsManagerLayoutContent({ children }) {
       active: pathname.startsWith("/applications-manager/communication"),
       description: "Email templates and history",
       color: "orange",
+    },
+    {
+      id: "automation",
+      label: "Automation",
+      icon: Zap,
+      path: "/applications-manager/automation",
+      active: pathname === "/applications-manager/automation",
+      description: "Automated email triggers and rules",
+      color: "purple",
     },
     {
       id: "settings",

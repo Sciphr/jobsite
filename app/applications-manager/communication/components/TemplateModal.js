@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import VariablesHelper from "./VariablesHelper";
 
 export default function TemplateModal({
   showModal,
@@ -61,6 +62,28 @@ export default function TemplateModal({
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Template Category *
+                    </label>
+                    <select
+                      value={templateForm.category}
+                      onChange={(e) =>
+                        setTemplateForm((prev) => ({ ...prev, category: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Select category...</option>
+                      <option value="application">Application Status</option>
+                      <option value="interview">Interview Process</option>
+                      <option value="onboarding">Onboarding</option>
+                      <option value="rejection">Rejection</option>
+                      <option value="general">General</option>
+                      <option value="follow_up">Follow Up</option>
+                    </select>
                   </div>
 
                   <div>
@@ -171,9 +194,12 @@ export default function TemplateModal({
                     rows={16}
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Use variables like {"{candidateName}"}, {"{jobTitle}"}, {"{companyName}"}, {"{department}"}, {"{senderName}"}, {"{reviewTimeframe}"} in your content
-                  </p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-gray-500">
+                      Use variables like {"{candidateName}"}, {"{jobTitle}"}, {"{companyName}"} in your content
+                    </p>
+                    <VariablesHelper trigger="help" />
+                  </div>
                 </div>
               </div>
 
