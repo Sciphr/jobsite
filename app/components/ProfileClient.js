@@ -583,6 +583,101 @@ export default function ProfileClient({ session }) {
           </div>
         </div>
 
+        {/* Profile Completion Prompt */}
+        {profile && (
+          (() => {
+            const completedFields = [
+              profile.firstName,
+              profile.lastName, 
+              profile.email,
+              profile.phone
+            ].filter(Boolean).length;
+            const totalFields = 4;
+            const completionPercentage = Math.round((completedFields / totalFields) * 100);
+            const isIncomplete = completionPercentage < 100;
+            
+            return isIncomplete ? (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 mb-6 transition-colors duration-200">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L4.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+                      Complete Your Profile
+                    </h3>
+                    <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">
+                      {!profile.phone ? (
+                        <>Add your phone number to apply to jobs instantly! This information is required for job applications.</>
+                      ) : (
+                        <>Complete your profile information to improve your job application experience.</>
+                      )}
+                    </p>
+                    
+                    {/* Progress Bar */}
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between text-sm text-yellow-700 dark:text-yellow-300 mb-2">
+                        <span>Profile Completion</span>
+                        <span className="font-medium">{completedFields} of {totalFields} fields complete ({completionPercentage}%)</span>
+                      </div>
+                      <div className="w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-3">
+                        <div 
+                          className="bg-gradient-to-r from-yellow-400 to-orange-500 dark:from-yellow-500 dark:to-orange-600 h-3 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${completionPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Missing Fields */}
+                    <div className="mt-3">
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                        Missing: {[
+                          !profile.firstName && 'First Name',
+                          !profile.lastName && 'Last Name', 
+                          !profile.email && 'Email',
+                          !profile.phone && 'Phone Number'
+                        ].filter(Boolean).join(', ')}
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="mt-4">
+                      {!profile.phone ? (
+                        <button
+                          onClick={() => {
+                            setActiveTab('overview');
+                            setEditMode(true);
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          <span>Add Phone Number</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setActiveTab('overview');
+                            setEditMode(true);
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                        >
+                          Complete Profile
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()
+        )}
+
         {/* Tab Content */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg transition-colors duration-200">
           {activeTab === "overview" && (

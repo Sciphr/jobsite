@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Upload, FileText, X, Loader2 } from "lucide-react";
+import { Upload, FileText, X, Loader2, Phone } from "lucide-react";
 
 export default function JobApplicationForm({
   job,
@@ -99,6 +99,11 @@ export default function JobApplicationForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Phone number modal states
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneModalValue, setPhoneModalValue] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -148,8 +153,32 @@ export default function JobApplicationForm({
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Check if phone number is needed and show modal
+  const checkPhoneAndContinue = async (e) => {
     e.preventDefault();
+    
+    console.log('Phone check:', {
+      hasUser: !!user,
+      userPhone: user?.phone,
+      userPhoneEmpty: !user?.phone || !user?.phone.trim(),
+      formPhone: form.phone,
+      formPhoneEmpty: !form.phone || !form.phone.trim(),
+      shouldShowModal: user && (!user.phone || !user.phone.trim()) && (!form.phone || !form.phone.trim())
+    });
+    
+    // For logged-in users, check if phone is missing
+    if (user && (!user.phone || !user.phone.trim()) && (!form.phone || !form.phone.trim())) {
+      console.log('Showing phone modal');
+      setPhoneModalValue("");
+      setShowPhoneModal(true);
+      return;
+    }
+    
+    // Continue with normal submission
+    await handleSubmit();
+  };
+
+  const handleSubmit = async () => {
     setSubmitting(true);
     setError("");
 
@@ -238,7 +267,7 @@ export default function JobApplicationForm({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={checkPhoneAndContinue} className="space-y-5">
         {/* Name Field */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -300,7 +329,7 @@ export default function JobApplicationForm({
             type="tel"
             value={form.phone}
             onChange={handleChange}
-            required
+            required={!user} // Only required for guest users
             readOnly={!!user}
             placeholder={
               user ? "Using your profile phone" : "Enter your phone number"
@@ -470,6 +499,107 @@ export default function JobApplicationForm({
           </button>
         </div>
       </form>
+
+      {/* Phone Number Modal */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <Phone className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Phone Number Required
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Please provide your phone number to complete your application. This will be saved to your profile for future use.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                value={phoneModalValue}
+                onChange={(e) => setPhoneModalValue(e.target.value)}
+                placeholder="Enter your phone number"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={savingPhone}
+                required
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!phoneModalValue.trim()) {
+                    return;
+                  }
+                  
+                  setSavingPhone(true);
+                  
+                  try {
+                    // Update user's profile with phone number
+                    const response = await fetch('/api/profile', {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: phoneModalValue.trim(),
+                      }),
+                    });
+                    
+                    if (response.ok) {
+                      // Update form with phone number
+                      setForm(prev => ({ ...prev, phone: phoneModalValue.trim() }));
+                      setShowPhoneModal(false);
+                      
+                      // Continue with submission
+                      await handleSubmit();
+                    } else {
+                      setError('Failed to save phone number. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error saving phone number:', error);
+                    setError('An error occurred while saving your phone number.');
+                  } finally {
+                    setSavingPhone(false);
+                  }
+                }}
+                className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={!phoneModalValue.trim() || savingPhone}
+              >
+                {savingPhone ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save & Continue'
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPhoneModal(false);
+                  setPhoneModalValue('');
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+                disabled={savingPhone}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
