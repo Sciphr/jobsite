@@ -55,8 +55,12 @@ export async function GET(req) {
           title: true,
           department: true,
           status: true,
-          applicationCount: true,
           createdAt: true,
+          _count: {
+            select: {
+              applications: true
+            }
+          }
         },
       });
 
