@@ -19,7 +19,8 @@
       "Bash(powershell:*)",
       "Bash(tail:*)",
       "Bash(node:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

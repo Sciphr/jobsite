@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplicationTimeline } from "@/app/hooks/useApplicationTimeline";
 import QuickEmailModal from "./QuickEmailModal";
+import InterviewSchedulingModal from "./InterviewSchedulingModal";
 import {
   X,
   User,
@@ -51,6 +52,7 @@ export default function ApplicationDetailModal({
   const [newTag, setNewTag] = useState("");
   const [isSchedulingInterview, setIsSchedulingInterview] = useState(false);
   const [showQuickEmail, setShowQuickEmail] = useState(false);
+  const [showInterviewScheduling, setShowInterviewScheduling] = useState(false);
   const [showAuditLogs, setShowAuditLogs] = useState(true);
   const [includeSystemLogs, setIncludeSystemLogs] = useState(true);
 
@@ -211,6 +213,15 @@ export default function ApplicationDetailModal({
     console.log("Email sent successfully!");
   };
 
+  const handleScheduleInterview = () => {
+    setShowInterviewScheduling(true);
+  };
+
+  const handleInterviewScheduled = () => {
+    // Optionally add a success message or update application status
+    console.log("Interview scheduled successfully!");
+  };
+
   const handleViewResume = async (application) => {
     if (!application.resumeUrl) {
       console.error("No resume URL found for this application");
@@ -302,7 +313,10 @@ export default function ApplicationDetailModal({
                   <Send className="h-4 w-4" />
                   <span>Send Email</span>
                 </button>
-                <button className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                <button 
+                  onClick={handleScheduleInterview}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                >
                   <Video className="h-4 w-4" />
                   <span>Schedule Interview</span>
                 </button>
@@ -794,6 +808,7 @@ export default function ApplicationDetailModal({
                       Interview Management
                     </h3>
                     <button
+                      onClick={handleScheduleInterview}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${getButtonClasses("primary")}`}
                     >
                       <Video className="h-4 w-4" />
@@ -838,6 +853,14 @@ export default function ApplicationDetailModal({
         isOpen={showQuickEmail}
         onClose={() => setShowQuickEmail(false)}
         onSent={handleEmailSent}
+      />
+
+      {/* Interview Scheduling Modal */}
+      <InterviewSchedulingModal
+        application={application}
+        isOpen={showInterviewScheduling}
+        onClose={() => setShowInterviewScheduling(false)}
+        onScheduled={handleInterviewScheduled}
       />
     </div>
   );

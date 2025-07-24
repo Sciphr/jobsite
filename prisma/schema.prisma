@@ -9,31 +9,40 @@ datasource db {
 }
 
 model User {
-  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                  String                @unique
-  password               String?
-  firstName              String?
-  lastName               String?
-  phone                  String?
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
-  role                   String?               @default("user") @db.VarChar
-  privilegeLevel         Int?                  @default(0)
-  isActive               Boolean?              @default(true)
-  privilege_level        Int?                  @default(0)
-  is_active              Boolean?              @default(true)
-  applications           Application[]
-  auditLogsAsActor       AuditLog[]            @relation("AuditLogActor")
-  auditLogsAsRelatedUser AuditLog[]            @relation("AuditLogRelatedUser")
-  email_automation_rules EmailAutomationRule[]
-  email_campaigns        EmailCampaign[]
-  email_templates        EmailTemplate[]
-  emails                 Email[]
-  createdJobs            Job[]                 @relation("JobCreator")
-  savedJobs              SavedJob[]
-  settings               Setting[]
-  resumes                UserResume[]
-  applicationNotes       ApplicationNote[]     @relation("ApplicationNoteAuthor")
+  id                             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                          String                @unique
+  password                       String?
+  firstName                      String?
+  lastName                       String?
+  phone                          String?
+  createdAt                      DateTime              @default(now())
+  updatedAt                      DateTime              @updatedAt
+  role                           String?               @default("user") @db.VarChar
+  privilegeLevel                 Int?                  @default(0)
+  isActive                       Boolean?              @default(true)
+  privilege_level                Int?                  @default(0)
+  is_active                      Boolean?              @default(true)
+  googleAccessToken              String?               @map("google_access_token")
+  googleRefreshToken             String?               @map("google_refresh_token")
+  googleTokenExpiresAt           DateTime?             @map("google_token_expires_at") @db.Timestamp(6)
+  googleCalendarId               String?               @default("primary") @map("google_calendar_id") @db.VarChar(255)
+  googleEmail                    String?               @map("google_email") @db.VarChar(255)
+  calendarIntegrationEnabled     Boolean?              @default(false) @map("calendar_integration_enabled")
+  calendarIntegrationConnectedAt DateTime?             @map("calendar_integration_connected_at") @db.Timestamp(6)
+  calendarTimezone               String?               @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
+  applications                   Application[]
+  auditLogsAsActor               AuditLog[]            @relation("AuditLogActor")
+  auditLogsAsRelatedUser         AuditLog[]            @relation("AuditLogRelatedUser")
+  email_automation_rules         EmailAutomationRule[]
+  email_campaigns                EmailCampaign[]
+  email_templates                EmailTemplate[]
+  emails                         Email[]
+  createdInterviews              Interview[]           @relation("InterviewCreator")
+  conductedInterviews            Interview[]           @relation("InterviewConductor")
+  createdJobs                    Job[]                 @relation("JobCreator")
+  savedJobs                      SavedJob[]
+  settings                       Setting[]
+  resumes                        UserResume[]
 
   @@map("users")
 }
@@ -89,6 +98,7 @@ model Job {
   auditLogs               AuditLog[]      @relation("AuditLogRelatedJob")
   email_campaigns         EmailCampaign[]
   emails                  Email[]
+  interviews              Interview[]
   category                Category        @relation(fields: [categoryId], references: [id])
   creator                 User?           @relation("JobCreator", fields: [createdBy], references: [id])
   savedJobs               SavedJob[]
@@ -97,41 +107,39 @@ model Job {
 }
 
 model Application {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status      String     @default("Applied")
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status      String      @default("Applied")
   coverLetter String?
   resumeUrl   String?
   notes       String?
-  appliedAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  userId      String?    @db.Uuid
-  jobId       String     @db.Uuid
+  appliedAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      String?     @db.Uuid
+  jobId       String      @db.Uuid
   name        String?
   email       String?
   phone       String?
-  job         Job              @relation(fields: [jobId], references: [id])
-  user        User?            @relation(fields: [userId], references: [id])
-  auditLogs   AuditLog[]       @relation("AuditLogRelatedApplication")
+  job         Job         @relation(fields: [jobId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
+  auditLogs   AuditLog[]  @relation("AuditLogRelatedApplication")
   emails      Email[]
-  applicationNotes ApplicationNote[]
+  interviews  Interview[]
 
   @@unique([userId, jobId])
   @@map("applications")
 }
 
 model ApplicationNote {
-  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  applicationId     String       @map("application_id") @db.Uuid
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId     String   @map("application_id") @db.Uuid
   content           String
-  type              String       @default("note") @db.VarChar(50)
-  authorId          String?      @map("author_id") @db.Uuid
-  authorName        String?      @map("author_name") @db.VarChar(255)
-  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt         DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  type              String   @default("note") @db.VarChar(50)
+  authorId          String?  @map("author_id") @db.Uuid
+  authorName        String?  @map("author_name") @db.VarChar(255)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   metadata          Json?
-  isSystemGenerated Boolean?     @default(false) @map("is_system_generated")
-  application       Application  @relation(fields: [applicationId], references: [id])
-  author            User?        @relation("ApplicationNoteAuthor", fields: [authorId], references: [id])
+  isSystemGenerated Boolean? @default(false) @map("is_system_generated")
 
   @@map("application_notes")
 }
@@ -332,4 +340,42 @@ model AuditLog {
   @@index([relatedJobId], map: "idx_audit_logs_related_job")
   @@index([relatedUserId], map: "idx_audit_logs_related_user")
   @@map("audit_logs")
+}
+
+model Interview {
+  id                     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId          String      @map("application_id") @db.Uuid
+  interviewerId          String      @map("interviewer_id") @db.Uuid
+  jobId                  String      @map("job_id") @db.Uuid
+  type                   String      @db.VarChar(20)
+  status                 String      @default("scheduled") @db.VarChar(20)
+  durationMinutes        Int         @default(45) @map("duration_minutes")
+  proposedTimeSlots      Json?       @map("proposed_time_slots")
+  scheduledAt            DateTime?   @map("scheduled_at") @db.Timestamp(6)
+  confirmedAt            DateTime?   @map("confirmed_at") @db.Timestamp(6)
+  timezone               String      @default("America/Toronto") @db.VarChar(100)
+  meetingLink            String?     @map("meeting_link")
+  meetingLocation        String?     @map("meeting_location")
+  agenda                 String?
+  notes                  String?
+  additionalInterviewers Json?       @map("additional_interviewers")
+  googleCalendarEventId  String?     @map("google_calendar_event_id") @db.VarChar(255)
+  calendarEventCreated   Boolean?    @default(false) @map("calendar_event_created")
+  invitationSentAt       DateTime?   @map("invitation_sent_at") @db.Timestamp(6)
+  reminderSentAt         DateTime?   @map("reminder_sent_at") @db.Timestamp(6)
+  createdAt              DateTime?   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt              DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  createdBy              String?     @map("created_by") @db.Uuid
+  application            Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  creator                User?       @relation("InterviewCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  interviewer            User        @relation("InterviewConductor", fields: [interviewerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job                    Job         @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([applicationId], map: "idx_interviews_application_id")
+  @@index([interviewerId], map: "idx_interviews_interviewer_id")
+  @@index([jobId], map: "idx_interviews_job_id")
+  @@index([scheduledAt], map: "idx_interviews_scheduled_at")
+  @@index([status], map: "idx_interviews_status")
+  @@index([createdAt], map: "idx_interviews_created_at")
+  @@map("interviews")
 }

@@ -5,6 +5,7 @@ import { updateSettingGlobally } from "@/app/hooks/useSettings";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
+import CalendarIntegration from "./components/CalendarIntegration";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
@@ -847,10 +848,13 @@ export default function AdminSettings() {
 
         {/* Settings List */}
         <div className="p-6">
-          {/* Special handling for Personal tab - show theme selector */}
+          {/* Special handling for Personal tab - show theme selector and calendar integration */}
           {activeTab === "personal" ? (
             <div className="space-y-6">
               <ThemeSelector />
+              
+              {/* Calendar Integration */}
+              <CalendarIntegration />
 
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(
