@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { emailService } from "@/app/lib/email";
 import { PrismaClient } from "@/app/generated/prisma";
-import { logAuditEvent } from "../../../../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../../lib/auditLog";
 
 const prisma = new PrismaClient();
