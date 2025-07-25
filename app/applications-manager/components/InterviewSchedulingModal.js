@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import CalendarPicker from "./CalendarPicker";
 import {
   X,
   ChevronLeft,
@@ -19,6 +20,9 @@ import {
   Plus,
   Trash2,
   Check,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 
 export default function InterviewSchedulingModal({
@@ -40,6 +44,12 @@ export default function InterviewSchedulingModal({
     agenda: "",
     timezone: "America/Toronto",
   });
+  const [availability, setAvailability] = useState({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [scheduling, setScheduling] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const steps = [
     { id: 1, title: "Interview Type", description: "Choose interview format" },
@@ -63,10 +73,15 @@ export default function InterviewSchedulingModal({
         agenda: "",
         timezone: "America/Toronto",
       });
+      setAvailability({});
+      setSelectedTimeSlot(null);
+      setScheduling(false);
+      setError("");
+      setSuccess("");
     }
   }, [isOpen]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
@@ -85,40 +100,6 @@ export default function InterviewSchedulingModal({
     }));
   };
 
-  const addTimeSlot = () => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    tomorrow.setHours(10, 0, 0, 0);
-
-    setInterviewData(prev => ({
-      ...prev,
-      timeSlots: [
-        ...prev.timeSlots,
-        {
-          id: Date.now(),
-          date: tomorrow.toISOString().split('T')[0],
-          time: "10:00",
-        },
-      ],
-    }));
-  };
-
-  const removeTimeSlot = (id) => {
-    setInterviewData(prev => ({
-      ...prev,
-      timeSlots: prev.timeSlots.filter(slot => slot.id !== id),
-    }));
-  };
-
-  const updateTimeSlot = (id, field, value) => {
-    setInterviewData(prev => ({
-      ...prev,
-      timeSlots: prev.timeSlots.map(slot =>
-        slot.id === id ? { ...slot, [field]: value } : slot
-      ),
-    }));
-  };
 
   const addInterviewer = () => {
     setInterviewData(prev => ({
@@ -149,6 +130,7 @@ export default function InterviewSchedulingModal({
     updateInterviewData("meetingLink", `https://meet.google.com/${meetingId}`);
   };
 
+
   const canProceed = () => {
     switch (currentStep) {
       case 1:
@@ -158,24 +140,52 @@ export default function InterviewSchedulingModal({
       case 3:
         return interviewData.interviewers.some(i => i.name && i.email);
       case 4:
-        return true;
+        return selectedTimeSlot !== null;
       default:
         return false;
     }
   };
 
   const handleSubmit = async () => {
+    if (!selectedTimeSlot) {
+      setError("Please select a time slot");
+      return;
+    }
+
+    setScheduling(true);
+    setError("");
+
     try {
-      // Here you would send the interview data to your API
-      console.log("Scheduling interview:", interviewData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (onScheduled) onScheduled();
-      onClose();
+      const response = await fetch("/api/calendar/interview/schedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          applicationId: application.id,
+          selectedTimeSlot,
+          interviewData,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccess("Interview scheduled successfully!");
+        
+        // Close modal after a brief success message
+        setTimeout(() => {
+          if (onScheduled) onScheduled();
+          onClose();
+        }, 1500);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to schedule interview");
+      }
     } catch (error) {
       console.error("Error scheduling interview:", error);
+      setError("Failed to schedule interview. Please try again.");
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -247,6 +257,26 @@ export default function InterviewSchedulingModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-red-700 font-medium">Error</span>
+              </div>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-700 font-medium">Success</span>
+              </div>
+              <p className="text-green-600 text-sm mt-1">{success}</p>
+            </div>
+          )}
           {/* Step 1: Interview Type */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -346,72 +376,48 @@ export default function InterviewSchedulingModal({
                   Select Available Time Slots
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Add multiple time options for the candidate to choose from. They'll receive an email with all options and can select their preferred time.
+                  Choose multiple time options from your calendar. The candidate will receive these options and can select their preferred time.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                {interviewData.timeSlots.map((slot, index) => (
-                  <div key={slot.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-                    <div className="flex-1 grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          value={slot.date}
-                          onChange={(e) => updateTimeSlot(slot.id, "date", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Time
-                        </label>
-                        <input
-                          type="time"
-                          value={slot.time}
-                          onChange={(e) => updateTimeSlot(slot.id, "time", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeTimeSlot(slot.id)}
-                      className="p-2 text-red-600 hover:text-red-800 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={addTimeSlot}
-                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors flex items-center justify-center space-x-2 text-gray-600"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>Add Time Slot</span>
-                </button>
+              {/* Timezone Selection */}
+              <div className="flex items-center justify-between bg-blue-50 rounded-lg p-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Timezone
+                  </label>
+                  <select
+                    value={interviewData.timezone}
+                    onChange={(e) => updateInterviewData("timezone", e.target.value)}
+                    className="px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="America/Toronto">Eastern Time (Toronto)</option>
+                    <option value="America/Vancouver">Pacific Time (Vancouver)</option>
+                    <option value="America/New_York">Eastern Time (New York)</option>
+                    <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
+                    <option value="Europe/London">GMT (London)</option>
+                  </select>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-blue-700 font-medium">Interview Duration</div>
+                  <div className="text-lg font-bold text-blue-900">{interviewData.duration} minutes</div>
+                </div>
               </div>
 
-              {/* Timezone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Timezone
-                </label>
-                <select
-                  value={interviewData.timezone}
-                  onChange={(e) => updateInterviewData("timezone", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="America/Toronto">Eastern Time (Toronto)</option>
-                  <option value="America/Vancouver">Pacific Time (Vancouver)</option>
-                  <option value="America/New_York">Eastern Time (New York)</option>
-                  <option value="America/Los_Angeles">Pacific Time (Los Angeles)</option>
-                  <option value="Europe/London">GMT (London)</option>
-                </select>
-              </div>
+              {/* Calendar Picker */}
+              <CalendarPicker
+                duration={interviewData.duration}
+                timezone={interviewData.timezone}
+                onTimeSlotsChange={(timeSlots) => {
+                  setInterviewData(prev => ({
+                    ...prev,
+                    timeSlots: timeSlots
+                  }));
+                  // Clear availability data when slots change
+                  setAvailability({});
+                }}
+                selectedTimeSlots={interviewData.timeSlots}
+              />
             </div>
           )}
 
@@ -552,8 +558,44 @@ export default function InterviewSchedulingModal({
                   Review Interview Details
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Please review all details before sending the invitation to the candidate.
+                  Please select the final time slot and review all details before scheduling the interview.
                 </p>
+              </div>
+
+              {/* Time Slot Selection */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-3">Select Final Time Slot</h4>
+                <p className="text-sm text-blue-700 mb-4">
+                  Choose the specific time slot for this interview from your available options.
+                </p>
+                <div className="space-y-2">
+                  {interviewData.timeSlots.map((slot) => (
+                    <label key={slot.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border cursor-pointer hover:bg-blue-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="selectedTimeSlot"
+                        value={slot.id}
+                        checked={selectedTimeSlot?.id === slot.id}
+                        onChange={() => setSelectedTimeSlot(slot)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">
+                          {new Date(slot.date).toLocaleDateString()} at {slot.time}
+                        </span>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                    </label>
+                  ))}
+                  
+                  {interviewData.timeSlots.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                      <p>No time slots selected. Please go back and choose available times.</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Summary Cards */}
@@ -671,19 +713,42 @@ export default function InterviewSchedulingModal({
                         </li>
                       ))}
                     </ul>
-                    <p>
-                      <strong>Interview Format:</strong> {interviewData.type.charAt(0).toUpperCase() + interviewData.type.slice(1)} Interview ({interviewData.duration} minutes)
-                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                      <p><strong>Interview Details:</strong></p>
+                      <ul className="list-disc list-inside ml-2 mt-1 space-y-1">
+                        <li><strong>Format:</strong> {interviewData.type.charAt(0).toUpperCase() + interviewData.type.slice(1)} Interview</li>
+                        <li><strong>Duration:</strong> {interviewData.duration} minutes</li>
+                        {interviewData.type === 'video' && (
+                          <>
+                            <li>A Google Meet link will be included in your calendar invitation</li>
+                            <li>Please test your camera and microphone beforehand</li>
+                          </>
+                        )}
+                        {interviewData.type === 'phone' && (
+                          <>
+                            <li>We will call you at your provided phone number</li>
+                            <li>Please ensure you have good phone reception</li>
+                          </>
+                        )}
+                        {interviewData.type === 'in-person' && interviewData.location && (
+                          <li><strong>Location:</strong> {interviewData.location}</li>
+                        )}
+                        {interviewData.type === 'in-person' && (
+                          <li>Please arrive 10-15 minutes early</li>
+                        )}
+                      </ul>
+                    </div>
+                    
                     {interviewData.agenda && (
                       <div>
-                        <p><strong>What to expect:</strong></p>
-                        <p className="whitespace-pre-wrap ml-4">{interviewData.agenda}</p>
+                        <p><strong>Interview Agenda:</strong></p>
+                        <p className="whitespace-pre-wrap ml-4 bg-gray-50 p-2 rounded">{interviewData.agenda}</p>
                       </div>
                     )}
                     {interviewData.notes && (
                       <div>
                         <p><strong>Additional Information:</strong></p>
-                        <p className="whitespace-pre-wrap ml-4">{interviewData.notes}</p>
+                        <p className="whitespace-pre-wrap ml-4 bg-gray-50 p-2 rounded">{interviewData.notes}</p>
                       </div>
                     )}
                     <p>Please reply to this email with your preferred time slot.</p>
@@ -737,11 +802,19 @@ export default function InterviewSchedulingModal({
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={!canProceed()}
-                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg ${getButtonClasses("primary")}`}
+                  disabled={!canProceed() || scheduling}
+                  className={`flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors ${
+                    (!canProceed() || scheduling)
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : getButtonClasses("primary")
+                  }`}
                 >
-                  <Send className="h-4 w-4" />
-                  <span>Send Invitation</span>
+                  {scheduling ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span>{scheduling ? "Scheduling..." : "Schedule Interview"}</span>
                 </button>
               )}
             </div>

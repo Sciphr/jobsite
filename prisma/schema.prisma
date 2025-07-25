@@ -9,37 +9,38 @@ datasource db {
 }
 
 model User {
-  id                             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                          String                @unique
+  id                             String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                          String                       @unique
   password                       String?
   firstName                      String?
   lastName                       String?
   phone                          String?
-  createdAt                      DateTime              @default(now())
-  updatedAt                      DateTime              @updatedAt
-  role                           String?               @default("user") @db.VarChar
-  privilegeLevel                 Int?                  @default(0)
-  isActive                       Boolean?              @default(true)
-  privilege_level                Int?                  @default(0)
-  is_active                      Boolean?              @default(true)
-  googleAccessToken              String?               @map("google_access_token")
-  googleRefreshToken             String?               @map("google_refresh_token")
-  googleTokenExpiresAt           DateTime?             @map("google_token_expires_at") @db.Timestamp(6)
-  googleCalendarId               String?               @default("primary") @map("google_calendar_id") @db.VarChar(255)
-  googleEmail                    String?               @map("google_email") @db.VarChar(255)
-  calendarIntegrationEnabled     Boolean?              @default(false) @map("calendar_integration_enabled")
-  calendarIntegrationConnectedAt DateTime?             @map("calendar_integration_connected_at") @db.Timestamp(6)
-  calendarTimezone               String?               @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
+  createdAt                      DateTime                     @default(now())
+  updatedAt                      DateTime                     @updatedAt
+  role                           String?                      @default("user") @db.VarChar
+  privilegeLevel                 Int?                         @default(0)
+  isActive                       Boolean?                     @default(true)
+  privilege_level                Int?                         @default(0)
+  is_active                      Boolean?                     @default(true)
+  googleAccessToken              String?                      @map("google_access_token")
+  googleRefreshToken             String?                      @map("google_refresh_token")
+  googleTokenExpiresAt           DateTime?                    @map("google_token_expires_at") @db.Timestamp(6)
+  googleCalendarId               String?                      @default("primary") @map("google_calendar_id") @db.VarChar(255)
+  googleEmail                    String?                      @map("google_email") @db.VarChar(255)
+  calendarIntegrationEnabled     Boolean?                     @default(false) @map("calendar_integration_enabled")
+  calendarIntegrationConnectedAt DateTime?                    @map("calendar_integration_connected_at") @db.Timestamp(6)
+  calendarTimezone               String?                      @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
   applications                   Application[]
-  auditLogsAsActor               AuditLog[]            @relation("AuditLogActor")
-  auditLogsAsRelatedUser         AuditLog[]            @relation("AuditLogRelatedUser")
+  auditLogsAsActor               AuditLog[]                   @relation("AuditLogActor")
+  auditLogsAsRelatedUser         AuditLog[]                   @relation("AuditLogRelatedUser")
   email_automation_rules         EmailAutomationRule[]
   email_campaigns                EmailCampaign[]
   email_templates                EmailTemplate[]
   emails                         Email[]
-  createdInterviews              Interview[]           @relation("InterviewCreator")
-  conductedInterviews            Interview[]           @relation("InterviewConductor")
-  createdJobs                    Job[]                 @relation("JobCreator")
+  reviewedRescheduleRequests     InterviewRescheduleRequest[]
+  createdInterviews              Interview[]                  @relation("InterviewCreator")
+  conductedInterviews            Interview[]                  @relation("InterviewConductor")
+  createdJobs                    Job[]                        @relation("JobCreator")
   savedJobs                      SavedJob[]
   settings                       Setting[]
   resumes                        UserResume[]
@@ -107,23 +108,25 @@ model Job {
 }
 
 model Application {
-  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status      String      @default("Applied")
-  coverLetter String?
-  resumeUrl   String?
-  notes       String?
-  appliedAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  userId      String?     @db.Uuid
-  jobId       String      @db.Uuid
-  name        String?
-  email       String?
-  phone       String?
-  job         Job         @relation(fields: [jobId], references: [id])
-  user        User?       @relation(fields: [userId], references: [id])
-  auditLogs   AuditLog[]  @relation("AuditLogRelatedApplication")
-  emails      Email[]
-  interviews  Interview[]
+  id                 String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status             String                       @default("Applied")
+  coverLetter        String?
+  resumeUrl          String?
+  notes              String?
+  appliedAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  userId             String?                      @db.Uuid
+  jobId              String                       @db.Uuid
+  name               String?
+  email              String?
+  phone              String?
+  job                Job                          @relation(fields: [jobId], references: [id])
+  user               User?                        @relation(fields: [userId], references: [id])
+  auditLogs          AuditLog[]                   @relation("AuditLogRelatedApplication")
+  emails             Email[]
+  rescheduleRequests InterviewRescheduleRequest[]
+  interviewTokens    InterviewToken[]
+  interviews         Interview[]
 
   @@unique([userId, jobId])
   @@map("applications")
@@ -378,4 +381,58 @@ model Interview {
   @@index([status], map: "idx_interviews_status")
   @@index([createdAt], map: "idx_interviews_created_at")
   @@map("interviews")
+}
+
+model InterviewToken {
+  id                 String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId      String                       @map("application_id") @db.Uuid
+  rescheduleToken    String                       @unique @map("reschedule_token") @db.VarChar(255)
+  acceptanceToken    String                       @unique @map("acceptance_token") @db.VarChar(255)
+  scheduledAt        DateTime                     @map("scheduled_at") @db.Timestamp(6)
+  duration           Int                          @default(45)
+  type               String                       @db.VarChar(50)
+  interviewers       Json?                        @db.Json
+  location           String?
+  agenda             String?
+  notes              String?
+  calendarEventId    String?                      @map("calendar_event_id") @db.VarChar(255)
+  status             String                       @default("pending") @db.VarChar(50)
+  respondedAt        DateTime?                    @map("responded_at") @db.Timestamp(6)
+  expiresAt          DateTime                     @map("expires_at") @db.Timestamp(6)
+  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime                     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  rescheduleRequests InterviewRescheduleRequest[]
+  application        Application                  @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_tokens_application")
+
+  @@index([applicationId], map: "idx_interview_tokens_application_id")
+  @@index([rescheduleToken], map: "idx_interview_tokens_reschedule_token")
+  @@index([acceptanceToken], map: "idx_interview_tokens_acceptance_token")
+  @@index([status], map: "idx_interview_tokens_status")
+  @@index([expiresAt], map: "idx_interview_tokens_expires_at")
+  @@map("interview_tokens")
+}
+
+model InterviewRescheduleRequest {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewTokenId String         @map("interview_token_id") @db.Uuid
+  applicationId    String         @map("application_id") @db.Uuid
+  responseType     String         @map("response_type") @db.VarChar(50)
+  alternativeTimes Json?          @map("alternative_times") @db.Json
+  writtenResponse  String?        @map("written_response")
+  status           String         @default("pending") @db.VarChar(50)
+  submittedAt      DateTime       @map("submitted_at") @db.Timestamp(6)
+  reviewedAt       DateTime?      @map("reviewed_at") @db.Timestamp(6)
+  reviewedBy       String?        @map("reviewed_by") @db.Uuid
+  reviewNotes      String?        @map("review_notes")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  application      Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_application")
+  reviewer         User?          @relation(fields: [reviewedBy], references: [id], onUpdate: NoAction, map: "fk_interview_reschedule_requests_reviewer")
+  interviewToken   InterviewToken @relation(fields: [interviewTokenId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_token")
+
+  @@index([interviewTokenId], map: "idx_interview_reschedule_requests_token_id")
+  @@index([applicationId], map: "idx_interview_reschedule_requests_application_id")
+  @@index([status], map: "idx_interview_reschedule_requests_status")
+  @@index([submittedAt], map: "idx_interview_reschedule_requests_submitted_at")
+  @@map("interview_reschedule_requests")
 }

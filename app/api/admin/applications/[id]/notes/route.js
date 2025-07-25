@@ -23,16 +23,6 @@ export async function GET(request, { params }) {
     // Fetch application notes
     const notes = await prisma.applicationNote.findMany({
       where: { applicationId: id },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -42,10 +32,7 @@ export async function GET(request, { params }) {
       type: note.type,
       content: note.content,
       timestamp: note.createdAt,
-      author: note.author
-        ? `${note.author.firstName || ""} ${note.author.lastName || ""}`.trim() ||
-          note.author.email
-        : note.authorName || "System",
+      author: note.authorName || "System",
       authorId: note.authorId,
       metadata: note.metadata,
       isSystemGenerated: note.isSystemGenerated,
@@ -117,16 +104,6 @@ export async function POST(request, { params }) {
         metadata,
         isSystemGenerated: false,
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
     });
 
     // Log audit event for note creation
@@ -165,10 +142,7 @@ export async function POST(request, { params }) {
       type: note.type,
       content: note.content,
       timestamp: note.createdAt,
-      author: note.author
-        ? `${note.author.firstName || ""} ${note.author.lastName || ""}`.trim() ||
-          note.author.email
-        : note.authorName || "System",
+      author: note.authorName || "System",
       authorId: note.authorId,
       metadata: note.metadata,
       isSystemGenerated: note.isSystemGenerated,
