@@ -30,6 +30,13 @@ model User {
   calendarIntegrationEnabled     Boolean?                     @default(false) @map("calendar_integration_enabled")
   calendarIntegrationConnectedAt DateTime?                    @map("calendar_integration_connected_at") @db.Timestamp(6)
   calendarTimezone               String?                      @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
+  zoomAccessToken                String?                      @map("zoom_access_token") @db.VarChar(500)
+  zoomRefreshToken               String?                      @map("zoom_refresh_token") @db.VarChar(500)
+  zoomTokenExpiresAt             DateTime?                    @map("zoom_token_expires_at") @db.Timestamp(6)
+  zoomUserId                     String?                      @map("zoom_user_id") @db.VarChar(255)
+  zoomEmail                      String?                      @map("zoom_email") @db.VarChar(255)
+  zoomIntegrationEnabled         Boolean?                     @default(false) @map("zoom_integration_enabled")
+  zoomIntegrationConnectedAt     DateTime?                    @map("zoom_integration_connected_at") @db.Timestamp(6)
   applications                   Application[]
   auditLogsAsActor               AuditLog[]                   @relation("AuditLogActor")
   auditLogsAsRelatedUser         AuditLog[]                   @relation("AuditLogRelatedUser")
@@ -401,6 +408,8 @@ model InterviewToken {
   expiresAt          DateTime                     @map("expires_at") @db.Timestamp(6)
   createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt          DateTime                     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  meetingLink        String?                      @map("meeting_link") @db.VarChar(500)
+  meetingProvider    String?                      @default("google") @map("meeting_provider") @db.VarChar(50)
   rescheduleRequests InterviewRescheduleRequest[]
   application        Application                  @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_tokens_application")
 

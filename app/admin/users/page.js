@@ -68,11 +68,7 @@ export default function AdminUsers() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const response = await fetch("/api/admin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
+      await refetch();
     } catch (error) {
       console.error("Error refreshing users:", error);
     } finally {

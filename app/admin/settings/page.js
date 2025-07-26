@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
 import CalendarIntegration from "./components/CalendarIntegration";
+import ZoomIntegration from "./components/ZoomIntegration";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
@@ -855,6 +856,9 @@ export default function AdminSettings() {
               
               {/* Calendar Integration */}
               <CalendarIntegration />
+              
+              {/* Zoom Integration */}
+              <ZoomIntegration />
 
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(

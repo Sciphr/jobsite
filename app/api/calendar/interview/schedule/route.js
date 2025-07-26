@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { PrismaClient } from "@/app/generated/prisma";
 import { google } from "googleapis";
+import { emailService } from "@/app/lib/email";
 import crypto from "crypto";
 
 const prisma = new PrismaClient();
@@ -45,67 +46,29 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
   return user.googleAccessToken;
 }
 
-async function createCalendarEvent(calendar, eventData, tokens) {
+async function createCalendarHoldEvent(calendar, eventData, tokens) {
   const formatType = eventData.type.charAt(0).toUpperCase() + eventData.type.slice(1);
   
-  let locationInfo = '';
-  let meetingInstructions = '';
-  
-  if (eventData.type === 'video') {
-    meetingInstructions = `
-Meeting Instructions:
-- This is a video interview conducted via Google Meet
-- A Google Meet link will be automatically generated and included in this calendar event
-- Please ensure you have a stable internet connection and test your camera/microphone beforehand
-- Join the meeting a few minutes early to resolve any technical issues`;
-  } else if (eventData.type === 'phone') {
-    meetingInstructions = `
-Meeting Instructions:
-- This is a phone interview
-- The interviewer will call you at your provided phone number
-- Please ensure you're in a quiet location with good phone reception
-- Have a copy of your resume and the job description handy`;
-  } else if (eventData.type === 'in-person') {
-    locationInfo = eventData.location ? `\nLocation: ${eventData.location}` : '';
-    meetingInstructions = `
-Meeting Instructions:
-- This is an in-person interview${locationInfo}
-- Please arrive 10-15 minutes early
-- Bring copies of your resume and any requested documents
-- Dress professionally and be prepared for a full interview experience`;
-  }
-
-  // Add custom response URLs to description
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const acceptUrl = `${baseUrl}/interview/accept/${tokens.acceptanceToken}`;
-  const rescheduleUrl = `${baseUrl}/interview/reschedule/${tokens.rescheduleToken}`;
-
+  // Create a "hold" event - just for the hiring manager initially
   const event = {
-    summary: `${formatType} Interview: ${eventData.candidateName} - ${eventData.jobTitle}`,
+    summary: `Interview Hold - ${eventData.candidateName} (${eventData.jobTitle})`,
     description: `
-🔔 IMPORTANT: Please use the links below to respond to this interview invitation 🔔
+📋 INTERVIEW HOLD
 
-📅 CONFIRM ATTENDANCE: ${acceptUrl}
-🔄 RESCHEDULE REQUEST: ${rescheduleUrl}
+This time slot is being held for a potential interview.
+The candidate has been sent invitation links and this event will be updated once they respond.
 
-═══════════════════════════════════════════════════════
-
-Interview Details:
-- Candidate: ${eventData.candidateName} (${eventData.candidateEmail})
+Candidate Details:
+- Name: ${eventData.candidateName}
+- Email: ${eventData.candidateEmail}
 - Position: ${eventData.jobTitle}
-- Interview Format: ${formatType} Interview
+- Interview Type: ${formatType}
 - Duration: ${eventData.duration} minutes
-${meetingInstructions}
 
-${eventData.agenda ? `\nInterview Agenda:\n${eventData.agenda}\n` : ''}
-${eventData.notes ? `\nAdditional Notes:\n${eventData.notes}\n` : ''}
+${eventData.agenda ? `Agenda: ${eventData.agenda}` : ''}
+${eventData.notes ? `Notes: ${eventData.notes}` : ''}
 
-═══════════════════════════════════════════════════════
-
-⚠️ PLEASE NOTE: Do not use the default Yes/No/Maybe buttons below. 
-Instead, click the links above to properly confirm or reschedule your interview.
-
-We look forward to speaking with you!
+Status: Waiting for candidate response
     `.trim(),
     start: {
       dateTime: eventData.startDateTime,
@@ -115,35 +78,32 @@ We look forward to speaking with you!
       dateTime: eventData.endDateTime,
       timeZone: eventData.timezone || 'America/Toronto',
     },
-    attendees: [
-      { 
-        email: eventData.candidateEmail, 
-        displayName: eventData.candidateName,
-        responseStatus: 'needsAction' // This will show as pending
-      },
-      ...eventData.interviewers.map(interviewer => ({
-        email: interviewer.email,
-        displayName: interviewer.name,
-        responseStatus: 'accepted' // Interviewers are automatically accepted
-      }))
-    ],
-    conferenceData: eventData.type === 'video' ? {
-      createRequest: {
-        requestId: `interview-${eventData.applicationId}-${Date.now()}`,
-        conferenceSolutionKey: {
-          type: 'hangoutsMeet'
-        }
-      }
-    } : undefined,
+    // Only include hiring manager and other interviewers - NOT the candidate yet
+    attendees: eventData.interviewers.map(interviewer => ({
+      email: interviewer.email,
+      displayName: interviewer.name,
+      responseStatus: 'accepted'
+    })),
     location: eventData.type === 'in-person' ? eventData.location : undefined,
+    // Mark as private/busy time
+    visibility: 'private',
     reminders: {
       useDefault: false,
       overrides: [
-        { method: 'email', minutes: 24 * 60 }, // 24 hours
-        { method: 'email', minutes: 60 },      // 1 hour
-        { method: 'popup', minutes: 30 },      // 30 minutes
+        { method: 'popup', minutes: 15 }, // Just a small reminder
       ],
     },
+    // Add Google Meet conference data for video interviews
+    ...(eventData.type === 'video' && {
+      conferenceData: {
+        createRequest: {
+          requestId: `interview-${eventData.applicationId}-${Date.now()}`,
+          conferenceSolutionKey: {
+            type: 'hangoutsMeet'
+          }
+        }
+      }
+    }),
   };
 
   const response = await calendar.events.insert({
@@ -154,6 +114,166 @@ We look forward to speaking with you!
   });
 
   return response.data;
+}
+
+async function sendInterviewInvitationEmail(eventData, tokens, interviewToken, calendarEvent) {
+  const formatType = eventData.type.charAt(0).toUpperCase() + eventData.type.slice(1);
+  const meetingLink = calendarEvent?.conferenceData?.entryPoints?.[0]?.uri;
+  
+  let meetingInstructions = '';
+  if (eventData.type === 'video') {
+    meetingInstructions = `
+<strong>Meeting Instructions:</strong>
+<ul>
+<li>This is a video interview conducted via Google Meet</li>
+${meetingLink ? `<li><strong>Meeting Link:</strong> <a href="${meetingLink}" style="color: #1a73e8; text-decoration: none;">${meetingLink}</a></li>` : '<li>A Google Meet link will be automatically generated when you confirm</li>'}
+<li>Please ensure you have a stable internet connection and test your camera/microphone beforehand</li>
+<li>Join the meeting a few minutes early to resolve any technical issues</li>
+</ul>`;
+  } else if (eventData.type === 'phone') {
+    meetingInstructions = `
+<strong>Meeting Instructions:</strong>
+<ul>
+<li>This is a phone interview</li>
+<li>The interviewer will call you at your provided phone number</li>
+<li>Please ensure you're in a quiet location with good phone reception</li>
+<li>Have a copy of your resume and the job description handy</li>
+</ul>`;
+  } else if (eventData.type === 'in-person') {
+    meetingInstructions = `
+<strong>Meeting Instructions:</strong>
+<ul>
+<li>This is an in-person interview${eventData.location ? ` at ${eventData.location}` : ''}</li>
+<li>Please arrive 10-15 minutes early</li>
+<li>Bring copies of your resume and any requested documents</li>
+<li>Dress professionally and be prepared for a full interview experience</li>
+</ul>`;
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const acceptUrl = `${baseUrl}/interview/accept/${tokens.acceptanceToken}`;
+  const rescheduleUrl = `${baseUrl}/interview/reschedule/${tokens.rescheduleToken}`;
+
+  const subject = `Interview Invitation: ${eventData.jobTitle} Position`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #2c3e50; margin: 0 0 10px 0;">Interview Invitation</h2>
+        <p style="color: #34495e; margin: 0;">You've been invited to interview for the <strong>${eventData.jobTitle}</strong> position.</p>
+      </div>
+
+      <div style="background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #2c3e50; margin: 0 0 15px 0;">Interview Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Date & Time:</td>
+            <td style="padding: 8px 0; color: #495057;">${new Date(eventData.startDateTime).toLocaleString('en-US', {
+              weekday: 'long',
+              year: 'numeric', 
+              month: 'long',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              timeZoneName: 'short'
+            })}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Duration:</td>
+            <td style="padding: 8px 0; color: #495057;">${eventData.duration} minutes</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Format:</td>
+            <td style="padding: 8px 0; color: #495057;">${formatType} Interview</td>
+          </tr>
+          ${eventData.location ? `
+          <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Location:</td>
+            <td style="padding: 8px 0; color: #495057;">${eventData.location}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      ${meetingInstructions ? `
+      <div style="background: #e8f4fd; border: 1px solid #bee5eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        ${meetingInstructions}
+      </div>
+      ` : ''}
+
+      ${eventData.agenda ? `
+      <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h4 style="color: #2c3e50; margin: 0 0 10px 0;">Interview Agenda</h4>
+        <p style="color: #495057; margin: 0; white-space: pre-wrap;">${eventData.agenda}</p>
+      </div>
+      ` : ''}
+
+      <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #155724; margin: 0 0 15px 0;">🎯 Action Required</h3>
+        <p style="color: #155724; margin: 0 0 15px 0;">Please respond to this interview invitation by clicking one of the buttons below:</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${acceptUrl}" style="display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px;">
+            ✅ Accept Interview
+          </a>
+          <a href="${rescheduleUrl}" style="display: inline-block; background: #ffc107; color: #212529; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px;">
+            📅 Request Reschedule
+          </a>
+        </div>
+        
+        <p style="color: #155724; font-size: 14px; margin: 15px 0 0 0; text-align: center;">
+          <strong>Important:</strong> Please respond by ${new Date(interviewToken.expiresAt).toLocaleDateString()} to confirm your interview.
+        </p>
+      </div>
+
+      ${eventData.notes ? `
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h4 style="color: #856404; margin: 0 0 10px 0;">Additional Notes</h4>
+        <p style="color: #856404; margin: 0; white-space: pre-wrap;">${eventData.notes}</p>
+      </div>
+      ` : ''}
+
+      <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 20px;">
+        <p style="color: #6c757d; font-size: 14px; margin: 0;">
+          We look forward to speaking with you! If you have any questions, please don't hesitate to reach out.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Interview Invitation: ${eventData.jobTitle} Position
+
+You've been invited to interview for the ${eventData.jobTitle} position.
+
+Interview Details:
+- Date & Time: ${new Date(eventData.startDateTime).toLocaleString()}
+- Duration: ${eventData.duration} minutes
+- Format: ${formatType} Interview
+${eventData.location ? `- Location: ${eventData.location}` : ''}
+${meetingLink ? `- Meeting Link: ${meetingLink}` : ''}
+
+${eventData.agenda ? `Interview Agenda:\n${eventData.agenda}\n\n` : ''}
+
+ACTION REQUIRED:
+Please respond to this interview invitation:
+
+Accept Interview: ${acceptUrl}
+Request Reschedule: ${rescheduleUrl}
+
+Please respond by ${new Date(interviewToken.expiresAt).toLocaleDateString()} to confirm your interview.
+
+${eventData.notes ? `\nAdditional Notes:\n${eventData.notes}\n\n` : ''}
+
+We look forward to speaking with you!
+  `;
+
+  return await emailService.sendEmail({
+    to: eventData.candidateEmail,
+    subject,
+    html,
+    text
+  });
 }
 
 export async function POST(request) {
@@ -263,9 +383,9 @@ export async function POST(request) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Create calendar event with tokens
+    // Create calendar hold event
     const tokens = { rescheduleToken, acceptanceToken };
-    const calendarEvent = await createCalendarEvent(calendar, eventData, tokens);
+    const calendarEvent = await createCalendarHoldEvent(calendar, eventData, tokens);
 
     // Create InterviewToken record
     const interviewToken = await prisma.interviewToken.create({
@@ -281,6 +401,10 @@ export async function POST(request) {
         agenda: interviewData.agenda,
         notes: interviewData.notes,
         calendarEventId: calendarEvent.id,
+        meetingLink: interviewData.meetingProvider === 'google' 
+          ? calendarEvent.conferenceData?.entryPoints?.[0]?.uri || null
+          : interviewData.meetingLink || null,
+        meetingProvider: interviewData.meetingProvider || 'google',
         expiresAt,
       },
     });
@@ -305,6 +429,14 @@ export async function POST(request) {
         isSystemGenerated: false,
       },
     });
+
+    // Send interview invitation email to candidate
+    try {
+      await sendInterviewInvitationEmail(eventData, tokens, interviewToken, calendarEvent);
+    } catch (emailError) {
+      console.error("Failed to send interview invitation email:", emailError);
+      // Don't fail the whole process if email fails
+    }
 
     // Update application status to "Interview" if not already
     if (application.status !== 'Interview') {

@@ -40,10 +40,12 @@ export default function InterviewSchedulingModal({
     interviewers: [{ name: "", email: "" }],
     location: "",
     meetingLink: "",
+    meetingProvider: "google", // google, zoom, custom
     notes: "",
     agenda: "",
     timezone: "America/Toronto",
   });
+  const [businessAddress, setBusinessAddress] = useState("");
   const [availability, setAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
@@ -58,6 +60,28 @@ export default function InterviewSchedulingModal({
     { id: 4, title: "Review", description: "Review and send invitation" },
   ];
 
+  // Fetch business address setting
+  useEffect(() => {
+    const fetchBusinessAddress = async () => {
+      try {
+        const response = await fetch('/api/admin/settings');
+        if (response.ok) {
+          const data = await response.json();
+          const businessAddressSetting = data.settings.find(
+            setting => setting.key === 'business_address'
+          );
+          if (businessAddressSetting) {
+            setBusinessAddress(businessAddressSetting.parsedValue || '');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch business address:', error);
+      }
+    };
+
+    fetchBusinessAddress();
+  }, []);
+
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
@@ -67,8 +91,9 @@ export default function InterviewSchedulingModal({
         duration: 45,
         timeSlots: [],
         interviewers: [{ name: "", email: "" }],
-        location: "",
+        location: businessAddress, // Pre-fill with business address
         meetingLink: "",
+        meetingProvider: "google", // google, zoom, custom
         notes: "",
         agenda: "",
         timezone: "America/Toronto",
@@ -79,7 +104,7 @@ export default function InterviewSchedulingModal({
       setError("");
       setSuccess("");
     }
-  }, [isOpen]);
+  }, [isOpen, businessAddress]);
 
   const handleNext = async () => {
     if (currentStep < 4) {
@@ -125,8 +150,9 @@ export default function InterviewSchedulingModal({
   };
 
   const generateMeetingLink = () => {
-    // Simulate generating a Google Meet link
-    const meetingId = Math.random().toString(36).substring(2, 15);
+    // Generate a placeholder Google Meet link to show what it will look like
+    // The actual link will be created by Google Calendar API when the event is scheduled
+    const meetingId = Math.random().toString(36).substring(2, 12);
     updateInterviewData("meetingLink", `https://meet.google.com/${meetingId}`);
   };
 
@@ -480,25 +506,77 @@ export default function InterviewSchedulingModal({
                 <h4 className="text-md font-semibold mb-3">Meeting Setup</h4>
                 
                 {interviewData.type === "video" && (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="text"
-                        placeholder="Meeting link (auto-generated or custom)"
-                        value={interviewData.meetingLink}
-                        onChange={(e) => updateInterviewData("meetingLink", e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                      <button
-                        onClick={generateMeetingLink}
-                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                      >
-                        Generate Meet Link
-                      </button>
+                  <div className="space-y-4">
+                    {/* Meeting Provider Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Meeting Provider
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { value: "google", label: "Google Meet", icon: "📹", description: "Auto-generated" },
+                          { value: "zoom", label: "Zoom", icon: "💻", description: "Manual link" },
+                          { value: "custom", label: "Custom", icon: "🔗", description: "Other platform" }
+                        ].map((provider) => (
+                          <button
+                            key={provider.value}
+                            type="button"
+                            onClick={() => {
+                              updateInterviewData("meetingProvider", provider.value);
+                              if (provider.value === "google") {
+                                updateInterviewData("meetingLink", "");
+                              }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              interviewData.meetingProvider === provider.value
+                                ? "border-green-500 bg-green-50"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="text-lg">{provider.icon}</span>
+                              <span className="font-medium text-sm">{provider.label}</span>
+                            </div>
+                            <p className="text-xs text-gray-600">{provider.description}</p>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      A Google Meet link will be automatically generated if left empty.
-                    </p>
+
+                    {/* Meeting Link Input */}
+                    {interviewData.meetingProvider === "google" ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg">📹</span>
+                          <span className="font-medium text-blue-900">Google Meet</span>
+                        </div>
+                        <p className="text-sm text-blue-800">
+                          A Google Meet link will be automatically generated when the interview is scheduled.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="text"
+                            placeholder={
+                              interviewData.meetingProvider === "zoom" 
+                                ? "Enter your Zoom meeting link (e.g., https://zoom.us/j/123456789)"
+                                : "Enter meeting link"
+                            }
+                            value={interviewData.meetingLink}
+                            onChange={(e) => updateInterviewData("meetingLink", e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {interviewData.meetingProvider === "zoom" 
+                            ? "You can use your personal Zoom meeting room or create a new meeting link."
+                            : "Enter the meeting link for your chosen video platform."
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -511,6 +589,9 @@ export default function InterviewSchedulingModal({
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Pre-filled with your business address. You can edit this for specific interviews.
+                    </p>
                   </div>
                 )}
 

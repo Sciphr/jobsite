@@ -2,9 +2,56 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@/app/generated/prisma";
 import { emailService } from "@/app/lib/email";
+import { google } from "googleapis";
 import crypto from "crypto";
 
 const prisma = new PrismaClient();
+
+// Function to delete hold calendar event
+async function deleteHoldEvent(interview) {
+  try {
+    // Get the hiring manager's Google Calendar credentials
+    const hiringManager = await prisma.user.findUnique({
+      where: { id: interview.application.job.createdBy },
+      select: {
+        googleAccessToken: true,
+        googleRefreshToken: true,
+        googleTokenExpiresAt: true,
+      }
+    });
+
+    if (!hiringManager?.googleAccessToken) {
+      console.warn("Hiring manager doesn't have Google Calendar connected");
+      return false;
+    }
+
+    // Setup Google Calendar client
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET
+    );
+
+    oauth2Client.setCredentials({
+      access_token: hiringManager.googleAccessToken,
+      refresh_token: hiringManager.googleRefreshToken,
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Delete the calendar event
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: interview.calendarEventId,
+      sendUpdates: 'all', // Notify attendees of cancellation
+    });
+
+    return true;
+
+  } catch (error) {
+    console.error("Failed to delete hold event:", error);
+    return false;
+  }
+}
 
 // GET - Fetch interview details by token
 export async function GET(request, { params }) {
@@ -147,6 +194,12 @@ export async function POST(request, { params }) {
         isSystemGenerated: false,
       },
     });
+
+    // Delete the calendar hold event since the candidate declined
+    const calendarDeleted = await deleteHoldEvent(interviewToken);
+    if (!calendarDeleted) {
+      console.warn("Failed to delete calendar hold event, but continuing with reschedule process");
+    }
 
     // Mark the token as used
     await prisma.interviewToken.update({

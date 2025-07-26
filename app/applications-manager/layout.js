@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   Target,
   Zap,
+  Calendar,
 } from "lucide-react";
 
 function ApplicationsManagerLayoutContent({ children }) {
@@ -110,6 +111,15 @@ function ApplicationsManagerLayoutContent({ children }) {
       active: pathname === "/applications-manager/analytics",
       description: "Detailed insights and reports",
       color: "indigo",
+    },
+    {
+      id: "interviews",
+      label: "Interviews",
+      icon: Calendar,
+      path: "/applications-manager/interviews",
+      active: pathname === "/applications-manager/interviews",
+      description: "Interview scheduling and responses",
+      color: "teal",
     },
     {
       id: "communication",
