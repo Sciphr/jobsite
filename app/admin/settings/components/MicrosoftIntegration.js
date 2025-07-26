@@ -1,11 +1,11 @@
-// app/admin/settings/components/ZoomIntegration.js
+// app/admin/settings/components/MicrosoftIntegration.js
 "use client";
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
-  Video,
+  Calendar,
   Check,
   X,
   RefreshCw,
@@ -18,9 +18,11 @@ import {
   Mail,
   Trash2,
   Link as LinkIcon,
+  Users,
+  Video,
 } from "lucide-react";
 
-export default function ZoomIntegration() {
+export default function MicrosoftIntegration() {
   const { data: session } = useSession();
   const { getButtonClasses } = useThemeClasses();
   const [integrationData, setIntegrationData] = useState(null);
@@ -35,24 +37,22 @@ export default function ZoomIntegration() {
     
     // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const zoomSuccess = urlParams.get('zoom_success');
-    const zoomError = urlParams.get('zoom_error');
+    const microsoftSuccess = urlParams.get('microsoft_success');
+    const microsoftError = urlParams.get('microsoft_error');
     
-    if (zoomSuccess === 'connected') {
-      setSuccess("Zoom connected successfully!");
+    if (microsoftSuccess === 'connected') {
+      setSuccess("Microsoft Calendar & Teams connected successfully!");
       // Clean up URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
-    } else if (zoomError) {
+    } else if (microsoftError) {
       const errorMessages = {
-        access_denied: "Access was denied. Please try again and allow Zoom access.",
+        access_denied: "Access was denied. Please try again and allow calendar and Teams access.",
         invalid_request: "Invalid request. Please try connecting again.",
         user_not_found: "User session not found. Please try again.",
-        connection_failed: "Failed to connect to Zoom. Please try again.",
-        token_exchange_failed: "Failed to exchange authorization code. Please try again.",
-        user_info_failed: "Failed to get user information from Zoom. Please try again.",
+        connection_failed: "Failed to connect to Microsoft. Please try again.",
       };
-      setError(errorMessages[zoomError] || "An error occurred during connection.");
+      setError(errorMessages[microsoftError] || "An error occurred during connection.");
       // Clean up URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -62,49 +62,49 @@ export default function ZoomIntegration() {
   const fetchIntegrationStatus = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/zoom/integration/status");
+      const response = await fetch("/api/microsoft/integration/status");
       if (response.ok) {
         const data = await response.json();
         setIntegrationData(data);
       } else {
-        console.error("Failed to fetch Zoom integration status");
+        console.error("Failed to fetch Microsoft integration status");
       }
     } catch (error) {
-      console.error("Error fetching Zoom integration status:", error);
+      console.error("Error fetching Microsoft integration status:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const connectZoom = async () => {
+  const connectMicrosoft = async () => {
     try {
       setConnecting(true);
       setError("");
       setSuccess("");
 
       // Get OAuth URL from our API
-      const response = await fetch("/api/zoom/integration/auth-url", {
+      const response = await fetch("/api/microsoft/integration/auth-url", {
         method: "POST",
       });
 
       if (response.ok) {
         const { authUrl } = await response.json();
-        // Redirect to Zoom OAuth
+        // Redirect to Microsoft OAuth
         window.location.href = authUrl;
       } else {
         const errorData = await response.json();
-        setError(errorData.error || "Failed to initiate Zoom OAuth");
+        setError(errorData.message || "Failed to initiate Microsoft OAuth");
       }
     } catch (error) {
-      console.error("Error connecting to Zoom:", error);
-      setError("Failed to connect to Zoom. Please try again.");
+      console.error("Error connecting to Microsoft:", error);
+      setError("Failed to connect to Microsoft. Please try again.");
     } finally {
       setConnecting(false);
     }
   };
 
-  const disconnectZoom = async () => {
-    if (!confirm("Are you sure you want to disconnect your Zoom account? This will disable Zoom meeting creation for interviews.")) {
+  const disconnectMicrosoft = async () => {
+    if (!confirm("Are you sure you want to disconnect your Microsoft account? This will disable calendar sync and Teams meeting features.")) {
       return;
     }
 
@@ -113,22 +113,44 @@ export default function ZoomIntegration() {
       setError("");
       setSuccess("");
 
-      const response = await fetch("/api/zoom/integration/disconnect", {
+      const response = await fetch("/api/microsoft/integration/disconnect", {
         method: "POST",
       });
 
       if (response.ok) {
         setIntegrationData(null);
-        setSuccess("Zoom disconnected successfully");
+        setSuccess("Microsoft integration disconnected successfully");
       } else {
         const errorData = await response.json();
-        setError(errorData.error || "Failed to disconnect Zoom");
+        setError(errorData.message || "Failed to disconnect Microsoft integration");
       }
     } catch (error) {
-      console.error("Error disconnecting Zoom:", error);
-      setError("Failed to disconnect Zoom. Please try again.");
+      console.error("Error disconnecting Microsoft integration:", error);
+      setError("Failed to disconnect Microsoft integration. Please try again.");
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const testMicrosoftAccess = async () => {
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch("/api/microsoft/integration/test", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccess(`Microsoft access test successful! Found ${data.calendarCount} calendars and Teams access verified.`);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Microsoft access test failed");
+      }
+    } catch (error) {
+      console.error("Error testing Microsoft access:", error);
+      setError("Failed to test Microsoft access. Please try again.");
     }
   };
 
@@ -177,14 +199,14 @@ export default function ZoomIntegration() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className={`p-2 ${colorScheme.iconBg} rounded-lg`}>
-              <Video className={`h-5 w-5 ${colorScheme.iconColor}`} />
+              <Users className={`h-5 w-5 ${colorScheme.iconColor}`} />
             </div>
             <div>
               <h3 className={`text-lg font-semibold ${colorScheme.textColor}`}>
-                Zoom Integration
+                Microsoft Integration
               </h3>
               <p className={`text-sm ${colorScheme.textColorLight}`}>
-                Connect your Zoom account to create Zoom meetings for interviews
+                Connect Microsoft Calendar and Teams for interview scheduling
               </p>
             </div>
           </div>
@@ -234,20 +256,20 @@ export default function ZoomIntegration() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <Mail className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">Zoom Account</span>
+                  <span className="text-sm font-medium text-gray-900">Microsoft Account</span>
                 </div>
                 <p className="text-sm text-gray-700">
-                  {integrationData.zoomEmail || "Connected Account"}
+                  {integrationData.microsoftEmail || "Connected Account"}
                 </p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Video className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">User ID</span>
+                  <Users className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Tenant</span>
                 </div>
                 <p className="text-sm text-gray-700">
-                  {integrationData.zoomUserId || "N/A"}
+                  {integrationData.tenantId || "Organization Tenant"}
                 </p>
               </div>
 
@@ -266,11 +288,11 @@ export default function ZoomIntegration() {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Settings className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">Token Status</span>
+                  <Globe className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Timezone</span>
                 </div>
-                <p className={`text-sm ${integrationData.tokenValid ? 'text-green-700' : 'text-red-700'}`}>
-                  {integrationData.tokenValid ? "Valid" : "Expired"}
+                <p className="text-sm text-gray-700">
+                  {integrationData.timezone || "America/Toronto"}
                 </p>
               </div>
             </div>
@@ -283,15 +305,19 @@ export default function ZoomIntegration() {
               <ul className="space-y-2 text-sm text-blue-800">
                 <li className="flex items-center space-x-2">
                   <Check className="h-4 w-4 text-blue-600" />
-                  <span>Create Zoom meetings for video interviews</span>
+                  <span>Schedule interviews with Outlook Calendar integration</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Check className="h-4 w-4 text-blue-600" />
-                  <span>Automatic meeting links in interview invitations</span>
+                  <span>Generate Microsoft Teams links for video interviews</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Check className="h-4 w-4 text-blue-600" />
-                  <span>Choose between Google Meet and Zoom for each interview</span>
+                  <span>Check availability across Microsoft 365</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Check className="h-4 w-4 text-blue-600" />
+                  <span>Automatic calendar invites for confirmed interviews</span>
                 </li>
               </ul>
             </div>
@@ -299,6 +325,13 @@ export default function ZoomIntegration() {
             {/* Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <div className="flex items-center space-x-3">
+                <button
+                  onClick={testMicrosoftAccess}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${getButtonClasses("secondary")}`}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Test Connection</span>
+                </button>
                 <button
                   onClick={fetchIntegrationStatus}
                   className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -308,7 +341,7 @@ export default function ZoomIntegration() {
                 </button>
               </div>
               <button
-                onClick={disconnectZoom}
+                onClick={disconnectMicrosoft}
                 disabled={disconnecting}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                   disconnecting 
@@ -329,17 +362,17 @@ export default function ZoomIntegration() {
           <div className="space-y-6">
             {/* Setup Instructions */}
             <div className="text-center py-8">
-              <Video className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h4 className="text-lg font-medium text-gray-900 mb-2">
-                Connect Your Zoom Account
+                Connect Your Microsoft Account
               </h4>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Connect your Zoom account to create Zoom meetings for interviews. 
-                You'll be able to choose between Google Meet and Zoom for each interview.
+                Connect your Microsoft 365 account to enable Outlook Calendar integration and 
+                Teams meeting creation for seamless interview scheduling.
               </p>
               
               <button
-                onClick={connectZoom}
+                onClick={connectMicrosoft}
                 disabled={connecting}
                 className={`flex items-center space-x-2 px-6 py-3 rounded-lg mx-auto transition-colors ${
                   connecting 
@@ -352,7 +385,7 @@ export default function ZoomIntegration() {
                 ) : (
                   <LinkIcon className="h-5 w-5" />
                 )}
-                <span>{connecting ? "Connecting..." : "Connect Zoom"}</span>
+                <span>{connecting ? "Connecting..." : "Connect Microsoft"}</span>
                 {!connecting && <ExternalLink className="h-4 w-4" />}
               </button>
             </div>
@@ -364,16 +397,20 @@ export default function ZoomIntegration() {
               </h4>
               <ul className="space-y-2 text-sm text-gray-700">
                 <li className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span>Automatic Outlook Calendar blocking for scheduled interviews</span>
+                </li>
+                <li className="flex items-center space-x-2">
                   <Video className="h-4 w-4 text-gray-500" />
-                  <span>Create Zoom meetings for video interviews</span>
+                  <span>Auto-generated Microsoft Teams links for video calls</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <LinkIcon className="h-4 w-4 text-gray-500" />
-                  <span>Automatic Zoom meeting links in invitations</span>
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <span>Real-time availability checking across Microsoft 365</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <Settings className="h-4 w-4 text-gray-500" />
-                  <span>Choose meeting provider per interview</span>
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span>Automatic calendar invites for participants</span>
                 </li>
               </ul>
             </div>
@@ -387,8 +424,8 @@ export default function ZoomIntegration() {
                     Privacy & Security
                   </h4>
                   <p className="text-sm text-blue-800">
-                    We only access your Zoom account to create meetings for interviews. 
-                    Your account data remains private and is not stored beyond authentication tokens.
+                    We only access your calendar and Teams to create and manage interview events. 
+                    Your personal calendar data remains private and is not stored on our servers.
                   </p>
                 </div>
               </div>

@@ -19,6 +19,7 @@ export default function CalendarPicker({
   timezone = "America/Toronto",
   onTimeSlotsChange,
   selectedTimeSlots = [],
+  provider = "google", // google, microsoft
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -32,6 +33,34 @@ export default function CalendarPicker({
   const [monthCache, setMonthCache] = useState({});
   const [dailyBusyCache, setDailyBusyCache] = useState({});
   const [hoverTimeout, setHoverTimeout] = useState(null);
+
+  // Get provider-specific API endpoints
+  const getAPIEndpoints = (provider) => {
+    switch (provider) {
+      case "microsoft":
+        return {
+          events: "/api/microsoft/calendar/events",
+          busyTimes: "/api/microsoft/calendar/busy-times"
+        };
+      case "google":
+      default:
+        return {
+          events: "/api/calendar/events", 
+          busyTimes: "/api/calendar/busy-times"
+        };
+    }
+  };
+
+  const apiEndpoints = getAPIEndpoints(provider);
+
+  // Clear caches when provider changes
+  useEffect(() => {
+    setMonthCache({});
+    setDailyBusyCache({});
+    setMonthEvents({});
+    setBusyTimes([]);
+    setSelectedDate(null);
+  }, [provider]);
 
   // Get current month's calendar data
   const getDaysInMonth = (date) => {
@@ -76,7 +105,7 @@ export default function CalendarPicker({
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      const response = await fetch("/api/calendar/events", {
+      const response = await fetch(apiEndpoints.events, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -181,7 +210,7 @@ export default function CalendarPicker({
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const response = await fetch("/api/calendar/busy-times", {
+      const response = await fetch(apiEndpoints.busyTimes, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

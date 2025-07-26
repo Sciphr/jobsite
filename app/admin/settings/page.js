@@ -7,6 +7,7 @@ import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import ThemeSelector from "./components/ThemeSelector";
 import CalendarIntegration from "./components/CalendarIntegration";
 import ZoomIntegration from "./components/ZoomIntegration";
+import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
@@ -854,11 +855,22 @@ export default function AdminSettings() {
             <div className="space-y-6">
               <ThemeSelector />
               
-              {/* Calendar Integration */}
-              <CalendarIntegration />
-              
-              {/* Zoom Integration */}
-              <ZoomIntegration />
+              {/* Integrations Section */}
+              <div>
+                <h3 className="text-lg font-semibold admin-text mb-4">
+                  Calendar & Meeting Integrations
+                </h3>
+                <p className="text-sm admin-text-light mb-6">
+                  Connect your calendar and meeting platforms to enable seamless interview scheduling
+                </p>
+                
+                {/* Three integrations side by side */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <CalendarIntegration />
+                  <ZoomIntegration />
+                  <MicrosoftIntegration />
+                </div>
+              </div>
 
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(

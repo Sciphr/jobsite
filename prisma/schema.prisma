@@ -9,48 +9,56 @@ datasource db {
 }
 
 model User {
-  id                             String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                          String                       @unique
-  password                       String?
-  firstName                      String?
-  lastName                       String?
-  phone                          String?
-  createdAt                      DateTime                     @default(now())
-  updatedAt                      DateTime                     @updatedAt
-  role                           String?                      @default("user") @db.VarChar
-  privilegeLevel                 Int?                         @default(0)
-  isActive                       Boolean?                     @default(true)
-  privilege_level                Int?                         @default(0)
-  is_active                      Boolean?                     @default(true)
-  googleAccessToken              String?                      @map("google_access_token")
-  googleRefreshToken             String?                      @map("google_refresh_token")
-  googleTokenExpiresAt           DateTime?                    @map("google_token_expires_at") @db.Timestamp(6)
-  googleCalendarId               String?                      @default("primary") @map("google_calendar_id") @db.VarChar(255)
-  googleEmail                    String?                      @map("google_email") @db.VarChar(255)
-  calendarIntegrationEnabled     Boolean?                     @default(false) @map("calendar_integration_enabled")
-  calendarIntegrationConnectedAt DateTime?                    @map("calendar_integration_connected_at") @db.Timestamp(6)
-  calendarTimezone               String?                      @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
-  zoomAccessToken                String?                      @map("zoom_access_token") @db.VarChar(500)
-  zoomRefreshToken               String?                      @map("zoom_refresh_token") @db.VarChar(500)
-  zoomTokenExpiresAt             DateTime?                    @map("zoom_token_expires_at") @db.Timestamp(6)
-  zoomUserId                     String?                      @map("zoom_user_id") @db.VarChar(255)
-  zoomEmail                      String?                      @map("zoom_email") @db.VarChar(255)
-  zoomIntegrationEnabled         Boolean?                     @default(false) @map("zoom_integration_enabled")
-  zoomIntegrationConnectedAt     DateTime?                    @map("zoom_integration_connected_at") @db.Timestamp(6)
-  applications                   Application[]
-  auditLogsAsActor               AuditLog[]                   @relation("AuditLogActor")
-  auditLogsAsRelatedUser         AuditLog[]                   @relation("AuditLogRelatedUser")
-  email_automation_rules         EmailAutomationRule[]
-  email_campaigns                EmailCampaign[]
-  email_templates                EmailTemplate[]
-  emails                         Email[]
-  reviewedRescheduleRequests     InterviewRescheduleRequest[]
-  createdInterviews              Interview[]                  @relation("InterviewCreator")
-  conductedInterviews            Interview[]                  @relation("InterviewConductor")
-  createdJobs                    Job[]                        @relation("JobCreator")
-  savedJobs                      SavedJob[]
-  settings                       Setting[]
-  resumes                        UserResume[]
+  id                              String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                           String                       @unique
+  password                        String?
+  firstName                       String?
+  lastName                        String?
+  phone                           String?
+  createdAt                       DateTime                     @default(now())
+  updatedAt                       DateTime                     @updatedAt
+  role                            String?                      @default("user") @db.VarChar
+  privilegeLevel                  Int?                         @default(0)
+  isActive                        Boolean?                     @default(true)
+  privilege_level                 Int?                         @default(0)
+  is_active                       Boolean?                     @default(true)
+  googleAccessToken               String?                      @map("google_access_token")
+  googleRefreshToken              String?                      @map("google_refresh_token")
+  googleTokenExpiresAt            DateTime?                    @map("google_token_expires_at") @db.Timestamp(6)
+  googleCalendarId                String?                      @default("primary") @map("google_calendar_id") @db.VarChar(255)
+  googleEmail                     String?                      @map("google_email") @db.VarChar(255)
+  calendarIntegrationEnabled      Boolean?                     @default(false) @map("calendar_integration_enabled")
+  calendarIntegrationConnectedAt  DateTime?                    @map("calendar_integration_connected_at") @db.Timestamp(6)
+  calendarTimezone                String?                      @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
+  zoomAccessToken                 String?                      @map("zoom_access_token") @db.VarChar(500)
+  zoomRefreshToken                String?                      @map("zoom_refresh_token") @db.VarChar(500)
+  zoomTokenExpiresAt              DateTime?                    @map("zoom_token_expires_at") @db.Timestamp(6)
+  zoomUserId                      String?                      @map("zoom_user_id") @db.VarChar(255)
+  zoomEmail                       String?                      @map("zoom_email") @db.VarChar(255)
+  zoomIntegrationEnabled          Boolean?                     @default(false) @map("zoom_integration_enabled")
+  zoomIntegrationConnectedAt      DateTime?                    @map("zoom_integration_connected_at") @db.Timestamp(6)
+  microsoftAccessToken            String?                      @map("microsoft_access_token")
+  microsoftRefreshToken           String?                      @map("microsoft_refresh_token")
+  microsoftTokenExpiresAt         DateTime?                    @map("microsoft_token_expires_at") @db.Timestamp(6)
+  microsoftUserId                 String?                      @map("microsoft_user_id") @db.VarChar(255)
+  microsoftEmail                  String?                      @map("microsoft_email") @db.VarChar(255)
+  microsoftTenantId               String?                      @map("microsoft_tenant_id") @db.VarChar(255)
+  microsoftIntegrationEnabled     Boolean?                     @default(false) @map("microsoft_integration_enabled")
+  microsoftIntegrationConnectedAt DateTime?                    @map("microsoft_integration_connected_at") @db.Timestamp(6)
+  applications                    Application[]
+  auditLogsAsActor                AuditLog[]                   @relation("AuditLogActor")
+  auditLogsAsRelatedUser          AuditLog[]                   @relation("AuditLogRelatedUser")
+  email_automation_rules          EmailAutomationRule[]
+  email_campaigns                 EmailCampaign[]
+  email_templates                 EmailTemplate[]
+  emails                          Email[]
+  reviewedRescheduleRequests      InterviewRescheduleRequest[]
+  createdInterviews               Interview[]                  @relation("InterviewCreator")
+  conductedInterviews             Interview[]                  @relation("InterviewConductor")
+  createdJobs                     Job[]                        @relation("JobCreator")
+  savedJobs                       SavedJob[]
+  settings                        Setting[]
+  resumes                         UserResume[]
 
   @@map("users")
 }

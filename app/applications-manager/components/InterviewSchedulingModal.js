@@ -48,17 +48,99 @@ export default function InterviewSchedulingModal({
   const [businessAddress, setBusinessAddress] = useState("");
   const [availability, setAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [scheduling, setScheduling] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const steps = [
-    { id: 1, title: "Interview Type", description: "Choose interview format" },
-    { id: 2, title: "Time Slots", description: "Select available times" },
-    { id: 3, title: "Details", description: "Configure interview settings" },
-    { id: 4, title: "Review", description: "Review and send invitation" },
-  ];
+  // Dynamic steps based on available calendar providers
+  const getSteps = () => {
+    const baseSteps = [
+      { id: 1, title: "Interview Type", description: "Choose interview format" }
+    ];
+    
+    // Add calendar provider step if multiple providers available
+    if (availableProviders.length > 1) {
+      baseSteps.push({ id: 2, title: "Calendar Provider", description: "Choose calendar system" });
+      baseSteps.push({ id: 3, title: "Time Slots", description: "Select available times" });
+      baseSteps.push({ id: 4, title: "Details", description: "Configure interview settings" });
+      baseSteps.push({ id: 5, title: "Review", description: "Review and send invitation" });
+    } else {
+      baseSteps.push({ id: 2, title: "Time Slots", description: "Select available times" });
+      baseSteps.push({ id: 3, title: "Details", description: "Configure interview settings" });
+      baseSteps.push({ id: 4, title: "Review", description: "Review and send invitation" });
+    }
+    
+    return baseSteps;
+  };
+  
+  const steps = getSteps();
+
+  // Fetch available calendar providers
+  useEffect(() => {
+    const fetchCalendarProviders = async () => {
+      try {
+        setLoadingProviders(true);
+        const providers = [];
+
+        // Check Google Calendar integration
+        try {
+          const googleResponse = await fetch("/api/calendar/integration/status");
+          if (googleResponse.ok) {
+            const googleData = await googleResponse.json();
+            if (googleData.connected) {
+              providers.push({
+                id: "google",
+                name: "Google Calendar",
+                description: "Use Google Calendar and Meet",
+                icon: "🗓️",
+                email: googleData.googleEmail
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error checking Google integration:", error);
+        }
+
+        // Check Microsoft integration
+        try {
+          const microsoftResponse = await fetch("/api/microsoft/integration/status");
+          if (microsoftResponse.ok) {
+            const microsoftData = await microsoftResponse.json();
+            if (microsoftData.connected) {
+              providers.push({
+                id: "microsoft",
+                name: "Microsoft Calendar", 
+                description: "Use Outlook Calendar and Teams",
+                icon: "📅",
+                email: microsoftData.microsoftEmail
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error checking Microsoft integration:", error);
+        }
+
+        setAvailableProviders(providers);
+        
+        // Set default provider if only one is available
+        if (providers.length === 1) {
+          setInterviewData(prev => ({
+            ...prev,
+            meetingProvider: providers[0].id
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching calendar providers:", error);
+      } finally {
+        setLoadingProviders(false);
+      }
+    };
+
+    fetchCalendarProviders();
+  }, []);
 
   // Fetch business address setting
   useEffect(() => {
@@ -107,7 +189,8 @@ export default function InterviewSchedulingModal({
   }, [isOpen, businessAddress]);
 
   const handleNext = async () => {
-    if (currentStep < 4) {
+    const maxStep = availableProviders.length > 1 ? 5 : 4;
+    if (currentStep < maxStep) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -158,14 +241,37 @@ export default function InterviewSchedulingModal({
 
 
   const canProceed = () => {
+    const hasMultipleProviders = availableProviders.length > 1;
+    
     switch (currentStep) {
       case 1:
         return interviewData.type;
       case 2:
-        return interviewData.timeSlots.length > 0;
+        if (hasMultipleProviders) {
+          // Calendar provider selection step
+          return interviewData.meetingProvider;
+        } else {
+          // Time slots step (when no provider selection needed)
+          return interviewData.timeSlots.length > 0;
+        }
       case 3:
-        return interviewData.interviewers.some(i => i.name && i.email);
+        if (hasMultipleProviders) {
+          // Time slots step (when provider selection was shown)
+          return interviewData.timeSlots.length > 0;
+        } else {
+          // Details step (when no provider selection)
+          return interviewData.interviewers.some(i => i.name && i.email);
+        }
       case 4:
+        if (hasMultipleProviders) {
+          // Details step (when provider selection was shown)
+          return interviewData.interviewers.some(i => i.name && i.email);
+        } else {
+          // Review step (when no provider selection)
+          return selectedTimeSlot !== null;
+        }
+      case 5:
+        // Review step (when provider selection was shown)
         return selectedTimeSlot !== null;
       default:
         return false;
@@ -394,8 +500,49 @@ export default function InterviewSchedulingModal({
             </div>
           )}
 
-          {/* Step 2: Time Slots */}
-          {currentStep === 2 && (
+          {/* Step 2: Calendar Provider Selection (only if multiple providers) */}
+          {currentStep === 2 && availableProviders.length > 1 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">
+                  Choose Calendar Provider
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Select which calendar system to use for this interview.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {availableProviders.map((provider) => (
+                  <button
+                    key={provider.id}
+                    onClick={() => setInterviewData(prev => ({ ...prev, meetingProvider: provider.id }))}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      interviewData.meetingProvider === provider.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{provider.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{provider.name}</div>
+                        <div className="text-sm text-gray-600">{provider.description}</div>
+                        <div className="text-xs text-gray-500 mt-1">Connected: {provider.email}</div>
+                      </div>
+                      {interviewData.meetingProvider === provider.id && (
+                        <CheckCircle className="h-5 w-5 text-blue-500" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2/3: Time Slots */}
+          {((currentStep === 2 && availableProviders.length === 1) || 
+            (currentStep === 3 && availableProviders.length > 1)) && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">
@@ -443,12 +590,14 @@ export default function InterviewSchedulingModal({
                   setAvailability({});
                 }}
                 selectedTimeSlots={interviewData.timeSlots}
+                provider={interviewData.meetingProvider}
               />
             </div>
           )}
 
-          {/* Step 3: Interview Details */}
-          {currentStep === 3 && (
+          {/* Step 3/4: Interview Details */}
+          {((currentStep === 3 && availableProviders.length === 1) || 
+            (currentStep === 4 && availableProviders.length > 1)) && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">
@@ -631,8 +780,9 @@ export default function InterviewSchedulingModal({
             </div>
           )}
 
-          {/* Step 4: Review & Send */}
-          {currentStep === 4 && (
+          {/* Step 4/5: Review & Send */}
+          {((currentStep === 4 && availableProviders.length === 1) || 
+            (currentStep === 5 && availableProviders.length > 1)) && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">
@@ -867,7 +1017,7 @@ export default function InterviewSchedulingModal({
               >
                 Cancel
               </button>
-              {currentStep < 4 ? (
+              {currentStep < (availableProviders.length > 1 ? 5 : 4) ? (
                 <button
                   onClick={handleNext}
                   disabled={!canProceed()}

@@ -20,7 +20,13 @@
       "Bash(tail:*)",
       "Bash(node:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(if [ -z \"$MICROSOFT_CLIENT_ID\" ])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(__NEW_LINE__ if [ -z \"$MICROSOFT_CLIENT_SECRET\" ])",
+      "Bash(echo:*)"
     ],
     "deny": []
   }
