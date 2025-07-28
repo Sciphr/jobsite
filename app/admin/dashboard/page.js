@@ -142,16 +142,16 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center justify-between dark:bg-gray-900">
-        <div>
-          <h1 className="text-3xl font-bold admin-text">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 dark:bg-gray-900">
+        <div className="flex-1">
+          <h1 className="text-2xl lg:text-3xl font-bold admin-text">
             Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"}!
           </h1>
-          <p className="admin-text-light mt-2">
+          <p className="admin-text-light mt-2 text-sm lg:text-base">
             Here's what's happening with your job board today.
           </p>
         </div>
-        <div className="admin-card px-4 py-2 rounded-lg shadow-sm bg-white dark:bg-gray-800 border dark:border-gray-700">
+        <div className="admin-card px-4 py-3 rounded-lg shadow-sm bg-white dark:bg-gray-800 border dark:border-gray-700 self-start lg:self-auto">
           <div className="text-sm admin-text-light">Your Role</div>
           <div className="font-semibold admin-text capitalize">
             {userRole.replace("_", " ")}
@@ -169,30 +169,30 @@ export default function AdminDashboard() {
             <Link
               key={index}
               href={stat.href}
-              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
+              className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium admin-text-light">
                     {stat.title}
                   </p>
-                  <p className="text-3xl font-bold admin-text mt-2">
+                  <p className="text-2xl lg:text-3xl font-bold admin-text mt-2">
                     {typeof stat.value === "number"
                       ? stat.value.toLocaleString()
                       : stat.value}
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center mt-2 flex-wrap">
                     <TrendingUp className="h-4 w-4 text-green-500" />
                     <span className="text-sm text-green-600 ml-1">
                       {stat.change}
                     </span>
-                    <span className="text-sm admin-text-light ml-1">
+                    <span className="text-xs lg:text-sm admin-text-light ml-1">
                       vs last month
                     </span>
                   </div>
                 </div>
-                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
-                  <Icon className={`h-6 w-6 ${statClasses.icon}`} />
+                <div className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}>
+                  <Icon className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </Link>
@@ -205,19 +205,19 @@ export default function AdminDashboard() {
         {/* Recent Applications (HR and above) */}
         {userPrivilegeLevel >= 1 && (
           <div className="admin-card rounded-lg shadow">
-            <div className="p-6 border-b admin-text-light flex items-center justify-between">
+            <div className="p-4 lg:p-6 border-b admin-text-light flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <h2 className="text-lg font-semibold admin-text">
                 Recent Applications
               </h2>
               <Link
                 href="/admin/applications"
-                className="theme-primary-text hover:opacity-80 text-sm font-medium flex items-center space-x-1 transition-colors duration-200"
+                className="theme-primary-text hover:opacity-80 text-sm font-medium flex items-center space-x-1 transition-colors duration-200 self-start sm:self-auto"
               >
                 <span>View all</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               {stats?.recentApplications?.length > 0 ? (
                 <div className="space-y-4">
                   {stats.recentApplications
@@ -280,17 +280,17 @@ export default function AdminDashboard() {
         {/* Recent Jobs (Admin and above) */}
         {userPrivilegeLevel >= 2 && (
           <div className="admin-card rounded-lg shadow">
-            <div className="p-6 border-b admin-text-light flex items-center justify-between">
+            <div className="p-4 lg:p-6 border-b admin-text-light flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <h2 className="text-lg font-semibold admin-text">Recent Jobs</h2>
               <Link
                 href="/admin/jobs"
-                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1 transition-colors duration-200"
+                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1 transition-colors duration-200 self-start sm:self-auto"
               >
                 <span>View all</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               {stats?.recentJobs?.length > 0 ? (
                 <div className="space-y-4">
                   {stats.recentJobs.slice(0, 5).map((job, index) => (
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions with Theme Support */}
-      <div className="admin-card rounded-lg shadow p-6">
+      <div className="admin-card rounded-lg shadow p-4 lg:p-6">
         <h2 className="text-lg font-semibold admin-text mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {userPrivilegeLevel >= 1 && (
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
 
       {/* System Status (Super Admin only) */}
       {userPrivilegeLevel >= 3 && (
-        <div className="admin-card rounded-lg shadow p-6">
+        <div className="admin-card rounded-lg shadow p-4 lg:p-6">
           <h2 className="text-lg font-semibold admin-text mb-4">
             System Status
           </h2>

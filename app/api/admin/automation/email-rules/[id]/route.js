@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const rule = await appPrisma.emailAutomationRule.findUnique({
       where: { id },
@@ -56,8 +56,8 @@ export async function PUT(request, { params }) {
   }
 
   try {
-    const { id } = params;
-    const { name, trigger, conditions, template_id, is_active } = await request.json();
+    const { id } = await params;
+    const { name, trigger, conditions, template_id, recipient_type, is_active } = await request.json();
 
     // Check if rule exists
     const existingRule = await appPrisma.emailAutomationRule.findUnique({
@@ -89,6 +89,7 @@ export async function PUT(request, { params }) {
         ...(trigger && { trigger }),
         ...(conditions !== undefined && { conditions: JSON.stringify(conditions) }),
         ...(template_id && { template_id }),
+        ...(recipient_type && { recipient_type }),
         ...(is_active !== undefined && { is_active }),
         updated_at: new Date(),
       },
@@ -128,7 +129,7 @@ export async function DELETE(request, { params }) {
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check if rule exists
     const existingRule = await appPrisma.emailAutomationRule.findUnique({

@@ -214,7 +214,7 @@ const WeeklyDigest = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* PROFESSIONAL THEME CARD */}
           <div
             onClick={() => onThemeChange("professional")}
@@ -641,10 +641,10 @@ const WeeklyDigest = () => {
       className={`p-6 space-y-6 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"} min-h-screen`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
           <h1
-            className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+            className={`text-xl sm:text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
           >
             Weekly Digest
           </h1>
@@ -654,29 +654,31 @@ const WeeklyDigest = () => {
             Configure and manage your weekly digest reports
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <button
             onClick={saveDigestSettings}
             disabled={loading}
-            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium disabled:opacity-50"
           >
             <Settings className="w-4 h-4" />
             <span>{loading ? "Saving..." : "Save Settings"}</span>
           </button>
 
-          <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800">
-            <Eye className="w-4 h-4" />
-            <span>Preview</span>
-          </button>
+          <div className="flex space-x-2">
+            <button className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800">
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Preview</span>
+            </button>
 
-          <button
-            onClick={handleSendTest}
-            disabled={testing}
-            className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800"
-          >
-            <Send className="w-4 h-4" />
-            <span>{testing ? "Sending..." : "Send Test"}</span>
-          </button>
+            <button
+              onClick={handleSendTest}
+              disabled={testing}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800"
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">{testing ? "Sending..." : "Send Test"}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -699,29 +701,29 @@ const WeeklyDigest = () => {
         </div>
       )}
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Configuration Panel */}
-        <div className="lg:col-span-2">
+        <div className="xl:col-span-2">
           <div
             className={`rounded-lg shadow border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
           >
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <h3
-                className={`flex items-center text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                className={`flex items-center text-base sm:text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
               >
-                <Settings className="w-5 h-5 mr-2" />
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Digest Configuration
               </h3>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="w-full">
                 <div
-                  className={`grid w-full grid-cols-4 rounded-lg p-1 ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}
+                  className={`grid w-full grid-cols-2 sm:grid-cols-4 rounded-lg p-1 gap-1 sm:gap-0 ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}
                 >
                   <button
                     onClick={() => setActiveTab("content")}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                       activeTab === "content"
                         ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -731,7 +733,7 @@ const WeeklyDigest = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab("theme")}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                       activeTab === "theme"
                         ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -741,7 +743,7 @@ const WeeklyDigest = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab("recipients")}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                       activeTab === "recipients"
                         ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -751,7 +753,7 @@ const WeeklyDigest = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab("schedule")}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                       activeTab === "schedule"
                         ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                         : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -1234,7 +1236,7 @@ const ContentConfiguration = ({
                               </h5>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                               {customs.map((custom) => (
                                 <label
                                   key={custom.key}
@@ -1396,7 +1398,7 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
       </div>
 
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="relative">
           <input
             type="text"
@@ -1591,7 +1593,7 @@ const ScheduleConfiguration = ({ schedule, onScheduleChange, theme }) => {
       >
         Schedule Settings
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label
             className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}

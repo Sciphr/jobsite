@@ -38,6 +38,11 @@ const CONDITION_TYPES = [
   { value: 'from_any_to', label: 'Any Status to Specific', description: 'Triggers when any status changes to specific value' },
 ];
 
+const RECIPIENT_TYPES = [
+  { value: 'applicant', label: 'Applicant', description: 'Send email to the job applicant', icon: '👤' },
+  { value: 'internal', label: 'Internal Team', description: 'Send email to HR/hiring managers', icon: '🏢' },
+];
+
 export default function AutomationManagement() {
   const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   
@@ -52,6 +57,7 @@ export default function AutomationManagement() {
     trigger: 'status_change',
     conditions: { type: 'to_status', toStatus: '' },
     template_id: '',
+    recipient_type: 'applicant',
     is_active: true,
   });
 
@@ -92,6 +98,7 @@ export default function AutomationManagement() {
       trigger: 'status_change',
       conditions: { type: 'to_status', toStatus: '' },
       template_id: '',
+      recipient_type: 'applicant',
       is_active: true,
     });
     setShowCreateModal(true);
@@ -104,6 +111,7 @@ export default function AutomationManagement() {
       trigger: rule.trigger,
       conditions: rule.conditions || { type: 'to_status', toStatus: '' },
       template_id: rule.template_id,
+      recipient_type: rule.recipient_type || 'applicant',
       is_active: rule.is_active,
     });
     setShowCreateModal(true);
@@ -145,7 +153,8 @@ export default function AutomationManagement() {
       });
 
       if (response.ok) {
-        await fetchData();
+        // Remove from local state instead of refetching all data
+        setRules(prevRules => prevRules.filter(r => r.id !== ruleId));
       } else {
         alert('Failed to delete rule');
       }
@@ -164,7 +173,11 @@ export default function AutomationManagement() {
       });
 
       if (response.ok) {
-        await fetchData();
+        const updatedRule = await response.json();
+        // Update local state instead of refetching all data
+        setRules(prevRules => 
+          prevRules.map(r => r.id === rule.id ? updatedRule : r)
+        );
       } else {
         alert('Failed to toggle rule');
       }
@@ -224,7 +237,7 @@ export default function AutomationManagement() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCreateRule}
-          className={`${getButtonClasses("primary")} flex items-center space-x-2`}
+          className={`${getButtonClasses("primary")} flex items-center space-x-2 px-4 py-2`}
         >
           <Plus className="h-4 w-4" />
           <span>Create Rule</span>
@@ -307,7 +320,7 @@ export default function AutomationManagement() {
             </p>
             <button
               onClick={handleCreateRule}
-              className={`${getButtonClasses("primary")} flex items-center space-x-2 mx-auto`}
+              className={`${getButtonClasses("primary")} flex items-center space-x-2 mx-auto px-6 py-3`}
             >
               <Plus className="h-4 w-4" />
               <span>Create First Rule</span>
@@ -341,7 +354,7 @@ export default function AutomationManagement() {
                           <div className="flex items-center space-x-2 text-sm admin-text-light mt-1">
                             <span>{formatConditions(rule.trigger, rule.conditions)}</span>
                             <ArrowRight className="h-3 w-3" />
-                            <span>Send "{template?.name || 'Unknown Template'}"</span>
+                            <span>Send "{template?.name || 'Unknown Template'}" to {rule.recipient_type === 'internal' ? '🏢 Internal Team' : '👤 Applicant'}</span>
                           </div>
                         </div>
                       </div>
@@ -515,6 +528,32 @@ export default function AutomationManagement() {
                     </div>
                   </div>
                 )}
+
+                {/* Recipient Type */}
+                <div>
+                  <label className="block text-sm font-medium admin-text mb-2">
+                    Send Email To *
+                  </label>
+                  <div className="space-y-3">
+                    {RECIPIENT_TYPES.map(recipient => (
+                      <label key={recipient.value} className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="recipient_type"
+                          value={recipient.value}
+                          checked={formData.recipient_type === recipient.value}
+                          onChange={(e) => setFormData({...formData, recipient_type: e.target.value})}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-xl">{recipient.icon}</span>
+                        <div>
+                          <div className="font-medium admin-text">{recipient.label}</div>
+                          <div className="text-sm admin-text-light">{recipient.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Email Template */}
                 <div>

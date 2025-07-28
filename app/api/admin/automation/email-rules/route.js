@@ -53,7 +53,7 @@ export async function POST(request) {
   }
 
   try {
-    const { name, trigger, conditions, template_id, is_active } = await request.json();
+    const { name, trigger, conditions, template_id, recipient_type, is_active } = await request.json();
 
     // Validate required fields
     if (!name || !trigger || !template_id) {
@@ -81,6 +81,7 @@ export async function POST(request) {
         trigger,
         conditions: JSON.stringify(conditions || {}),
         template_id,
+        recipient_type: recipient_type || 'applicant',
         is_active: is_active ?? true,
         created_by: session.user.id,
       },

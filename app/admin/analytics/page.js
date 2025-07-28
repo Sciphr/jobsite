@@ -128,18 +128,18 @@ export default function AdminAnalytics() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Analytics Dashboard</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold admin-text">Analytics Dashboard</h1>
+          <p className="admin-text-light mt-2 text-sm sm:text-base">
             Track performance metrics and insights across your job board
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
           >
             {timeRangeOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -147,172 +147,174 @@ export default function AdminAnalytics() {
               </option>
             ))}
           </select>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 admin-text bg-white dark:bg-gray-800"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
-          </button>
-          <button
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
-          >
-            <Download className="h-4 w-4" />
-            <span>Export</span>
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 admin-text bg-white dark:bg-gray-800"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+            <button
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium admin-text-light">Total Jobs</p>
-              <p className="text-3xl font-bold admin-text">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Total Jobs</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalJobs}
               </p>
               <div className="flex items-center mt-2">
                 {getChangeIcon(analytics.overview.jobsChange)}
                 <span
-                  className={`text-sm ml-1 ${getChangeColor(
+                  className={`text-xs sm:text-sm ml-1 ${getChangeColor(
                     analytics.overview.jobsChange
                   )}`}
                 >
                   {Math.abs(analytics.overview.jobsChange)}%
                 </span>
-                <span className="text-sm admin-text-light ml-1">
+                <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
                 </span>
               </div>
             </div>
             <div
-              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(0).bg}`}
+              className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(0).bg}`}
             >
-              <Briefcase className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
+              <Briefcase className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(0).icon}`} />
             </div>
           </div>
         </div>
 
-        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium admin-text-light">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
                 Applications
               </p>
-              <p className="text-3xl font-bold admin-text">
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalApplications}
               </p>
               <div className="flex items-center mt-2">
                 {getChangeIcon(analytics.overview.applicationsChange)}
                 <span
-                  className={`text-sm ml-1 ${getChangeColor(
+                  className={`text-xs sm:text-sm ml-1 ${getChangeColor(
                     analytics.overview.applicationsChange
                   )}`}
                 >
                   {Math.abs(analytics.overview.applicationsChange)}%
                 </span>
-                <span className="text-sm admin-text-light ml-1">
+                <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
                 </span>
               </div>
             </div>
             <div
-              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(1).bg}`}
+              className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(1).bg}`}
             >
-              <FileText className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
+              <FileText className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(1).icon}`} />
             </div>
           </div>
         </div>
 
-        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium admin-text-light">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
                 Total Users
               </p>
-              <p className="text-3xl font-bold admin-text">
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalUsers}
               </p>
               <div className="flex items-center mt-2">
                 {getChangeIcon(analytics.overview.usersChange)}
                 <span
-                  className={`text-sm ml-1 ${getChangeColor(
+                  className={`text-xs sm:text-sm ml-1 ${getChangeColor(
                     analytics.overview.usersChange
                   )}`}
                 >
                   {Math.abs(analytics.overview.usersChange)}%
                 </span>
-                <span className="text-sm admin-text-light ml-1">
+                <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
                 </span>
               </div>
             </div>
             <div
-              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(2).bg}`}
+              className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(2).bg}`}
             >
-              <Users className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
+              <Users className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(2).icon}`} />
             </div>
           </div>
         </div>
 
-        <div className="metric-card admin-card p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium admin-text-light">Job Views</p>
-              <p className="text-3xl font-bold admin-text">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Job Views</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalViews.toLocaleString()}
               </p>
               <div className="flex items-center mt-2">
                 {getChangeIcon(analytics.overview.viewsChange)}
                 <span
-                  className={`text-sm ml-1 ${getChangeColor(
+                  className={`text-xs sm:text-sm ml-1 ${getChangeColor(
                     analytics.overview.viewsChange
                   )}`}
                 >
                   {Math.abs(analytics.overview.viewsChange)}%
                 </span>
-                <span className="text-sm admin-text-light ml-1">
+                <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
                 </span>
               </div>
             </div>
             <div
-              className={`metric-icon p-3 rounded-lg ${getStatCardClasses(3).bg}`}
+              className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(3).bg}`}
             >
-              <Eye className={`h-6 w-6 ${getStatCardClasses(3).icon}`} />
+              <Eye className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(3).icon}`} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
         {/* Trend Chart */}
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between mb-6">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-6">
             <h2 className="text-lg font-semibold admin-text">
               Activity Trends
             </h2>
             <select
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
+              className="w-full sm:w-auto text-sm border border-gray-300 dark:border-gray-600 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
             >
               <option value="applications">Applications</option>
               <option value="jobs">Jobs Posted</option>
               <option value="users">New Users</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={analytics.applicationsByDay}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10 }}
                 tickFormatter={(value) =>
                   new Date(value).toLocaleDateString("en-US", {
                     month: "short",
@@ -320,7 +322,7 @@ export default function AdminAnalytics() {
                   })
                 }
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 10 }} />
               <Tooltip
                 labelFormatter={(value) => new Date(value).toLocaleDateString()}
                 formatter={(value, name) => [
@@ -341,11 +343,11 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Jobs by Department */}
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
             Jobs by Department
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
                 data={analytics.jobsByDepartment}
@@ -368,13 +370,13 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Application Status & Top Jobs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
         {/* Application Status */}
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
             Application Status Distribution
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={analytics.applicationStatus} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis type="number" tick={{ fontSize: 12 }} />
@@ -395,11 +397,11 @@ export default function AdminAnalytics() {
         </div>
 
         {/* Top Performing Jobs */}
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
             Top Performing Jobs
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {analytics.topJobs.map((job, index) => (
               <div
                 key={index}
@@ -424,7 +426,7 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Conversion Funnel */}
-      <div className="chart-card admin-card p-6 rounded-lg shadow">
+      <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold admin-text mb-6">
           Conversion Funnel
         </h2>
@@ -456,63 +458,63 @@ export default function AdminAnalytics() {
       </div>
 
       {/* Additional Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">
               <Target className="h-5 w-5 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold admin-text">
+            <h3 className="text-base sm:text-lg font-semibold admin-text">
               Avg. Time to Hire
             </h3>
           </div>
-          <div className="text-3xl font-bold admin-text mb-2">
+          <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.avgTimeToHire} days
           </div>
           <div className="flex items-center">
             <TrendingDown className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-green-600 ml-1">2 days faster</span>
-            <span className="text-sm admin-text-light ml-1">
+            <span className="text-xs sm:text-sm text-green-600 ml-1">2 days faster</span>
+            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
               than last month
             </span>
           </div>
         </div>
 
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-blue-100">
               <Award className="h-5 w-5 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold admin-text">Success Rate</h3>
+            <h3 className="text-base sm:text-lg font-semibold admin-text">Success Rate</h3>
           </div>
-          <div className="text-3xl font-bold admin-text mb-2">
+          <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.successRate}%
           </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-green-600 ml-1">1.2% increase</span>
-            <span className="text-sm admin-text-light ml-1">
+            <span className="text-xs sm:text-sm text-green-600 ml-1">1.2% increase</span>
+            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
               from last month
             </span>
           </div>
         </div>
 
-        <div className="chart-card admin-card p-6 rounded-lg shadow">
+        <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-purple-100">
               <Activity className="h-5 w-5 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold admin-text">
+            <h3 className="text-base sm:text-lg font-semibold admin-text">
               Avg. Applications/Job
             </h3>
           </div>
-          <div className="text-3xl font-bold admin-text mb-2">
+          <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.avgApplicationsPerJob}
           </div>
           <div className="flex items-center">
             <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-green-600 ml-1">3.2 increase</span>
-            <span className="text-sm admin-text-light ml-1">
+            <span className="text-xs sm:text-sm text-green-600 ml-1">3.2 increase</span>
+            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
               from last month
             </span>
           </div>

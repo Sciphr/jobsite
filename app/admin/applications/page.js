@@ -366,56 +366,56 @@ export default function AdminApplications() {
   return (
     <div className="space-y-8">
       {/* Header with Applications Manager CTA */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Applications</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-2xl lg:text-3xl font-bold admin-text">Applications</h1>
+          <p className="admin-text-light mt-2 text-sm lg:text-base">
             Quick overview and basic application management
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           {/* NEW: Applications Manager CTA */}
           <button
             onClick={() => router.push("/applications-manager")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-all duration-200 shadow-md ${getButtonClasses("primary")} hover:shadow-lg transform hover:-translate-y-0.5`}
+            className={`flex items-center justify-center space-x-2 px-4 lg:px-6 py-3 rounded-lg transition-all duration-200 shadow-md ${getButtonClasses("primary")} hover:shadow-lg transform hover:-translate-y-0.5 w-full sm:w-auto`}
           >
             <Zap className="h-5 w-5" />
-            <span className="font-semibold">Applications Manager</span>
+            <span className="font-semibold text-sm lg:text-base">Applications Manager</span>
             <ArrowRight className="h-4 w-4" />
           </button>
 
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")} ${refreshing ? "opacity-50" : ""}`}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")} ${refreshing ? "opacity-50" : ""} w-full sm:w-auto`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             />
-            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
+            <span className="text-sm lg:text-base">{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
         </div>
       </div>
 
       {/* NEW: Applications Manager Promotion Card */}
       <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 text-white">
-          <div className="flex items-center justify-between">
+        <div className="px-4 py-6 lg:px-6 lg:py-8 text-white">
+          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="bg-white bg-opacity-20 p-2 rounded-lg">
                   <Target className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-bold">
+                <h3 className="text-lg lg:text-xl font-bold">
                   Upgrade to Applications Manager
                 </h3>
               </div>
-              <p className="text-blue-100 mb-4 max-w-2xl">
+              <p className="text-blue-100 mb-4 text-sm lg:text-base max-w-2xl">
                 Get enterprise-level application management with job-specific
                 views, pipeline workflows, advanced analytics, bulk operations,
                 and automated communication tools.
               </p>
-              <div className="flex items-center space-x-6 text-sm text-blue-100">
+              <div className="flex flex-wrap gap-3 lg:gap-6 text-sm text-blue-100">
                 <div className="flex items-center space-x-2">
                   <BarChart3 className="h-4 w-4" />
                   <span>Advanced Analytics</span>
@@ -430,10 +430,10 @@ export default function AdminApplications() {
                 </div>
               </div>
             </div>
-            <div className="flex-shrink-0 ml-6">
+            <div className="flex-shrink-0 mt-4 lg:mt-0 lg:ml-6">
               <button
                 onClick={() => router.push("/applications-manager")}
-                className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg"
+                className="bg-white text-blue-600 px-4 lg:px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg w-full lg:w-auto justify-center"
               >
                 <span>Open Manager</span>
                 <ArrowRight className="h-4 w-4" />
@@ -488,17 +488,17 @@ export default function AdminApplications() {
           return (
             <div
               key={status}
-              className={`stat-card admin-card p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-shadow duration-200 cursor-pointer`}
+              className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-shadow duration-200 cursor-pointer`}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold admin-text">{count}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xl lg:text-2xl font-bold admin-text">{count}</div>
                   <div className="text-sm admin-text-light font-medium">
                     {status}
                   </div>
                 </div>
-                <div className={`stat-icon p-3 rounded-lg ${statClasses.bg}`}>
-                  <StatusIcon className={`h-6 w-6 ${statClasses.icon}`} />
+                <div className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}>
+                  <StatusIcon className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`} />
                 </div>
               </div>
             </div>
@@ -507,13 +507,13 @@ export default function AdminApplications() {
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
+      <div className="admin-card p-4 lg:p-6 rounded-lg shadow">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="relative md:col-span-2 xl:col-span-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or job title..."
+              placeholder="Search applications..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"

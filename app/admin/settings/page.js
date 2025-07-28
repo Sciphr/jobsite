@@ -661,27 +661,27 @@ export default function AdminSettings() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Settings</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold admin-text">Settings</h1>
+          <p className="admin-text-light mt-2 text-sm sm:text-base">
             Configure system preferences and personal settings
           </p>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={fetchSettings}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 admin-text bg-white dark:bg-gray-800"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 admin-text bg-white dark:bg-gray-800"
           >
             <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex overflow-x-auto space-x-2 sm:space-x-8 pb-2 sm:pb-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -689,7 +689,7 @@ export default function AdminSettings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group inline-flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                className={`group inline-flex items-center space-x-2 py-4 px-2 sm:px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap ${
                   isActive
                     ? "border-blue-500"
                     : "border-transparent admin-text-light hover:admin-text hover:border-gray-300"
@@ -729,7 +729,8 @@ export default function AdminSettings() {
                       : undefined,
                   }}
                 />
-                <span>{tab.label}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
               </button>
             );
           })}
@@ -865,7 +866,7 @@ export default function AdminSettings() {
                 </p>
                 
                 {/* Three integrations side by side */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <CalendarIntegration />
                   <ZoomIntegration />
                   <MicrosoftIntegration />

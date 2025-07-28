@@ -70,6 +70,11 @@ export async function PATCH(req, { params }) {
             id: true,
             title: true,
             department: true,
+            salaryMin: true,
+            salaryMax: true,
+            benefits: true,
+            startDate: true,
+            applicationDeadline: true,
           },
         },
         user: {
@@ -86,7 +91,9 @@ export async function PATCH(req, { params }) {
     // Create audit logs for the changes
     const applicantName = updatedApplication.name || 
       (updatedApplication.user ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim() : 'Unknown');
-    const actorName = `${session.user.firstName} ${session.user.lastName}`.trim() || session.user.email;
+    const actorName = (session.user.firstName && session.user.lastName) 
+      ? `${session.user.firstName} ${session.user.lastName}`.trim() 
+      : session.user.email || 'System';
 
     // Log status change if status was updated
     if (status && status !== currentApplication.status) {

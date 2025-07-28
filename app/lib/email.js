@@ -486,3 +486,160 @@ export const sendTestEmail = (email) => emailService.sendTestEmail(email);
 export const testEmailConfiguration = () =>
   emailService.testEmailConfiguration();
 export const forceEmailReinitialize = () => emailService.forceReinitialize();
+
+/**
+ * Send email using a template with variable substitution
+ * Used by the automation system
+ */
+export async function sendEmailWithTemplate(recipientEmail, template, context = {}) {
+  try {
+    console.log(`📧 Sending template email: ${template.name} to ${recipientEmail}`);
+
+    // Substitute variables in template content
+    const substitutedSubject = substituteVariables(template.subject, context);
+    const substitutedContent = substituteVariables(template.content, context);
+
+    // Convert content to both HTML and text
+    const html = convertToHtml(substitutedContent);
+    const text = convertToText(substitutedContent);
+
+    const result = await emailService.sendEmail({
+      to: recipientEmail,
+      subject: substitutedSubject,
+      html,
+      text,
+    });
+
+    return {
+      success: result.success,
+      templateId: template.id,
+      templateName: template.name,
+      recipient: recipientEmail,
+      messageId: result.data?.id || result.data?.messageId,
+    };
+  } catch (error) {
+    console.error('Error sending template email:', error);
+    throw error;
+  }
+}
+
+/**
+ * Substitute template variables with actual values
+ */
+function substituteVariables(content, context) {
+  let result = content;
+
+  // Standard variables available in all templates
+  const variables = {
+    // Legacy underscore variables (keep for backward compatibility)
+    recipient_name: context.recipientName || 'Recipient',
+    applicant_name: context.applicantName || context.name || 'Applicant',
+    applicant_email: context.applicantEmail || context.email || '',
+    job_title: context.jobTitle || 'Position',
+    job_department: context.jobDepartment || '',
+    company_name: context.companyName || 'Our Company',
+    status: context.status || '',
+    previous_status: context.previousStatus || '',
+    status_change: context.previousStatus && context.status ? 
+      `${context.previousStatus} → ${context.status}` : 
+      (context.status || ''),
+    date: new Date().toLocaleDateString(),
+    time: new Date().toLocaleTimeString(),
+    timestamp: new Date().toLocaleString(),
+    application_id: context.applicationId || '',
+    application_link: context.applicationLink || '',
+    interview_date: context.interviewDate || '',
+    interview_time: context.interviewTime || '',
+    interview_location: context.interviewLocation || '',
+    interview_link: context.interviewLink || '',
+    portal_link: context.portalLink || process.env.NEXTAUTH_URL || '',
+    admin_portal_link: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin`,
+    applications_link: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/applications`,
+    
+    // CamelCase variables (for Communications compatibility)
+    candidateName: context.candidateName || context.applicantName || context.name || 'Applicant',
+    recipientEmail: context.recipientEmail || context.applicantEmail || context.email || '',
+    jobTitle: context.jobTitle || 'Position',
+    companyName: context.companyName || 'Our Company',
+    department: context.department || context.jobDepartment || '',
+    senderName: context.senderName || 'HR Team',
+    reviewTimeframe: context.reviewTimeframe || '1-2 weeks',
+    timeframe: context.timeframe || '1-2 weeks',
+    currentStage: context.currentStage || 'review phase',
+    expectedDate: context.expectedDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+    nextSteps: context.nextSteps || '• Initial review by hiring team',
+    timeline: context.timeline || '• Application review: 3-5 business days',
+    interviewDate: context.interviewDate || 'TBD',
+    interviewTime: context.interviewTime || 'TBD',
+    duration: context.duration || '45-60 minutes',
+    interviewFormat: context.interviewFormat || 'Video call',
+    interviewLocation: context.interviewLocation || 'Virtual',
+    interviewDetails: context.interviewDetails || 'Meeting details will be provided',
+    interviewExpectations: context.interviewExpectations || 'Technical discussion and team fit assessment',
+    originalDate: context.originalDate || 'TBD',
+    originalTime: context.originalTime || 'TBD',
+    option1: context.option1 || 'Option 1: TBD',
+    option2: context.option2 || 'Option 2: TBD',
+    option3: context.option3 || 'Option 3: TBD',
+    startDate: context.startDate || 'TBD',
+    officeAddress: context.officeAddress || '123 Business St, City, State 12345',
+    startTime: context.startTime || '9:00 AM',
+    supervisor: context.supervisor || 'Team Lead',
+    supervisorEmail: context.supervisorEmail || 'supervisor@company.com',
+    parkingInfo: context.parkingInfo || 'Visitor parking available',
+    missingDocuments: context.missingDocuments || '• ID verification\n• Tax forms',
+    hrEmail: context.hrEmail || 'hr@company.com',
+    salary: context.salary || 'Competitive salary',
+    benefits: context.benefits || 'Comprehensive benefits package',
+    deadline: context.deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+    retentionPeriod: context.retentionPeriod || '6 months',
+    requestedInfo: context.requestedInfo || 'Portfolio links, references',
+    referenceName: context.referenceName || 'Reference',
+    phoneNumber: context.phoneNumber || '(555) 123-4567',
+    email: context.email || 'hiring@company.com',
+  };
+
+  // Replace variables in the format {{variable_name}}
+  Object.entries(variables).forEach(([key, value]) => {
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
+    result = result.replace(regex, value || '');
+  });
+
+  // For debugging: leave unreplaced variables visible instead of removing them
+  // result = result.replace(/{{[^}]+}}/g, '');
+
+  return result;
+}
+
+/**
+ * Convert template content to HTML
+ */
+function convertToHtml(content) {
+  // Simple conversion - replace line breaks with <br> and wrap in basic HTML
+  const htmlContent = content
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <p>${htmlContent}</p>
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+      <p style="color: #666; font-size: 12px;">
+        This email was sent automatically by our application tracking system.
+      </p>
+    </div>
+  `;
+}
+
+/**
+ * Convert template content to plain text
+ */
+function convertToText(content) {
+  // Remove markdown formatting and return clean text
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    + '\n\n---\nThis email was sent automatically by our application tracking system.';
+}

@@ -181,27 +181,27 @@ export default function AdminUsers() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Users Management</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold admin-text">Users Management</h1>
+          <p className="admin-text-light mt-2 text-sm sm:text-base">
             Manage user accounts and permissions
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
+            className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${refreshing ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             />
-            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
+            <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
           <Link
             href="/admin/users/create"
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("accent")}`}
+            className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("accent")}`}
           >
             <Plus className="h-4 w-4" />
             <span>Add User</span>
@@ -210,7 +210,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {roleOptions.map((role, index) => {
           const count = users.filter((user) => user.role === role.value).length;
           const RoleIcon = getRoleIcon(role.value);
@@ -238,8 +238,8 @@ export default function AdminUsers() {
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="admin-card p-4 sm:p-6 rounded-lg shadow">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -422,11 +422,11 @@ export default function AdminUsers() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-1 sm:space-x-2">
                         <Link
                           href={`/admin/users/${user.id}/edit`}
-                          className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded transition-colors duration-200"
+                          className="text-purple-600 hover:text-purple-900 p-2 sm:p-2 hover:bg-purple-50 rounded transition-colors duration-200 touch-action-manipulation"
                           title="Edit user"
                         >
                           <Edit3 className="h-4 w-4" />
@@ -435,7 +435,7 @@ export default function AdminUsers() {
                         {user.id !== session?.user?.id && (
                           <button
                             onClick={() => deleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded transition-colors duration-200"
+                            className="text-red-600 hover:text-red-900 p-2 sm:p-2 hover:bg-red-50 rounded transition-colors duration-200 touch-action-manipulation"
                             title="Delete user"
                           >
                             <Trash2 className="h-4 w-4" />

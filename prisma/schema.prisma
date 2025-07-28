@@ -302,16 +302,17 @@ model CommunicationSetting {
 }
 
 model EmailAutomationRule {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String    @db.VarChar(255)
-  trigger     String    @db.VarChar(100)
-  conditions  String
-  template_id String    @db.Uuid
-  is_active   Boolean?  @default(true)
-  created_by  String    @db.Uuid
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  users       User      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  trigger        String    @db.VarChar(100)
+  conditions     String
+  template_id    String    @db.Uuid
+  is_active      Boolean?  @default(true)
+  created_by     String    @db.Uuid
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  recipient_type String?   @default("applicant") @db.VarChar(50)
+  users          User      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("email_automation_rules")
 }

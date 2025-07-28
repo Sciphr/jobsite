@@ -172,7 +172,7 @@ function evaluateApplicationCreatedConditions(conditions, data) {
  */
 async function triggerEmailAutomation(rule, eventData, context) {
   try {
-    console.log(`📧 Triggering email automation for rule: ${rule.name}`);
+    console.log(`📧 Triggering email automation for rule: ${rule.name} (${rule.recipient_type || 'applicant'} recipient)`);
 
     // Get the email template
     const template = await appPrisma.emailTemplate.findUnique({
@@ -195,6 +195,14 @@ async function triggerEmailAutomation(rule, eventData, context) {
             description: true,
           },
         },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -202,54 +210,199 @@ async function triggerEmailAutomation(rule, eventData, context) {
       throw new Error(`Application ${eventData.applicationId} not found`);
     }
 
-    // For now, we'll log the email that would be sent
-    // Later this can integrate with the actual email sending system
-    console.log(`📧 Would send email:`, {
-      to: application.email,
-      template: template.name,
-      subject: template.subject,
+    // Determine recipient based on rule type
+    const recipientType = rule.recipient_type || 'applicant';
+    let recipientEmail;
+    let recipientName;
+
+    if (recipientType === 'internal') {
+      // Send to admin/HR team
+      const { getSystemSetting } = await import('./settings');
+      recipientEmail = await getSystemSetting('notification_email', 'admin@example.com');
+      recipientName = 'HR Team';
+    } else {
+      // Send to applicant (default behavior)
+      recipientEmail = application.email || application.user?.email;
+      recipientName = application.name || (application.user ? `${application.user.firstName} ${application.user.lastName}`.trim() : 'Applicant');
+      
+      if (!recipientEmail) {
+        throw new Error('No email address found for applicant');
+      }
+    }
+
+    // Prepare email context with all available variables
+    const emailContext = {
+      // Applicant info
+      applicantName: application.name || (application.user ? `${application.user.firstName} ${application.user.lastName}`.trim() : 'Applicant'),
+      applicantEmail: application.email || application.user?.email,
+      recipientName: recipientName,
+      candidateName: application.name || (application.user ? `${application.user.firstName} ${application.user.lastName}`.trim() : 'Applicant'),
+      recipientEmail: application.email || application.user?.email,
+      
+      // Job info (matching your template variables)
+      jobTitle: application.job?.title || 'Position',
+      department: application.job?.department || '',
+      jobDepartment: application.job?.department || '',
+      startDate: application.job?.startDate ? new Date(application.job.startDate).toLocaleDateString() : '',
+      salary: application.job?.salaryMin && application.job?.salaryMax ? 
+        `$${application.job.salaryMin.toLocaleString()} - $${application.job.salaryMax.toLocaleString()}` : 
+        (application.job?.salaryMin ? `$${application.job.salaryMin.toLocaleString()}` : ''),
+      benefits: application.job?.benefits || '',
+      companyName: 'Your Company', // Update this to your actual company name
+      
+      // Sender info
+      senderName: context.userName || 'HR Team',
+      
+      // Deadlines
+      deadline: application.job?.applicationDeadline ? new Date(application.job.applicationDeadline).toLocaleDateString() : '',
+      
+      // Status info
+      status: eventData.toStatus,
+      previousStatus: eventData.fromStatus,
+      
+      // IDs and links
       applicationId: application.id,
-      jobTitle: application.job?.title,
-      applicantName: application.name || 'Applicant',
-    });
+      applicationLink: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/applications/${application.id}`,
+      portalLink: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+      
+      // Application-related variables (from Communications)
+      reviewTimeframe: '1-2 weeks',
+      timeframe: '1-2 weeks',
+      currentStage: 'review phase',
+      expectedDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      nextSteps: '• Initial review by hiring team\n• Technical assessment (if applicable)\n• Interview scheduling',
+      timeline: '• Application review: 3-5 business days\n• Initial interview: 1-2 weeks\n• Final decision: 2-3 weeks',
+      
+      // Interview-related variables
+      interviewDate: 'TBD',
+      interviewTime: 'TBD',
+      duration: '45-60 minutes',
+      interviewFormat: 'Video call via Zoom',
+      interviewLocation: 'Virtual',
+      interviewDetails: 'The interview will include a technical discussion and cultural fit assessment',
+      interviewExpectations: '• Brief introduction and background discussion\n• Technical questions related to the role\n• Questions about your experience and projects\n• Opportunity for you to ask questions',
+      originalDate: 'TBD',
+      originalTime: 'TBD',
+      option1: 'Option 1: TBD',
+      option2: 'Option 2: TBD',
+      option3: 'Option 3: TBD',
+      
+      // Onboarding variables
+      officeAddress: '123 Business St, City, State 12345',
+      startTime: '9:00 AM',
+      supervisor: 'Team Lead',
+      supervisorEmail: 'supervisor@company.com',
+      parkingInfo: 'Visitor parking available in front lot',
+      missingDocuments: '• ID verification\n• Tax forms\n• Emergency contact information',
+      hrEmail: 'hr@company.com',
+      
+      // General variables
+      retentionPeriod: '6 months',
+      requestedInfo: 'Portfolio links, references, or additional documents',
+      referenceName: 'Reference',
+      phoneNumber: '(555) 123-4567',
+      email: 'hiring@company.com',
+    };
 
-    // Log the automation action
-    await createAuditLog({
-      eventType: 'EMAIL_AUTOMATION',
-      category: 'EMAIL_AUTOMATION',
-      action: `Automated email triggered: ${template.name}`,
-      entityType: 'application',
-      entityId: application.id,
-      entityName: `Application by ${application.name || application.email}`,
-      actorId: context.userId || 'system',
-      actorType: 'automation',
-      actorName: `Automation Rule: ${rule.name}`,
-      description: `Email template "${template.name}" sent automatically due to ${eventData.fromStatus} → ${eventData.toStatus} status change`,
-      relatedApplicationId: application.id,
-      relatedJobId: application.job?.id,
-      severity: 'info',
-      status: 'success',
-      tags: ['automation', 'email', 'status-change'],
-      metadata: {
-        ruleId: rule.id,
-        ruleName: rule.name,
-        templateId: template.id,
-        templateName: template.name,
-        statusChange: {
-          from: eventData.fromStatus,
-          to: eventData.toStatus,
+    // Import email function dynamically to avoid circular imports
+    const { sendEmailWithTemplate } = await import('./email');
+
+    // Send the actual email
+    try {
+      const emailResult = await sendEmailWithTemplate(recipientEmail, template, emailContext);
+      
+      if (emailResult.success) {
+        console.log(`✅ Email sent successfully: ${template.name} to ${recipientEmail} (${recipientType})`);
+        
+        // Log successful email automation
+        await createAuditLog({
+          eventType: recipientType === 'internal' ? 'INTERNAL_EMAIL_AUTOMATION' : 'APPLICANT_EMAIL_AUTOMATION',
+          category: 'EMAIL_AUTOMATION',
+          subcategory: recipientType,
+          action: `Automated ${recipientType} email sent: ${template.name}`,
+          entityType: 'application',
+          entityId: application.id,
+          entityName: `Application by ${application.name || application.email || 'Unknown'}`,
+          actorId: context.userId || 'system',
+          actorType: 'automation',
+          actorName: `Automation Rule: ${rule.name} (${recipientType})`,
+          description: `Email template "${template.name}" sent automatically to ${recipientType} (${recipientEmail}) due to ${eventData.fromStatus} → ${eventData.toStatus} status change`,
+          relatedApplicationId: application.id,
+          relatedJobId: application.job?.id,
+          severity: 'info',
+          status: 'success',
+          tags: ['automation', 'email', 'status-change', recipientType, template.category || 'general'],
+          metadata: {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            templateId: template.id,
+            templateName: template.name,
+            templateCategory: template.category,
+            messageId: emailResult.messageId,
+            recipientType: recipientType,
+            recipientEmail: recipientEmail,
+            recipientName: recipientName,
+            statusChange: {
+              from: eventData.fromStatus,
+              to: eventData.toStatus,
+            },
+            trigger: rule.trigger,
+            conditions: rule.conditions,
+          },
+        });
+      } else {
+        throw new Error('Email sending failed');
+      }
+    } catch (emailError) {
+      console.error(`❌ Failed to send email: ${emailError.message}`);
+      
+      // Log failed email automation
+      await createAuditLog({
+        eventType: recipientType === 'internal' ? 'INTERNAL_EMAIL_AUTOMATION_FAILED' : 'APPLICANT_EMAIL_AUTOMATION_FAILED',
+        category: 'EMAIL_AUTOMATION',
+        subcategory: recipientType,
+        action: `Automated ${recipientType} email failed: ${template.name}`,
+        entityType: 'application',
+        entityId: application.id,
+        entityName: `Application by ${application.name || application.email || 'Unknown'}`,
+        actorId: context.userId || 'system',
+        actorType: 'automation',
+        actorName: `Automation Rule: ${rule.name} (${recipientType})`,
+        description: `Email template "${template.name}" failed to send automatically to ${recipientType} (${recipientEmail}) due to ${eventData.fromStatus} → ${eventData.toStatus} status change. Error: ${emailError.message}`,
+        relatedApplicationId: application.id,
+        relatedJobId: application.job?.id,
+        severity: 'error',
+        status: 'failed',
+        tags: ['automation', 'email', 'status-change', 'error', recipientType, template.category || 'general'],
+        metadata: {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          templateId: template.id,
+          templateName: template.name,
+          templateCategory: template.category,
+          recipientType: recipientType,
+          recipientEmail: recipientEmail,
+          recipientName: recipientName,
+          error: emailError.message,
+          errorStack: emailError.stack,
+          statusChange: {
+            from: eventData.fromStatus,
+            to: eventData.toStatus,
+          },
+          trigger: rule.trigger,
+          conditions: rule.conditions,
         },
-      },
-    });
-
-    // TODO: Integrate with actual email sending system
-    // await sendEmailWithTemplate(application.email, template, applicationContext);
+      });
+      
+      throw emailError;
+    }
 
     return {
       success: true,
       templateId: template.id,
       templateName: template.name,
-      recipient: application.email,
+      recipient: recipientEmail,
+      recipientType: recipientType,
     };
 
   } catch (error) {

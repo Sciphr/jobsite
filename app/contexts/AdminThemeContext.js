@@ -52,24 +52,46 @@ export const ADMIN_THEMES = {
 
 export function AdminThemeProvider({ children }) {
   const { data: session } = useSession();
-  const [currentTheme, setCurrentTheme] = useState("default");
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    // Initialize with localStorage value or default to prevent flash
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("admin_dashboard_theme");
+      return stored || "default";
+    }
+    return "default";
+  });
   const [loading, setLoading] = useState(true);
+  const [themeInitialized, setThemeInitialized] = useState(false);
 
-  // Load user's theme preference
+  // Initialize theme immediately on mount
   useEffect(() => {
-    if (session?.user?.id) {
+    if (typeof window !== "undefined") {
+      const storedTheme = localStorage.getItem("admin_dashboard_theme");
+      if (storedTheme && storedTheme !== currentTheme) {
+        setCurrentTheme(storedTheme);
+      }
+      document.documentElement.setAttribute("data-admin-theme", currentTheme);
+      setThemeInitialized(true);
+    }
+  }, []);
+
+  // Load user's theme preference from server
+  useEffect(() => {
+    if (session?.user?.id && themeInitialized) {
       loadUserTheme();
-    } else {
+    } else if (!session?.user?.id && themeInitialized) {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, themeInitialized]);
 
   // Apply theme to document when it changes
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && themeInitialized) {
       document.documentElement.setAttribute("data-admin-theme", currentTheme);
+      // Store in localStorage for immediate access on next load
+      localStorage.setItem("admin_dashboard_theme", currentTheme);
     }
-  }, [currentTheme]);
+  }, [currentTheme, themeInitialized]);
 
   const loadUserTheme = async () => {
     try {
@@ -78,7 +100,10 @@ export function AdminThemeProvider({ children }) {
       );
       if (response.ok) {
         const setting = await response.json();
-        setCurrentTheme(setting.parsedValue || "default");
+        const serverTheme = setting.parsedValue || "default";
+        if (serverTheme !== currentTheme) {
+          setCurrentTheme(serverTheme);
+        }
       }
     } catch (error) {
       console.error("Error loading theme:", error);
@@ -116,6 +141,11 @@ export function AdminThemeProvider({ children }) {
 
       const updatedSetting = await response.json();
       setCurrentTheme(themeId);
+      
+      // Update localStorage immediately
+      if (typeof window !== "undefined") {
+        localStorage.setItem("admin_dashboard_theme", themeId);
+      }
 
       return { success: true };
     } catch (error) {

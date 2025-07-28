@@ -307,27 +307,27 @@ export default function AdminJobs() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Jobs Management</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold admin-text">Jobs Management</h1>
+          <p className="admin-text-light mt-2 text-sm sm:text-base">
             Create and manage job postings
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <button
             onClick={() => refetch()}
             disabled={isLoading}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${isLoading ? "opacity-50" : ""}`}
+            className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("primary")} ${isLoading ? "opacity-50" : ""}`}
           >
             <RefreshCw
               className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
             />
-            <span>{isLoading ? "Refreshing..." : "Refresh"}</span>
+            <span className="hidden sm:inline">{isLoading ? "Refreshing..." : "Refresh"}</span>
           </button>
           <Link
             href="/admin/jobs/create"
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("success")}`}
+            className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium shadow-md hover:shadow-lg ${getButtonClasses("success")}`}
           >
             <Plus className="h-4 w-4" />
             <span>Create Job</span>
@@ -370,7 +370,7 @@ export default function AdminJobs() {
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statusOptions.map((status, index) => {
           const count = jobs.filter((job) => job.status === status).length;
           const StatusIcon = memoizedThemeData.statusIconMap[status];
@@ -480,7 +480,7 @@ export default function AdminJobs() {
       )}
 
       {/* Jobs Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {paginatedJobs.map((job) => {
           const StatusIcon = memoizedThemeData.statusIconMap[job.status];
           return (
@@ -489,9 +489,9 @@ export default function AdminJobs() {
               className="job-card admin-card rounded-lg shadow hover:shadow-md transition-shadow duration-200"
             >
               {/* Card Header */}
-              <div className="p-6 border-b admin-text-light">
+              <div className="p-4 sm:p-6 border-b admin-text-light">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-2">
                       <input
                         type="checkbox"
@@ -505,20 +505,20 @@ export default function AdminJobs() {
                         <Star className="h-4 w-4 text-yellow-500 fill-current" />
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold admin-text mb-2">
+                    <h3 className="text-base sm:text-lg font-semibold admin-text mb-2 truncate">
                       {job.title}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm admin-text-light mb-3">
+                    <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-sm admin-text-light mb-3">
                       <div className="flex items-center space-x-1">
-                        <Building2 className="h-4 w-4" />
-                        <span>{job.department}</span>
+                        <Building2 className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{job.department}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{job.location}</span>
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{job.location}</span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap gap-2">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
                           job.status
@@ -526,10 +526,10 @@ export default function AdminJobs() {
                       >
                         {job.status}
                       </span>
-                      <span className="text-xs admin-text-light">
+                      <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
                         {job.employmentType}
                       </span>
-                      <span className="text-xs admin-text-light">
+                      <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
                         {job.experienceLevel}
                       </span>
                     </div>
@@ -538,7 +538,7 @@ export default function AdminJobs() {
               </div>
 
               {/* Card Body */}
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="space-y-3">
                   {/* Salary */}
                   <div className="flex items-center justify-between">
@@ -588,37 +588,37 @@ export default function AdminJobs() {
               </div>
 
               {/* Card Actions */}
-              <div className="px-6 py-4 border-t admin-text-light bg-gray-50 dark:bg-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-t admin-text-light bg-gray-50 dark:bg-gray-700">
+                <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <Link
                       href={`/jobs/${job.slug}`}
                       target="_blank"
-                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
                       title="View job"
                     >
                       <Eye className="h-4 w-4" />
                     </Link>
                     <Link
                       href={`/admin/jobs/${job.id}/edit`}
-                      className="p-2 text-gray-400 hover:text-green-600 transition-colors duration-200"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-green-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
                       title="Edit job"
                     >
                       <Edit3 className="h-4 w-4" />
                     </Link>
                     <button
                       onClick={() => duplicateJob(job.id)}
-                      className="p-2 text-gray-400 hover:text-purple-600 transition-colors duration-200"
+                      className="p-3 sm:p-2 text-gray-400 hover:text-purple-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
                       title="Duplicate job"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => toggleFeatured(job.id, job.featured)}
-                      className={`p-2 transition-colors duration-200 ${
+                      className={`p-3 sm:p-2 transition-colors duration-200 rounded-lg sm:rounded-none ${
                         job.featured
-                          ? "text-yellow-500"
-                          : "text-gray-400 hover:text-yellow-500"
+                          ? "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 sm:bg-transparent dark:sm:bg-transparent"
+                          : "text-gray-400 hover:text-yellow-500 bg-gray-100 dark:bg-gray-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 sm:bg-transparent dark:sm:bg-transparent"
                       }`}
                       title={
                         job.featured
@@ -637,7 +637,7 @@ export default function AdminJobs() {
                     <select
                       value={job.status}
                       onChange={(e) => updateJobStatus(job.id, e.target.value)}
-                      className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium ${getStatusColor(
+                      className={`flex-1 sm:flex-none text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium ${getStatusColor(
                         job.status
                       )} bg-white dark:bg-gray-700`}
                       disabled={updateJobMutation.isLoading}

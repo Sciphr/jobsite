@@ -18,10 +18,13 @@ import {
   Building2,
   Mail,
   FileSearch,
+  Menu,
+  X,
 } from "lucide-react";
 import {
   AdminThemeProvider,
   useThemeClasses,
+  useAdminTheme,
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
 import { usePrefetchAdminData } from "../hooks/useAdminData";
@@ -29,8 +32,13 @@ import { usePrefetchAdminData } from "../hooks/useAdminData";
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const { loading: themeLoading } = useAdminTheme();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
+
+  // Mobile state management
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // ✅ ALWAYS call hooks at the top level, before any conditionals
   const {
@@ -41,6 +49,22 @@ function AdminLayoutContent({ children }) {
     prefetchAnalytics,
   } = usePrefetchAdminData();
 
+  // Mobile detection effect
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   // ✅ REPLACE your useEffect with this ONE-TIME prefetch:
   useEffect(() => {
     // Only prefetch once when admin layout first loads
@@ -50,13 +74,15 @@ function AdminLayoutContent({ children }) {
     }
   }, [session?.user?.privilegeLevel, prefetchAll]); // Only run when session changes
 
-  // Show loading while checking session
-  if (status === "loading") {
+  // Show loading while checking session or theme
+  if (status === "loading" || themeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {status === "loading" ? "Loading..." : "Initializing theme..."}
+          </p>
         </div>
       </div>
     );
@@ -167,10 +193,56 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex transition-colors duration-200">
-      {/* Themed Sidebar */}
-      <div className="w-64 shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
+              <Shield className="h-5 w-5" />
+            </div>
+            <h1 className="text-lg font-semibold admin-text dark:text-white">Admin Panel</h1>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 admin-text"
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+      )}
+
+      <div className="flex">
+        {/* Sidebar - Desktop: always visible, Mobile: overlay when open */}
+        <AnimatePresence>
+          {(!isMobile || isMobileMenuOpen) && (
+            <>
+              {/* Mobile Overlay */}
+              {isMobile && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                />
+              )}
+              
+              {/* Sidebar */}
+              <motion.div
+                initial={isMobile ? { x: -320 } : { x: 0 }}
+                animate={{ x: 0 }}
+                exit={isMobile ? { x: -320 } : { x: 0 }}
+                transition={{ type: "tween", duration: 0.3 }}
+                className={`${
+                  isMobile 
+                    ? "fixed left-0 top-0 h-full w-80 z-50" 
+                    : "w-64 relative"
+                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col`}
+              >
+                {/* Desktop Header - only show on desktop */}
+                {!isMobile && (
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
@@ -190,9 +262,10 @@ function AdminLayoutContent({ children }) {
               </div>
             </div>
           </div>
-        </div>
+                  </div>
+                )}
 
-        <nav className="p-4 space-y-2">
+                <nav className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2`}>
           {allowedNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -283,19 +356,25 @@ function AdminLayoutContent({ children }) {
             Back to Site
           </Link>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.main
-            key={pathname}
-            className="flex-1 p-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
-            data-main-content
-          >
-            {children}
-          </motion.main>
+              </motion.div>
+            </>
+          )}
         </AnimatePresence>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.main
+              key={pathname}
+              className={`flex-1 bg-gray-50 dark:bg-gray-900 transition-colors duration-200 ${
+                isMobile ? "p-4" : "p-8"
+              }`}
+              data-main-content
+            >
+              {children}
+            </motion.main>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

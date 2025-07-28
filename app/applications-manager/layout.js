@@ -1,7 +1,7 @@
 // app/applications-manager/layout.js - Fixed animation timing issues
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +24,8 @@ import {
   Target,
   Zap,
   Calendar,
+  Menu,
+  X,
 } from "lucide-react";
 
 function ApplicationsManagerLayoutContent({ children }) {
@@ -33,6 +35,26 @@ function ApplicationsManagerLayoutContent({ children }) {
   const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   const { data: jobs = [] } = useJobsSimple();
   const [showJobPicker, setShowJobPicker] = useState(false);
+  
+  // Mobile state management
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection effect
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   // Show loading state while session is being fetched
   if (status === "loading") {
@@ -225,20 +247,24 @@ function ApplicationsManagerLayoutContent({ children }) {
         className="admin-card shadow-sm border-b admin-border"
       >
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className={`flex items-center justify-between ${isMobile ? "h-14" : "h-16"}`}>
             {/* Left side - Logo/Brand and breadcrumb */}
-            <div className="flex items-center space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleBackToDashboard}
-                className="flex items-center space-x-2 admin-text-light hover:admin-text transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm">Back to Dashboard</span>
-              </motion.button>
+            <div className="flex items-center space-x-2 lg:space-x-4">
+              {!isMobile && (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleBackToDashboard}
+                    className="flex items-center space-x-2 admin-text-light hover:admin-text transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="text-sm">Back to Dashboard</span>
+                  </motion.button>
 
-              <div className="h-6 border-l admin-border"></div>
+                  <div className="h-6 border-l admin-border"></div>
+                </>
+              )}
 
               <div className="flex items-center space-x-3">
                 <motion.div
@@ -248,10 +274,10 @@ function ApplicationsManagerLayoutContent({ children }) {
                   <Target className={`h-5 w-5 ${getStatCardClasses(0).icon}`} />
                 </motion.div>
                 <div>
-                  <h1 className="text-lg font-bold admin-text">
-                    Applications Manager
+                  <h1 className={`${isMobile ? "text-base" : "text-lg"} font-bold admin-text`}>
+                    {isMobile ? "Apps Manager" : "Applications Manager"}
                   </h1>
-                  {isJobSpecific && currentJob && (
+                  {!isMobile && isJobSpecific && currentJob && (
                     <motion.p
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -266,8 +292,19 @@ function ApplicationsManagerLayoutContent({ children }) {
 
             {/* Right side - Quick actions */}
             <div className="flex items-center space-x-3">
-              {/* Quick Job Selector */}
-              <div className="relative">
+              {/* Mobile Menu Toggle */}
+              {isMobile && (
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 admin-text"
+                >
+                  {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
+              )}
+
+              {/* Quick Job Selector - hide on mobile if menu is open */}
+              {(!isMobile || !isMobileMenuOpen) && (
+                <div className="relative">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -333,26 +370,49 @@ function ApplicationsManagerLayoutContent({ children }) {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+                </div>
+              )}
 
-              <div className="text-sm admin-text-light">
-                {session.user.firstName} {session.user.lastName}
-              </div>
+              {!isMobile && (
+                <div className="text-sm admin-text-light">
+                  {session.user.firstName} {session.user.lastName}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </motion.div>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex space-x-6">
+      <div className={`w-full ${isMobile ? "px-4 py-4" : "px-4 sm:px-6 lg:px-8 py-6"}`}>
+        <div className={isMobile ? "block" : "flex space-x-6"}>
           {/* Sidebar Navigation with Animation */}
-          <motion.div
-            variants={sidebarVariants}
-            initial="hidden"
-            animate="visible"
-            className="w-64 flex-shrink-0"
-          >
-            <div className="admin-card rounded-lg shadow-sm border admin-border overflow-hidden">
+          <AnimatePresence>
+            {(!isMobile || isMobileMenuOpen) && (
+              <>
+                {/* Mobile Overlay */}
+                {isMobile && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                  />
+                )}
+                
+                {/* Sidebar */}
+                <motion.div
+                  variants={sidebarVariants}
+                  initial={isMobile ? { x: -320, opacity: 0 } : "hidden"}
+                  animate={isMobile ? { x: 0, opacity: 1 } : "visible"}
+                  exit={isMobile ? { x: -320, opacity: 0 } : "hidden"}
+                  transition={{ type: "tween", duration: 0.3 }}
+                  className={`${
+                    isMobile 
+                      ? "fixed left-0 top-0 h-full w-80 z-50 mt-14" 
+                      : "w-64 flex-shrink-0 relative"
+                  } admin-card rounded-lg shadow-sm border admin-border overflow-hidden`}
+                >
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -466,11 +526,13 @@ function ApplicationsManagerLayoutContent({ children }) {
                   </motion.div>
                 </div>
               </motion.div>
-            </div>
-          </motion.div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Main Content Area with Fixed Page Transitions */}
-          <div className="flex-1 min-w-0">{children}</div>
+          <div className={`${isMobile ? "w-full mt-4" : "flex-1 min-w-0"}`}>{children}</div>
         </div>
       </div>
     </div>
