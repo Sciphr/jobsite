@@ -469,30 +469,30 @@ export default function ApplicationsManagerSettings() {
         {/* Header */}
         <motion.div
           variants={itemVariants}
-          className="flex items-center justify-between"
+          className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0"
         >
           <div>
-            <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
-              <Settings className="h-8 w-8 text-blue-600" />
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold admin-text flex items-center space-x-2 md:space-x-3">
+              <Settings className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
               <span>Hiring Settings</span>
             </h1>
-            <p className="admin-text-light mt-2">
+            <p className="admin-text-light mt-2 text-sm md:text-base">
               Configure automation, workflows, and preferences for your hiring
               process
             </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
             <button
               onClick={() => resetCategory(activeTab)}
               disabled={isLoading}
-              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <RefreshCw className="h-4 w-4" />
               <span>Reset Category</span>
             </button>
             <button
               onClick={() => router.push("/applications-manager")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
+              className={`flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors text-sm ${getButtonClasses("secondary")}`}
             >
               <ArrowRight className="h-4 w-4 rotate-180" />
               <span>Back to Overview</span>
@@ -532,23 +532,23 @@ export default function ApplicationsManagerSettings() {
           variants={itemVariants}
           className="admin-card p-4 rounded-lg shadow"
         >
-          <div className="relative max-w-md">
+          <div className="relative max-w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search settings..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
         </motion.div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <div className="admin-card rounded-lg shadow overflow-hidden sticky top-6">
+            <div className="admin-card rounded-lg shadow overflow-hidden lg:sticky lg:top-6">
               <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600">
                 <h3 className="font-semibold text-white flex items-center space-x-2">
                   <Zap className="h-5 w-5" />

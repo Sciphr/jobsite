@@ -95,7 +95,8 @@ export default function JobsFilter({
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200"
+              className="text-sm transition-colors duration-200 site-primary-text-hover"
+              style={{color: 'var(--site-primary)'}}
             >
               Clear all
             </button>

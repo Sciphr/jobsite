@@ -759,3 +759,269 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* PUBLIC SITE COLOR THEMES */
+/* Default theme: Ocean Blue */
+:root {
+  --site-primary: #3b82f6;
+  --site-primary-hover: #2563eb;
+  --site-primary-light: #60a5fa;
+  --site-secondary: #1e40af;
+  --site-accent: #06b6d4;
+  --site-success: #10b981;
+  --site-warning: #f59e0b;
+  --site-error: #ef4444;
+  --site-text-gradient-from: #3b82f6;
+  --site-text-gradient-to: #1e40af;
+}
+
+/* Dark mode overrides for default theme */
+:root.dark {
+  --site-primary: #60a5fa;
+  --site-primary-hover: #3b82f6;
+  --site-primary-light: #93c5fd;
+  --site-secondary: #2563eb;
+  --site-accent: #22d3ee;
+  --site-success: #34d399;
+  --site-warning: #fbbf24;
+  --site-error: #f87171;
+  --site-text-gradient-from: #60a5fa;
+  --site-text-gradient-to: #3b82f6;
+}
+
+/* Forest Green Theme */
+[data-site-theme="forest-green"] {
+  --site-primary: #16a34a;
+  --site-primary-hover: #15803d;
+  --site-primary-light: #22c55e;
+  --site-secondary: #166534;
+  --site-accent: #059669;
+  --site-success: #10b981;
+  --site-warning: #d97706;
+  --site-error: #dc2626;
+  --site-text-gradient-from: #16a34a;
+  --site-text-gradient-to: #166534;
+}
+
+[data-site-theme="forest-green"].dark {
+  --site-primary: #22c55e;
+  --site-primary-hover: #16a34a;
+  --site-primary-light: #4ade80;
+  --site-secondary: #15803d;
+  --site-accent: #10b981;
+  --site-success: #34d399;
+  --site-warning: #fbbf24;
+  --site-error: #f87171;
+  --site-text-gradient-from: #22c55e;
+  --site-text-gradient-to: #16a34a;
+}
+
+/* Sunset Orange Theme */
+[data-site-theme="sunset-orange"] {
+  --site-primary: #ea580c;
+  --site-primary-hover: #c2410c;
+  --site-primary-light: #fb923c;
+  --site-secondary: #9a3412;
+  --site-accent: #f59e0b;
+  --site-success: #16a34a;
+  --site-warning: #d97706;
+  --site-error: #dc2626;
+  --site-text-gradient-from: #ea580c;
+  --site-text-gradient-to: #9a3412;
+}
+
+[data-site-theme="sunset-orange"].dark {
+  --site-primary: #fb923c;
+  --site-primary-hover: #ea580c;
+  --site-primary-light: #fdba74;
+  --site-secondary: #c2410c;
+  --site-accent: #fbbf24;
+  --site-success: #22c55e;
+  --site-warning: #fcd34d;
+  --site-error: #f87171;
+  --site-text-gradient-from: #fb923c;
+  --site-text-gradient-to: #ea580c;
+}
+
+/* Royal Purple Theme */
+[data-site-theme="royal-purple"] {
+  --site-primary: #7c3aed;
+  --site-primary-hover: #6d28d9;
+  --site-primary-light: #8b5cf6;
+  --site-secondary: #5b21b6;
+  --site-accent: #a855f7;
+  --site-success: #10b981;
+  --site-warning: #f59e0b;
+  --site-error: #ef4444;
+  --site-text-gradient-from: #7c3aed;
+  --site-text-gradient-to: #5b21b6;
+}
+
+[data-site-theme="royal-purple"].dark {
+  --site-primary: #8b5cf6;
+  --site-primary-hover: #7c3aed;
+  --site-primary-light: #a78bfa;
+  --site-secondary: #6d28d9;
+  --site-accent: #c4b5fd;
+  --site-success: #34d399;
+  --site-warning: #fbbf24;
+  --site-error: #f87171;
+  --site-text-gradient-from: #8b5cf6;
+  --site-text-gradient-to: #7c3aed;
+}
+
+/* Charcoal Gray Theme */
+[data-site-theme="charcoal-gray"] {
+  --site-primary: #374151;
+  --site-primary-hover: #1f2937;
+  --site-primary-light: #4b5563;
+  --site-secondary: #111827;
+  --site-accent: #6b7280;
+  --site-success: #059669;
+  --site-warning: #d97706;
+  --site-error: #dc2626;
+  --site-text-gradient-from: #374151;
+  --site-text-gradient-to: #111827;
+}
+
+[data-site-theme="charcoal-gray"].dark {
+  --site-primary: #6b7280;
+  --site-primary-hover: #4b5563;
+  --site-primary-light: #9ca3af;
+  --site-secondary: #374151;
+  --site-accent: #d1d5db;
+  --site-success: #10b981;
+  --site-warning: #fbbf24;
+  --site-error: #f87171;
+  --site-text-gradient-from: #6b7280;
+  --site-text-gradient-to: #4b5563;
+}
+
+/* Rose Gold Theme */
+[data-site-theme="rose-gold"] {
+  --site-primary: #e11d48;
+  --site-primary-hover: #be185d;
+  --site-primary-light: #f43f5e;
+  --site-secondary: #9f1239;
+  --site-accent: #f59e0b;
+  --site-success: #10b981;
+  --site-warning: #d97706;
+  --site-error: #dc2626;
+  --site-text-gradient-from: #e11d48;
+  --site-text-gradient-to: #9f1239;
+}
+
+[data-site-theme="rose-gold"].dark {
+  --site-primary: #f43f5e;
+  --site-primary-hover: #e11d48;
+  --site-primary-light: #fb7185;
+  --site-secondary: #be185d;
+  --site-accent: #fbbf24;
+  --site-success: #34d399;
+  --site-warning: #fcd34d;
+  --site-error: #f87171;
+  --site-text-gradient-from: #f43f5e;
+  --site-text-gradient-to: #e11d48;
+}
+
+/* Tech Blue Theme */
+[data-site-theme="tech-blue"] {
+  --site-primary: #0ea5e9;
+  --site-primary-hover: #0284c7;
+  --site-primary-light: #38bdf8;
+  --site-secondary: #0369a1;
+  --site-accent: #06b6d4;
+  --site-success: #10b981;
+  --site-warning: #f59e0b;
+  --site-error: #ef4444;
+  --site-text-gradient-from: #0ea5e9;
+  --site-text-gradient-to: #0369a1;
+}
+
+[data-site-theme="tech-blue"].dark {
+  --site-primary: #38bdf8;
+  --site-primary-hover: #0ea5e9;
+  --site-primary-light: #7dd3fc;
+  --site-secondary: #0284c7;
+  --site-accent: #22d3ee;
+  --site-success: #34d399;
+  --site-warning: #fbbf24;
+  --site-error: #f87171;
+  --site-text-gradient-from: #38bdf8;
+  --site-text-gradient-to: #0ea5e9;
+}
+
+/* Warm Earth Theme */
+[data-site-theme="warm-earth"] {
+  --site-primary: #92400e;
+  --site-primary-hover: #78350f;
+  --site-primary-light: #a16207;
+  --site-secondary: #451a03;
+  --site-accent: #d97706;
+  --site-success: #16a34a;
+  --site-warning: #f59e0b;
+  --site-error: #dc2626;
+  --site-text-gradient-from: #92400e;
+  --site-text-gradient-to: #451a03;
+}
+
+[data-site-theme="warm-earth"].dark {
+  --site-primary: #a16207;
+  --site-primary-hover: #92400e;
+  --site-primary-light: #ca8a04;
+  --site-secondary: #78350f;
+  --site-accent: #eab308;
+  --site-success: #22c55e;
+  --site-warning: #fcd34d;
+  --site-error: #f87171;
+  --site-text-gradient-from: #a16207;
+  --site-text-gradient-to: #92400e;
+}
+
+/* Site theme utility classes */
+.site-primary {
+  background-color: var(--site-primary) !important;
+}
+
+.site-primary:hover {
+  background-color: var(--site-primary-hover) !important;
+}
+
+.site-primary-text {
+  color: var(--site-primary) !important;
+}
+
+.site-primary-border {
+  border-color: var(--site-primary) !important;
+}
+
+.site-text-gradient {
+  background: linear-gradient(to right, var(--site-text-gradient-from), var(--site-text-gradient-to)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.site-accent {
+  background-color: var(--site-accent) !important;
+}
+
+.site-accent-text {
+  color: var(--site-accent) !important;
+}
+
+.site-success {
+  background-color: var(--site-success) !important;
+}
+
+.site-warning {
+  background-color: var(--site-warning) !important;
+}
+
+.site-error {
+  background-color: var(--site-error) !important;
+}
+
+.site-primary-text-hover:hover {
+  color: var(--site-primary) !important;
+}

@@ -258,13 +258,19 @@ export default function JobDetailsClient({
           <div className="grid grid-cols-2 gap-2">
             <Link
               href="/auth/signin"
-              className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-medium text-sm"
+              className="flex items-center justify-center gap-2 py-3 px-4 text-white rounded-md transition-colors font-medium text-sm"
+              style={{backgroundColor: 'var(--site-primary)'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
             >
               Sign In
             </Link>
             <Link
               href="/auth/signup"
-              className="flex items-center justify-center gap-2 py-3 px-4 bg-green-600 dark:bg-green-500 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 transition-colors font-medium text-sm"
+              className="flex items-center justify-center gap-2 py-3 px-4 text-white rounded-md transition-colors font-medium text-sm"
+              style={{backgroundColor: 'var(--site-success)'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-success)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-success)'}
             >
               <UserPlus className="h-4 w-4" />
               Sign Up
@@ -277,7 +283,10 @@ export default function JobDetailsClient({
     // Standard apply button (logged in user or guest applications allowed)
     return (
       <button
-        className="w-full py-3 px-4 rounded-md bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-medium mb-4"
+        className="w-full py-3 px-4 rounded-md text-white transition-colors font-medium mb-4"
+        style={{backgroundColor: 'var(--site-primary)'}}
+        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
         onClick={handleApplyClick}
       >
         {isUserLoggedIn ? "Apply Now" : "Apply as Guest"}
@@ -367,12 +376,15 @@ export default function JobDetailsClient({
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
                           isSaved
                             ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            : "text-white"
                         } ${
                           isLoading || checkingStatus
                             ? "opacity-50 cursor-not-allowed"
                             : ""
                         }`}
+                        style={!isSaved ? {backgroundColor: 'var(--site-primary)'} : {}}
+                        onMouseEnter={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary-hover)' : undefined}
+                        onMouseLeave={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary)' : undefined}
                       >
                         {isLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -610,12 +622,15 @@ export default function JobDetailsClient({
                     className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-colors duration-200 font-medium ${
                       isSaved
                         ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        : "text-white"
                     } ${
                       isLoading || checkingStatus
                         ? "opacity-50 cursor-not-allowed"
                         : ""
                     }`}
+                    style={!isSaved ? {backgroundColor: 'var(--site-primary)'} : {}}
+                    onMouseEnter={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary-hover)' : undefined}
+                    onMouseLeave={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary)' : undefined}
                   >
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

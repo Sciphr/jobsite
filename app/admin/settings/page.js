@@ -8,6 +8,8 @@ import ThemeSelector from "./components/ThemeSelector";
 import CalendarIntegration from "./components/CalendarIntegration";
 import ZoomIntegration from "./components/ZoomIntegration";
 import MicrosoftIntegration from "./components/MicrosoftIntegration";
+import LogoUpload from "./components/LogoUpload";
+import SiteThemeSelector from "./components/SiteThemeSelector";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
@@ -200,6 +202,111 @@ export default function AdminSettings() {
     }
   };
 
+  const saveAllChanges = async () => {
+    const changedKeys = Object.keys(unsavedChanges);
+    if (changedKeys.length === 0) return;
+
+    setSaving((prev) => {
+      const newSaving = { ...prev };
+      changedKeys.forEach(key => { newSaving[key] = true; });
+      return newSaving;
+    });
+
+    try {
+      // Find all settings that have changes
+      const allSettings = Object.values(settings).flat();
+      const settingsToSave = changedKeys.map(key => ({
+        key,
+        value: unsavedChanges[key],
+        setting: allSettings.find(s => s.key === key)
+      }));
+
+      // Save all settings in parallel
+      const savePromises = settingsToSave.map(({ key, value, setting }) =>
+        fetch(`/api/admin/settings/${key}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value, isPersonal: setting?.isPersonal || false }),
+        })
+      );
+
+      const responses = await Promise.all(savePromises);
+      const results = await Promise.all(responses.map(r => r.json()));
+
+      // Update local state for successful saves
+      const successfulSaves = [];
+      responses.forEach((response, index) => {
+        const { key, setting } = settingsToSave[index];
+        
+        if (response.ok) {
+          const updatedSetting = results[index];
+          successfulSaves.push(key);
+
+          // Update local state
+          setSettings((prev) => {
+            const newSettings = { ...prev };
+            const category = Object.keys(newSettings).find((cat) =>
+              newSettings[cat].some((s) => s.key === key)
+            );
+
+            if (category) {
+              newSettings[category] = newSettings[category].map((s) =>
+                s.key === key
+                  ? {
+                      ...s,
+                      parsedValue: updatedSetting.parsedValue,
+                      value: updatedSetting.value,
+                    }
+                  : s
+              );
+            }
+            return newSettings;
+          });
+
+          updateSettingGlobally(key, updatedSetting.parsedValue);
+          
+          // Show success status
+          setSaveStatus((prev) => ({ ...prev, [key]: "success" }));
+        } else {
+          setSaveStatus((prev) => ({ ...prev, [key]: "error" }));
+        }
+      });
+
+      // Remove successful saves from unsaved changes
+      if (successfulSaves.length > 0) {
+        setUnsavedChanges((prev) => {
+          const newChanges = { ...prev };
+          successfulSaves.forEach(key => delete newChanges[key]);
+          return newChanges;
+        });
+      }
+
+      // Clear status indicators after 2 seconds
+      setTimeout(() => {
+        setSaveStatus((prev) => {
+          const newStatus = { ...prev };
+          changedKeys.forEach(key => delete newStatus[key]);
+          return newStatus;
+        });
+      }, 2000);
+
+    } catch (error) {
+      console.error("Error saving all changes:", error);
+      // Set error status for all changed keys
+      setSaveStatus((prev) => {
+        const newStatus = { ...prev };
+        changedKeys.forEach(key => { newStatus[key] = "error"; });
+        return newStatus;
+      });
+    } finally {
+      setSaving((prev) => {
+        const newSaving = { ...prev };
+        changedKeys.forEach(key => { newSaving[key] = false; });
+        return newSaving;
+      });
+    }
+  };
+
   const toggleSection = (sectionId) => {
     setCollapsedSections((prev) => ({
       ...prev,
@@ -286,6 +393,17 @@ export default function AdminSettings() {
       bgColor: "bg-red-100",
       borderColor: "border-red-200",
       hoverColor: "hover:bg-red-50",
+    },
+    {
+      id: "branding",
+      label: "Branding",
+      icon: Palette,
+      minPrivilege: 2,
+      description: "Site branding and appearance",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+      borderColor: "border-emerald-200",
+      hoverColor: "hover:bg-emerald-50",
     },
     {
       id: "jobs",
@@ -669,6 +787,27 @@ export default function AdminSettings() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          {Object.keys(unsavedChanges).length > 0 && (
+            <button
+              onClick={saveAllChanges}
+              disabled={Object.keys(unsavedChanges).length === 0 || Object.values(saving).some(Boolean)}
+              className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")} ${
+                Object.values(saving).some(Boolean) ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {Object.values(saving).some(Boolean) ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                Save All Changes ({Object.keys(unsavedChanges).length})
+              </span>
+              <span className="sm:hidden">
+                Save All ({Object.keys(unsavedChanges).length})
+              </span>
+            </button>
+          )}
           <button
             onClick={fetchSettings}
             className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 admin-text bg-white dark:bg-gray-800"
@@ -698,20 +837,24 @@ export default function AdminSettings() {
                   color: isActive
                     ? tab.id === "system"
                       ? "var(--admin-stat-4)"
-                      : tab.id === "jobs"
-                        ? "var(--admin-stat-1)"
-                        : tab.id === "notifications"
-                          ? "var(--admin-stat-3)"
-                          : "var(--admin-stat-5)"
+                      : tab.id === "branding"
+                        ? "var(--admin-stat-2)"
+                        : tab.id === "jobs"
+                          ? "var(--admin-stat-1)"
+                          : tab.id === "notifications"
+                            ? "var(--admin-stat-3)"
+                            : "var(--admin-stat-5)"
                     : undefined,
                   borderBottomColor: isActive
                     ? tab.id === "system"
                       ? "var(--admin-stat-4)"
-                      : tab.id === "jobs"
-                        ? "var(--admin-stat-1)"
-                        : tab.id === "notifications"
-                          ? "var(--admin-stat-3)"
-                          : "var(--admin-stat-5)"
+                      : tab.id === "branding"
+                        ? "var(--admin-stat-2)"
+                        : tab.id === "jobs"
+                          ? "var(--admin-stat-1)"
+                          : tab.id === "notifications"
+                            ? "var(--admin-stat-3)"
+                            : "var(--admin-stat-5)"
                     : undefined,
                 }}
               >
@@ -721,11 +864,13 @@ export default function AdminSettings() {
                     color: isActive
                       ? tab.id === "system"
                         ? "var(--admin-stat-4)"
-                        : tab.id === "jobs"
-                          ? "var(--admin-stat-1)"
-                          : tab.id === "notifications"
-                            ? "var(--admin-stat-3)"
-                            : "var(--admin-stat-5)"
+                        : tab.id === "branding"
+                          ? "var(--admin-stat-2)"
+                          : tab.id === "jobs"
+                            ? "var(--admin-stat-1)"
+                            : tab.id === "notifications"
+                              ? "var(--admin-stat-3)"
+                              : "var(--admin-stat-5)"
                       : undefined,
                   }}
                 />
@@ -746,24 +891,28 @@ export default function AdminSettings() {
             backgroundColor:
               activeTabData?.bgColor === "bg-red-100"
                 ? "var(--admin-stat-4-bg)"
-                : activeTabData?.bgColor === "bg-blue-100"
-                  ? "var(--admin-stat-1-bg)"
-                  : activeTabData?.bgColor === "bg-yellow-100"
-                    ? "var(--admin-stat-3-bg)"
-                    : activeTabData?.bgColor === "bg-purple-100"
-                      ? "var(--admin-stat-5-bg)"
-                      : "var(--admin-stat-1-bg)",
+                : activeTabData?.bgColor === "bg-emerald-100"
+                  ? "var(--admin-stat-2-bg)"
+                  : activeTabData?.bgColor === "bg-blue-100"
+                    ? "var(--admin-stat-1-bg)"
+                    : activeTabData?.bgColor === "bg-yellow-100"
+                      ? "var(--admin-stat-3-bg)"
+                      : activeTabData?.bgColor === "bg-purple-100"
+                        ? "var(--admin-stat-5-bg)"
+                        : "var(--admin-stat-1-bg)",
             borderLeftWidth: "4px",
             borderLeftColor:
               activeTabData?.bgColor === "bg-red-100"
                 ? "var(--admin-stat-4)"
-                : activeTabData?.bgColor === "bg-blue-100"
-                  ? "var(--admin-stat-1)"
-                  : activeTabData?.bgColor === "bg-yellow-100"
-                    ? "var(--admin-stat-3)"
-                    : activeTabData?.bgColor === "bg-purple-100"
-                      ? "var(--admin-stat-5)"
-                      : "var(--admin-stat-1)",
+                : activeTabData?.bgColor === "bg-emerald-100"
+                  ? "var(--admin-stat-2)"
+                  : activeTabData?.bgColor === "bg-blue-100"
+                    ? "var(--admin-stat-1)"
+                    : activeTabData?.bgColor === "bg-yellow-100"
+                      ? "var(--admin-stat-3)"
+                      : activeTabData?.bgColor === "bg-purple-100"
+                        ? "var(--admin-stat-5)"
+                        : "var(--admin-stat-1)",
           }}
         >
           <div className="flex items-center justify-between">
@@ -776,13 +925,15 @@ export default function AdminSettings() {
                       backgroundColor:
                         activeTabData?.bgColor === "bg-red-100"
                           ? "var(--admin-stat-4-bg)"
-                          : activeTabData?.bgColor === "bg-blue-100"
-                            ? "var(--admin-stat-1-bg)"
-                            : activeTabData?.bgColor === "bg-yellow-100"
-                              ? "var(--admin-stat-3-bg)"
-                              : activeTabData?.bgColor === "bg-purple-100"
-                                ? "var(--admin-stat-5-bg)"
-                                : "var(--admin-stat-1-bg)",
+                          : activeTabData?.bgColor === "bg-emerald-100"
+                            ? "var(--admin-stat-2-bg)"
+                            : activeTabData?.bgColor === "bg-blue-100"
+                              ? "var(--admin-stat-1-bg)"
+                              : activeTabData?.bgColor === "bg-yellow-100"
+                                ? "var(--admin-stat-3-bg)"
+                                : activeTabData?.bgColor === "bg-purple-100"
+                                  ? "var(--admin-stat-5-bg)"
+                                  : "var(--admin-stat-1-bg)",
                     }}
                   >
                     <activeTabData.icon
@@ -791,13 +942,15 @@ export default function AdminSettings() {
                         color:
                           activeTabData?.bgColor === "bg-red-100"
                             ? "var(--admin-stat-4)"
-                            : activeTabData?.bgColor === "bg-blue-100"
-                              ? "var(--admin-stat-1)"
-                              : activeTabData?.bgColor === "bg-yellow-100"
-                                ? "var(--admin-stat-3)"
-                                : activeTabData?.bgColor === "bg-purple-100"
-                                  ? "var(--admin-stat-5)"
-                                  : "var(--admin-stat-1)",
+                            : activeTabData?.bgColor === "bg-emerald-100"
+                              ? "var(--admin-stat-2)"
+                              : activeTabData?.bgColor === "bg-blue-100"
+                                ? "var(--admin-stat-1)"
+                                : activeTabData?.bgColor === "bg-yellow-100"
+                                  ? "var(--admin-stat-3)"
+                                  : activeTabData?.bgColor === "bg-purple-100"
+                                    ? "var(--admin-stat-5)"
+                                    : "var(--admin-stat-1)",
                       }}
                     />
                   </div>
@@ -808,13 +961,15 @@ export default function AdminSettings() {
                         color:
                           activeTabData?.bgColor === "bg-red-100"
                             ? "var(--admin-stat-4)"
-                            : activeTabData?.bgColor === "bg-blue-100"
-                              ? "var(--admin-stat-1)"
-                              : activeTabData?.bgColor === "bg-yellow-100"
-                                ? "var(--admin-stat-3)"
-                                : activeTabData?.bgColor === "bg-purple-100"
-                                  ? "var(--admin-stat-5)"
-                                  : "var(--admin-stat-1)",
+                            : activeTabData?.bgColor === "bg-emerald-100"
+                              ? "var(--admin-stat-2)"
+                              : activeTabData?.bgColor === "bg-blue-100"
+                                ? "var(--admin-stat-1)"
+                                : activeTabData?.bgColor === "bg-yellow-100"
+                                  ? "var(--admin-stat-3)"
+                                  : activeTabData?.bgColor === "bg-purple-100"
+                                    ? "var(--admin-stat-5)"
+                                    : "var(--admin-stat-1)",
                       }}
                     >
                       {activeTabData.label}
@@ -973,6 +1128,104 @@ export default function AdminSettings() {
                 </>
               )}
             </div>
+          ) : activeTab === "branding" ? (
+            <div className="space-y-6">
+              <LogoUpload getButtonClasses={getButtonClasses} />
+              
+              <div className="border-t border-gray-200 pt-6">
+                <SiteThemeSelector getButtonClasses={getButtonClasses} />
+              </div>
+              
+              {/* Other branding settings if any exist */}
+              {activeSettings.length > 0 && (
+                <>
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-sm font-medium admin-text mb-4">
+                      Other Branding Settings
+                    </h3>
+                  </div>
+                  {activeSettings.map((setting, index) => {
+                    const SettingIcon = getSettingIcon(setting.key);
+                    const settingColorIndex = index % 4; // Cycle through 0-3 for theme colors
+
+                    return (
+                      <div
+                        key={setting.key}
+                        className="setting-card flex items-start space-x-4 p-4 border rounded-lg transition-all duration-200 hover:shadow-sm"
+                        style={{
+                          borderColor:
+                            settingColorIndex === 0
+                              ? "var(--admin-stat-1-border)"
+                              : settingColorIndex === 1
+                                ? "var(--admin-stat-2-border)"
+                                : settingColorIndex === 2
+                                  ? "var(--admin-stat-3-border)"
+                                  : "var(--admin-stat-4-border)",
+                        }}
+                      >
+                        <div
+                          className="p-2 rounded-lg"
+                          style={{
+                            backgroundColor:
+                              settingColorIndex === 0
+                                ? "var(--admin-stat-1-bg)"
+                                : settingColorIndex === 1
+                                  ? "var(--admin-stat-2-bg)"
+                                  : settingColorIndex === 2
+                                    ? "var(--admin-stat-3-bg)"
+                                    : "var(--admin-stat-4-bg)",
+                          }}
+                        >
+                          <SettingIcon
+                            className="h-4 w-4"
+                            style={{
+                              color:
+                                settingColorIndex === 0
+                                  ? "var(--admin-stat-1)"
+                                  : settingColorIndex === 1
+                                    ? "var(--admin-stat-2)"
+                                    : settingColorIndex === 2
+                                      ? "var(--admin-stat-3)"
+                                      : "var(--admin-stat-4)",
+                            }}
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h3 className="text-sm font-medium admin-text">
+                                {setting.key
+                                  .replace(/_/g, " ")
+                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </h3>
+                              {setting.description && (
+                                <p className="text-sm admin-text-light mt-1">
+                                  {setting.description}
+                                </p>
+                              )}
+                            </div>
+
+                            {setting.isPersonal && (
+                              <span
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium text-white"
+                                style={{
+                                  backgroundColor: "var(--admin-stat-5)",
+                                }}
+                              >
+                                Personal
+                              </span>
+                            )}
+                          </div>
+
+                          {renderSettingInput(setting)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
           ) : activeTab === "notifications" ? (
             <div className="space-y-6">
               {organizeNotificationSettings(activeSettings).map(
@@ -1072,20 +1325,49 @@ export default function AdminSettings() {
             </div>
           )}
         </div>
+
+        {/* Bottom Save All Button */}
+        {Object.keys(unsavedChanges).length > 0 && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <span>
+                  {Object.keys(unsavedChanges).length} unsaved change
+                  {Object.keys(unsavedChanges).length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button
+                onClick={saveAllChanges}
+                disabled={Object.keys(unsavedChanges).length === 0 || Object.values(saving).some(Boolean)}
+                className={`flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")} ${
+                  Object.values(saving).some(Boolean) ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                {Object.values(saving).some(Boolean) ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span>Save All Changes</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Unsaved Changes Warning */}
+      {/* Unsaved Changes Warning - Fixed positioning to not block bottom content */}
       {Object.keys(unsavedChanges).length > 0 && (
-        <div className="fixed bottom-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg max-w-sm">
+        <div className="fixed bottom-4 left-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg max-w-sm z-50">
           <div className="flex items-start space-x-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-yellow-800">
-                You have {Object.keys(unsavedChanges).length} unsaved change
+                {Object.keys(unsavedChanges).length} unsaved change
                 {Object.keys(unsavedChanges).length !== 1 ? "s" : ""}
               </p>
               <p className="text-xs text-yellow-600 mt-1">
-                Click the Save button next to each setting to apply changes.
+                Use "Save All Changes" button or save individually.
               </p>
             </div>
           </div>

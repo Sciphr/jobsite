@@ -2,14 +2,17 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Briefcase, Menu, X, User, Settings } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useSetting } from "../hooks/useSettings";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [logoDownloadUrl, setLogoDownloadUrl] = useState(null);
+  const [logoFetching, setLogoFetching] = useState(false);
   const { data: session, status } = useSession();
 
   // Get both value and loading state from useSetting
@@ -17,6 +20,44 @@ export default function Header() {
     "site_name",
     "JobSite"
   );
+  
+  // Get custom logo URL if available
+  const { value: logoUrl, loading: logoLoading } = useSetting(
+    "site_logo_url",
+    null
+  );
+
+  // Fetch logo download URL when logoUrl changes
+  useEffect(() => {
+    const fetchLogoUrl = async () => {
+      if (logoUrl && !logoLoading) {
+        setLogoFetching(true);
+        try {
+          const response = await fetch('/api/admin/logo');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.logoUrl) {
+              setLogoDownloadUrl(data.logoUrl);
+            } else {
+              setLogoDownloadUrl(null);
+            }
+          } else {
+            setLogoDownloadUrl(null);
+          }
+        } catch (error) {
+          console.error('Error fetching logo URL:', error);
+          setLogoDownloadUrl(null);
+        } finally {
+          setLogoFetching(false);
+        }
+      } else if (!logoUrl && !logoLoading) {
+        setLogoDownloadUrl(null);
+        setLogoFetching(false);
+      }
+    };
+
+    fetchLogoUrl();
+  }, [logoUrl, logoLoading]);
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
@@ -44,11 +85,31 @@ export default function Header() {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <div className="bg-blue-600 dark:bg-blue-500 p-2 rounded-lg transition-colors duration-200">
-              <Briefcase className="h-6 w-6 text-white" />
-            </div>
+            {(logoLoading || logoFetching) ? (
+              <div className="p-1 rounded-lg flex items-center justify-center">
+                <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+              </div>
+            ) : (
+              <div className={`${logoDownloadUrl ? 'p-1' : 'bg-blue-600 dark:bg-blue-500 p-2'} rounded-lg transition-colors duration-200 flex items-center justify-center`}>
+                {logoDownloadUrl ? (
+                  <Image 
+                    src={logoDownloadUrl} 
+                    alt="Site Logo" 
+                    width={40}
+                    height={40}
+                    className="object-contain"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      setLogoDownloadUrl(null);
+                    }}
+                  />
+                ) : (
+                  <Briefcase className="h-6 w-6 text-white" />
+                )}
+              </div>
+            )}
             <Link href="/" className="flex items-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-400 dark:to-blue-600 bg-clip-text text-transparent transition-colors duration-200">
+              <h1 className="text-2xl font-bold site-text-gradient transition-colors duration-200">
                 {siteNameLoading ? (
                   <span className="inline-block w-24 h-8 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></span>
                 ) : (
@@ -62,17 +123,17 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             <Link
               href="/"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 relative group"
+              className="text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 relative group site-primary-text-hover"
             >
               Home
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-200 group-hover:w-full"></span>
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-200 group-hover:w-full site-primary"></span>
             </Link>
             <Link
               href="/jobs"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200 relative group"
+              className="text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 relative group site-primary-text-hover"
             >
               Jobs
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-200 group-hover:w-full"></span>
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-200 group-hover:w-full site-primary"></span>
             </Link>
 
             {/* Admin Navigation */}
@@ -145,13 +206,16 @@ export default function Header() {
                 <>
                   <Link
                     href="/auth/signin"
-                    className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-200"
+                    className="text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 site-primary-text-hover"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+                    className="text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 site-primary"
+                    style={{backgroundColor: 'var(--site-primary)'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
                   >
                     Get Started
                   </Link>
@@ -184,14 +248,14 @@ export default function Header() {
             <nav className="flex flex-col space-y-3">
               <Link
                 href="/"
-                className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium py-2 transition-colors duration-200"
+                className="text-gray-700 dark:text-gray-300 font-medium py-2 transition-colors duration-200 site-primary-text-hover"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 href="/jobs"
-                className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium py-2 transition-colors duration-200"
+                className="text-gray-700 dark:text-gray-300 font-medium py-2 transition-colors duration-200 site-primary-text-hover"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Jobs
@@ -226,7 +290,7 @@ export default function Header() {
                   {/* Mobile Profile Link */}
                   <Link
                     href="/profile"
-                    className="flex items-center space-x-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium py-2 transition-colors duration-200"
+                    className="flex items-center space-x-3 text-gray-700 dark:text-gray-300 font-medium py-2 transition-colors duration-200 site-primary-text-hover"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <div className="relative">
@@ -275,14 +339,17 @@ export default function Header() {
                 <>
                   <Link
                     href="/auth/signin"
-                    className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium py-2 transition-colors duration-200"
+                    className="text-gray-700 dark:text-gray-300 font-medium py-2 transition-colors duration-200 site-primary-text-hover"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200 font-medium text-center"
+                    className="text-white px-4 py-2 rounded-lg font-medium text-center transition-all duration-200 site-primary"
+                    style={{backgroundColor: 'var(--site-primary)'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Get Started

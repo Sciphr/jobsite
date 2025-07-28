@@ -195,10 +195,10 @@ export default function InterviewsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold admin-text">Interview Management</h1>
-          <p className="admin-text-light mt-2">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold admin-text">Interview Management</h1>
+          <p className="admin-text-light mt-2 text-sm md:text-base">
             Manage and track all interview schedules and responses
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function InterviewsPage() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses('primary')} ${refreshing ? 'opacity-50' : ''}`}
+            className={`flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors duration-200 shadow-sm text-sm ${getButtonClasses('primary')} ${refreshing ? 'opacity-50' : ''}`}
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
@@ -215,68 +215,68 @@ export default function InterviewsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="admin-card p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold admin-text">{summary.total || 0}</div>
-              <div className="text-sm admin-text-light font-medium">Total Interviews</div>
+              <div className="text-lg md:text-2xl font-bold admin-text">{summary.total || 0}</div>
+              <div className="text-xs md:text-sm admin-text-light font-medium">Total Interviews</div>
             </div>
-            <div className="p-3 rounded-lg bg-blue-100">
-              <Calendar className="h-6 w-6 text-blue-600" />
+            <div className="p-2 md:p-3 rounded-lg bg-blue-100">
+              <Calendar className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="admin-card p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold admin-text">{summary.upcoming || 0}</div>
-              <div className="text-sm admin-text-light font-medium">Upcoming</div>
+              <div className="text-lg md:text-2xl font-bold admin-text">{summary.upcoming || 0}</div>
+              <div className="text-xs md:text-sm admin-text-light font-medium">Upcoming</div>
             </div>
-            <div className="p-3 rounded-lg bg-green-100">
-              <TrendingUp className="h-6 w-6 text-green-600" />
+            <div className="p-2 md:p-3 rounded-lg bg-green-100">
+              <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="admin-card p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold admin-text">{summary.accepted || 0}</div>
-              <div className="text-sm admin-text-light font-medium">Confirmed</div>
+              <div className="text-lg md:text-2xl font-bold admin-text">{summary.accepted || 0}</div>
+              <div className="text-xs md:text-sm admin-text-light font-medium">Confirmed</div>
             </div>
-            <div className="p-3 rounded-lg bg-emerald-100">
-              <CheckCircle className="h-6 w-6 text-emerald-600" />
+            <div className="p-2 md:p-3 rounded-lg bg-emerald-100">
+              <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
             </div>
           </div>
         </div>
 
-        <div className="admin-card p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold admin-text">{summary.pending || 0}</div>
-              <div className="text-sm admin-text-light font-medium">Pending Response</div>
+              <div className="text-lg md:text-2xl font-bold admin-text">{summary.pending || 0}</div>
+              <div className="text-xs md:text-sm admin-text-light font-medium">Pending Response</div>
             </div>
-            <div className="p-3 rounded-lg bg-yellow-100">
-              <Clock className="h-6 w-6 text-yellow-600" />
+            <div className="p-2 md:p-3 rounded-lg bg-yellow-100">
+              <Clock className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="admin-card p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="admin-card p-4 md:p-6 rounded-lg shadow">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
           {/* Search */}
-          <div className="relative lg:col-span-2">
+          <div className="relative sm:col-span-2 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search interviews..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700 text-sm"
             />
           </div>
 
@@ -284,7 +284,7 @@ export default function InterviewsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700 text-sm"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -296,7 +296,7 @@ export default function InterviewsPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700 text-sm"
           >
             <option value="all">All Types</option>
             <option value="video">Video</option>
@@ -308,7 +308,7 @@ export default function InterviewsPage() {
           <select
             value={timeFilter}
             onChange={(e) => setTimeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700 text-sm"
           >
             <option value="all">All Time</option>
             <option value="today">Today</option>

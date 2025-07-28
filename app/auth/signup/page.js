@@ -6,6 +6,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock, User, UserPlus } from "lucide-react";
+import { ThemedButton } from "../../components/ThemedButton";
 
 export default function SignUp() {
   const { data: session, status } = useSession();
@@ -125,7 +126,7 @@ export default function SignUp() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-indigo-600 dark:bg-indigo-500 rounded-full flex items-center justify-center mb-6 transition-colors duration-200">
+          <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-6 transition-colors duration-200" style={{backgroundColor: 'var(--site-success)'}}>
             <UserPlus className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
@@ -319,10 +320,11 @@ export default function SignUp() {
             )}
 
             {/* Submit Button */}
-            <button
+            <ThemedButton
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+              variant="success"
             >
               {isLoading ? (
                 <>
@@ -354,7 +356,7 @@ export default function SignUp() {
                   Create account
                 </>
               )}
-            </button>
+            </ThemedButton>
           </form>
 
           {/* Footer */}

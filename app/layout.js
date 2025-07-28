@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ThemeScript from "./components/ThemeScript";
 import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
@@ -70,9 +71,15 @@ export async function generateMetadata() {
   };
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // Get the site theme server-side to prevent flickering
+  const siteTheme = await getSystemSetting("site_color_theme", "ocean-blue");
+  
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-site-theme={siteTheme !== 'ocean-blue' ? siteTheme : undefined}>
+      <head>
+        <ThemeScript />
+      </head>
       <body
         suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -224,11 +224,11 @@ export default function AutomationManagement() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0"
       >
         <div>
-          <h1 className="text-2xl font-bold admin-text">Email Automation</h1>
-          <p className="admin-text-light mt-1">
+          <h1 className="text-xl md:text-2xl font-bold admin-text">Email Automation</h1>
+          <p className="admin-text-light mt-1 text-sm md:text-base">
             Automatically send emails when application statuses change
           </p>
         </div>
@@ -237,7 +237,7 @@ export default function AutomationManagement() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCreateRule}
-          className={`${getButtonClasses("primary")} flex items-center space-x-2 px-4 py-2`}
+          className={`${getButtonClasses("primary")} flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 text-sm`}
         >
           <Plus className="h-4 w-4" />
           <span>Create Rule</span>
@@ -245,20 +245,20 @@ export default function AutomationManagement() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(0).border} ${getStatCardClasses(0).hover}`}
+          className={`admin-card p-4 md:p-6 rounded-lg shadow ${getStatCardClasses(0).border} ${getStatCardClasses(0).hover}`}
         >
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-lg ${getStatCardClasses(0).bg}`}>
-              <Zap className={`h-6 w-6 ${getStatCardClasses(0).icon}`} />
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className={`p-2 md:p-3 rounded-lg ${getStatCardClasses(0).bg}`}>
+              <Zap className={`h-5 w-5 md:h-6 md:w-6 ${getStatCardClasses(0).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold admin-text">{rules.length}</p>
-              <p className="admin-text-light text-sm">Total Rules</p>
+              <p className="text-lg md:text-2xl font-bold admin-text">{rules.length}</p>
+              <p className="admin-text-light text-xs md:text-sm">Total Rules</p>
             </div>
           </div>
         </motion.div>
@@ -267,17 +267,17 @@ export default function AutomationManagement() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(1).border} ${getStatCardClasses(1).hover}`}
+          className={`admin-card p-4 md:p-6 rounded-lg shadow ${getStatCardClasses(1).border} ${getStatCardClasses(1).hover}`}
         >
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-lg ${getStatCardClasses(1).bg}`}>
-              <CheckCircle className={`h-6 w-6 ${getStatCardClasses(1).icon}`} />
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className={`p-2 md:p-3 rounded-lg ${getStatCardClasses(1).bg}`}>
+              <CheckCircle className={`h-5 w-5 md:h-6 md:w-6 ${getStatCardClasses(1).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold admin-text">
+              <p className="text-lg md:text-2xl font-bold admin-text">
                 {rules.filter(r => r.is_active).length}
               </p>
-              <p className="admin-text-light text-sm">Active Rules</p>
+              <p className="admin-text-light text-xs md:text-sm">Active Rules</p>
             </div>
           </div>
         </motion.div>
@@ -286,15 +286,15 @@ export default function AutomationManagement() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className={`admin-card p-6 rounded-lg shadow ${getStatCardClasses(2).border} ${getStatCardClasses(2).hover}`}
+          className={`admin-card p-4 md:p-6 rounded-lg shadow ${getStatCardClasses(2).border} ${getStatCardClasses(2).hover}`}
         >
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-lg ${getStatCardClasses(2).bg}`}>
-              <Mail className={`h-6 w-6 ${getStatCardClasses(2).icon}`} />
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className={`p-2 md:p-3 rounded-lg ${getStatCardClasses(2).bg}`}>
+              <Mail className={`h-5 w-5 md:h-6 md:w-6 ${getStatCardClasses(2).icon}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold admin-text">{templates.length}</p>
-              <p className="admin-text-light text-sm">Available Templates</p>
+              <p className="text-lg md:text-2xl font-bold admin-text">{templates.length}</p>
+              <p className="admin-text-light text-xs md:text-sm">Available Templates</p>
             </div>
           </div>
         </motion.div>
@@ -307,8 +307,8 @@ export default function AutomationManagement() {
         transition={{ delay: 0.4 }}
         className="admin-card rounded-lg shadow overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold admin-text">Automation Rules</h2>
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
+          <h2 className="text-base md:text-lg font-semibold admin-text">Automation Rules</h2>
         </div>
 
         {rules.length === 0 ? (
@@ -337,24 +337,24 @@ export default function AutomationManagement() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="p-6 hover:bg-gray-50 transition-colors"
+                  className="p-4 md:p-6 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${rule.is_active ? 'bg-green-100' : 'bg-gray-100'}`}>
+                      <div className="flex items-start md:items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${rule.is_active ? 'bg-green-100' : 'bg-gray-100'} flex-shrink-0`}>
                           {rule.is_active ? 
-                            <CheckCircle className="h-5 w-5 text-green-600" /> :
-                            <Clock className="h-5 w-5 text-gray-400" />
+                            <CheckCircle className="h-4 w-4 md:h-5 md:w-5 text-green-600" /> :
+                            <Clock className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                           }
                         </div>
                         
-                        <div>
-                          <h3 className="text-lg font-semibold admin-text">{rule.name}</h3>
-                          <div className="flex items-center space-x-2 text-sm admin-text-light mt-1">
-                            <span>{formatConditions(rule.trigger, rule.conditions)}</span>
-                            <ArrowRight className="h-3 w-3" />
-                            <span>Send "{template?.name || 'Unknown Template'}" to {rule.recipient_type === 'internal' ? '🏢 Internal Team' : '👤 Applicant'}</span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base md:text-lg font-semibold admin-text truncate">{rule.name}</h3>
+                          <div className="flex flex-col md:flex-row md:items-center md:space-x-2 text-xs md:text-sm admin-text-light mt-1">
+                            <span className="truncate">{formatConditions(rule.trigger, rule.conditions)}</span>
+                            <ArrowRight className="h-3 w-3 hidden md:block flex-shrink-0" />
+                            <span className="mt-1 md:mt-0 truncate">Send "{template?.name || 'Unknown Template'}" to {rule.recipient_type === 'internal' ? '🏢 Internal Team' : '👤 Applicant'}</span>
                           </div>
                         </div>
                       </div>
@@ -416,15 +416,15 @@ export default function AutomationManagement() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="admin-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="admin-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4"
             >
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-semibold admin-text">
+              <div className="p-4 md:p-6 border-b border-gray-200">
+                <h3 className="text-lg md:text-xl font-semibold admin-text">
                   {editingRule ? 'Edit Automation Rule' : 'Create Automation Rule'}
                 </h3>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                 {/* Rule Name */}
                 <div>
                   <label className="block text-sm font-medium admin-text mb-2">
@@ -589,17 +589,17 @@ export default function AutomationManagement() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="px-4 py-3 md:px-6 md:py-4 bg-gray-50 border-t border-gray-200 flex flex-col space-y-3 md:flex-row md:justify-end md:space-y-0 md:space-x-3">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveRule}
                   disabled={!formData.name || !formData.template_id || (formData.trigger === 'status_change' && !formData.conditions.toStatus)}
-                  className={`px-6 py-2 rounded-lg text-white ${getButtonClasses("primary")} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`px-6 py-2 rounded-lg text-white text-sm ${getButtonClasses("primary")} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {editingRule ? 'Update Rule' : 'Create Rule'}
                 </button>

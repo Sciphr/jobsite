@@ -434,7 +434,7 @@ export default function PipelineView() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-80 overflow-y-auto"
+                    className="absolute top-full left-0 mt-2 w-72 md:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 md:max-h-80 overflow-y-auto"
                   >
                     <div className="p-3 border-b border-gray-200">
                       <h3 className="text-sm font-semibold text-gray-900">
@@ -556,7 +556,7 @@ export default function PipelineView() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
         >
         {applicationsByStatus.stages.map((stage, stageIndex) => (
           <motion.div
@@ -600,7 +600,7 @@ export default function PipelineView() {
             </motion.div>
 
             {/* Applications List */}
-            <div className="p-2 lg:p-3 space-y-2 lg:space-y-3 max-h-[400px] lg:max-h-[500px] overflow-y-auto overflow-x-hidden">
+            <div className="p-2 md:p-3 space-y-2 md:space-y-3 max-h-[300px] md:max-h-[400px] lg:max-h-[500px] overflow-y-auto overflow-x-hidden">
               <AnimatePresence mode="popLayout">
                 {applicationsByStatus.grouped[stage.id]?.map(
                   (application, index) => (
@@ -627,7 +627,7 @@ export default function PipelineView() {
                         zIndex: 1000,
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                       }}
-                      className={`bg-white border border-gray-200 rounded-lg p-3 lg:p-4 transition-all cursor-move group ${
+                      className={`bg-white border border-gray-200 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
                         draggedApplication?.id === application.id
                           ? "opacity-50"
                           : ""
@@ -639,29 +639,29 @@ export default function PipelineView() {
                       }
                     >
                       {/* Applicant Info */}
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-start space-x-2 md:space-x-3">
                         <motion.div
                           whileHover={{ scale: 1.1 }}
-                          className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getButtonClasses("primary")}`}
+                          className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getButtonClasses("primary")}`}
                         >
                           {application.name?.charAt(0)?.toUpperCase() ||
                             application.email?.charAt(0)?.toUpperCase() ||
                             "A"}
                         </motion.div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
+                          <h4 className="text-xs md:text-sm font-medium text-gray-900 truncate">
                             {application.name || "Anonymous"}
                           </h4>
                           <div className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
-                            <Mail className="h-3 w-3" />
+                            <Mail className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">
                               {application.email}
                             </span>
                           </div>
                           {application.phone && (
                             <div className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
-                              <Phone className="h-3 w-3" />
-                              <span>{application.phone}</span>
+                              <Phone className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{application.phone}</span>
                             </div>
                           )}
                         </div>
@@ -675,22 +675,22 @@ export default function PipelineView() {
                           className="mt-3 pt-3 border-t border-gray-100"
                         >
                           <div className="text-xs admin-text-light flex items-center space-x-1">
-                            <Briefcase className="h-3 w-3" />
+                            <Briefcase className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">
                               {application.job.title}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 mt-1 truncate">
                             {application.job.department}
                           </div>
                         </motion.div>
                       )}
 
                       {/* Applied Date */}
-                      <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100">
                         <div className="text-xs text-gray-500 flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">
                             Applied{" "}
                             {new Date(
                               application.appliedAt
@@ -699,11 +699,11 @@ export default function PipelineView() {
                         </div>
                       </div>
 
-                      {/* Enhanced Quick Actions */}
+                      {/* Enhanced Quick Actions - Always visible on mobile */}
                       <motion.div
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
-                        className="mt-3 pt-3 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <QuickActions
@@ -805,7 +805,7 @@ export default function PipelineView() {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-2 md:grid-cols-5 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4"
         >
           {applicationsByStatus.stages.map((stage, index) => (
             <motion.div
@@ -815,17 +815,17 @@ export default function PipelineView() {
               className="text-center"
             >
               <motion.div
-                className={`w-16 h-16 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 mx-auto mb-2 flex items-center justify-center`}
+                className={`w-12 h-12 md:w-16 md:h-16 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 mx-auto mb-2 flex items-center justify-center`}
                 whileHover={{
                   boxShadow: `0 0 0 4px ${stage.bgColor}40`,
                   scale: 1.1,
                 }}
               >
-                <span className={`text-xl font-bold ${stage.textColor}`}>
+                <span className={`text-lg md:text-xl font-bold ${stage.textColor}`}>
                   {stage.count}
                 </span>
               </motion.div>
-              <div className="text-sm font-medium admin-text">
+              <div className="text-xs md:text-sm font-medium admin-text truncate">
                 {stage.title}
               </div>
               <div className="text-xs text-gray-500">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { ThemedButton } from "./ThemedButton";
 
 export default function ProfileClient({ session }) {
   const router = useRouter();
@@ -552,12 +553,13 @@ export default function ProfileClient({ session }) {
                   {profile?.email}
                 </p>
               </div>
-              <button
+              <ThemedButton
                 onClick={() => signOut()}
-                className="bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                className="px-4 py-2 rounded-md text-sm font-medium text-white"
+                variant="primary"
               >
                 Sign Out
-              </button>
+              </ThemedButton>
             </div>
           </div>
 
@@ -571,9 +573,13 @@ export default function ProfileClient({ session }) {
                     onClick={() => setActiveTab(tab)}
                     className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors duration-200 ${
                       activeTab === tab
-                        ? "border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400"
+                        ? "site-primary-text hover:site-primary-text"
                         : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
+                    style={activeTab === tab ? {
+                      borderBottomColor: 'var(--site-primary)',
+                      color: 'var(--site-primary)'
+                    } : {}}
                   >
                     {tab.replace("-", " ")}
                   </button>
@@ -694,12 +700,13 @@ export default function ProfileClient({ session }) {
                     >
                       {showChangePassword ? "Cancel" : "Change Password"}
                     </button>
-                    <button
+                    <ThemedButton
                       onClick={() => setEditMode(true)}
-                      className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                      className="px-4 py-2 rounded-md text-sm font-medium text-white"
+                      variant="primary"
                     >
                       Edit Profile
-                    </button>
+                    </ThemedButton>
                   </div>
                 ) : (
                   <div className="space-x-2">
@@ -806,15 +813,14 @@ export default function ProfileClient({ session }) {
                       >
                         Cancel
                       </button>
-                      <button
+                      <ThemedButton
                         type="submit"
                         disabled={passwordLoading}
-                        className={`bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                          passwordLoading ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                        className="px-6 py-2 rounded-md text-sm font-medium text-white"
+                        variant="primary"
                       >
                         {passwordLoading ? "Changing..." : "Change Password"}
-                      </button>
+                      </ThemedButton>
                     </div>
                   </form>
                 </div>
@@ -919,12 +925,13 @@ export default function ProfileClient({ session }) {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <button
+                    <ThemedButton
                       type="submit"
-                      className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                      className="px-6 py-2 rounded-md text-sm font-medium text-white"
+                      variant="primary"
                     >
                       Save Changes
-                    </button>
+                    </ThemedButton>
                   </div>
                 </form>
               )}
@@ -949,14 +956,17 @@ export default function ProfileClient({ session }) {
                       id="resume-upload"
                       disabled={uploading}
                     />
-                    <label
+                    <ThemedButton
+                      as="label"
                       htmlFor="resume-upload"
-                      className={`bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                      className={`px-4 py-2 rounded-md text-sm font-medium text-white cursor-pointer ${
                         uploading ? "opacity-50 cursor-not-allowed" : ""
                       }`}
+                      variant="primary"
+                      disabled={uploading}
                     >
                       {uploading ? "Uploading..." : "Upload Resume"}
-                    </label>
+                    </ThemedButton>
                     <span className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200">
                       Max: {maxResumeSize}MB
                     </span>
@@ -1039,7 +1049,13 @@ export default function ProfileClient({ session }) {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleDownloadResume(resume.fileName)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900 hover:bg-indigo-200 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors duration-200"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white"
+                          style={{
+                            backgroundColor: 'var(--site-primary)',
+                            borderColor: 'var(--site-primary)'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
                         >
                           <svg
                             className="w-4 h-4 mr-1"
@@ -1221,14 +1237,15 @@ export default function ProfileClient({ session }) {
                           </p>
                         </div>
                         <div className="flex space-x-2">
-                          <button
+                          <ThemedButton
                             onClick={() =>
                               router.push(`/jobs/${savedJob.job?.slug}`)
                             }
-                            className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors duration-200"
+                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            variant="primary"
                           >
                             View Job
-                          </button>
+                          </ThemedButton>
                         </div>
                       </div>
                     </div>
@@ -1310,14 +1327,15 @@ export default function ProfileClient({ session }) {
                           >
                             {application.status || "Applied"}
                           </span>
-                          <button
+                          <ThemedButton
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors duration-200"
+                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            variant="primary"
                           >
                             View Job
-                          </button>
+                          </ThemedButton>
                         </div>
                       </div>
                     </div>

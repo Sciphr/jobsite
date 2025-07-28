@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Check } from "lucide-react";
+import { ThemedLink } from "./ThemedButton";
 
 export default function JobCard({ job, applicationStatus }) {
   const { data: session } = useSession();
@@ -14,7 +15,7 @@ export default function JobCard({ job, applicationStatus }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg dark:hover:shadow-xl transition-all duration-200 p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg dark:hover:shadow-xl transition-all duration-200 p-6 border border-gray-200 dark:border-gray-700 flex flex-col h-full">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
@@ -43,13 +44,14 @@ export default function JobCard({ job, applicationStatus }) {
             {job.summary}
           </p>
         </div>
-        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full ml-4 transition-colors duration-200">
+        <span className="text-xs px-2 py-1 rounded-full ml-4 transition-colors duration-200 text-white" style={{backgroundColor: 'var(--site-primary)'}}>
           {job.category.name}
         </span>
       </div>
 
-      {/* Rest of your JobCard JSX with dark mode classes */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4 transition-colors duration-200">
+      {/* Main content area - takes up available space */}
+      <div className="flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4 transition-colors duration-200">
         <div>
           <span className="font-medium">Location:</span>
           <br />
@@ -108,8 +110,10 @@ export default function JobCard({ job, applicationStatus }) {
           {new Date(job.applicationDeadline).toLocaleDateString()}
         </div>
       )}
+      </div>
 
-      <div className="flex items-center justify-between">
+      {/* Button section - always at bottom */}
+      <div className="flex items-center justify-between mt-auto pt-4">
         <div className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
           Posted {new Date(job.postedAt).toLocaleDateString()}
           {session && applicationStatus?.hasApplied && (
@@ -128,18 +132,22 @@ export default function JobCard({ job, applicationStatus }) {
               Status: {applicationStatus.status}
             </span>
           )}
-          <Link
-            href={`/jobs/${job.slug}`}
-            className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-              session && applicationStatus?.hasApplied
-                ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                : "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
-            }`}
-          >
-            {session && applicationStatus?.hasApplied
-              ? "View Application"
-              : "View Details"}
-          </Link>
+          {session && applicationStatus?.hasApplied ? (
+            <Link
+              href={`/jobs/${job.slug}`}
+              className="px-4 py-2 rounded-md transition-colors duration-200 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              View Application
+            </Link>
+          ) : (
+            <ThemedLink
+              href={`/jobs/${job.slug}`}
+              className="px-4 py-2 rounded-md transition-colors duration-200 text-white"
+              variant="primary"
+            >
+              View Details
+            </ThemedLink>
+          )}
         </div>
       </div>
     </div>
