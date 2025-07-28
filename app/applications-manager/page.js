@@ -309,15 +309,15 @@ export default function ApplicationsManagerMain() {
         {/* Enhanced Header */}
         <motion.div
           variants={itemVariants}
-          className="flex items-center justify-between"
+          className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0"
         >
           <div>
-            <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold admin-text flex items-center space-x-2 lg:space-x-3">
               <motion.div
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6 }}
               >
-                <Target className="h-8 w-8 text-blue-600" />
+                <Target className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
               </motion.div>
               <span>Applications Manager</span>
             </h1>
@@ -325,7 +325,7 @@ export default function ApplicationsManagerMain() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="admin-text-light mt-2"
+              className="admin-text-light mt-2 text-sm lg:text-base"
             >
               Enterprise-level application management and hiring workflows
             </motion.p>
@@ -334,13 +334,13 @@ export default function ApplicationsManagerMain() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex items-center space-x-3"
+            className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3"
           >
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push("/applications-manager/pipeline")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
+              className={`flex items-center justify-center space-x-2 px-3 py-2 lg:px-4 lg:py-2 rounded-lg transition-colors text-sm ${getButtonClasses("secondary")}`}
             >
               <Filter className="h-4 w-4" />
               <span>Pipeline View</span>
@@ -349,7 +349,7 @@ export default function ApplicationsManagerMain() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push("/applications-manager/analytics")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("primary")}`}
+              className={`flex items-center justify-center space-x-2 px-3 py-2 lg:px-4 lg:py-2 rounded-lg transition-colors text-sm ${getButtonClasses("primary")}`}
             >
               <BarChart3 className="h-4 w-4" />
               <span>Analytics</span>
@@ -360,7 +360,7 @@ export default function ApplicationsManagerMain() {
         {/* Enhanced Key Metrics */}
         <motion.div
           variants={containerVariants}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
         >
           {[
             {
@@ -398,7 +398,7 @@ export default function ApplicationsManagerMain() {
               whileHover="hover"
               onHoverStart={() => setHoveredCard(metric.index)}
               onHoverEnd={() => setHoveredCard(null)}
-              className={`stat-card admin-card p-6 rounded-lg shadow cursor-pointer ${getStatCardClasses(metric.index).border} overflow-hidden relative`}
+              className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow cursor-pointer ${getStatCardClasses(metric.index).border} overflow-hidden relative`}
             >
               {/* Animated background effect */}
               <motion.div
@@ -409,15 +409,15 @@ export default function ApplicationsManagerMain() {
               />
 
               <div className="relative flex items-center justify-between">
-                <div>
+                <div className="flex-1 min-w-0">
                   <motion.div
                     initial={{ scale: 1 }}
                     animate={{ scale: hoveredCard === metric.index ? 1.05 : 1 }}
-                    className="text-3xl font-bold admin-text"
+                    className="text-xl sm:text-2xl lg:text-3xl font-bold admin-text"
                   >
                     {metric.value}
                   </motion.div>
-                  <div className="text-sm admin-text-light font-medium">
+                  <div className="text-xs sm:text-sm admin-text-light font-medium">
                     {metric.label}
                   </div>
                   <motion.div
@@ -431,12 +431,12 @@ export default function ApplicationsManagerMain() {
                   </motion.div>
                 </div>
                 <motion.div
-                  className={`stat-icon p-3 rounded-lg ${getStatCardClasses(metric.index).bg}`}
+                  className={`stat-icon p-2 lg:p-3 rounded-lg ${getStatCardClasses(metric.index).bg} flex-shrink-0`}
                   whileHover={{ rotate: 5, scale: 1.1 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   <metric.icon
-                    className={`h-6 w-6 ${getStatCardClasses(metric.index).icon}`}
+                    className={`h-5 w-5 lg:h-6 lg:w-6 ${getStatCardClasses(metric.index).icon}`}
                   />
                 </motion.div>
               </div>
@@ -445,18 +445,18 @@ export default function ApplicationsManagerMain() {
         </motion.div>
 
         {/* Enhanced Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Enhanced Top Performing Jobs */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <div className="admin-card rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b admin-border">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+              <div className="p-4 lg:p-6 border-b admin-border">
+                <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                  <h3 className="text-base lg:text-lg font-semibold admin-text flex items-center space-x-2">
                     <motion.div
                       whileHover={{ rotate: 180, scale: 1.1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Star className={`h-5 w-5 ${getStatCardClasses(2).icon}`} />
+                      <Star className={`h-4 w-4 lg:h-5 lg:w-5 ${getStatCardClasses(2).icon}`} />
                     </motion.div>
                     <span>Top Performing Jobs</span>
                   </h3>
@@ -466,7 +466,7 @@ export default function ApplicationsManagerMain() {
                     onClick={() =>
                       router.push("/applications-manager/analytics")
                     }
-                    className={`text-sm font-medium flex items-center space-x-1 ${getStatCardClasses(0).icon} hover:opacity-80 transition-opacity`}
+                    className={`text-sm font-medium flex items-center space-x-1 ${getStatCardClasses(0).icon} hover:opacity-80 transition-opacity self-start sm:self-auto`}
                   >
                     <span>View All</span>
                     <motion.div
@@ -478,7 +478,7 @@ export default function ApplicationsManagerMain() {
                   </motion.button>
                 </div>
               </div>
-              <div className="p-6">
+              <div className="p-4 lg:p-6">
                 {topJobs.length > 0 ? (
                   <motion.div
                     variants={containerVariants}
@@ -491,7 +491,7 @@ export default function ApplicationsManagerMain() {
                         key={job.id}
                         variants={jobCardVariants}
                         whileHover="hover"
-                        className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer overflow-hidden relative ${getStatCardClasses(index).bg}`}
+                        className={`flex items-center justify-between p-3 lg:p-4 rounded-lg transition-colors cursor-pointer overflow-hidden relative ${getStatCardClasses(index).bg}`}
                         onClick={() =>
                           router.push(`/applications-manager/jobs/${job.id}`)
                         }
@@ -504,29 +504,29 @@ export default function ApplicationsManagerMain() {
                           transition={{ duration: 0.3 }}
                         />
 
-                        <div className="relative flex-1">
-                          <div className="flex items-center space-x-3">
+                        <div className="relative flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 lg:space-x-3">
                             <motion.div
                               whileHover={{ scale: 1.1, rotate: 5 }}
-                              className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-bold"
+                              className="w-6 h-6 lg:w-8 lg:h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold flex-shrink-0"
                             >
                               {index + 1}
                             </motion.div>
-                            <div>
-                              <h4 className="font-medium admin-text">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium admin-text text-sm lg:text-base truncate">
                                 {job.title}
                               </h4>
-                              <p className="text-sm admin-text-light">
+                              <p className="text-xs lg:text-sm admin-text-light truncate">
                                 {job.department}
                               </p>
                             </div>
                           </div>
                         </div>
                         <motion.div
-                          className="relative text-right"
+                          className="relative text-right flex-shrink-0 ml-2"
                           whileHover={{ scale: 1.05 }}
                         >
-                          <div className="text-lg font-bold admin-text">
+                          <div className="text-base lg:text-lg font-bold admin-text">
                             {job.applicationCount}
                           </div>
                           <div className="text-xs admin-text-light">
@@ -564,8 +564,8 @@ export default function ApplicationsManagerMain() {
           {/* Enhanced Jobs Needing Attention */}
           <motion.div variants={itemVariants}>
             <div className="admin-card rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b admin-border">
-                <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+              <div className="p-4 lg:p-6 border-b admin-border">
+                <h3 className="text-base lg:text-lg font-semibold admin-text flex items-center space-x-2">
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0] }}
                     transition={{
@@ -574,12 +574,12 @@ export default function ApplicationsManagerMain() {
                       repeatDelay: 3,
                     }}
                   >
-                    <AlertTriangle className="h-5 w-5 text-orange-500" />
+                    <AlertTriangle className="h-4 w-4 lg:h-5 lg:w-5 text-orange-500" />
                   </motion.div>
                   <span>Needs Attention</span>
                 </h3>
               </div>
-              <div className="p-6">
+              <div className="p-4 lg:p-6">
                 {jobsNeedingAttention.length > 0 ? (
                   <motion.div
                     variants={containerVariants}
@@ -596,7 +596,7 @@ export default function ApplicationsManagerMain() {
                           y: -2,
                           boxShadow: "0 8px 25px -5px rgba(251, 146, 60, 0.3)",
                         }}
-                        className="p-3 border border-orange-200 bg-orange-50 rounded-lg cursor-pointer transition-colors overflow-hidden relative"
+                        className="p-3 lg:p-4 border border-orange-200 bg-orange-50 rounded-lg cursor-pointer transition-colors overflow-hidden relative"
                         onClick={() =>
                           router.push(`/applications-manager/jobs/${job.id}`)
                         }
@@ -609,17 +609,17 @@ export default function ApplicationsManagerMain() {
                         />
 
                         <div className="relative">
-                          <h4 className="font-medium text-orange-900">
+                          <h4 className="font-medium text-orange-900 text-sm lg:text-base truncate">
                             {job.title}
                           </h4>
-                          <p className="text-sm text-orange-700">
+                          <p className="text-xs lg:text-sm text-orange-700 truncate">
                             {job.department}
                           </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-orange-600">
+                          <div className="flex items-center justify-between mt-2 text-xs">
+                            <span className="text-orange-600">
                               {job.applicationCount} applications
                             </span>
-                            <span className="text-xs text-orange-600">
+                            <span className="text-orange-600">
                               {Math.floor(
                                 (Date.now() - new Date(job.createdAt)) /
                                   (1000 * 60 * 60 * 24)
@@ -651,16 +651,16 @@ export default function ApplicationsManagerMain() {
         {/* Enhanced Recent Activity */}
         <motion.div variants={itemVariants}>
           <div className="admin-card rounded-lg shadow overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold admin-text">
+            <div className="p-4 lg:p-6 border-b border-gray-200">
+              <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                <h3 className="text-base lg:text-lg font-semibold admin-text">
                   Recent Activity
                 </h3>
                 <motion.button
                   whileHover={{ scale: 1.05, x: 2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => router.push("/applications-manager/pipeline")}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1 self-start sm:self-auto"
                 >
                   <span>View Pipeline</span>
                   <motion.div
@@ -672,20 +672,20 @@ export default function ApplicationsManagerMain() {
                 </motion.button>
               </div>
             </div>
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               {recentActivity.length > 0 ? (
                 <motion.div
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4"
                 >
                   {recentActivity.map((application, index) => (
                     <motion.div
                       key={application.id}
                       variants={activityCardVariants}
                       whileHover="hover"
-                      className="p-4 border admin-border rounded-lg transition-all cursor-pointer overflow-hidden relative"
+                      className="p-3 lg:p-4 border admin-border rounded-lg transition-all cursor-pointer overflow-hidden relative"
                       onClick={() =>
                         router.push(
                           `/applications-manager/jobs/${application.jobId}`
@@ -701,11 +701,11 @@ export default function ApplicationsManagerMain() {
                       />
 
                       <div className="relative flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium admin-text text-sm">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium admin-text text-xs lg:text-sm truncate">
                             {application.name || "Anonymous"}
                           </h4>
-                          <p className="text-xs admin-text-light mt-1">
+                          <p className="text-xs admin-text-light mt-1 truncate">
                             {application.job?.title}
                           </p>
                           <div className="flex items-center space-x-2 mt-2">
@@ -753,7 +753,7 @@ export default function ApplicationsManagerMain() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6"
         >
           {[
             {
@@ -784,7 +784,7 @@ export default function ApplicationsManagerMain() {
               whileHover="hover"
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push(action.path)}
-              className="admin-card p-6 rounded-lg shadow text-left group overflow-hidden relative"
+              className="admin-card p-4 lg:p-6 rounded-lg shadow text-left group overflow-hidden relative"
             >
               {/* Animated background gradient */}
               <motion.div
@@ -794,31 +794,31 @@ export default function ApplicationsManagerMain() {
                 transition={{ duration: 0.3 }}
               />
 
-              <div className="relative flex items-center space-x-4">
+              <div className="relative flex items-center space-x-3 lg:space-x-4">
                 <motion.div
-                  className={`bg-${action.color}-100 p-3 rounded-lg group-hover:bg-${action.color}-200 transition-colors`}
+                  className={`bg-${action.color}-100 p-2 lg:p-3 rounded-lg group-hover:bg-${action.color}-200 transition-colors flex-shrink-0`}
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <action.icon className={`h-6 w-6 text-${action.color}-600`} />
+                  <action.icon className={`h-5 w-5 lg:h-6 lg:w-6 text-${action.color}-600`} />
                 </motion.div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <motion.h3
-                    className="font-semibold admin-text"
+                    className="font-semibold admin-text text-sm lg:text-base"
                     whileHover={{ scale: 1.02 }}
                   >
                     {action.title}
                   </motion.h3>
-                  <p className="text-sm admin-text-light">
+                  <p className="text-xs lg:text-sm admin-text-light">
                     {action.description}
                   </p>
                 </div>
                 <motion.div
-                  className="ml-auto"
+                  className="flex-shrink-0"
                   whileHover={{ x: 4, scale: 1.1 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <ArrowRight className="h-5 w-5 admin-text-light" />
+                  <ArrowRight className="h-4 w-4 lg:h-5 lg:w-5 admin-text-light" />
                 </motion.div>
               </div>
             </motion.button>

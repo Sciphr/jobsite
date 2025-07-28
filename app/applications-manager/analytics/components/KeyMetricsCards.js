@@ -67,7 +67,7 @@ const KeyMetricsCards = ({ analytics }) => {
   return (
     <motion.div
       variants={containerVariants}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
     >
       {metrics.map((metric) => (
         <motion.div
@@ -78,14 +78,14 @@ const KeyMetricsCards = ({ analytics }) => {
             y: -4,
             boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
           }}
-          className={`stat-card admin-card p-6 rounded-lg shadow ${getStatCardClasses(metric.index).border}`}
+          className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${getStatCardClasses(metric.index).border}`}
         >
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold admin-text">
+            <div className="flex-1 min-w-0">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold admin-text">
                 {metric.value}
               </div>
-              <div className="text-sm admin-text-light font-medium">
+              <div className="text-xs sm:text-sm admin-text-light font-medium">
                 {metric.title}
               </div>
               {metric.growth !== undefined && (
@@ -109,9 +109,9 @@ const KeyMetricsCards = ({ analytics }) => {
               )}
             </div>
             <div
-              className={`stat-icon p-3 rounded-lg ${getStatCardClasses(metric.index).bg}`}
+              className={`stat-icon p-2 lg:p-3 rounded-lg ${getStatCardClasses(metric.index).bg} flex-shrink-0`}
             >
-              <metric.icon className={`h-6 w-6 ${getStatCardClasses(metric.index).icon}`} />
+              <metric.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${getStatCardClasses(metric.index).icon}`} />
             </div>
           </div>
         </motion.div>

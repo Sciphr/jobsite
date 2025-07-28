@@ -203,9 +203,9 @@ export default function AnalyticsPage() {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="space-y-6"
+      className="space-y-4 lg:space-y-6"
     >
-      <motion.div className="space-y-6">
+      <motion.div className="space-y-4 lg:space-y-6">
         {/* Header with Filters */}
         <AnalyticsHeader
           timeRange={timeRange}
@@ -225,18 +225,18 @@ export default function AnalyticsPage() {
 
         {/* Main Content Based on Selected Metric */}
         {selectedMetric === "overview" && (
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             {/* Conversion Funnel and Status */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
               <ConversionFunnel analytics={analytics} selectedMetric={selectedMetric} />
-              <div className="space-y-6">
+              <div className="space-y-4 lg:space-y-6">
                 <StatusDistribution analytics={analytics} />
                 <QuickActions />
               </div>
             </div>
 
             {/* Performance Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               <JobPerformance analytics={analytics} selectedMetric={selectedMetric} />
               <DepartmentPerformance analytics={analytics} selectedMetric={selectedMetric} />
             </div>
@@ -252,7 +252,7 @@ export default function AnalyticsPage() {
         )}
 
         {selectedMetric === "performance" && (
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             <JobPerformance analytics={analytics} selectedMetric={selectedMetric} />
             <DepartmentPerformance analytics={analytics} selectedMetric={selectedMetric} />
           </div>
@@ -263,17 +263,17 @@ export default function AnalyticsPage() {
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-center space-x-4 pt-6">
+        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-center sm:space-y-0 sm:space-x-4 pt-6">
           <button
             onClick={() => router.push("/applications-manager")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("secondary")}`}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 lg:px-6 lg:py-3 rounded-lg text-sm ${getButtonClasses("secondary")}`}
           >
             <ArrowRight className="h-4 w-4 rotate-180" />
             <span>Back to Overview</span>
           </button>
           <button
             onClick={() => router.push("/applications-manager/pipeline")}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("primary")}`}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 lg:px-6 lg:py-3 rounded-lg text-sm ${getButtonClasses("primary")}`}
           >
             <Layers className="h-4 w-4" />
             <span>View Pipeline</span>

@@ -355,25 +355,25 @@ export default function PipelineView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center justify-between"
+        className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0"
       >
         <div>
-          <h1 className="text-3xl font-bold admin-text flex items-center space-x-3">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold admin-text flex items-center space-x-2 lg:space-x-3">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.6 }}
             >
-              <Target className="h-8 w-8 text-blue-600" />
+              <Target className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600" />
             </motion.div>
             <span>Application Pipeline</span>
           </h1>
-          <p className="admin-text-light mt-2">
+          <p className="admin-text-light mt-2 text-sm lg:text-base">
             Kanban-style workflow management for hiring process
           </p>
         </div>
@@ -382,7 +382,7 @@ export default function PipelineView() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => router.push("/applications-manager")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${getButtonClasses("secondary")}`}
+            className={`flex items-center space-x-2 px-3 py-2 lg:px-4 lg:py-2 rounded-lg transition-colors text-sm ${getButtonClasses("secondary")}`}
           >
             <ArrowRight className="h-4 w-4 rotate-180" />
             <span>Back to Overview</span>
@@ -395,7 +395,7 @@ export default function PipelineView() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="admin-card p-6 rounded-lg shadow"
+        className="admin-card p-4 lg:p-6 rounded-lg shadow"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
@@ -525,18 +525,18 @@ export default function PipelineView() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="admin-card rounded-xl shadow-lg p-12 text-center min-h-[600px] flex flex-col justify-center"
+          className="admin-card rounded-xl shadow-lg p-6 lg:p-12 text-center min-h-[400px] lg:min-h-[600px] flex flex-col justify-center"
         >
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="mx-auto mb-6 w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center"
+            className="mx-auto mb-4 lg:mb-6 w-16 h-16 lg:w-24 lg:h-24 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center"
           >
-            <Briefcase className="h-12 w-12 text-white" />
+            <Briefcase className="h-8 w-8 lg:h-12 lg:w-12 text-white" />
           </motion.div>
-          <h3 className="text-2xl font-bold admin-text mb-4">
+          <h3 className="text-lg lg:text-2xl font-bold admin-text mb-3 lg:mb-4">
             Choose a Job to View Pipeline
           </h3>
-          <p className="admin-text-light mb-8 max-w-md mx-auto">
+          <p className="admin-text-light mb-6 lg:mb-8 max-w-md mx-auto text-sm lg:text-base">
             Select a specific job from the dropdown above to see its application pipeline,
             or choose "All Jobs" to view applications across all positions.
           </p>
@@ -544,9 +544,9 @@ export default function PipelineView() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowJobFilter(true)}
-            className={`mx-auto flex items-center space-x-2 px-6 py-3 rounded-lg ${getButtonClasses("primary")}`}
+            className={`mx-auto flex items-center space-x-2 px-4 py-2 lg:px-6 lg:py-3 rounded-lg text-sm ${getButtonClasses("primary")}`}
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-4 w-4 lg:h-5 lg:w-5" />
             <span>Select Job</span>
           </motion.button>
         </motion.div>
@@ -556,7 +556,7 @@ export default function PipelineView() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[600px]"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
         >
         {applicationsByStatus.stages.map((stage, stageIndex) => (
           <motion.div
@@ -600,7 +600,7 @@ export default function PipelineView() {
             </motion.div>
 
             {/* Applications List */}
-            <div className="p-3 space-y-3 max-h-[500px] overflow-y-auto overflow-x-hidden">
+            <div className="p-2 lg:p-3 space-y-2 lg:space-y-3 max-h-[400px] lg:max-h-[500px] overflow-y-auto overflow-x-hidden">
               <AnimatePresence mode="popLayout">
                 {applicationsByStatus.grouped[stage.id]?.map(
                   (application, index) => (
@@ -627,7 +627,7 @@ export default function PipelineView() {
                         zIndex: 1000,
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                       }}
-                      className={`bg-white border border-gray-200 rounded-lg p-4 transition-all cursor-move group ${
+                      className={`bg-white border border-gray-200 rounded-lg p-3 lg:p-4 transition-all cursor-move group ${
                         draggedApplication?.id === application.id
                           ? "opacity-50"
                           : ""
