@@ -4,6 +4,7 @@
 import Pagination from "./components/ui/Pagination";
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
@@ -22,7 +23,6 @@ import {
   Edit3,
   Copy,
   Trash2,
-  MoreHorizontal,
   MapPin,
   Clock,
   Users,
@@ -36,10 +36,17 @@ import {
   Pause,
   AlertCircle,
   Loader2,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  UserCheck,
+  ClipboardList,
 } from "lucide-react";
+import { exportJobsToExcel, exportJobsToCSV } from "@/app/utils/jobsExport";
 
 export default function AdminJobs() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
   // Use React Query hooks
@@ -165,6 +172,17 @@ export default function AdminJobs() {
     }
   };
 
+  // ✅ NEW: View applications for a specific job
+  const viewJobApplications = (jobId) => {
+    router.push(`/admin/applications?job=${jobId}`);
+  };
+
+  // ✅ NEW: Clone and edit job (open create page with pre-filled data)
+  const cloneAndEditJob = (job) => {
+    // Simply pass the job ID as a URL parameter
+    router.push(`/admin/jobs/create?clone=${job.id}`);
+  };
+
   const deleteJob = async (jobId) => {
     if (
       !confirm(
@@ -195,6 +213,57 @@ export default function AdminJobs() {
       setSelectedJobs((prev) => [...prev, jobId]);
     } else {
       setSelectedJobs((prev) => prev.filter((id) => id !== jobId));
+    }
+  };
+
+  // ✅ NEW: Bulk action handlers
+  const handleBulkStatusUpdate = async (newStatus) => {
+    if (selectedJobs.length === 0) return;
+
+    const action = newStatus.toLowerCase();
+    const confirmMessage = `Are you sure you want to ${action} ${selectedJobs.length} job${selectedJobs.length !== 1 ? 's' : ''}?`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Update each selected job
+      const updatePromises = selectedJobs.map(jobId =>
+        updateJobMutation.mutateAsync({
+          jobId,
+          jobData: { status: newStatus },
+        })
+      );
+
+      await Promise.all(updatePromises);
+      
+      // Clear selection after successful update
+      setSelectedJobs([]);
+    } catch (error) {
+      console.error(`Error updating jobs to ${newStatus}:`, error);
+      alert(`Failed to update some jobs. Please try again.`);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedJobs.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${selectedJobs.length} job${selectedJobs.length !== 1 ? 's' : ''}? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Delete each selected job
+      const deletePromises = selectedJobs.map(jobId =>
+        deleteJobMutation.mutateAsync(jobId)
+      );
+
+      await Promise.all(deletePromises);
+      
+      // Clear selection after successful deletion
+      setSelectedJobs([]);
+    } catch (error) {
+      console.error('Error deleting jobs:', error);
+      alert('Failed to delete some jobs. Please try again.');
     }
   };
 
@@ -248,6 +317,22 @@ export default function AdminJobs() {
     [jobs]
   );
   const statusOptions = ["Active", "Draft", "Paused", "Closed"];
+
+  // ✅ NEW: Export functionality
+  const handleExport = (format) => {
+    const filters = {
+      searchTerm,
+      statusFilter: statusFilter === 'all' ? null : statusFilter,
+      categoryFilter: categoryFilter === 'all' ? null : categoryFilter,
+      departmentFilter: departmentFilter === 'all' ? null : departmentFilter
+    };
+
+    if (format === 'excel') {
+      exportJobsToExcel(filteredJobs, filters, categories);
+    } else if (format === 'csv') {
+      exportJobsToCSV(filteredJobs, filters, categories);
+    }
+  };
 
   // ✅ ADD this instead (after your hooks but before the return):
   const memoizedThemeData = useMemo(() => {
@@ -315,6 +400,34 @@ export default function AdminJobs() {
           </p>
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+          {/* ✅ NEW: Export Dropdown */}
+          <div className="relative group">
+            <button
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")}`}
+            >
+              <FileDown className="h-4 w-4" />
+              <span>Export</span>
+            </button>
+            <div className="absolute right-0 top-10 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+              <div className="p-2">
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  <span>Export to Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <span>Export to CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={() => refetch()}
             disabled={isLoading}
@@ -465,14 +578,35 @@ export default function AdminJobs() {
               selected
             </span>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                Activate
+              <button 
+                onClick={() => handleBulkStatusUpdate('Active')}
+                disabled={updateJobMutation.isLoading || deleteJobMutation.isLoading}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {updateJobMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Activate</span>
               </button>
-              <button className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700">
-                Pause
+              <button 
+                onClick={() => handleBulkStatusUpdate('Paused')}
+                disabled={updateJobMutation.isLoading || deleteJobMutation.isLoading}
+                className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {updateJobMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Pause</span>
               </button>
-              <button className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-                Delete
+              <button 
+                onClick={handleBulkDelete}
+                disabled={updateJobMutation.isLoading || deleteJobMutation.isLoading}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {deleteJobMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Delete</span>
               </button>
             </div>
           </div>
@@ -565,14 +699,6 @@ export default function AdminJobs() {
                     </span>
                   </div>
 
-                  {/* Views */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm admin-text-light">Views:</span>
-                    <span className="text-sm font-medium admin-text flex items-center space-x-1">
-                      <Eye className="h-4 w-4 text-gray-400" />
-                      <span>{job.viewCount}</span>
-                    </span>
-                  </div>
 
                   {/* Created Date */}
                   <div className="flex items-center justify-between">
@@ -607,6 +733,20 @@ export default function AdminJobs() {
                       <Edit3 className="h-4 w-4" />
                     </Link>
                     <button
+                      onClick={() => viewJobApplications(job.id)}
+                      className="p-3 sm:p-2 text-gray-400 hover:text-indigo-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
+                      title="View applications"
+                    >
+                      <UserCheck className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => cloneAndEditJob(job)}
+                      className="p-3 sm:p-2 text-gray-400 hover:text-cyan-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
+                      title="Clone and edit"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => duplicateJob(job.id)}
                       className="p-3 sm:p-2 text-gray-400 hover:text-purple-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
                       title="Duplicate job"
@@ -632,6 +772,18 @@ export default function AdminJobs() {
                         }`}
                       />
                     </button>
+                    <button
+                      onClick={() => deleteJob(job.id)}
+                      className="p-3 sm:p-2 text-gray-400 hover:text-red-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
+                      title="Delete job"
+                      disabled={deleteJobMutation.isLoading}
+                    >
+                      {deleteJobMutation.isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                   <div className="flex items-center space-x-2">
                     <select
@@ -652,42 +804,6 @@ export default function AdminJobs() {
                         </option>
                       ))}
                     </select>
-                    <div className="relative group">
-                      <button
-                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                        title="More actions"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                      <div className="absolute right-0 top-8 w-40 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                        <Link
-                          href={`/admin/jobs/${job.id}/edit`}
-                          className="w-full px-3 py-2 text-left text-sm admin-text-light hover:bg-gray-50 rounded-t-lg flex items-center space-x-2"
-                        >
-                          <Edit3 className="h-3 w-3" />
-                          <span>Edit Job</span>
-                        </Link>
-                        <button
-                          onClick={() => duplicateJob(job.id)}
-                          className="w-full px-3 py-2 text-left text-sm admin-text-light hover:bg-gray-50 flex items-center space-x-2"
-                        >
-                          <Copy className="h-3 w-3" />
-                          <span>Duplicate</span>
-                        </button>
-                        <button
-                          onClick={() => deleteJob(job.id)}
-                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-lg flex items-center space-x-2"
-                          disabled={deleteJobMutation.isLoading}
-                        >
-                          {deleteJobMutation.isLoading ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

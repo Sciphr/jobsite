@@ -103,7 +103,6 @@ export async function getJobSettings() {
 export async function getNotificationSettings() {
   const keys = [
     "email_new_applications",
-    "email_job_published",
     "notification_email",
     "application_confirmation_email",
     "weekly_digest_enabled",

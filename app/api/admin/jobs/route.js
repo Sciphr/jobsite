@@ -286,34 +286,6 @@ export async function POST(req) {
       },
     });
 
-    const jobPublishedEmailEnabled = await getSystemSetting(
-      "email_job_published",
-      true
-    );
-    if (jobPublishedEmailEnabled && newJob.status === "Active") {
-      console.log("📧 Sending job published notification...");
-
-      const creatorName = newJob.creator
-        ? `${newJob.creator.firstName} ${newJob.creator.lastName}`.trim()
-        : "Unknown";
-
-      const emailResult = await sendJobPublishedNotification({
-        jobTitle: newJob.title,
-        jobId: newJob.id,
-        creatorName,
-      });
-
-      if (emailResult.success) {
-        console.log("✅ Job published notification sent successfully");
-      } else {
-        console.error(
-          "❌ Failed to send job published notification:",
-          emailResult.error
-        );
-        // Don't fail the job creation if email fails - just log it
-      }
-    }
-
     // Log successful job creation
     await logAuditEvent(
       {
@@ -347,7 +319,6 @@ export async function POST(req) {
               ? `${newJob.salaryMin}-${newJob.salaryMax} ${newJob.salaryCurrency}`
               : null,
           featured: newJob.featured,
-          emailSent: jobPublishedEmailEnabled && newJob.status === "Active",
         },
         ...requestContext,
       },

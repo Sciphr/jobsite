@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   useApplications,
@@ -43,12 +43,13 @@ import { exportApplicationsToExcel, exportApplicationsToCSV } from "@/app/utils/
 export default function AdminApplications() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const queryClient = useQueryClient();
   const updateApplicationMutation = useUpdateApplicationStatus();
   const deleteApplicationMutation = useDeleteApplication();
 
-  // ✅ FIXED: Remove array-dependent useEffect
+  // ✅ FIXED: Remove array-dependent useEffect + Added URL parameter support
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
@@ -71,6 +72,23 @@ export default function AdminApplications() {
   } = useApplications();
   const { data: jobs = [] } = useJobsSimple();
   const [refreshing, setRefreshing] = useState(false);
+
+  // ✅ NEW: Initialize filters from URL parameters
+  useEffect(() => {
+    const jobParam = searchParams.get('job');
+    const statusParam = searchParams.get('status');
+    const searchParam = searchParams.get('search');
+    
+    if (jobParam) {
+      setJobFilter(jobParam);
+    }
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+    if (searchParam) {
+      setSearchTerm(searchParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (showApplicationModal) {

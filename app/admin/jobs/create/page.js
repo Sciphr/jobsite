@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import JobForm from "../components/JobForm";
 import {
   Briefcase,
@@ -16,11 +16,14 @@ import {
 export default function CreateJobPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [permissionError, setPermissionError] = useState(null);
+  const [clonedJobData, setClonedJobData] = useState(null);
+  const [loadingCloneData, setLoadingCloneData] = useState(false);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -41,6 +44,41 @@ export default function CreateJobPage() {
 
     setLoading(false);
   }, [session, status, router]);
+
+  // ✅ NEW: Fetch job data for cloning
+  useEffect(() => {
+    const cloneJobId = searchParams.get('clone');
+    
+    if (cloneJobId && cloneJobId !== 'true' && !clonedJobData && !loadingCloneData) {
+      console.log('Fetching job data for cloning:', cloneJobId);
+      setLoadingCloneData(true);
+      
+      fetch(`/api/admin/jobs/${cloneJobId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data) {
+            console.log('Fetched job data for cloning:', data);
+            // Prepare clone data
+            const cloneData = {
+              ...data,
+              title: `${data.title} (Copy)`,
+              slug: `${data.slug}-copy-${Date.now()}`,
+              id: undefined,
+              createdAt: undefined,
+              updatedAt: undefined,
+              applicationCount: undefined,
+            };
+            setClonedJobData(cloneData);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching job for cloning:', error);
+        })
+        .finally(() => {
+          setLoadingCloneData(false);
+        });
+    }
+  }, [searchParams, clonedJobData, loadingCloneData]);
 
   const handleSubmit = async (formData) => {
     setSubmitting(true);
@@ -96,8 +134,8 @@ export default function CreateJobPage() {
     router.push("/admin/jobs");
   };
 
-  // Show loading state while checking session
-  if (status === "loading" || loading) {
+  // Show loading state while checking session or loading clone data
+  if (status === "loading" || loading || loadingCloneData) {
     return (
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -107,7 +145,10 @@ export default function CreateJobPage() {
               Loading...
             </h2>
             <p className="text-gray-600">
-              Checking your permissions to create jobs
+              {loadingCloneData 
+                ? "Loading job data for cloning..." 
+                : "Checking your permissions to create jobs"
+              }
             </p>
           </div>
         </div>
@@ -228,9 +269,14 @@ export default function CreateJobPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Job</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {clonedJobData ? "Clone Job" : "Create New Job"}
+          </h1>
           <p className="text-gray-600 mt-1">
-            Fill out the form below to create a new job posting
+            {clonedJobData 
+              ? "Review and modify the cloned job information below"
+              : "Fill out the form below to create a new job posting"
+            }
           </p>
         </div>
       </div>
@@ -281,12 +327,13 @@ export default function CreateJobPage() {
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-medium text-blue-900 mb-1">
-              Creating a new job posting
+              {clonedJobData ? "Cloning job posting" : "Creating a new job posting"}
             </h3>
             <p className="text-sm text-blue-700">
-              Fill out all required fields below. You can save as a draft and
-              publish later, or set the status to "Active" to publish
-              immediately.
+              {clonedJobData 
+                ? "The form has been pre-filled with data from the original job. Review and modify as needed before creating."
+                : "Fill out all required fields below. You can save as a draft and publish later, or set the status to \"Active\" to publish immediately."
+              }
             </p>
           </div>
         </div>
@@ -295,6 +342,7 @@ export default function CreateJobPage() {
       {/* Job Form */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <JobForm
+          initialData={clonedJobData}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

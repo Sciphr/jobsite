@@ -600,6 +600,108 @@ export const useDeleteApplication = () => {
   });
 };
 
+// ✅ NEW: User mutation hooks
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, userData }) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update user");
+      }
+
+      return response.json();
+    },
+    onMutate: async ({ userId, userData }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin", "users"] });
+      
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(["admin", "users"]);
+      
+      // Optimistically update the users list cache
+      queryClient.setQueryData(["admin", "users"], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((user) =>
+          user.id === userId ? { ...user, ...userData } : user
+        );
+      });
+
+      // Also update individual user cache if it exists
+      queryClient.setQueryData(
+        ["admin", "user", userId],
+        (oldData) => oldData ? { ...oldData, ...userData } : oldData
+      );
+      
+      return { previousUsers };
+    },
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousUsers) {
+        queryClient.setQueryData(["admin", "users"], context.previousUsers);
+      }
+    },
+    onSettled: () => {
+      // Always refetch dashboard stats to keep them in sync
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete user");
+      }
+
+      return response.json();
+    },
+    onMutate: async (userId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin", "users"] });
+      
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(["admin", "users"]);
+      
+      // Optimistically remove the user from cache
+      queryClient.setQueryData(["admin", "users"], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.filter((user) => user.id !== userId);
+      });
+
+      // Remove individual user cache
+      queryClient.removeQueries({ queryKey: ["admin", "user", userId] });
+      
+      return { previousUsers };
+    },
+    onError: (err, userId, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousUsers) {
+        queryClient.setQueryData(["admin", "users"], context.previousUsers);
+      }
+    },
+    onSettled: () => {
+      // Always refetch dashboard stats to keep them in sync
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+  });
+};
+
 // Hook for getting cached data without triggering fetch
 export const useCachedAdminData = () => {
   const queryClient = useQueryClient();

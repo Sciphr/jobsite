@@ -4,7 +4,10 @@ import { appPrisma } from "../../../../lib/prisma";
 
 import { sendJobPublishedNotification } from "../../../../lib/email";
 import { getSystemSetting } from "../../../../lib/settings";
-import { logAuditEvent, calculateChanges } from "../../../../../lib/auditMiddleware";
+import {
+  logAuditEvent,
+  calculateChanges,
+} from "../../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../../lib/auditLog";
 
 export async function GET(req, { params }) {
@@ -112,24 +115,27 @@ export async function PATCH(req, { params }) {
         applicationDeadline: true,
         startDate: true,
         postedAt: true,
-        autoExpiresAt: true
-      }
+        autoExpiresAt: true,
+      },
     });
 
     if (!currentJob) {
       // Log failed attempt to update non-existent job
-      await logAuditEvent({
-        eventType: 'UPDATE',
-        category: 'JOB',
-        entityType: 'job',
-        entityId: id,
-        action: 'Failed to update job - Job not found',
-        description: `Attempted to update non-existent job with ID: ${id}`,
-        severity: 'warning',
-        status: 'failure',
-        tags: ['job', 'update', 'not_found'],
-        ...requestContext
-      }, req);
+      await logAuditEvent(
+        {
+          eventType: "UPDATE",
+          category: "JOB",
+          entityType: "job",
+          entityId: id,
+          action: "Failed to update job - Job not found",
+          description: `Attempted to update non-existent job with ID: ${id}`,
+          severity: "warning",
+          status: "failure",
+          tags: ["job", "update", "not_found"],
+          ...requestContext,
+        },
+        req
+      );
 
       return new Response(JSON.stringify({ message: "Job not found" }), {
         status: 404,
@@ -280,78 +286,43 @@ export async function PATCH(req, { params }) {
     const wasJustPublished =
       updateData.status === "Active" && updateData.postedAt;
 
-    // Send job published notification (if enabled and job was just published)
-    const jobPublishedEmailEnabled = await getSystemSetting(
-      "email_job_published",
-      true
-    );
-    if (jobPublishedEmailEnabled && wasJustPublished) {
-      console.log("📧 Sending job published notification for status update...");
-
-      let creatorName = "Unknown";
-      if (updatedJob.createdBy) {
-        try {
-          const creator = await appPrisma.user.findUnique({
-            where: { id: updatedJob.createdBy },
-            select: { firstName: true, lastName: true },
-          });
-          if (creator) {
-            creatorName = `${creator.firstName} ${creator.lastName}`.trim();
-          }
-        } catch (error) {
-          console.warn(
-            "Could not fetch creator for job published notification"
-          );
-        }
-      }
-
-      const emailResult = await sendJobPublishedNotification({
-        jobTitle: updatedJob.title,
-        jobId: updatedJob.id,
-        creatorName,
-      });
-
-      if (emailResult.success) {
-        console.log("✅ Job published notification sent successfully");
-      } else {
-        console.error(
-          "❌ Failed to send job published notification:",
-          emailResult.error
-        );
-        // Don't fail the job update if email fails - just log it
-      }
-    }
-
     // Calculate what changed for audit log
     const changes = calculateChanges(currentJob, updateData);
     const changedFields = Object.keys(changes || {});
-    
+
     // Log successful job update
-    await logAuditEvent({
-      eventType: 'UPDATE',
-      category: 'JOB',
-      subcategory: changedFields.includes('status') && updateData.status === 'Active' ? 'JOB_PUBLISH' : 
-                   changedFields.includes('featured') ? 'JOB_FEATURE' : null,
-      entityType: 'job',
-      entityId: id,
-      entityName: currentJob.title,
-      action: `Job updated: ${changedFields.join(', ')}`,
-      description: `Updated job posting: ${currentJob.title}. Changed fields: ${changedFields.join(', ')}`,
-      oldValues: currentJob,
-      newValues: updateData,
-      changes,
-      relatedJobId: id,
-      severity: changedFields.includes('status') ? 'warning' : 'info',
-      status: 'success',
-      tags: ['job', 'update', 'admin_action', ...changedFields],
-      metadata: {
-        changedFields,
-        wasJustPublished,
-        emailSent: jobPublishedEmailEnabled && wasJustPublished,
-        category: updatedJob.category?.name
+    await logAuditEvent(
+      {
+        eventType: "UPDATE",
+        category: "JOB",
+        subcategory:
+          changedFields.includes("status") && updateData.status === "Active"
+            ? "JOB_PUBLISH"
+            : changedFields.includes("featured")
+              ? "JOB_FEATURE"
+              : null,
+        entityType: "job",
+        entityId: id,
+        entityName: currentJob.title,
+        action: `Job updated: ${changedFields.join(", ")}`,
+        description: `Updated job posting: ${currentJob.title}. Changed fields: ${changedFields.join(", ")}`,
+        oldValues: currentJob,
+        newValues: updateData,
+        changes,
+        relatedJobId: id,
+        severity: changedFields.includes("status") ? "warning" : "info",
+        status: "success",
+        tags: ["job", "update", "admin_action", ...changedFields],
+        metadata: {
+          changedFields,
+          wasJustPublished,
+
+          category: updatedJob.category?.name,
+        },
+        ...requestContext,
       },
-      ...requestContext
-    }, req);
+      req
+    );
 
     // Separately fetch creator if exists
     let creator = null;
@@ -378,22 +349,25 @@ export async function PATCH(req, { params }) {
     console.error("Job update error:", error);
 
     // Log the error
-    await logAuditEvent({
-      eventType: 'ERROR',
-      category: 'JOB',
-      entityType: 'job',
-      entityId: id,
-      action: 'Failed to update job',
-      description: `Job update failed: ${error.message}`,
-      severity: 'error',
-      status: 'failure',
-      tags: ['job', 'update', 'error'],
-      metadata: {
-        errorCode: error.code,
-        errorMessage: error.message,
-        attempted: body
-      }
-    }, req);
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "JOB",
+        entityType: "job",
+        entityId: id,
+        action: "Failed to update job",
+        description: `Job update failed: ${error.message}`,
+        severity: "error",
+        status: "failure",
+        tags: ["job", "update", "error"],
+        metadata: {
+          errorCode: error.code,
+          errorMessage: error.message,
+          attempted: body,
+        },
+      },
+      req
+    );
 
     if (error.code === "P2025") {
       return new Response(JSON.stringify({ message: "Job not found" }), {
@@ -425,7 +399,7 @@ export async function DELETE(req, { params }) {
 
   try {
     const requestContext = extractRequestContext(req);
-    
+
     // Check if job has applications and get job data for audit
     const jobWithApplications = await appPrisma.job.findUnique({
       where: { id },
@@ -436,18 +410,21 @@ export async function DELETE(req, { params }) {
 
     if (!jobWithApplications) {
       // Log failed attempt to delete non-existent job
-      await logAuditEvent({
-        eventType: 'DELETE',
-        category: 'JOB',
-        entityType: 'job',
-        entityId: id,
-        action: 'Failed to delete job - Job not found',
-        description: `Attempted to delete non-existent job with ID: ${id}`,
-        severity: 'warning',
-        status: 'failure',
-        tags: ['job', 'delete', 'not_found'],
-        ...requestContext
-      }, req);
+      await logAuditEvent(
+        {
+          eventType: "DELETE",
+          category: "JOB",
+          entityType: "job",
+          entityId: id,
+          action: "Failed to delete job - Job not found",
+          description: `Attempted to delete non-existent job with ID: ${id}`,
+          severity: "warning",
+          status: "failure",
+          tags: ["job", "delete", "not_found"],
+          ...requestContext,
+        },
+        req
+      );
 
       return new Response(JSON.stringify({ message: "Job not found" }), {
         status: 404,
@@ -472,32 +449,35 @@ export async function DELETE(req, { params }) {
     });
 
     // Log successful job deletion
-    await logAuditEvent({
-      eventType: 'DELETE',
-      category: 'JOB',
-      entityType: 'job',
-      entityId: id,
-      entityName: jobWithApplications.title,
-      action: 'Job deleted',
-      description: `Deleted job posting: ${jobWithApplications.title} (${jobWithApplications.department})`,
-      oldValues: {
-        title: jobWithApplications.title,
-        status: jobWithApplications.status,
-        department: jobWithApplications.department,
-        applicationsCount: jobWithApplications.applications.length
+    await logAuditEvent(
+      {
+        eventType: "DELETE",
+        category: "JOB",
+        entityType: "job",
+        entityId: id,
+        entityName: jobWithApplications.title,
+        action: "Job deleted",
+        description: `Deleted job posting: ${jobWithApplications.title} (${jobWithApplications.department})`,
+        oldValues: {
+          title: jobWithApplications.title,
+          status: jobWithApplications.status,
+          department: jobWithApplications.department,
+          applicationsCount: jobWithApplications.applications.length,
+        },
+        // Don't set relatedJobId for deletions since the job no longer exists
+        severity: "warning",
+        status: "success",
+        tags: ["job", "delete", "admin_action"],
+        metadata: {
+          deletedApplications: jobWithApplications.applications.length,
+          jobStatus: jobWithApplications.status,
+          department: jobWithApplications.department,
+          featured: jobWithApplications.featured,
+        },
+        ...requestContext,
       },
-      relatedJobId: id,
-      severity: 'warning',
-      status: 'success',
-      tags: ['job', 'delete', 'admin_action'],
-      metadata: {
-        deletedApplications: jobWithApplications.applications.length,
-        jobStatus: jobWithApplications.status,
-        department: jobWithApplications.department,
-        featured: jobWithApplications.featured
-      },
-      ...requestContext
-    }, req);
+      req
+    );
 
     return new Response(
       JSON.stringify({ message: "Job deleted successfully" }),
@@ -509,21 +489,24 @@ export async function DELETE(req, { params }) {
     console.error("Job deletion error:", error);
 
     // Log the error
-    await logAuditEvent({
-      eventType: 'ERROR',
-      category: 'JOB',
-      entityType: 'job',
-      entityId: id,
-      action: 'Failed to delete job',
-      description: `Job deletion failed: ${error.message}`,
-      severity: 'error',
-      status: 'failure',
-      tags: ['job', 'delete', 'error'],
-      metadata: {
-        errorCode: error.code,
-        errorMessage: error.message
-      }
-    }, req);
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "JOB",
+        entityType: "job",
+        entityId: id,
+        action: "Failed to delete job",
+        description: `Job deletion failed: ${error.message}`,
+        severity: "error",
+        status: "failure",
+        tags: ["job", "delete", "error"],
+        metadata: {
+          errorCode: error.code,
+          errorMessage: error.message,
+        },
+      },
+      req
+    );
 
     if (error.code === "P2025") {
       return new Response(JSON.stringify({ message: "Job not found" }), {

@@ -226,13 +226,102 @@ export async function GET(req) {
 
     const avgTimeToHire =
       hiredApplications.length > 0
-        ? hiredApplications.reduce((acc, app) => {
+        ? Math.round(hiredApplications.reduce((acc, app) => {
             const days = Math.ceil(
               (app.updatedAt - app.appliedAt) / (1000 * 60 * 60 * 24)
             );
             return acc + days;
-          }, 0) / hiredApplications.length
-        : 18; // fallback
+          }, 0) / hiredApplications.length)
+        : 0; // Use 0 when no data
+
+    // Get additional real metrics
+    const [
+      totalEmails,
+      totalInterviews,
+      activeJobs,
+      expiredJobs,
+      totalSavedJobs,
+      featuredJobs,
+      emailCampaigns,
+      totalResumes,
+      auditLogs
+    ] = await Promise.all([
+      appPrisma.email.count({
+        where: {
+          sent_at: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.interview.count({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.job.count({
+        where: {
+          status: "Active",
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.job.count({
+        where: {
+          status: "Closed",
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.savedJob.count({
+        where: {
+          savedAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.job.count({
+        where: {
+          featured: true,
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.emailCampaign.count({
+        where: {
+          created_at: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.userResume.count({
+        where: {
+          uploadedAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+      appPrisma.auditLog.count({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        },
+      }),
+    ]);
 
     // Get application status distribution
     const applicationStatus = await appPrisma.application.groupBy({
@@ -273,8 +362,8 @@ export async function GET(req) {
       views: job.viewCount || 0,
       conversionRate:
         job.viewCount > 0
-          ? ((job.applicationCount / job.viewCount) * 100).toFixed(1)
-          : "0",
+          ? ((job.applicationCount / job.viewCount) * 100).toFixed(2)
+          : "0.00",
     }));
 
     // Get conversion funnel data
@@ -303,37 +392,37 @@ export async function GET(req) {
       {
         stage: "Job Views",
         count: totalViews,
-        percentage: 100,
+        percentage: 100.00,
       },
       {
         stage: "Started Application",
         count: startedApplications,
         percentage:
           totalViews > 0
-            ? ((startedApplications / totalViews) * 100).toFixed(1)
-            : 0,
+            ? parseFloat(((startedApplications / totalViews) * 100).toFixed(2))
+            : 0.00,
       },
       {
         stage: "Completed Application",
         count: totalApplications,
         percentage:
           startedApplications > 0
-            ? ((totalApplications / startedApplications) * 100).toFixed(1)
-            : 0,
+            ? parseFloat(((totalApplications / startedApplications) * 100).toFixed(2))
+            : 0.00,
       },
       {
         stage: "Interview",
         count: interviews,
         percentage:
           totalApplications > 0
-            ? ((interviews / totalApplications) * 100).toFixed(1)
-            : 0,
+            ? parseFloat(((interviews / totalApplications) * 100).toFixed(2))
+            : 0.00,
       },
       {
         stage: "Hired",
         count: hired,
         percentage:
-          interviews > 0 ? ((hired / interviews) * 100).toFixed(1) : 0,
+          interviews > 0 ? parseFloat(((hired / interviews) * 100).toFixed(2)) : 0.00,
       },
     ];
 
@@ -344,13 +433,22 @@ export async function GET(req) {
         totalApplications,
         totalUsers,
         totalViews: totalViews,
-        jobsChange: calculateChange(totalJobs, previousJobs),
-        applicationsChange: calculateChange(
+        totalEmails,
+        totalInterviews,
+        activeJobs,
+        expiredJobs,
+        totalSavedJobs,
+        featuredJobs,
+        emailCampaigns,
+        totalResumes,
+        auditLogs,
+        jobsChange: parseFloat(calculateChange(totalJobs, previousJobs).toFixed(2)),
+        applicationsChange: parseFloat(calculateChange(
           totalApplications,
           previousApplications
-        ),
-        usersChange: calculateChange(totalUsers, previousUsers),
-        viewsChange: 15.2, // Mock data for now
+        ).toFixed(2)),
+        usersChange: parseFloat(calculateChange(totalUsers, previousUsers).toFixed(2)),
+        viewsChange: 0.00, // No previous view data tracking for now
       },
       applicationsByDay: dailyData,
       jobsByDepartment: jobsByDepartment.map((dept) => ({
@@ -366,13 +464,23 @@ export async function GET(req) {
       topJobs: topJobsWithConversion,
       conversionFunnel,
       additionalMetrics: {
-        avgTimeToHire: 18, // You can calculate this from your hired applications
+        avgTimeToHire,
         successRate:
           totalApplications > 0
-            ? ((hired / totalApplications) * 100).toFixed(1)
-            : 0,
+            ? parseFloat(((hired / totalApplications) * 100).toFixed(2))
+            : 0.00,
         avgApplicationsPerJob:
-          totalJobs > 0 ? (totalApplications / totalJobs).toFixed(1) : 0,
+          totalJobs > 0 ? parseFloat((totalApplications / totalJobs).toFixed(2)) : 0.00,
+        interviewRate:
+          totalApplications > 0
+            ? parseFloat(((totalInterviews / totalApplications) * 100).toFixed(2))
+            : 0.00,
+        saveRate:
+          totalViews > 0
+            ? parseFloat(((totalSavedJobs / totalViews) * 100).toFixed(2))
+            : 0.00,
+        emailsSent: totalEmails,
+        resumesUploaded: totalResumes,
       },
     };
 

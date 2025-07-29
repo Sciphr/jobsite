@@ -5,7 +5,14 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
-import { useUsers, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import Pagination from "../jobs/components/ui/Pagination";
+import { 
+  useUsers, 
+  usePrefetchAdminData, 
+  useUpdateUser, 
+  useDeleteUser 
+} from "@/app/hooks/useAdminData";
+import { exportUsersToExcel, exportUsersToCSV } from "@/app/utils/usersExport";
 import {
   Users,
   Search,
@@ -24,6 +31,10 @@ import {
   UserX,
   Crown,
   User,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
 } from "lucide-react";
 
 export default function AdminUsers() {
@@ -33,9 +44,15 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const { prefetchAll } = usePrefetchAdminData();
   const { data: users = [], isLoading, isError, error, refetch } = useUsers();
   const [refreshing, setRefreshing] = useState(false);
+  
+  // ✅ NEW: React Query mutations for optimistic updates
+  const updateUserMutation = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
 
   // ✅ REPLACE WITH THIS:
   const filteredUsers = useMemo(() => {
@@ -65,6 +82,30 @@ export default function AdminUsers() {
     return filtered;
   }, [users, searchTerm, roleFilter, statusFilter]); // ✅ Depend on actual data, not .length
 
+  // ✅ NEW: Client-side pagination
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, itemsPerPage]);
+
+  // Pagination metadata
+  const pagination = useMemo(() => {
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    return {
+      page: currentPage,
+      pages: totalPages,
+      total: filteredUsers.length,
+      hasNext: currentPage < totalPages,
+      hasPrev: currentPage > 1,
+    };
+  }, [filteredUsers.length, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -76,17 +117,13 @@ export default function AdminUsers() {
     }
   };
 
+  // ✅ NEW: Optimistic update functions using React Query
   const updateUserStatus = async (userId, isActive) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive }),
+      await updateUserMutation.mutateAsync({
+        userId,
+        userData: { isActive },
       });
-
-      if (response.ok) {
-        refetch();
-      }
     } catch (error) {
       console.error("Error updating user status:", error);
     }
@@ -94,15 +131,10 @@ export default function AdminUsers() {
 
   const updateUserRole = async (userId, role, privilegeLevel) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, privilegeLevel }),
+      await updateUserMutation.mutateAsync({
+        userId,
+        userData: { role, privilegeLevel },
       });
-
-      if (response.ok) {
-        refetch();
-      }
     } catch (error) {
       console.error("Error updating user role:", error);
     }
@@ -118,16 +150,119 @@ export default function AdminUsers() {
     }
 
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        refetch();
-        setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-      }
+      await deleteUserMutation.mutateAsync(userId);
+      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
     } catch (error) {
       console.error("Error deleting user:", error);
+    }
+  };
+
+  // ✅ NEW: Export functionality
+  const handleExport = (format) => {
+    const filters = {
+      searchTerm,
+      roleFilter: roleFilter === 'all' ? null : roleFilter,
+      statusFilter: statusFilter === 'all' ? null : statusFilter
+    };
+
+    if (format === 'excel') {
+      exportUsersToExcel(filteredUsers, filters);
+    } else if (format === 'csv') {
+      exportUsersToCSV(filteredUsers, filters);
+    }
+  };
+
+  // ✅ NEW: Bulk actions handlers
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedUsers(paginatedUsers.map((user) => user.id));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleSelectUser = (userId, checked) => {
+    if (checked) {
+      setSelectedUsers((prev) => [...prev, userId]);
+    } else {
+      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+    }
+  };
+
+  const handleBulkRoleUpdate = async (newRole, privilegeLevel) => {
+    if (selectedUsers.length === 0) return;
+
+    const roleLabel = roleOptions.find(r => r.value === newRole)?.label || newRole;
+    const confirmMessage = `Are you sure you want to change ${selectedUsers.length} user${selectedUsers.length !== 1 ? 's' : ''} to ${roleLabel} role?`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Update each selected user
+      const updatePromises = selectedUsers.map(userId =>
+        updateUserMutation.mutateAsync({
+          userId,
+          userData: { role: newRole, privilegeLevel },
+        })
+      );
+
+      await Promise.all(updatePromises);
+      
+      // Clear selection after successful update
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error(`Error updating users to ${newRole}:`, error);
+      alert(`Failed to update some users. Please try again.`);
+    }
+  };
+
+  const handleBulkStatusUpdate = async (isActive) => {
+    if (selectedUsers.length === 0) return;
+
+    const action = isActive ? 'activate' : 'deactivate';
+    const confirmMessage = `Are you sure you want to ${action} ${selectedUsers.length} user${selectedUsers.length !== 1 ? 's' : ''}?`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Update each selected user
+      const updatePromises = selectedUsers.map(userId =>
+        updateUserMutation.mutateAsync({
+          userId,
+          userData: { isActive },
+        })
+      );
+
+      await Promise.all(updatePromises);
+      
+      // Clear selection after successful update
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error(`Error ${action}ing users:`, error);
+      alert(`Failed to ${action} some users. Please try again.`);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUsers.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${selectedUsers.length} user${selectedUsers.length !== 1 ? 's' : ''}? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Delete each selected user
+      const deletePromises = selectedUsers.map(userId =>
+        deleteUserMutation.mutateAsync(userId)
+      );
+
+      await Promise.all(deletePromises);
+      
+      // Clear selection after successful deletion
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error('Error deleting users:', error);
+      alert('Failed to delete some users. Please try again.');
     }
   };
 
@@ -189,6 +324,34 @@ export default function AdminUsers() {
           </p>
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+          {/* ✅ NEW: Export Dropdown */}
+          <div className="relative group">
+            <button
+              className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")}`}
+            >
+              <FileDown className="h-4 w-4" />
+              <span>Export</span>
+            </button>
+            <div className="absolute right-0 top-10 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+              <div className="p-2">
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  <span>Export to Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <span>Export to CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -279,12 +442,92 @@ export default function AdminUsers() {
         </div>
       </div>
 
+      {/* ✅ NEW: Bulk Actions */}
+      {selectedUsers.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex flex-col space-y-3 sm:flex-row items-start sm:items-center justify-between">
+            <span className="text-blue-800 dark:text-blue-200 font-medium">
+              {selectedUsers.length} user{selectedUsers.length !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Role Change Dropdown */}
+              <div className="relative group">
+                <button 
+                  disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                  className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                >
+                  {updateUserMutation.isLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  <span>Change Role</span>
+                </button>
+                {/* Invisible bridge to prevent dropdown from disappearing */}
+                <div className="absolute right-0 top-6 w-40 h-4 invisible group-hover:visible z-10"></div>
+                <div className="absolute right-0 top-9 w-40 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                  <div className="p-2">
+                    {roleOptions.map((role) => (
+                      <button
+                        key={role.value}
+                        onClick={() => handleBulkRoleUpdate(role.value, role.privilegeLevel)}
+                        disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span>{role.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => handleBulkStatusUpdate(true)}
+                disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {updateUserMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Activate</span>
+              </button>
+              <button 
+                onClick={() => handleBulkStatusUpdate(false)}
+                disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {updateUserMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Deactivate</span>
+              </button>
+              <button 
+                onClick={handleBulkDelete}
+                disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+              >
+                {deleteUserMutation.isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="admin-card rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={paginatedUsers.length > 0 && paginatedUsers.every(user => selectedUsers.includes(user.id))}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
                   User
                 </th>
@@ -306,7 +549,7 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody className="admin-card divide-y divide-gray-200">
-              {filteredUsers.map((user) => {
+              {paginatedUsers.map((user) => {
                 const RoleIcon = getRoleIcon(user.role);
                 const roleColor = getRoleColor(user.role);
 
@@ -315,6 +558,14 @@ export default function AdminUsers() {
                     key={user.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -360,8 +611,8 @@ export default function AdminUsers() {
                             selectedRole.privilegeLevel
                           );
                         }}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-purple-500 ${roleColor} dark:border-gray-600`}
-                        disabled={user.id === session?.user?.id}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-purple-500 ${roleColor} dark:border-gray-600 ${updateUserMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={user.id === session?.user?.id || updateUserMutation.isLoading}
                       >
                         {roleOptions.map((role) => (
                           <option
@@ -373,6 +624,9 @@ export default function AdminUsers() {
                           </option>
                         ))}
                       </select>
+                      {updateUserMutation.isLoading && (
+                        <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin text-gray-400" />
+                      )}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -380,18 +634,23 @@ export default function AdminUsers() {
                         onClick={() =>
                           updateUserStatus(user.id, !user.isActive)
                         }
-                        disabled={user.id === session?.user?.id}
+                        disabled={user.id === session?.user?.id || updateUserMutation.isLoading}
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200 ${
                           user.isActive
                             ? "bg-green-100 text-green-800 hover:bg-green-200"
                             : "bg-red-100 text-red-800 hover:bg-red-200"
                         } ${
-                          user.id === session?.user?.id
+                          user.id === session?.user?.id || updateUserMutation.isLoading
                             ? "opacity-50 cursor-not-allowed"
                             : ""
                         }`}
                       >
-                        {user.isActive ? (
+                        {updateUserMutation.isLoading ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Updating...
+                          </>
+                        ) : user.isActive ? (
                           <>
                             <UserCheck className="h-3 w-3 mr-1" />
                             Active
@@ -435,10 +694,15 @@ export default function AdminUsers() {
                         {user.id !== session?.user?.id && (
                           <button
                             onClick={() => deleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900 p-2 sm:p-2 hover:bg-red-50 rounded transition-colors duration-200 touch-action-manipulation"
+                            disabled={deleteUserMutation.isLoading}
+                            className={`text-red-600 hover:text-red-900 p-2 sm:p-2 hover:bg-red-50 rounded transition-colors duration-200 touch-action-manipulation ${deleteUserMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             title="Delete user"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {deleteUserMutation.isLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </button>
                         )}
                       </div>
@@ -451,8 +715,20 @@ export default function AdminUsers() {
         </div>
       </div>
 
+      {/* ✅ NEW: Pagination */}
+      {filteredUsers.length > itemsPerPage && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          totalItems={filteredUsers.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          className="mt-8"
+        />
+      )}
+
       {/* Empty State */}
-      {filteredUsers.length === 0 && !isLoading && (
+      {paginatedUsers.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium admin-text mb-2">

@@ -43,6 +43,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { exportAnalyticsToExcel, exportAnalyticsToCSV } from "@/app/utils/analyticsExport";
 
 export default function AdminAnalytics() {
   const { data: session } = useSession();
@@ -82,6 +83,17 @@ export default function AdminAnalytics() {
     if (change > 0) return "text-green-600";
     if (change < 0) return "text-red-600";
     return "text-gray-500";
+  };
+
+  // ✅ NEW: Export functionality
+  const handleExport = (format) => {
+    if (!analytics) return;
+
+    if (format === 'excel') {
+      exportAnalyticsToExcel(analytics, timeRange);
+    } else if (format === 'csv') {
+      exportAnalyticsToCSV(analytics, timeRange);
+    }
   };
 
   if (isLoading) {
@@ -158,12 +170,35 @@ export default function AdminAnalytics() {
               />
               <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
             </button>
-            <button
-              className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
+            {/* ✅ NEW: Export Dropdown */}
+            <div className="relative group">
+              <button
+                className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+              {/* Invisible bridge to prevent dropdown from disappearing */}
+              <div className="absolute right-0 top-10 w-48 h-4 invisible group-hover:visible z-10"></div>
+              <div className="absolute right-0 top-12 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                <div className="p-2">
+                  <button
+                    onClick={() => handleExport('excel')}
+                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                  >
+                    <span className="text-green-600">📊</span>
+                    <span>Export to Excel (.xlsx)</span>
+                  </button>
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                  >
+                    <span className="text-blue-600">📄</span>
+                    <span>Export to CSV</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -184,7 +219,7 @@ export default function AdminAnalytics() {
                     analytics.overview.jobsChange
                   )}`}
                 >
-                  {Math.abs(analytics.overview.jobsChange)}%
+                  {Math.abs(analytics.overview.jobsChange).toFixed(2)}%
                 </span>
                 <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
@@ -215,7 +250,7 @@ export default function AdminAnalytics() {
                     analytics.overview.applicationsChange
                   )}`}
                 >
-                  {Math.abs(analytics.overview.applicationsChange)}%
+                  {Math.abs(analytics.overview.applicationsChange).toFixed(2)}%
                 </span>
                 <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
@@ -246,7 +281,7 @@ export default function AdminAnalytics() {
                     analytics.overview.usersChange
                   )}`}
                 >
-                  {Math.abs(analytics.overview.usersChange)}%
+                  {Math.abs(analytics.overview.usersChange).toFixed(2)}%
                 </span>
                 <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
@@ -275,7 +310,7 @@ export default function AdminAnalytics() {
                     analytics.overview.viewsChange
                   )}`}
                 >
-                  {Math.abs(analytics.overview.viewsChange)}%
+                  {Math.abs(analytics.overview.viewsChange).toFixed(2)}%
                 </span>
                 <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
                   vs last period
@@ -286,6 +321,81 @@ export default function AdminAnalytics() {
               className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(3).bg}`}
             >
               <Eye className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(3).icon}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Emails Sent</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
+                {analytics.overview.totalEmails?.toLocaleString() || 0}
+              </p>
+              <div className="flex items-center mt-2">
+                <span className="text-xs sm:text-sm admin-text-light">Email communications</span>
+              </div>
+            </div>
+            <div className="metric-icon p-2 sm:p-3 rounded-lg bg-blue-100">
+              <span className="text-2xl">📧</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Interviews Scheduled</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
+                {analytics.overview.totalInterviews || 0}
+              </p>
+              <div className="flex items-center mt-2">
+                <span className="text-xs sm:text-sm text-blue-600">
+                  {analytics.additionalMetrics.interviewRate.toFixed(2)}% of applications
+                </span>
+              </div>
+            </div>
+            <div className="metric-icon p-2 sm:p-3 rounded-lg bg-purple-100">
+              <span className="text-2xl">🗣️</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Jobs Saved</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
+                {analytics.overview.totalSavedJobs || 0}
+              </p>
+              <div className="flex items-center mt-2">
+                <span className="text-xs sm:text-sm text-green-600">
+                  {analytics.additionalMetrics.saveRate.toFixed(2)}% save rate
+                </span>
+              </div>
+            </div>
+            <div className="metric-icon p-2 sm:p-3 rounded-lg bg-green-100">
+              <span className="text-2xl">💾</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium admin-text-light">Resumes Uploaded</p>
+              <p className="text-2xl sm:text-3xl font-bold admin-text">
+                {analytics.overview.totalResumes || 0}
+              </p>
+              <div className="flex items-center mt-2">
+                <span className="text-xs sm:text-sm admin-text-light">User submissions</span>
+              </div>
+            </div>
+            <div className="metric-icon p-2 sm:p-3 rounded-lg bg-yellow-100">
+              <span className="text-2xl">📄</span>
             </div>
           </div>
         </div>
@@ -356,7 +466,7 @@ export default function AdminAnalytics() {
                 outerRadius={100}
                 dataKey="value"
                 label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
+                  `${name} ${(percent * 100).toFixed(2)}%`
                 }
               >
                 {analytics.jobsByDepartment.map((entry, index) => (
@@ -415,7 +525,7 @@ export default function AdminAnalytics() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium admin-text">
-                    {job.conversionRate}%
+                    {parseFloat(job.conversionRate).toFixed(2)}%
                   </div>
                   <div className="text-xs admin-text-light">conversion</div>
                 </div>
@@ -439,7 +549,7 @@ export default function AdminAnalytics() {
                 </span>
                 <div className="flex items-center space-x-3">
                   <span className="text-sm admin-text-light">
-                    {stage.percentage}%
+                    {stage.percentage.toFixed(2)}%
                   </span>
                   <span className="text-lg font-bold admin-text">
                     {stage.count.toLocaleString()}
@@ -449,7 +559,7 @@ export default function AdminAnalytics() {
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                 <div
                   className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${stage.percentage}%` }}
+                  style={{ width: `${stage.percentage.toFixed(2)}%` }}
                 ></div>
               </div>
             </div>
@@ -469,13 +579,13 @@ export default function AdminAnalytics() {
             </h3>
           </div>
           <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
-            {analytics.additionalMetrics.avgTimeToHire} days
+            {analytics.additionalMetrics.avgTimeToHire || 0} days
           </div>
           <div className="flex items-center">
-            <TrendingDown className="h-4 w-4 text-green-500" />
-            <span className="text-xs sm:text-sm text-green-600 ml-1">2 days faster</span>
-            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
-              than last month
+            <span className="text-xs sm:text-sm admin-text-light">
+              {analytics.additionalMetrics.avgTimeToHire > 0 
+                ? "Average hiring timeline" 
+                : "No hires in period"}
             </span>
           </div>
         </div>
@@ -488,13 +598,11 @@ export default function AdminAnalytics() {
             <h3 className="text-base sm:text-lg font-semibold admin-text">Success Rate</h3>
           </div>
           <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
-            {analytics.additionalMetrics.successRate}%
+            {analytics.additionalMetrics.successRate.toFixed(2)}%
           </div>
           <div className="flex items-center">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-xs sm:text-sm text-green-600 ml-1">1.2% increase</span>
-            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
-              from last month
+            <span className="text-xs sm:text-sm admin-text-light">
+              Applications to hire rate
             </span>
           </div>
         </div>
@@ -509,13 +617,11 @@ export default function AdminAnalytics() {
             </h3>
           </div>
           <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
-            {analytics.additionalMetrics.avgApplicationsPerJob}
+            {analytics.additionalMetrics.avgApplicationsPerJob.toFixed(2)}
           </div>
           <div className="flex items-center">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-xs sm:text-sm text-green-600 ml-1">3.2 increase</span>
-            <span className="text-xs sm:text-sm admin-text-light ml-1 hidden sm:inline">
-              from last month
+            <span className="text-xs sm:text-sm admin-text-light">
+              Average per job posting
             </span>
           </div>
         </div>
