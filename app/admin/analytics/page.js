@@ -457,16 +457,16 @@ export default function AdminAnalytics() {
           <h2 className="text-lg font-semibold admin-text mb-6">
             Jobs by Department
           </h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <Pie
                 data={analytics.jobsByDepartment}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
+                outerRadius={90}
                 dataKey="value"
                 label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(2)}%`
+                  `${name} ${(percent * 100).toFixed(1)}%`
                 }
               >
                 {analytics.jobsByDepartment.map((entry, index) => (
@@ -479,31 +479,38 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* Application Status & Top Jobs */}
+      {/* Conversion Funnel & Top Jobs */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-        {/* Application Status */}
+        {/* Conversion Funnel */}
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
-            Application Status Distribution
+            Conversion Funnel
           </h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={analytics.applicationStatus} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis
-                dataKey="name"
-                type="category"
-                tick={{ fontSize: 12 }}
-                width={80}
-              />
-              <Tooltip />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {analytics.applicationStatus.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="space-y-4">
+            {analytics.conversionFunnel.map((stage, index) => (
+              <div key={index} className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium admin-text-light">
+                    {stage.stage}
+                  </span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm admin-text-light">
+                      {stage.percentage.toFixed(2)}%
+                    </span>
+                    <span className="text-lg font-bold admin-text">
+                      {stage.count.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${stage.percentage.toFixed(2)}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Top Performing Jobs */}
@@ -535,32 +542,26 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* Conversion Funnel */}
+      {/* Application Status Cards */}
       <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold admin-text mb-6">
-          Conversion Funnel
+          Application Status Distribution
         </h2>
-        <div className="space-y-4">
-          {analytics.conversionFunnel.map((stage, index) => (
-            <div key={index} className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium admin-text-light">
-                  {stage.stage}
-                </span>
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm admin-text-light">
-                    {stage.percentage.toFixed(2)}%
-                  </span>
-                  <span className="text-lg font-bold admin-text">
-                    {stage.count.toLocaleString()}
-                  </span>
-                </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {analytics.applicationStatus.map((status, index) => (
+            <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+              <div 
+                className="w-4 h-4 rounded-full mx-auto mb-2"
+                style={{ backgroundColor: status.color }}
+              ></div>
+              <div className="text-2xl font-bold admin-text mb-1">
+                {status.value}
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${stage.percentage.toFixed(2)}%` }}
-                ></div>
+              <div className="text-sm admin-text-light mb-1">
+                {status.name}
+              </div>
+              <div className="text-xs admin-text-light">
+                {((status.value / analytics.overview.totalApplications) * 100).toFixed(1)}%
               </div>
             </div>
           ))}

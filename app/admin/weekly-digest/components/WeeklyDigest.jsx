@@ -24,10 +24,17 @@ const WeeklyDigest = () => {
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  
+  // Preview-related state
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewDateRange, setPreviewDateRange] = useState("");
 
   const [digestConfig, setDigestConfig] = useState({
     enabled: true,
-    recipients: [],
+    recipients: [], // For scheduled digest
+    testRecipients: [], // For test digest
     emailTheme: "professional", // Add this line
     sections: {
       jobMetrics: true,
@@ -65,11 +72,8 @@ const WeeklyDigest = () => {
       },
       systemHealth: {
         systemStatus: true,
-        performance: false,
-        alerts: true,
-        uptime: false,
-        errorRates: false,
-        responseTime: false,
+        emailPerformance: false,
+        errorSummary: true,
       },
     },
     schedule: {
@@ -604,11 +608,11 @@ const WeeklyDigest = () => {
     setTestResult(null);
 
     try {
-      // Save current settings first
+      // Save current settings first (including test recipients)
       await saveDigestSettings();
 
-      // Then send test
-      const response = await fetch("/api/admin/weekly-digest/send", {
+      // Then send test using the new test endpoint
+      const response = await fetch("/api/admin/weekly-digest/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -618,7 +622,9 @@ const WeeklyDigest = () => {
       if (response.ok) {
         setTestResult({
           success: true,
-          message: `Test digest sent to ${data.sent} recipient(s) using your current settings!`,
+          message: data.testMode 
+            ? `Test digest sent to ${data.sent} test recipient(s)! Check your email to review the digest.`
+            : `Test digest sent to ${data.sent} recipient(s) using your current settings!`,
         });
       } else {
         setTestResult({
@@ -635,6 +641,60 @@ const WeeklyDigest = () => {
       setTesting(false);
     }
   };
+
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    setShowPreview(true);
+    setPreviewHtml("");
+
+    try {
+      const response = await fetch("/api/admin/weekly-digest/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ digestConfig }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setPreviewHtml(data.html);
+        setPreviewDateRange(data.dateRange);
+      } else {
+        setPreviewHtml(`
+          <div style="padding: 20px; text-align: center; color: #ef4444;">
+            <h2>Preview Error</h2>
+            <p>${data.message || "Failed to generate preview"}</p>
+          </div>
+        `);
+      }
+    } catch (error) {
+      console.error("Preview error:", error);
+      setPreviewHtml(`
+        <div style="padding: 20px; text-align: center; color: #ef4444;">
+          <h2>Preview Error</h2>
+          <p>Network error occurred while generating preview</p>
+        </div>
+      `);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // Show loading state until settings are loaded
+  if (!settingsLoaded) {
+    return (
+      <div
+        className={`p-6 space-y-6 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"} min-h-screen`}
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+            Loading digest settings...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -665,9 +725,13 @@ const WeeklyDigest = () => {
           </button>
 
           <div className="flex space-x-2">
-            <button className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800">
+            <button 
+              onClick={handlePreview}
+              disabled={previewLoading}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium admin-text bg-white dark:bg-gray-800 disabled:opacity-50"
+            >
               <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Preview</span>
+              <span className="hidden sm:inline">{previewLoading ? "Loading..." : "Preview"}</span>
             </button>
 
             <button
@@ -784,8 +848,12 @@ const WeeklyDigest = () => {
                   <div className="space-y-4 mt-6">
                     <RecipientsConfiguration
                       recipients={digestConfig.recipients}
+                      testRecipients={digestConfig.testRecipients}
                       onRecipientsChange={(recipients) =>
                         setDigestConfig((prev) => ({ ...prev, recipients }))
+                      }
+                      onTestRecipientsChange={(testRecipients) =>
+                        setDigestConfig((prev) => ({ ...prev, testRecipients }))
                       }
                       theme={theme}
                     />
@@ -1006,37 +1074,19 @@ const ContentConfiguration = ({
         {
           key: "systemStatus",
           label: "System Status",
-          description: "Overall system health status",
+          description: "Overall system health based on error rates and email performance",
           category: "overview",
         },
         {
-          key: "alerts",
-          label: "System Alerts",
-          description: "Any system alerts or warnings",
-          category: "overview",
-        },
-        {
-          key: "performance",
-          label: "Performance Metrics",
-          description: "System performance statistics",
+          key: "emailPerformance",
+          label: "Email Performance",
+          description: "Email success and failure rates from this week",
           category: "technical",
         },
         {
-          key: "uptime",
-          label: "Uptime Statistics",
-          description: "System availability metrics",
-          category: "technical",
-        },
-        {
-          key: "errorRates",
-          label: "Error Rates",
-          description: "Application error statistics",
-          category: "technical",
-        },
-        {
-          key: "responseTime",
-          label: "Response Time",
-          description: "Average system response times",
+          key: "errorSummary",
+          label: "Error Summary",
+          description: "Recent system errors and warnings",
           category: "technical",
         },
       ],
@@ -1293,9 +1343,10 @@ const ContentConfiguration = ({
   );
 };
 
-const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
+const RecipientsConfiguration = ({ recipients, testRecipients, onRecipientsChange, onTestRecipientsChange, theme }) => {
   const [userFilter, setUserFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [activeRecipientTab, setActiveRecipientTab] = useState("scheduled");
 
   // Use React Query hook instead of manual fetch
   const { data: allUsers = [], isLoading: loading, isError } = useUsers();
@@ -1322,10 +1373,17 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
   });
 
   const toggleUser = (userId) => {
-    const newRecipients = recipients.includes(userId)
-      ? recipients.filter((id) => id !== userId)
-      : [...recipients, userId];
-    onRecipientsChange(newRecipients);
+    if (activeRecipientTab === "scheduled") {
+      const newRecipients = recipients.includes(userId)
+        ? recipients.filter((id) => id !== userId)
+        : [...recipients, userId];
+      onRecipientsChange(newRecipients);
+    } else {
+      const newTestRecipients = testRecipients.includes(userId)
+        ? testRecipients.filter((id) => id !== userId)
+        : [...testRecipients, userId];
+      onTestRecipientsChange(newTestRecipients);
+    }
   };
 
   const formatRoleName = (role) => {
@@ -1379,6 +1437,9 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
     );
   }
 
+  const currentRecipients = activeRecipientTab === "scheduled" ? recipients : testRecipients;
+  const currentOnChange = activeRecipientTab === "scheduled" ? onRecipientsChange : onTestRecipientsChange;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1392,9 +1453,52 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
           <span
             className={`font-medium ${theme === "dark" ? "text-blue-400" : "text-blue-600"}`}
           >
-            {recipients.length} selected
+            {activeRecipientTab === "scheduled" ? recipients.length : testRecipients.length} selected
           </span>
         </div>
+      </div>
+
+      {/* Recipient Type Tabs */}
+      <div className={`grid w-full grid-cols-2 rounded-lg p-1 gap-1 ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"}`}>
+        <button
+          onClick={() => setActiveRecipientTab("scheduled")}
+          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeRecipientTab === "scheduled"
+              ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
+          Scheduled Recipients ({recipients.length})
+        </button>
+        <button
+          onClick={() => setActiveRecipientTab("test")}
+          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeRecipientTab === "test"
+              ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
+          Test Recipients ({testRecipients.length})
+        </button>
+      </div>
+
+      {/* Description based on active tab */}
+      <div className={`p-3 rounded-lg border ${
+        activeRecipientTab === "scheduled" 
+          ? theme === "dark" ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"
+          : theme === "dark" ? "bg-purple-900/20 border-purple-800" : "bg-purple-50 border-purple-200"
+      }`}>
+        {activeRecipientTab === "scheduled" ? (
+          <p className={`text-sm ${theme === "dark" ? "text-blue-200" : "text-blue-800"}`}>
+            📅 These users will receive the weekly digest automatically according to your schedule. 
+            These are the recipients for the automated weekly emails.
+          </p>
+        ) : (
+          <p className={`text-sm ${theme === "dark" ? "text-purple-200" : "text-purple-800"}`}>
+            🧪 These users will receive test emails when you click "Send Test". 
+            This allows you to preview the digest without affecting your scheduled recipients.
+          </p>
+        )}
       </div>
 
       {/* Search and Filter */}
@@ -1439,8 +1543,8 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
         <div className="flex space-x-2">
           <button
             onClick={() =>
-              onRecipientsChange([
-                ...new Set([...recipients, ...filteredUsers.map((u) => u.id)]),
+              currentOnChange([
+                ...new Set([...currentRecipients, ...filteredUsers.map((u) => u.id)]),
               ])
             }
             disabled={filteredUsers.length === 0}
@@ -1449,8 +1553,8 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
             Select All
           </button>
           <button
-            onClick={() => onRecipientsChange([])}
-            disabled={recipients.length === 0}
+            onClick={() => currentOnChange([])}
+            disabled={currentRecipients.length === 0}
             className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Clear All
@@ -1488,7 +1592,7 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
           </div>
         ) : (
           filteredUsers.map((user) => {
-            const isSelected = recipients.includes(user.id);
+            const isSelected = currentRecipients.includes(user.id);
             const userName =
               `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
               user.email;
@@ -1552,21 +1656,40 @@ const RecipientsConfiguration = ({ recipients, onRecipientsChange, theme }) => {
       </div>
 
       {/* Status Messages */}
-      {recipients.length === 0 && (
+      {activeRecipientTab === "scheduled" && recipients.length === 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
           <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-center">
             <X className="h-4 w-4 mr-2" />
-            No recipients selected. The digest will not be sent.
+            No scheduled recipients selected. The automatic digest will not be sent.
           </p>
         </div>
       )}
 
-      {recipients.length > 0 && (
+      {activeRecipientTab === "test" && testRecipients.length === 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-center">
+            <X className="h-4 w-4 mr-2" />
+            No test recipients selected. Test emails will not be sent.
+          </p>
+        </div>
+      )}
+
+      {activeRecipientTab === "scheduled" && recipients.length > 0 && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
           <p className="text-sm text-green-800 dark:text-green-200 flex items-center">
             <Check className="h-4 w-4 mr-2" />
-            Weekly digest will be sent to {recipients.length} recipient
+            Weekly digest will be sent automatically to {recipients.length} recipient
             {recipients.length !== 1 ? "s" : ""}.
+          </p>
+        </div>
+      )}
+
+      {activeRecipientTab === "test" && testRecipients.length > 0 && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+          <p className="text-sm text-green-800 dark:text-green-200 flex items-center">
+            <Check className="h-4 w-4 mr-2" />
+            Test digest will be sent to {testRecipients.length} recipient
+            {testRecipients.length !== 1 ? "s" : ""} when you click "Send Test".
           </p>
         </div>
       )}

@@ -113,11 +113,8 @@ export class WeeklyDigestService {
           },
           systemHealth: {
             systemStatus: true,
-            performance: false,
-            alerts: true,
-            uptime: false,
-            errorRates: false,
-            responseTime: false,
+            emailPerformance: false,
+            errorSummary: true,
           },
         },
       };
@@ -253,8 +250,49 @@ export class WeeklyDigestService {
       },
     });
 
+    // Get active users if customization is enabled
+    let activeUsers = 0;
+    if (customizations.activeUsers) {
+      // Users who logged in or performed actions this week
+      activeUsers = await appPrisma.user.count({
+        where: {
+          OR: [
+            {
+              lastLoginAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
+            },
+            {
+              applications: {
+                some: {
+                  appliedAt: {
+                    gte: this.weekStart,
+                    lte: this.weekEnd,
+                  },
+                },
+              },
+            },
+            {
+              savedJobs: {
+                some: {
+                  savedAt: {
+                    gte: this.weekStart,
+                    lte: this.weekEnd,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+    }
+
     return {
-      thisWeek: { total: thisWeekUsers },
+      thisWeek: { 
+        total: thisWeekUsers,
+        active: activeUsers,
+      },
       previousWeek: { total: previousWeekUsers },
       change: {
         total: thisWeekUsers - previousWeekUsers,
@@ -396,6 +434,103 @@ export class WeeklyDigestService {
   }
 
   /**
+   * Get users by role breakdown
+   */
+  async getUsersByRole() {
+    const usersByRole = await appPrisma.user.groupBy({
+      by: ['role'],
+      where: {
+        createdAt: {
+          gte: this.weekStart,
+          lte: this.weekEnd,
+        },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    return usersByRole.map(role => ({
+      role: role.role,
+      count: role._count.id,
+    }));
+  }
+
+  /**
+   * Get daily user registration breakdown for the week
+   */
+  async getDailyUserRegistrations() {
+    const dailyData = [];
+    const currentDate = new Date(this.weekStart);
+
+    while (currentDate <= this.weekEnd) {
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const count = await appPrisma.user.count({
+        where: {
+          createdAt: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
+        },
+      });
+
+      dailyData.push({
+        date: dayStart.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        registrations: count,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dailyData;
+  }
+
+  /**
+   * Get user growth chart data (last 4 weeks)
+   */
+  async getUserGrowthData() {
+    const growthData = [];
+    const weeksBack = 4;
+    
+    for (let i = weeksBack - 1; i >= 0; i--) {
+      const weekStart = new Date(this.weekStart);
+      weekStart.setDate(weekStart.getDate() - (i * 7));
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const count = await appPrisma.user.count({
+        where: {
+          createdAt: {
+            gte: weekStart,
+            lte: weekEnd,
+          },
+        },
+      });
+
+      growthData.push({
+        week: weekStart.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        registrations: count,
+      });
+    }
+
+    return growthData;
+  }
+
+  /**
    * Get daily application breakdown for the week
    */
   async getDailyApplicationBreakdown() {
@@ -436,18 +571,167 @@ export class WeeklyDigestService {
   /**
    * Get system health metrics
    */
-  async getSystemHealthMetrics() {
+  async getSystemHealthMetrics(customizations = {}) {
     const [activeJobs, totalUsers, totalApplications] = await Promise.all([
       appPrisma.job.count({ where: { status: "Active" } }),
       appPrisma.user.count(),
       appPrisma.application.count(),
     ]);
 
+    // Email performance metrics (this week)
+    let emailPerformance = null;
+    if (customizations.emailPerformance || customizations.systemStatus) {
+      const [totalEmails, successfulEmails, failedEmails] = await Promise.all([
+        appPrisma.email.count({
+          where: {
+            sent_at: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+          },
+        }),
+        appPrisma.email.count({
+          where: {
+            sent_at: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+            status: 'sent',
+          },
+        }),
+        appPrisma.email.count({
+          where: {
+            sent_at: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+            status: 'failed',
+          },
+        }),
+      ]);
+
+      emailPerformance = {
+        total: totalEmails,
+        successful: successfulEmails,
+        failed: failedEmails,
+        successRate: totalEmails > 0 ? ((successfulEmails / totalEmails) * 100).toFixed(1) : 100,
+        failureRate: totalEmails > 0 ? ((failedEmails / totalEmails) * 100).toFixed(1) : 0,
+      };
+    }
+
+    // Error summary from audit logs (this week)
+    let errorSummary = null;
+    if (customizations.errorSummary || customizations.systemStatus) {
+      const [totalAuditEntries, errorEntries, warningEntries, criticalEntries] = await Promise.all([
+        appPrisma.auditLog.count({
+          where: {
+            createdAt: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+          },
+        }),
+        appPrisma.auditLog.count({
+          where: {
+            createdAt: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+            severity: 'error',
+          },
+        }),
+        appPrisma.auditLog.count({
+          where: {
+            createdAt: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+            severity: 'warning',
+          },
+        }),
+        appPrisma.auditLog.count({
+          where: {
+            createdAt: {
+              gte: this.weekStart,
+              lte: this.weekEnd,
+            },
+            severity: 'critical',
+          },
+        }),
+      ]);
+
+      // Get recent errors for details
+      const recentErrors = customizations.errorSummary ? await appPrisma.auditLog.findMany({
+        where: {
+          createdAt: {
+            gte: this.weekStart,
+            lte: this.weekEnd,
+          },
+          severity: {
+            in: ['error', 'critical'],
+          },
+        },
+        select: {
+          severity: true,
+          action: true,
+          description: true,
+          createdAt: true,
+          category: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 10,
+      }) : [];
+
+      errorSummary = {
+        totalEntries: totalAuditEntries,
+        errors: errorEntries,
+        warnings: warningEntries,
+        critical: criticalEntries,
+        errorRate: totalAuditEntries > 0 ? ((errorEntries / totalAuditEntries) * 100).toFixed(1) : 0,
+        recentErrors: recentErrors.map(error => ({
+          severity: error.severity,
+          action: error.action,
+          description: error.description || 'No description',
+          date: error.createdAt.toLocaleDateString(),
+          category: error.category,
+        })),
+      };
+    }
+
+    // Determine overall system status based on metrics
+    let systemStatus = 'healthy';
+    let statusReason = 'All systems operating normally';
+
+    if (emailPerformance || errorSummary) {
+      const emailFailureRate = emailPerformance ? parseFloat(emailPerformance.failureRate) : 0;
+      const errorRate = errorSummary ? parseFloat(errorSummary.errorRate) : 0;
+      const hasCriticalErrors = errorSummary ? errorSummary.critical > 0 : false;
+
+      if (hasCriticalErrors) {
+        systemStatus = 'critical';
+        statusReason = `${errorSummary.critical} critical error${errorSummary.critical > 1 ? 's' : ''} detected`;
+      } else if (emailFailureRate > 10 || errorRate > 5) {
+        systemStatus = 'degraded';
+        statusReason = emailFailureRate > 10 
+          ? `High email failure rate: ${emailFailureRate}%`
+          : `Elevated error rate: ${errorRate}%`;
+      } else if (emailFailureRate > 5 || errorRate > 2) {
+        systemStatus = 'warning';
+        statusReason = 'Some issues detected, but system is stable';
+      }
+    }
+
     return {
       activeJobs,
       totalUsers,
       totalApplications,
-      systemStatus: "healthy", // Could add more sophisticated health checks
+      systemStatus,
+      statusReason,
+      emailPerformance,
+      errorSummary,
+      customizations,
     };
   }
 
@@ -516,8 +800,26 @@ export class WeeklyDigestService {
       ) {
         insightPromises.push(this.getDailyApplicationBreakdown());
       }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.usersByRole
+      ) {
+        insightPromises.push(this.getUsersByRole());
+      }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.registrationTrends
+      ) {
+        insightPromises.push(this.getDailyUserRegistrations());
+      }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.userGrowth
+      ) {
+        insightPromises.push(this.getUserGrowthData());
+      }
       if (config.sections.systemHealth) {
-        insightPromises.push(this.getSystemHealthMetrics());
+        insightPromises.push(this.getSystemHealthMetrics(config.sectionCustomizations.systemHealth));
       }
 
       const [basicData, insightData] = await Promise.all([
@@ -563,6 +865,24 @@ export class WeeklyDigestService {
         config.sectionCustomizations.applicationData?.dailyBreakdown
       ) {
         insights.dailyApplications = insightData[insightIndex++] || [];
+      }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.usersByRole
+      ) {
+        insights.usersByRole = insightData[insightIndex++] || [];
+      }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.registrationTrends
+      ) {
+        insights.dailyRegistrations = insightData[insightIndex++] || [];
+      }
+      if (
+        config.sections.userMetrics &&
+        config.sectionCustomizations.userMetrics?.userGrowth
+      ) {
+        insights.userGrowthData = insightData[insightIndex++] || [];
       }
 
       const systemHealth = config.sections.systemHealth
@@ -662,8 +982,9 @@ export class WeeklyDigestService {
 
   /**
    * Generate and send the weekly digest
+   * @param {Array} customRecipients - Optional array of user IDs to override config recipients
    */
-  async generateAndSend() {
+  async generateAndSend(customRecipients = null) {
     try {
       console.log("🚀 Starting weekly digest generation...");
 
@@ -675,7 +996,10 @@ export class WeeklyDigestService {
         return { success: true, message: "Weekly digest disabled" };
       }
 
-      if (!Array.isArray(config.recipients) || config.recipients.length === 0) {
+      // Use custom recipients if provided, otherwise use config recipients
+      const recipientIds = customRecipients || config.recipients;
+
+      if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
         console.log("📧 No recipients configured for weekly digest");
         return { success: true, message: "No recipients configured" };
       }
@@ -686,7 +1010,7 @@ export class WeeklyDigestService {
       // Get the specific users who should receive the digest
       const recipients = await appPrisma.user.findMany({
         where: {
-          id: { in: config.recipients },
+          id: { in: recipientIds },
           isActive: true,
         },
         select: {
@@ -702,8 +1026,9 @@ export class WeeklyDigestService {
         return { success: false, message: "No active recipients found" };
       }
 
+      const recipientType = customRecipients ? "test" : "scheduled";
       console.log(
-        `📧 Sending digest to ${recipients.length} configured recipient(s)`
+        `📧 Sending ${recipientType} digest to ${recipients.length} recipient(s)`
       );
 
       const emailResults = [];
@@ -736,14 +1061,14 @@ export class WeeklyDigestService {
       const failureCount = emailResults.filter((r) => !r.success).length;
 
       console.log(
-        `✅ Weekly digest complete: ${successCount} sent, ${failureCount} failed`
+        `✅ ${recipientType === "test" ? "Test" : "Weekly"} digest complete: ${successCount} sent, ${failureCount} failed`
       );
 
       return {
         success: true,
         sent: successCount,
         failed: failureCount,
-        configuredRecipients: config.recipients.length,
+        configuredRecipients: recipientIds.length,
         activeRecipients: recipients.length,
         results: emailResults,
       };

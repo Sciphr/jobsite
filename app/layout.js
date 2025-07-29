@@ -9,6 +9,7 @@ import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import "./lib/startup"; // Initialize background services
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

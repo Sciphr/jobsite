@@ -24,6 +24,7 @@ export async function GET(req) {
           in: [
             "weekly_digest_enabled",
             "weekly_digest_recipients",
+            "weekly_digest_test_recipients",
             "weekly_digest_sections",
             "weekly_digest_customizations",
             "weekly_digest_theme", // Add this line
@@ -39,6 +40,7 @@ export async function GET(req) {
     const digestConfig = {
       enabled: true,
       recipients: [],
+      testRecipients: [],
       emailTheme: "professional",
       sections: {
         jobMetrics: true,
@@ -100,6 +102,12 @@ export async function GET(req) {
             const recipients = JSON.parse(setting.value || "[]");
             digestConfig.recipients = Array.isArray(recipients)
               ? recipients
+              : [];
+            break;
+          case "weekly_digest_test_recipients":
+            const testRecipients = JSON.parse(setting.value || "[]");
+            digestConfig.testRecipients = Array.isArray(testRecipients)
+              ? testRecipients
               : [];
             break;
           case "weekly_digest_theme": // Add this case
@@ -206,6 +214,13 @@ export async function POST(req) {
         dataType: "json",
         category: "notifications",
         description: "List of user IDs to receive weekly digest",
+      },
+      {
+        key: "weekly_digest_test_recipients",
+        value: JSON.stringify(digestConfig.testRecipients || []),
+        dataType: "json",
+        category: "notifications",
+        description: "List of user IDs to receive test digest emails",
       },
       {
         key: "weekly_digest_sections",

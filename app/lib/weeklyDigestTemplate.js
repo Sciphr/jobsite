@@ -167,6 +167,16 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
       `);
     }
 
+    if (isEnabled("userMetrics", "activeUsers") && summary.users?.thisWeek.active !== undefined) {
+      metrics.push(`
+        <div class="${cardClass}">
+          <div class="metric-number">${summary.users.thisWeek.active}</div>
+          <div class="metric-label">ACTIVE USERS</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "🔥" : "📊"} This week</div>
+        </div>
+      `);
+    }
+
     return metrics.join("");
   };
 
@@ -550,6 +560,208 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                 : ""
             }
 
+            <!-- Top Performing Jobs Section -->
+            ${
+              isEnabled("jobMetrics", "topJobs") && insights.topJobs && insights.topJobs.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "🏆✨" : "🏆"} Top Performing Jobs</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f9fafb" : selectedTheme === "modern" ? "linear-gradient(145deg, #ffffff, #f8fafc)" : "#f8fafc"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    ${insights.topJobs.slice(0, 5).map((job, index) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: ${index < 4 ? '1px solid #e2e8f0' : 'none'};">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: ${currentTheme.textColor}; font-size: 14px;">${job.title}</div>
+                                <div style="color: #718096; font-size: 12px; margin-top: 2px;">${job.department}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; color: ${currentTheme.primaryColor}; font-size: 16px;">${job.weeklyApplications}</div>
+                                <div style="color: #718096; font-size: 11px;">applications</div>
+                                <div style="color: #10b981; font-size: 11px;">${job.conversionRate}% conversion</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Low Performing Jobs Section -->
+            ${
+              isEnabled("jobMetrics", "lowJobs") && insights.lowPerformingJobs && insights.lowPerformingJobs.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "⚠️✨" : "⚠️"} Jobs Needing Attention</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#fef2f2" : selectedTheme === "modern" ? "linear-gradient(145deg, #fef2f2, #fecaca)" : "#fef2f2"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; border-left: 4px solid #ef4444; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(239,68,68,0.1);" : ""}">
+                    <p style="color: #991b1b; font-size: 14px; margin-bottom: 15px; font-weight: 500;">These jobs have received fewer than expected applications and may need promotion or review:</p>
+                    ${insights.lowPerformingJobs.slice(0, 5).map((job, index) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: ${index < 4 ? '1px solid #fecaca' : 'none'};">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #991b1b; font-size: 14px;">${job.title}</div>
+                                <div style="color: #dc2626; font-size: 12px; margin-top: 2px;">${job.department} • ${job.daysLive} days live</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; color: #ef4444; font-size: 16px;">${job.applications}</div>
+                                <div style="color: #dc2626; font-size: 11px;">${job.views} views</div>
+                                <div style="color: #dc2626; font-size: 11px;">${job.conversionRate}% conversion</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Jobs by Department Section -->
+            ${
+              isEnabled("jobMetrics", "jobsByDepartment") && insights.departmentStats && insights.departmentStats.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "🏢✨" : "🏢"} Applications by Department</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f9fafb" : selectedTheme === "modern" ? "linear-gradient(145deg, #ffffff, #f8fafc)" : "#f8fafc"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    ${insights.departmentStats.map((dept, index) => {
+                        const maxApps = Math.max(...insights.departmentStats.map(d => d.applications));
+                        const percentage = maxApps > 0 ? (dept.applications / maxApps) * 100 : 0;
+                        return `
+                        <div style="margin: 15px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: ${currentTheme.textColor}; font-size: 14px;">${dept.department}</span>
+                                <span style="font-weight: 600; color: ${currentTheme.primaryColor}; font-size: 16px;">${dept.applications}</span>
+                            </div>
+                            <div style="background: #e2e8f0; border-radius: ${selectedTheme === "professional" ? "0px" : "4px"}; height: 8px; overflow: hidden;">
+                                <div style="background: ${selectedTheme === "modern" ? "linear-gradient(90deg, #7c3aed, #ec4899)" : currentTheme.primaryColor}; height: 100%; width: ${percentage}%; border-radius: ${selectedTheme === "professional" ? "0px" : "4px"};"></div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Featured Jobs Performance Section -->
+            ${
+              isEnabled("jobMetrics", "featuredJobs") && summary.jobs && summary.jobs.thisWeek.featured > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "⭐✨" : "⭐"} Featured Jobs Performance</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#fefbf3" : selectedTheme === "modern" ? "linear-gradient(145deg, #fefbf3, #fde68a)" : "#fefbf3"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(245,158,11,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d97706; margin-bottom: 5px;">${summary.jobs.thisWeek.featured}</div>
+                            <div style="color: #92400e; font-size: 14px; font-weight: 500;">Featured Jobs This Week</div>
+                            ${summary.jobs.previousWeek.featured ? `
+                                <div style="color: #b45309; font-size: 12px; margin-top: 5px;">
+                                    ${summary.jobs.thisWeek.featured - summary.jobs.previousWeek.featured > 0 ? '+' : ''}${summary.jobs.thisWeek.featured - summary.jobs.previousWeek.featured} from last week
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #92400e; font-size: 12px;">Premium visibility boost</div>
+                            <div style="color: #b45309; font-size: 11px; margin-top: 2px;">Increased exposure & applications</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- User Growth Chart Section -->
+            ${
+              isEnabled("userMetrics", "userGrowth") && insights.userGrowthData && insights.userGrowthData.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "📈✨" : "📈"} User Growth Trend</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f0fdf4" : selectedTheme === "modern" ? "linear-gradient(145deg, #f0fdf4, #dcfce7)" : "#f0fdf4"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(34,197,94,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: end; height: 80px; margin: 20px 0; padding: 0 10px; border-bottom: 1px solid #bbf7d0;">
+                        ${insights.userGrowthData.map((week, index) => {
+                            const maxRegistrations = Math.max(...insights.userGrowthData.map(w => w.registrations));
+                            const height = maxRegistrations > 0 ? Math.max(4, (week.registrations / maxRegistrations) * 60) : 4;
+                            return `
+                            <div style="flex: 1; margin: 0 2px; text-align: center;">
+                                <div style="font-size: 12px; color: #166534; font-weight: 600; margin-bottom: 2px;">${week.registrations}</div>
+                                <div style="background: ${selectedTheme === "modern" ? "linear-gradient(to top, #22c55e, #10b981)" : "#22c55e"}; border-radius: ${selectedTheme === "professional" ? "0px" : "2px"}; margin-bottom: 5px; min-height: 4px; height: ${height}px;"></div>
+                                <div style="font-size: 10px; color: #16a34a; font-weight: 500;">${week.week}</div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <p style="margin: 10px 0 0 0; color: #16a34a; font-size: 12px; text-align: center;">
+                        4-week user registration trend
+                    </p>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Users by Role Section -->
+            ${
+              isEnabled("userMetrics", "usersByRole") && insights.usersByRole && insights.usersByRole.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "👥✨" : "👥"} New Users by Role</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f9fafb" : selectedTheme === "modern" ? "linear-gradient(145deg, #ffffff, #f8fafc)" : "#f8fafc"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    ${insights.usersByRole.map((roleData, index) => {
+                        const maxCount = Math.max(...insights.usersByRole.map(r => r.count));
+                        const percentage = maxCount > 0 ? (roleData.count / maxCount) * 100 : 0;
+                        const roleNames = {
+                            'job_seeker': 'Job Seekers',
+                            'employer': 'Employers',
+                            'hr': 'HR Personnel',
+                            'admin': 'Administrators'
+                        };
+                        const roleName = roleNames[roleData.role] || roleData.role;
+                        return `
+                        <div style="margin: 15px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: ${currentTheme.textColor}; font-size: 14px;">${roleName}</span>
+                                <span style="font-weight: 600; color: ${currentTheme.primaryColor}; font-size: 16px;">${roleData.count}</span>
+                            </div>
+                            <div style="background: #e2e8f0; border-radius: ${selectedTheme === "professional" ? "0px" : "4px"}; height: 8px; overflow: hidden;">
+                                <div style="background: ${selectedTheme === "modern" ? "linear-gradient(90deg, #3b82f6, #06b6d4)" : currentTheme.primaryColor}; height: 100%; width: ${percentage}%; border-radius: ${selectedTheme === "professional" ? "0px" : "4px"};"></div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Daily Registration Trends Section -->
+            ${
+              isEnabled("userMetrics", "registrationTrends") && insights.dailyRegistrations && insights.dailyRegistrations.length > 0
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "📊✨" : "📊"} Daily Registration Activity</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f0f9ff" : selectedTheme === "modern" ? "linear-gradient(145deg, #f0f9ff, #e0f2fe)" : "#f0f9ff"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; text-align: center; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: end; height: 100px; margin: 20px 0; padding: 0 10px; border-bottom: 1px solid #bae6fd;">
+                        ${insights.dailyRegistrations.map((day) => {
+                            const maxRegistrations = Math.max(...insights.dailyRegistrations.map(d => d.registrations));
+                            const height = maxRegistrations > 0 ? Math.max(4, (day.registrations / maxRegistrations) * 80) : 4;
+                            return `
+                            <div style="flex: 1; margin: 0 2px; text-align: center;">
+                                <div style="font-size: 12px; color: #0369a1; font-weight: 600; margin-bottom: 2px;">${day.registrations}</div>
+                                <div style="background: ${selectedTheme === "modern" ? "linear-gradient(to top, #0369a1, #0284c7)" : "#0369a1"}; border-radius: ${selectedTheme === "professional" ? "0px" : "2px"}; margin-bottom: 5px; min-height: 4px; height: ${height}px;"></div>
+                                <div style="font-size: 11px; color: #0284c7; font-weight: 500;">${day.date}</div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <p style="margin: 10px 0 0 0; color: #0284c7; font-size: 12px;">
+                        Total: ${insights.dailyRegistrations.reduce((sum, day) => sum + day.registrations, 0)} new registrations this week
+                    </p>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
             <!-- Rest of sections remain the same but will use theme-specific styling -->
             ${
               isEnabled("applicationData", "dailyBreakdown") &&
@@ -586,6 +798,134 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                     <p style="margin: 10px 0 0 0; color: #718096; font-size: 12px;">
                         Total: ${insights.dailyApplications.reduce((sum, day) => sum + day.applications, 0)} applications this week
                     </p>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- System Health Section -->
+            ${
+              isEnabled("systemHealth", "systemStatus") && systemHealth
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "🔧✨" : "🔧"} System Status</h2>
+                <div style="background: ${
+                  systemHealth.systemStatus === 'healthy' 
+                    ? selectedTheme === "minimalist" ? "#f0fdf4" : selectedTheme === "modern" ? "linear-gradient(145deg, #f0fdf4, #dcfce7)" : "#f0fdf4"
+                    : systemHealth.systemStatus === 'critical'
+                    ? selectedTheme === "minimalist" ? "#fef2f2" : selectedTheme === "modern" ? "linear-gradient(145deg, #fef2f2, #fecaca)" : "#fef2f2"
+                    : selectedTheme === "minimalist" ? "#fefbf3" : selectedTheme === "modern" ? "linear-gradient(145deg, #fefbf3, #fde68a)" : "#fefbf3"
+                }; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; border-left: 4px solid ${
+                  systemHealth.systemStatus === 'healthy' ? '#22c55e' 
+                    : systemHealth.systemStatus === 'critical' ? '#ef4444'  
+                    : '#f59e0b'
+                }; ${selectedTheme === "modern" ? `box-shadow: 0 4px 16px ${
+                  systemHealth.systemStatus === 'healthy' ? 'rgba(34,197,94,0.1)' 
+                    : systemHealth.systemStatus === 'critical' ? 'rgba(239,68,68,0.1)'
+                    : 'rgba(245,158,11,0.1)'
+                };` : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: ${
+                              systemHealth.systemStatus === 'healthy' ? '#166534' 
+                                : systemHealth.systemStatus === 'critical' ? '#991b1b'
+                                : '#92400e'
+                            }; text-transform: uppercase; margin-bottom: 5px;">
+                                ${systemHealth.systemStatus === 'healthy' ? '✅ HEALTHY' 
+                                  : systemHealth.systemStatus === 'critical' ? '🚨 CRITICAL'
+                                  : systemHealth.systemStatus === 'degraded' ? '⚠️ DEGRADED'
+                                  : '⚡ WARNING'}
+                            </div>
+                            <div style="color: ${
+                              systemHealth.systemStatus === 'healthy' ? '#16a34a' 
+                                : systemHealth.systemStatus === 'critical' ? '#dc2626'
+                                : '#d97706'
+                            }; font-size: 14px; font-weight: 500;">${systemHealth.statusReason}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; color: #6b7280;">System Overview</div>
+                            <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">${systemHealth.activeJobs} active jobs, ${systemHealth.totalUsers} users</div>
+                        </div>
+                    </div>
+                    
+                    ${systemHealth.emailPerformance ? `
+                        <div style="border-top: 1px solid ${
+                          systemHealth.systemStatus === 'healthy' ? '#bbf7d0' 
+                            : systemHealth.systemStatus === 'critical' ? '#fecaca'
+                            : '#fde68a'
+                        }; padding-top: 15px; margin-top: 15px;">
+                            <div style="font-weight: 600; color: ${currentTheme.textColor}; font-size: 14px; margin-bottom: 10px;">📧 Email Performance</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1; text-align: center;">
+                                    <div style="font-size: 18px; font-weight: bold; color: ${currentTheme.primaryColor};">${systemHealth.emailPerformance.total}</div>
+                                    <div style="font-size: 12px; color: #6b7280;">Total Sent</div>
+                                </div>
+                                <div style="flex: 1; text-align: center;">
+                                    <div style="font-size: 18px; font-weight: bold; color: #22c55e;">${systemHealth.emailPerformance.successRate}%</div>
+                                    <div style="font-size: 12px; color: #6b7280;">Success Rate</div>
+                                </div>
+                                <div style="flex: 1; text-align: center;">
+                                    <div style="font-size: 18px; font-weight: bold; color: ${systemHealth.emailPerformance.failed > 0 ? '#ef4444' : '#6b7280'};">${systemHealth.emailPerformance.failed}</div>
+                                    <div style="font-size: 12px; color: #6b7280;">Failed</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Error Summary Section -->
+            ${
+              isEnabled("systemHealth", "errorSummary") && systemHealth?.errorSummary && (systemHealth.errorSummary.errors > 0 || systemHealth.errorSummary.warnings > 0)
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "⚠️✨" : "⚠️"} Error Summary</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#fef2f2" : selectedTheme === "modern" ? "linear-gradient(145deg, #fef2f2, #fecaca)" : "#fef2f2"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; border-left: 4px solid #ef4444; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(239,68,68,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #991b1b; font-size: 16px;">
+                            System Issues This Week
+                        </div>
+                        <div style="font-size: 12px; color: #dc2626;">
+                            ${systemHealth.errorSummary.errorRate}% error rate
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${systemHealth.errorSummary.critical}</div>
+                            <div style="font-size: 12px; color: #991b1b;">Critical</div>
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 20px; font-weight: bold; color: #ea580c;">${systemHealth.errorSummary.errors}</div>
+                            <div style="font-size: 12px; color: #c2410c;">Errors</div>
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 20px; font-weight: bold; color: #d97706;">${systemHealth.errorSummary.warnings}</div>
+                            <div style="font-size: 12px; color: #b45309;">Warnings</div>
+                        </div>
+                    </div>
+                    
+                    ${systemHealth.errorSummary.recentErrors && systemHealth.errorSummary.recentErrors.length > 0 ? `
+                        <div style="border-top: 1px solid #fecaca; padding-top: 15px;">
+                            <div style="font-weight: 600; color: #991b1b; font-size: 14px; margin-bottom: 10px;">Recent Issues:</div>
+                            ${systemHealth.errorSummary.recentErrors.slice(0, 5).map(error => `
+                                <div style="margin-bottom: 8px; padding: 8px; background: rgba(254, 202, 202, 0.5); border-radius: 4px;">
+                                    <div style="display: flex; justify-content: between; align-items: center;">
+                                        <span style="font-size: 11px; color: #991b1b; font-weight: bold; text-transform: uppercase; margin-right: 8px;">${error.severity}</span>
+                                        <span style="font-size: 12px; color: #7f1d1d; flex: 1;">${error.action}</span>
+                                        <span style="font-size: 10px; color: #b91c1c;">${error.date}</span>
+                                    </div>
+                                    ${error.description && error.description !== 'No description' ? `
+                                        <div style="font-size: 11px; color: #dc2626; margin-top: 4px; font-style: italic;">${error.description}</div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
                 </div>
             </div>
             `
