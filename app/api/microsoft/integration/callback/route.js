@@ -10,16 +10,20 @@ export async function GET(request) {
     const state = searchParams.get('state'); // This should be the user ID
     const error = searchParams.get('error');
 
+    // Get the correct base URL for redirects
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    console.log("🔍 Callback Debug - Base URL for redirects:", baseUrl);
+
     if (error) {
       console.error("Microsoft OAuth error:", error);
       return NextResponse.redirect(
-        new URL(`/admin/settings?microsoft_error=${error}`, request.url)
+        new URL(`/admin/settings?microsoft_error=${error}`, baseUrl)
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_error=invalid_request', request.url)
+        new URL('/admin/settings?microsoft_error=invalid_request', baseUrl)
       );
     }
 
@@ -42,7 +46,7 @@ export async function GET(request) {
       const errorData = await tokenResponse.text();
       console.error("Microsoft token exchange failed:", errorData);
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_error=connection_failed', request.url)
+        new URL('/admin/settings?microsoft_error=connection_failed', baseUrl)
       );
     }
 
@@ -58,7 +62,7 @@ export async function GET(request) {
     if (!userResponse.ok) {
       console.error("Failed to get Microsoft user info");
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_error=connection_failed', request.url)
+        new URL('/admin/settings?microsoft_error=connection_failed', baseUrl)
       );
     }
 
@@ -85,19 +89,19 @@ export async function GET(request) {
       });
 
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_success=connected', request.url)
+        new URL('/admin/settings?microsoft_success=connected', baseUrl)
       );
     } catch (dbError) {
       console.error("Database error during Microsoft integration:", dbError);
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_error=connection_failed', request.url)
+        new URL('/admin/settings?microsoft_error=connection_failed', baseUrl)
       );
     }
 
   } catch (error) {
     console.error("Microsoft OAuth callback error:", error);
     return NextResponse.redirect(
-      new URL('/admin/settings?microsoft_error=connection_failed', request.url)
+      new URL('/admin/settings?microsoft_error=connection_failed', baseUrl)
     );
   } finally {
     await prisma.$disconnect();
