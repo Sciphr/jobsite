@@ -75,6 +75,15 @@ export const useDashboardStats = () => {
   });
 };
 
+export const useSystemStatus = () => {
+  return useQuery({
+    queryKey: ["admin", "system-status"],
+    queryFn: () => fetcher("/api/admin/system-status"),
+    ...commonQueryOptions,
+    staleTime: 5 * 60 * 1000, // 5 minutes for system status
+  });
+};
+
 export const useCategories = () => {
   return useQuery({
     queryKey: ["admin", "categories"],
@@ -508,17 +517,85 @@ export const useUpdateApplicationStatus = () => {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
-      // Update the specific application in cache
-      queryClient.setQueryData(
-        ["admin", "application", variables.applicationId],
-        data
-      );
+    onMutate: async ({ applicationId, status, notes }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin", "applications"] });
+      
+      // Snapshot the previous value
+      const previousApplications = queryClient.getQueryData(["admin", "applications"]);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(["admin", "applications"], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((app) =>
+          app.id === applicationId ? { ...app, status, notes: notes || app.notes } : app
+        );
+      });
 
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+      // Also update individual application cache if it exists
+      queryClient.setQueryData(
+        ["admin", "application", applicationId],
+        (oldData) => oldData ? { ...oldData, status, notes: notes || oldData.notes } : oldData
+      );
+      
+      return { previousApplications };
+    },
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousApplications) {
+        queryClient.setQueryData(["admin", "applications"], context.previousApplications);
+      }
+    },
+    onSettled: () => {
+      // Always refetch dashboard stats to keep them in sync
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "analytics"] });
+    },
+  });
+};
+
+export const useDeleteApplication = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (applicationId) => {
+      const response = await fetch(`/api/admin/applications/${applicationId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete application");
+      }
+
+      return response.json();
+    },
+    onMutate: async (applicationId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin", "applications"] });
+      
+      // Snapshot the previous value
+      const previousApplications = queryClient.getQueryData(["admin", "applications"]);
+      
+      // Optimistically remove from cache
+      queryClient.setQueryData(["admin", "applications"], (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.filter((app) => app.id !== applicationId);
+      });
+
+      // Remove individual application cache
+      queryClient.removeQueries({ queryKey: ["admin", "application", applicationId] });
+      
+      return { previousApplications };
+    },
+    onError: (err, applicationId, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousApplications) {
+        queryClient.setQueryData(["admin", "applications"], context.previousApplications);
+      }
+    },
+    onSettled: () => {
+      // Always refetch dashboard stats to keep them in sync
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
     },
   });
 };

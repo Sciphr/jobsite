@@ -1,11 +1,11 @@
-// app/admin/settings/components/LogoUpload.js
+// app/admin/settings/components/FaviconUpload.js
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Upload, 
-  Image as ImageIcon, 
+  Monitor, 
   X, 
   RefreshCw, 
   CheckCircle, 
@@ -15,8 +15,8 @@ import {
   Eye
 } from "lucide-react";
 
-export default function LogoUpload({ getButtonClasses, compact = false }) {
-  const [logo, setLogo] = useState(null);
+export default function FaviconUpload({ getButtonClasses, compact = false }) {
+  const [favicon, setFavicon] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -25,25 +25,25 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Fetch current logo on component mount
+  // Fetch current favicon on component mount
   useEffect(() => {
-    fetchCurrentLogo();
+    fetchCurrentFavicon();
   }, []);
 
-  const fetchCurrentLogo = async () => {
+  const fetchCurrentFavicon = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/logo');
+      const response = await fetch('/api/admin/favicon');
       const data = await response.json();
       
-      if (response.ok && data.logoUrl) {
-        setLogo({
-          url: data.logoUrl,
+      if (response.ok && data.faviconUrl) {
+        setFavicon({
+          url: data.faviconUrl,
           storagePath: data.storagePath
         });
       }
     } catch (error) {
-      console.error('Error fetching logo:', error);
+      console.error('Error fetching favicon:', error);
     } finally {
       setLoading(false);
     }
@@ -53,23 +53,23 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+    const allowedTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type.toLowerCase())) {
-      setError('Invalid file type. Please upload JPG, PNG, WebP, or SVG images only.');
+      setError('Invalid file type. Please upload ICO, PNG, or SVG files only.');
       return;
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size (1MB max)
+    const maxSize = 1 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File size too large. Maximum size is 5MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+      setError(`File size too large. Maximum size is 1MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
       return;
     }
 
-    uploadLogo(file);
+    uploadFavicon(file);
   };
 
-  const uploadLogo = async (file) => {
+  const uploadFavicon = async (file) => {
     try {
       setUploading(true);
       setError(null);
@@ -78,7 +78,7 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/admin/logo', {
+      const response = await fetch('/api/admin/favicon', {
         method: 'POST',
         body: formData,
       });
@@ -86,27 +86,27 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
       const data = await response.json();
 
       if (response.ok) {
-        setLogo({
-          url: data.logoUrl,
+        setFavicon({
+          url: data.faviconUrl,
           storagePath: data.storagePath
         });
-        setSuccess('Logo uploaded successfully!');
+        setSuccess('Favicon uploaded successfully!');
         
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError(data.error || 'Failed to upload logo');
+        setError(data.error || 'Failed to upload favicon');
       }
     } catch (error) {
-      console.error('Error uploading logo:', error);
-      setError('Failed to upload logo. Please try again.');
+      console.error('Error uploading favicon:', error);
+      setError('Failed to upload favicon. Please try again.');
     } finally {
       setUploading(false);
     }
   };
 
-  const deleteLogo = async () => {
-    if (!confirm('Are you sure you want to delete the current logo? This will revert to the default briefcase icon.')) {
+  const deleteFavicon = async () => {
+    if (!confirm('Are you sure you want to delete the current favicon? This will revert to the default browser favicon.')) {
       return;
     }
 
@@ -115,24 +115,24 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch('/api/admin/logo', {
+      const response = await fetch('/api/admin/favicon', {
         method: 'DELETE',
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setLogo(null);
-        setSuccess('Logo deleted successfully!');
+        setFavicon(null);
+        setSuccess('Favicon deleted successfully!');
         
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError(data.error || 'Failed to delete logo');
+        setError(data.error || 'Failed to delete favicon');
       }
     } catch (error) {
-      console.error('Error deleting logo:', error);
-      setError('Failed to delete logo. Please try again.');
+      console.error('Error deleting favicon:', error);
+      setError('Failed to delete favicon. Please try again.');
     } finally {
       setDeleting(false);
     }
@@ -172,10 +172,10 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
     <div className={compact ? "space-y-4" : "space-y-6"}>
       {/* Header */}
       <div>
-        <h3 className={`${compact ? "text-base" : "text-lg"} font-semibold admin-text mb-2`}>Site Logo</h3>
+        <h3 className={`${compact ? "text-base" : "text-lg"} font-semibold admin-text mb-2`}>Site Favicon</h3>
         {!compact && (
           <p className="text-sm admin-text-light">
-            Upload a custom logo to replace the default briefcase icon. Recommended size: 200x200px or smaller. Maximum file size: 5MB.
+            Upload a custom favicon to appear in browser tabs and bookmarks. Recommended size: 32x32px or 16x16px. Maximum file size: 1MB.
           </p>
         )}
       </div>
@@ -203,8 +203,8 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
         </motion.div>
       )}
 
-      {/* Current Logo Display */}
-      {logo && (
+      {/* Current Favicon Display */}
+      {favicon && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -212,33 +212,42 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
         >
           <div className={`flex items-start ${compact ? "space-x-3" : "space-x-4"}`}>
             <div className="flex-shrink-0">
-              <img
-                src={logo.url}
-                alt="Current site logo"
-                className={`${compact ? "h-12 w-12" : "h-16 w-16"} object-contain rounded-lg border border-gray-200`}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  setError('Failed to load logo image');
-                }}
-              />
+              <div className="relative">
+                <img
+                  src={favicon.url}
+                  alt="Current site favicon"
+                  className={`${compact ? "h-6 w-6" : "h-8 w-8"} object-contain rounded border border-gray-200`}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    setError('Failed to load favicon image');
+                  }}
+                />
+                {/* Show preview in browser tab context */}
+                {!compact && (
+                  <div className="mt-2 flex items-center space-x-2 text-xs admin-text-light">
+                    <Monitor className="h-3 w-3" />
+                    <span>Browser tab preview</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`${compact ? "text-xs" : "text-sm"} font-medium admin-text`}>Current Logo</h4>
+              <h4 className={`${compact ? "text-xs" : "text-sm"} font-medium admin-text`}>Current Favicon</h4>
               {!compact && (
                 <p className="text-xs admin-text-light mt-1 truncate">
-                  {logo.storagePath}
+                  {favicon.storagePath}
                 </p>
               )}
               <div className={`flex items-center space-x-2 ${compact ? "mt-2" : "mt-3"}`}>
                 <button
-                  onClick={() => window.open(logo.url, '_blank')}
+                  onClick={() => window.open(favicon.url, '_blank')}
                   className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
                 >
                   <Eye className="h-3 w-3" />
                   <span>View</span>
                 </button>
                 <button
-                  onClick={deleteLogo}
+                  onClick={deleteFavicon}
                   disabled={deleting}
                   className="flex items-center space-x-1 px-2 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
                 >
@@ -270,7 +279,7 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
+          accept=".ico,.png,.svg,image/x-icon,image/vnd.microsoft.icon,image/png,image/svg+xml"
           onChange={handleInputChange}
           className="hidden"
         />
@@ -280,17 +289,17 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
             {uploading ? (
               <RefreshCw className={`${compact ? "h-6 w-6" : "h-8 w-8"} text-blue-600 animate-spin`} />
             ) : (
-              <ImageIcon className={`${compact ? "h-6 w-6" : "h-8 w-8"} text-gray-400`} />
+              <Monitor className={`${compact ? "h-6 w-6" : "h-8 w-8"} text-gray-400`} />
             )}
           </div>
           
           <div className="space-y-2">
             <p className={`${compact ? "text-xs" : "text-sm"} admin-text`}>
-              {uploading ? 'Uploading logo...' : (compact ? 'Drop logo or click to browse' : 'Drop your logo here or click to browse')}
+              {uploading ? 'Uploading favicon...' : (compact ? 'Drop favicon or click to browse' : 'Drop your favicon here or click to browse')}
             </p>
             {!compact && (
               <p className="text-xs admin-text-light">
-                JPG, PNG, WebP, or SVG • Max 5MB • Recommended: 200x200px
+                ICO, PNG, or SVG • Max 1MB • Recommended: 32x32px or 16x16px
               </p>
             )}
           </div>
@@ -305,20 +314,21 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
             }`}
           >
             <Upload className={`${compact ? "h-3 w-3" : "h-4 w-4"}`} />
-            <span>{logo ? 'Replace Logo' : 'Upload Logo'}</span>
+            <span>{favicon ? 'Replace Favicon' : 'Upload Favicon'}</span>
           </motion.button>
         </div>
       </div>
 
-      {/* Logo Guidelines - Only show in non-compact mode */}
+      {/* Favicon Guidelines - Only show in non-compact mode */}
       {!compact && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">Logo Guidelines</h4>
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Favicon Guidelines</h4>
           <ul className="text-xs text-blue-800 space-y-1">
-            <li>• Keep it square (1:1 aspect ratio) for best results</li>
-            <li>• Use high contrast colors for better visibility</li>
-            <li>• SVG format is recommended for crisp scaling</li>
-            <li>• The logo will be automatically resized to fit the header</li>
+            <li>• ICO format supports multiple sizes (16x16, 32x32, 48x48)</li>
+            <li>• PNG format should be 32x32px for best results</li>
+            <li>• SVG format provides crisp scaling across all sizes</li>
+            <li>• Use simple, recognizable shapes for small sizes</li>
+            <li>• High contrast colors work better in browser tabs</li>
           </ul>
         </div>
       )}

@@ -9,7 +9,10 @@ import {
   useApplications,
   useJobsSimple,
   usePrefetchAdminData,
+  useUpdateApplicationStatus,
+  useDeleteApplication,
 } from "@/app/hooks/useAdminData";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   Search,
@@ -21,7 +24,7 @@ import {
   User,
   Briefcase,
   RefreshCw,
-  MoreHorizontal,
+  Trash2,
   X,
   CheckCircle,
   XCircle,
@@ -32,12 +35,18 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  FileSpreadsheet,
+  FileDown,
 } from "lucide-react";
+import { exportApplicationsToExcel, exportApplicationsToCSV } from "@/app/utils/applicationsExport";
 
 export default function AdminApplications() {
   const { data: session } = useSession();
   const router = useRouter();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
+  const queryClient = useQueryClient();
+  const updateApplicationMutation = useUpdateApplicationStatus();
+  const deleteApplicationMutation = useDeleteApplication();
 
   // ✅ FIXED: Remove array-dependent useEffect
   const [searchTerm, setSearchTerm] = useState("");
@@ -164,21 +173,9 @@ export default function AdminApplications() {
     resetPagination();
   };
 
+  // ✅ OPTIMIZED: Use React Query mutation for instant UI updates
   const updateApplicationStatus = async (applicationId, newStatus) => {
-    try {
-      const response = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        // Refetch the applications data to show the updated status
-        await refetch();
-      }
-    } catch (error) {
-      console.error("Error updating application status:", error);
-    }
+    updateApplicationMutation.mutate({ applicationId, status: newStatus });
   };
 
   const handleSelectAll = (checked) => {
@@ -200,6 +197,7 @@ export default function AdminApplications() {
     }
   };
 
+  // ✅ OPTIMIZED: Single delete with React Query mutation
   const deleteApplication = async (applicationId) => {
     if (
       !confirm(
@@ -209,22 +207,16 @@ export default function AdminApplications() {
       return;
     }
 
-    try {
-      const response = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "DELETE",
-      });
+    // Remove from selected applications immediately
+    setSelectedApplications((prev) =>
+      prev.filter((id) => id !== applicationId)
+    );
 
-      if (response.ok) {
-        // Note: React Query will handle cache updates via mutations
-        setSelectedApplications((prev) =>
-          prev.filter((id) => id !== applicationId)
-        );
-      }
-    } catch (error) {
-      console.error("Error deleting application:", error);
-    }
+    // Use the optimized delete mutation
+    deleteApplicationMutation.mutate(applicationId);
   };
 
+  // ✅ OPTIMIZED: Bulk actions with optimistic updates
   const handleBulkAction = async (action) => {
     if (selectedApplications.length === 0) return;
 
@@ -237,12 +229,26 @@ export default function AdminApplications() {
 
     try {
       if (action === "delete") {
+        // Optimistically remove from cache
+        queryClient.setQueryData(["admin", "applications"], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.filter((app) => !selectedApplications.includes(app.id));
+        });
+
         await Promise.all(
           selectedApplications.map((id) =>
             fetch(`/api/admin/applications/${id}`, { method: "DELETE" })
           )
         );
       } else {
+        // Optimistically update status in cache
+        queryClient.setQueryData(["admin", "applications"], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map((app) =>
+            selectedApplications.includes(app.id) ? { ...app, status: action } : app
+          );
+        });
+
         await Promise.all(
           selectedApplications.map((id) =>
             fetch(`/api/admin/applications/${id}`, {
@@ -254,9 +260,10 @@ export default function AdminApplications() {
         );
       }
       setSelectedApplications([]);
-      // React Query will handle cache updates
     } catch (error) {
       console.error("Error performing bulk action:", error);
+      // Revert optimistic update on error
+      refetch();
     }
   };
 
@@ -331,6 +338,21 @@ export default function AdminApplications() {
     "Rejected",
   ];
 
+  // ✅ NEW: Export functionality
+  const handleExport = (format) => {
+    const filters = {
+      searchTerm,
+      statusFilter: statusFilter === 'all' ? null : statusFilter,
+      jobFilter: jobFilter === 'all' ? null : jobFilter
+    };
+
+    if (format === 'excel') {
+      exportApplicationsToExcel(filteredApplications, filters);
+    } else if (format === 'csv') {
+      exportApplicationsToCSV(filteredApplications, filters);
+    }
+  };
+
   // ✅ Show cache status in development
   if (process.env.NODE_ENV === "development") {
     console.log("📊 Applications Component Render:", {
@@ -383,6 +405,34 @@ export default function AdminApplications() {
             <span className="font-semibold text-sm lg:text-base">Applications Manager</span>
             <ArrowRight className="h-4 w-4" />
           </button>
+
+          {/* ✅ NEW: Export Dropdown */}
+          <div className="relative group">
+            <button
+              className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm ${getButtonClasses("secondary")} w-full sm:w-auto`}
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="text-sm lg:text-base">Export</span>
+            </button>
+            <div className="absolute right-0 top-10 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+              <div className="p-2">
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  <span>Export to Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <span>Export to CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
           <button
             onClick={handleRefresh}
@@ -693,12 +743,24 @@ export default function AdminApplications() {
                           </div>
                           <div className="text-sm admin-text-light flex items-center space-x-1">
                             <Mail className="h-3 w-3" />
-                            <span>{application.email}</span>
+                            <a 
+                              href={`mailto:${application.email}`}
+                              className="hover:text-blue-600 hover:underline transition-colors duration-200"
+                              title="Send email"
+                            >
+                              {application.email}
+                            </a>
                           </div>
                           {application.phone && (
                             <div className="text-sm admin-text-light flex items-center space-x-1">
                               <Phone className="h-3 w-3" />
-                              <span>{application.phone}</span>
+                              <a 
+                                href={`tel:${application.phone}`}
+                                className="hover:text-green-600 hover:underline transition-colors duration-200"
+                                title="Call phone"
+                              >
+                                {application.phone}
+                              </a>
                             </div>
                           )}
                         </div>
@@ -766,22 +828,13 @@ export default function AdminApplications() {
                             <Download className="h-4 w-4" />
                           </button>
                         )}
-                        <div className="relative group">
-                          <button
-                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                            title="More actions"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                          <div className="absolute right-0 top-8 w-32 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                            <button
-                              onClick={() => deleteApplication(application.id)}
-                              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => deleteApplication(application.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                          title="Delete application"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1136,13 +1189,14 @@ export default function AdminApplications() {
                     <select
                       value={selectedApplication.status}
                       onChange={(e) => {
+                        const newStatus = e.target.value;
                         updateApplicationStatus(
                           selectedApplication.id,
-                          e.target.value
+                          newStatus
                         );
                         setSelectedApplication((prev) => ({
                           ...prev,
-                          status: e.target.value,
+                          status: newStatus,
                         }));
                       }}
                       className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text font-medium"

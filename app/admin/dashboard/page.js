@@ -9,6 +9,7 @@ import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   useDashboardStats,
   usePrefetchAdminData,
+  useSystemStatus,
 } from "@/app/hooks/useAdminData";
 import {
   Users,
@@ -40,6 +41,13 @@ export default function AdminDashboard() {
     error,
     refetch,
   } = useDashboardStats();
+
+  // Use React Query for system status
+  const {
+    data: systemStatus,
+    isLoading: statusLoading,
+    isError: statusError,
+  } = useSystemStatus();
 
   // Check if user is admin (privilege level 1 or higher)
   const isAdmin = session?.user?.privilegeLevel >= 1;
@@ -400,31 +408,111 @@ export default function AdminDashboard() {
           <h2 className="text-lg font-semibold admin-text mb-4">
             System Status
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <div className="text-sm font-medium admin-text">Database</div>
-                <div className="text-xs text-green-600">Connected</div>
+          {statusLoading ? (
+            <div className="animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-3 bg-gray-100 rounded-lg">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <div className="text-sm font-medium admin-text">
-                  Email Service
+          ) : statusError ? (
+            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center space-x-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <span className="text-sm text-red-700">Failed to load system status</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Database Status */}
+              <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                systemStatus?.database?.healthy 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                {systemStatus?.database?.healthy ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+                <div>
+                  <div className="text-sm font-medium admin-text">Database</div>
+                  <div className={`text-xs ${
+                    systemStatus?.database?.healthy ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {systemStatus?.database?.status || 'Unknown'}
+                  </div>
                 </div>
-                <div className="text-xs text-green-600">Operational</div>
+              </div>
+
+              {/* Email Service Status */}
+              <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                systemStatus?.emailService?.healthy 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                {systemStatus?.emailService?.healthy ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+                <div>
+                  <div className="text-sm font-medium admin-text">Email Service</div>
+                  <div className={`text-xs ${
+                    systemStatus?.emailService?.healthy ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {systemStatus?.emailService?.status || 'Unknown'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Storage Usage */}
+              <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                systemStatus?.storage?.healthy 
+                  ? 'bg-blue-50 border-blue-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                {systemStatus?.storage?.healthy ? (
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+                <div>
+                  <div className="text-sm font-medium admin-text">Storage</div>
+                  <div className={`text-xs ${
+                    systemStatus?.storage?.healthy ? 'text-blue-600' : 'text-red-600'
+                  }`}>
+                    {systemStatus?.storage?.status || 'Unknown'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Email Delivery */}
+              <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                systemStatus?.emailDelivery?.healthy 
+                  ? 'bg-purple-50 border-purple-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                {systemStatus?.emailDelivery?.healthy ? (
+                  <CheckCircle className="h-5 w-5 text-purple-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+                <div>
+                  <div className="text-sm font-medium admin-text">Email Delivery</div>
+                  <div className={`text-xs ${
+                    systemStatus?.emailDelivery?.healthy ? 'text-purple-600' : 'text-red-600'
+                  }`}>
+                    {systemStatus?.emailDelivery?.status || 'Unknown'}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-              <Clock className="h-5 w-5 text-yellow-600" />
-              <div>
-                <div className="text-sm font-medium admin-text">Backup</div>
-                <div className="text-xs text-yellow-600">Last: 2 hours ago</div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

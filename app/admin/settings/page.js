@@ -9,6 +9,7 @@ import CalendarIntegration from "./components/CalendarIntegration";
 import ZoomIntegration from "./components/ZoomIntegration";
 import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import LogoUpload from "./components/LogoUpload";
+import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
 import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
@@ -1130,7 +1131,39 @@ export default function AdminSettings() {
             </div>
           ) : activeTab === "branding" ? (
             <div className="space-y-6">
-              <LogoUpload getButtonClasses={getButtonClasses} />
+              {/* Logo and Favicon Side by Side */}
+              <div>
+                <h3 className="text-lg font-semibold admin-text mb-4">Brand Assets</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <LogoUpload getButtonClasses={getButtonClasses} compact={true} />
+                  <FaviconUpload getButtonClasses={getButtonClasses} compact={true} />
+                </div>
+                
+                {/* Shared Guidelines */}
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">Brand Asset Guidelines</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-blue-800">
+                    <div>
+                      <h5 className="font-medium mb-1">Logo Guidelines:</h5>
+                      <ul className="space-y-1">
+                        <li>• Keep it square (1:1 aspect ratio) for best results</li>
+                        <li>• Use high contrast colors for better visibility</li>
+                        <li>• SVG format is recommended for crisp scaling</li>
+                        <li>• Maximum file size: 5MB</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium mb-1">Favicon Guidelines:</h5>
+                      <ul className="space-y-1">
+                        <li>• ICO format supports multiple sizes (16x16, 32x32, 48x48)</li>
+                        <li>• PNG format should be 32x32px for best results</li>
+                        <li>• Use simple, recognizable shapes for small sizes</li>
+                        <li>• Maximum file size: 1MB</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div className="border-t border-gray-200 pt-6">
                 <SiteThemeSelector getButtonClasses={getButtonClasses} />

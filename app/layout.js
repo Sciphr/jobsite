@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ThemeScript from "./components/ThemeScript";
+import DynamicFavicon from "./components/DynamicFavicon";
 import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
@@ -25,6 +26,9 @@ export async function generateMetadata() {
     getSystemSetting("site_name", "JobSite"),
     getSystemSetting("site_description", "Find your next career opportunity"),
   ]);
+
+  // Note: Favicon will be handled client-side by DynamicFavicon component
+  // due to the need for signed URLs from MinIO storage
 
   return {
     title: {
@@ -84,6 +88,7 @@ export default async function RootLayout({ children }) {
         suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <DynamicFavicon />
         <QueryProvider>
           <ThemeProvider>
             <Providers session={undefined}>
