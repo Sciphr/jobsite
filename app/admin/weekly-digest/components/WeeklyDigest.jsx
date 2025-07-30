@@ -30,6 +30,7 @@ const WeeklyDigest = () => {
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDateRange, setPreviewDateRange] = useState("");
+  const [previewBlobUrl, setPreviewBlobUrl] = useState("");
 
   const [digestConfig, setDigestConfig] = useState({
     enabled: true,
@@ -67,8 +68,6 @@ const WeeklyDigest = () => {
         rejected: false,
         appTrends: true,
         dailyBreakdown: true,
-        conversionRates: false,
-        avgTimeToHire: true,
       },
       systemHealth: {
         systemStatus: true,
@@ -646,29 +645,95 @@ const WeeklyDigest = () => {
     setPreviewLoading(true);
     setShowPreview(true);
     setPreviewHtml("");
+    
+    // Clean up any existing blob URL
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+      setPreviewBlobUrl("");
+    }
 
     try {
+      console.log("🚀 Starting preview generation...");
+      console.log("📋 Digest config:", JSON.stringify(digestConfig, null, 2));
+      
       const response = await fetch("/api/admin/weekly-digest/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ digestConfig }),
       });
 
+      console.log("📡 Response status:", response.status);
       const data = await response.json();
+      console.log("📦 Response data:", { success: data.success, htmlLength: data.html?.length, message: data.message });
 
       if (response.ok && data.success) {
-        setPreviewHtml(data.html);
+        console.log("✅ Preview generated successfully, HTML length:", data.html?.length);
+        console.log("📅 Date range:", data.dateRange);
+        console.log("🔍 HTML preview (first 500 chars):", data.html?.substring(0, 500));
+        
+        // Validate HTML structure
+        if (data.html && data.html.includes('<!DOCTYPE html>')) {
+          console.log("✅ HTML has proper DOCTYPE");
+        } else {
+          console.log("⚠️ HTML missing DOCTYPE or malformed");
+        }
+        
+        // Check if HTML seems to have minimal content
+        const bodyContent = data.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || '';
+        const textContent = bodyContent.replace(/<[^>]*>/g, '').trim();
+        
+        if (textContent.length < 100) {
+          console.log("⚠️ HTML appears to have minimal content, likely due to disabled sections");
+          setPreviewHtml(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Preview Notice</title></head>
+            <body style="font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5;">
+              <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h2 style="color: #f59e0b; margin-bottom: 20px;">⚠️ Preview Notice</h2>
+                <p>The email preview appears mostly empty because most sections are currently disabled in your configuration.</p>
+                <p><strong>Currently enabled:</strong></p>
+                <ul>
+                  ${Object.entries(digestConfig.sections).filter(([key, value]) => value).map(([key]) => `<li>${key.replace(/([A-Z])/g, ' $1').toLowerCase()}</li>`).join('')}
+                </ul>
+                <p><strong>To see more content:</strong></p>
+                <ol>
+                  <li>Enable more sections (Job Metrics, User Metrics, Application Data)</li>
+                  <li>Enable customizations within each section</li>
+                  <li>Click Preview again</li>
+                </ol>
+                <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 4px;">
+                  <h4>Generated HTML Info:</h4>
+                  <p>Length: ${data.html.length} characters</p>
+                  <p>Content preview: ${textContent.substring(0, 200)}...</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `);
+        } else {
+          // Set the actual HTML content and create blob URL
+          setPreviewHtml(data.html);
+          
+          // Create blob URL for iframe
+          const blob = new Blob([data.html], { type: 'text/html' });
+          const blobUrl = URL.createObjectURL(blob);
+          setPreviewBlobUrl(blobUrl);
+          console.log("🔗 Created blob URL:", blobUrl);
+        }
         setPreviewDateRange(data.dateRange);
       } else {
+        console.error("❌ Preview API error:", data);
         setPreviewHtml(`
           <div style="padding: 20px; text-align: center; color: #ef4444;">
             <h2>Preview Error</h2>
             <p>${data.message || "Failed to generate preview"}</p>
+            <pre style="text-align: left; font-size: 12px; margin-top: 10px;">${JSON.stringify(data, null, 2)}</pre>
           </div>
         `);
       }
     } catch (error) {
-      console.error("Preview error:", error);
+      console.error("❌ Preview error:", error);
       setPreviewHtml(`
         <div style="padding: 20px; text-align: center; color: #ef4444;">
           <h2>Preview Error</h2>
@@ -677,6 +742,15 @@ const WeeklyDigest = () => {
       `);
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    setShowPreview(false);
+    // Clean up blob URL when closing
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+      setPreviewBlobUrl("");
     }
   };
 
@@ -897,6 +971,102 @@ const WeeklyDigest = () => {
           <RecentDigests theme={theme} />
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closePreview}></div>
+          
+          {/* Modal Content */}
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden z-10">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className={`text-lg font-medium ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+                      Email Preview
+                    </h3>
+                    {previewDateRange && (
+                      <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                        Week of {previewDateRange}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={closePreview}
+                    className={`rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${theme === "dark" ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"}`}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-700">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                          Generating preview with your current settings...
+                        </p>
+                      </div>
+                    </div>
+                  ) : previewHtml ? (
+                    <div>
+                      <div className="text-xs text-gray-500 p-2 border-b">
+                        HTML Length: {previewHtml.length} characters
+                      </div>
+                      <iframe
+                        src={previewBlobUrl || `data:text/html;charset=utf-8,${encodeURIComponent(previewHtml)}`}
+                        className="w-full h-96 sm:h-[600px]"
+                        title="Email Preview"
+                        style={{ minHeight: "600px", border: "1px solid #ccc", background: "white" }}
+                        onLoad={(e) => {
+                          console.log("🖼️ Iframe loaded successfully");
+                          console.log("🔍 Iframe src:", e.target.src?.substring(0, 100));
+                          console.log("🔍 Using blob URL:", !!previewBlobUrl);
+                          try {
+                            if (e.target.contentDocument) {
+                              console.log("✅ Can access iframe content");
+                              console.log("🔍 Iframe body content:", e.target.contentDocument?.body?.innerHTML?.substring(0, 200));
+                            } else {
+                              console.log("❌ Cannot access iframe contentDocument (still null)");
+                            }
+                          } catch (err) {
+                            console.log("❌ Cannot access iframe content (security):", err.message);
+                          }
+                        }}
+                        onError={(e) => console.error("🖼️ Iframe error:", e)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-700">
+                      <p className="text-gray-500">No preview content available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(previewHtml);
+                    newWindow.document.close();
+                  }}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Open in New Tab
+                </button>
+              </div>
+            </div>
+          </div>
+      )}
     </div>
   );
 };
@@ -1039,27 +1209,15 @@ const ContentConfiguration = ({
           category: "breakdown",
         },
         {
-          key: "appTrends",
-          label: "Application Trends",
-          description: "Daily application patterns",
-          category: "insights",
-        },
-        {
           key: "dailyBreakdown",
           label: "Daily Breakdown",
           description: "Applications received each day",
           category: "insights",
         },
         {
-          key: "conversionRates",
-          label: "Conversion Rates",
-          description: "Application to hire conversion rates",
-          category: "insights",
-        },
-        {
-          key: "avgTimeToHire",
-          label: "Average Time to Hire",
-          description: "How long the hiring process takes",
+          key: "appTrends",
+          label: "Application Trends",
+          description: "Week-over-week application trends",
           category: "insights",
         },
       ],
@@ -1866,6 +2024,37 @@ const StatusPanel = ({ digestConfig, theme }) => {
 
 // Recent Digests Component
 const RecentDigests = ({ theme }) => {
+  const [recentDigests, setRecentDigests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchRecentDigests();
+  }, []);
+
+  const fetchRecentDigests = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/weekly-digest/recent");
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setRecentDigests(data.data);
+        } else {
+          setError("Failed to load recent digests");
+        }
+      } else {
+        setError("Failed to load recent digests");
+      }
+    } catch (err) {
+      console.error("Error fetching recent digests:", err);
+      setError("Network error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className={`rounded-lg shadow border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
@@ -1879,30 +2068,90 @@ const RecentDigests = ({ theme }) => {
         </h3>
       </div>
       <div className="p-6">
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className={`p-3 rounded-lg ${theme === "dark" ? "bg-gray-700" : "bg-gray-50"}`}
-            >
-              <div className="flex items-center justify-between">
-                <span
-                  className={`text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-900"}`}
-                >
-                  Week {52 - i + 1}, 2024
-                </span>
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                  <Eye className="w-4 h-4" />
-                </button>
-              </div>
-              <p
-                className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"} mt-1`}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className={`p-3 rounded-lg animate-pulse ${theme === "dark" ? "bg-gray-700" : "bg-gray-200"}`}
               >
-                Sent to 5 recipients
-              </p>
-            </div>
-          ))}
-        </div>
+                <div className="h-4 bg-gray-400 rounded mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className={`text-sm ${theme === "dark" ? "text-red-400" : "text-red-600"}`}>
+              {error}
+            </p>
+            <button
+              onClick={fetchRecentDigests}
+              className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : recentDigests.length === 0 ? (
+          <div className="text-center py-8">
+            <Calendar className={`w-12 h-12 mx-auto mb-4 ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`} />
+            <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+              No digests sent yet
+            </p>
+            <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-500" : "text-gray-500"}`}>
+              Send your first digest to see it here
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentDigests.map((digest) => (
+              <div
+                key={digest.id}
+                className={`p-3 rounded-lg ${theme === "dark" ? "bg-gray-700" : "bg-gray-50"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                      >
+                        {digest.displayName}
+                      </span>
+                      {digest.digestType === 'test' && (
+                        <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 rounded-full">
+                          TEST
+                        </span>
+                      )}
+                      {digest.status === 'failed' && (
+                        <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-full">
+                          FAILED
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"} mt-1`}
+                    >
+                      {digest.displayStatus} • {digest.sentAgo}
+                    </p>
+                    {digest.sender.name !== 'System' && (
+                      <p
+                        className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-500"} mt-0.5`}
+                      >
+                        Sent by {digest.sender.name}
+                      </p>
+                    )}
+                  </div>
+                  <button 
+                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    title="View digest details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

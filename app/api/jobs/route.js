@@ -4,10 +4,10 @@ import { appPrisma } from "../../lib/prisma";
 export async function GET() {
   try {
     // Fetch active jobs
-    const jobs = await appPrisma.job.findMany({
+    const jobs = await appPrisma.jobs.findMany({
       where: { status: "Active" },
       include: {
-        category: true,
+        categories: true,
       },
       orderBy: [
         { featured: "desc" },
@@ -24,28 +24,28 @@ export async function GET() {
       experienceLevels,
       remotePolicies,
     ] = await Promise.all([
-      appPrisma.category.findMany({
+      appPrisma.categories.findMany({
         orderBy: { name: "asc" },
       }),
-      appPrisma.job.findMany({
+      appPrisma.jobs.findMany({
         where: { status: "Active" },
         select: { location: true },
         distinct: ["location"],
         orderBy: { location: "asc" },
       }),
-      appPrisma.job.findMany({
+      appPrisma.jobs.findMany({
         where: { status: "Active" },
         select: { employmentType: true },
         distinct: ["employmentType"],
         orderBy: { employmentType: "asc" },
       }),
-      appPrisma.job.findMany({
+      appPrisma.jobs.findMany({
         where: { status: "Active" },
         select: { experienceLevel: true },
         distinct: ["experienceLevel"],
         orderBy: { experienceLevel: "asc" },
       }),
-      appPrisma.job.findMany({
+      appPrisma.jobs.findMany({
         where: { status: "Active" },
         select: { remotePolicy: true },
         distinct: ["remotePolicy"],

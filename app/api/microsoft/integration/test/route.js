@@ -1,50 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
-
-async function refreshMicrosoftToken(user) {
-  if (!user.microsoftRefreshToken) {
-    throw new Error("No refresh token available");
-  }
-
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: process.env.MICROSOFT_CLIENT_ID,
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET,
-      grant_type: 'refresh_token',
-      refresh_token: user.microsoftRefreshToken,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to refresh Microsoft token");
-  }
-
-  const tokens = await response.json();
-  
-  // Calculate new expiration
-  const expiresAt = new Date();
-  expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
-
-  // Update user with new tokens
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      microsoftAccessToken: tokens.access_token,
-      microsoftRefreshToken: tokens.refresh_token || user.microsoftRefreshToken,
-      microsoftTokenExpiresAt: expiresAt,
-    },
-  });
-
-  return tokens.access_token;
-}
+import { getMicrosoftAccessToken } from "@/app/lib/microsoftAuth";
 
 export async function POST(request) {
   try {
@@ -57,37 +14,16 @@ export async function POST(request) {
       );
     }
 
-    // Get user's Microsoft integration data
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        microsoftAccessToken: true,
-        microsoftRefreshToken: true,
-        microsoftTokenExpiresAt: true,
-        microsoftIntegrationEnabled: true,
-      },
-    });
-
-    if (!user?.microsoftIntegrationEnabled) {
+    // Get Microsoft access token (with automatic refresh)
+    let accessToken;
+    try {
+      accessToken = await getMicrosoftAccessToken(session.user.id);
+    } catch (tokenError) {
+      console.error("Failed to get Microsoft access token:", tokenError);
       return NextResponse.json(
-        { message: "Microsoft integration not enabled" },
-        { status: 400 }
+        { message: tokenError.message },
+        { status: 401 }
       );
-    }
-
-    let accessToken = user.microsoftAccessToken;
-
-    // Check if token needs refresh
-    if (!accessToken || new Date(user.microsoftTokenExpiresAt) <= new Date()) {
-      try {
-        accessToken = await refreshMicrosoftToken(user);
-      } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
-        return NextResponse.json(
-          { message: "Microsoft token expired and refresh failed. Please reconnect." },
-          { status: 401 }
-        );
-      }
     }
 
     // Test calendar access
@@ -150,7 +86,5 @@ export async function POST(request) {
       { message: "Failed to test Microsoft integration" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

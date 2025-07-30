@@ -4,13 +4,13 @@ import { ThemedLink } from "./components/ThemedButton";
 
 export default async function HomePage() {
   // Fetch featured jobs from database
-  const featuredJobs = await db.job.findMany({
+  const featuredJobs = await db.jobs.findMany({
     where: {
       status: "Active",
       featured: true,
     },
     include: {
-      category: true,
+      categories: true,
     },
     orderBy: {
       priority: "asc",
@@ -19,7 +19,7 @@ export default async function HomePage() {
   });
 
   // Get total job count
-  const totalJobs = await db.job.count({
+  const totalJobs = await db.jobs.count({
     where: {
       status: "Active",
     },
@@ -28,7 +28,10 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Hero Section */}
-      <section className="text-white transition-colors duration-200 site-primary" style={{backgroundColor: 'var(--site-primary)'}}>
+      <section
+        className="text-white transition-colors duration-200 site-primary"
+        style={{ backgroundColor: "var(--site-primary)" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <h2 className="text-4xl font-bold mb-4">Find Your Dream Job</h2>
@@ -73,8 +76,11 @@ export default async function HomePage() {
                     {job.department}
                   </p>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full transition-colors duration-200 text-white" style={{backgroundColor: 'var(--site-primary)'}}>
-                  {job.category.name}
+                <span
+                  className="text-xs px-2 py-1 rounded-full transition-colors duration-200 text-white"
+                  style={{ backgroundColor: "var(--site-primary)" }}
+                >
+                  {job.categories.name}
                 </span>
               </div>
 

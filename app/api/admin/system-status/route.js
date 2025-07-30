@@ -23,17 +23,17 @@ export async function GET(req) {
     // 1. Database Health Check
     try {
       await appPrisma.$queryRaw`SELECT 1`;
-      const userCount = await appPrisma.user.count();
+      const userCount = await appPrisma.users.count();
       status.database = {
         status: "Connected",
         healthy: true,
-        details: `${userCount} users in database`
+        details: `${userCount} users in database`,
       };
     } catch (error) {
       status.database = {
         status: "Connection Failed",
         healthy: false,
-        details: error.message
+        details: error.message,
       };
     }
 
@@ -41,31 +41,31 @@ export async function GET(req) {
     try {
       // Check if email configuration exists
       const hasEmailConfig = !!(
-        process.env.SMTP_HOST || 
+        process.env.SMTP_HOST ||
         process.env.RESEND_API_KEY ||
         process.env.SENDGRID_API_KEY
       );
-      
+
       if (hasEmailConfig) {
         // Count recent email attempts (if you track them)
         // For now, just check configuration
         status.emailService = {
           status: "Configured",
           healthy: true,
-          details: "Email service configured"
+          details: "Email service configured",
         };
       } else {
         status.emailService = {
           status: "Not Configured",
           healthy: false,
-          details: "No email service configured"
+          details: "No email service configured",
         };
       }
     } catch (error) {
       status.emailService = {
         status: "Check Failed",
         healthy: false,
-        details: error.message
+        details: error.message,
       };
     }
 
@@ -83,18 +83,18 @@ export async function GET(req) {
 
       // Check if bucket exists
       const bucketExists = await minioClient.bucketExists(bucketName);
-      
+
       if (!bucketExists) {
         status.storage = {
           status: "Bucket not found",
           healthy: false,
           details: `Bucket '${bucketName}' does not exist`,
           fileCount: 0,
-          sizeInMB: 0
+          sizeInMB: 0,
         };
       } else {
         // List objects to get count and size
-        const objectsStream = minioClient.listObjects(bucketName, '', true);
+        const objectsStream = minioClient.listObjects(bucketName, "", true);
         let fileCount = 0;
         let totalSize = 0;
 
@@ -110,7 +110,7 @@ export async function GET(req) {
           healthy: true,
           details: `Storage operational`,
           fileCount,
-          sizeInMB: parseFloat(sizeInMB)
+          sizeInMB: parseFloat(sizeInMB),
         };
       }
     } catch (error) {
@@ -119,7 +119,7 @@ export async function GET(req) {
         healthy: false,
         details: "Could not connect to MinIO",
         fileCount: 0,
-        sizeInMB: 0
+        sizeInMB: 0,
       };
     }
 
@@ -131,23 +131,23 @@ export async function GET(req) {
       const recentApplications = await appPrisma.application.count({
         where: {
           appliedAt: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-          }
-        }
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+          },
+        },
       });
 
       status.emailDelivery = {
         status: `${recentApplications} emails today`,
         healthy: true,
         details: "Email delivery tracking active",
-        recentCount: recentApplications
+        recentCount: recentApplications,
       };
     } catch (error) {
       status.emailDelivery = {
         status: "Check Failed",
         healthy: false,
         details: "Could not check email delivery",
-        recentCount: 0
+        recentCount: 0,
       };
     }
 

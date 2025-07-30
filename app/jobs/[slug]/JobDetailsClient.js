@@ -259,18 +259,26 @@ export default function JobDetailsClient({
             <Link
               href="/auth/signin"
               className="flex items-center justify-center gap-2 py-3 px-4 text-white rounded-md transition-colors font-medium text-sm"
-              style={{backgroundColor: 'var(--site-primary)'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+              style={{ backgroundColor: "var(--site-primary)" }}
+              onMouseEnter={(e) =>
+                (e.target.style.backgroundColor = "var(--site-primary-hover)")
+              }
+              onMouseLeave={(e) =>
+                (e.target.style.backgroundColor = "var(--site-primary)")
+              }
             >
               Sign In
             </Link>
             <Link
               href="/auth/signup"
               className="flex items-center justify-center gap-2 py-3 px-4 text-white rounded-md transition-colors font-medium text-sm"
-              style={{backgroundColor: 'var(--site-success)'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-success)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-success)'}
+              style={{ backgroundColor: "var(--site-success)" }}
+              onMouseEnter={(e) =>
+                (e.target.style.backgroundColor = "var(--site-success)")
+              }
+              onMouseLeave={(e) =>
+                (e.target.style.backgroundColor = "var(--site-success)")
+              }
             >
               <UserPlus className="h-4 w-4" />
               Sign Up
@@ -284,9 +292,13 @@ export default function JobDetailsClient({
     return (
       <button
         className="w-full py-3 px-4 rounded-md text-white transition-colors font-medium mb-4"
-        style={{backgroundColor: 'var(--site-primary)'}}
-        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
-        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+        style={{ backgroundColor: "var(--site-primary)" }}
+        onMouseEnter={(e) =>
+          (e.target.style.backgroundColor = "var(--site-primary-hover)")
+        }
+        onMouseLeave={(e) =>
+          (e.target.style.backgroundColor = "var(--site-primary)")
+        }
         onClick={handleApplyClick}
       >
         {isUserLoggedIn ? "Apply Now" : "Apply as Guest"}
@@ -382,9 +394,25 @@ export default function JobDetailsClient({
                             ? "opacity-50 cursor-not-allowed"
                             : ""
                         }`}
-                        style={!isSaved ? {backgroundColor: 'var(--site-primary)'} : {}}
-                        onMouseEnter={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary-hover)' : undefined}
-                        onMouseLeave={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary)' : undefined}
+                        style={
+                          !isSaved
+                            ? { backgroundColor: "var(--site-primary)" }
+                            : {}
+                        }
+                        onMouseEnter={
+                          !isSaved
+                            ? (e) =>
+                                (e.target.style.backgroundColor =
+                                  "var(--site-primary-hover)")
+                            : undefined
+                        }
+                        onMouseLeave={
+                          !isSaved
+                            ? (e) =>
+                                (e.target.style.backgroundColor =
+                                  "var(--site-primary)")
+                            : undefined
+                        }
                       >
                         {isLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -407,7 +435,7 @@ export default function JobDetailsClient({
                   <span>{job.location}</span>
                   <span className="text-gray-400 dark:text-gray-500">•</span>
                   <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full transition-colors duration-200">
-                    {job.category.name}
+                    {job.categories.name}
                   </span>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed transition-colors duration-200">
@@ -628,9 +656,23 @@ export default function JobDetailsClient({
                         ? "opacity-50 cursor-not-allowed"
                         : ""
                     }`}
-                    style={!isSaved ? {backgroundColor: 'var(--site-primary)'} : {}}
-                    onMouseEnter={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary-hover)' : undefined}
-                    onMouseLeave={!isSaved ? (e) => e.target.style.backgroundColor = 'var(--site-primary)' : undefined}
+                    style={
+                      !isSaved ? { backgroundColor: "var(--site-primary)" } : {}
+                    }
+                    onMouseEnter={
+                      !isSaved
+                        ? (e) =>
+                            (e.target.style.backgroundColor =
+                              "var(--site-primary-hover)")
+                        : undefined
+                    }
+                    onMouseLeave={
+                      !isSaved
+                        ? (e) =>
+                            (e.target.style.backgroundColor =
+                              "var(--site-primary)")
+                        : undefined
+                    }
                   >
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

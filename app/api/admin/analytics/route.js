@@ -57,7 +57,7 @@ export async function GET(req) {
       previousUsers,
     ] = await Promise.all([
       // Current period
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           createdAt: {
             gte: startDate,
@@ -65,7 +65,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.application.count({
+      appPrisma.applications.count({
         where: {
           appliedAt: {
             gte: startDate,
@@ -73,7 +73,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.user.count({
+      appPrisma.users.count({
         where: {
           createdAt: {
             gte: startDate,
@@ -81,7 +81,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.job.aggregate({
+      appPrisma.jobs.aggregate({
         _sum: {
           viewCount: true,
         },
@@ -93,7 +93,7 @@ export async function GET(req) {
         },
       }),
       // Previous period for comparison
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           createdAt: {
             gte: previousPeriodStart,
@@ -101,7 +101,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.application.count({
+      appPrisma.applications.count({
         where: {
           appliedAt: {
             gte: previousPeriodStart,
@@ -109,7 +109,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.user.count({
+      appPrisma.users.count({
         where: {
           createdAt: {
             gte: previousPeriodStart,
@@ -126,7 +126,7 @@ export async function GET(req) {
     };
 
     // Get daily data for trends - using Prisma queries instead of raw SQL
-    const applications = await appPrisma.application.findMany({
+    const applications = await appPrisma.applications.findMany({
       where: {
         appliedAt: {
           gte: startDate,
@@ -145,7 +145,7 @@ export async function GET(req) {
       return acc;
     }, {});
 
-    const jobs = await appPrisma.job.findMany({
+    const jobs = await appPrisma.jobs.findMany({
       where: {
         createdAt: {
           gte: startDate,
@@ -157,7 +157,7 @@ export async function GET(req) {
       },
     });
 
-    const users = await appPrisma.user.findMany({
+    const users = await appPrisma.users.findMany({
       where: {
         createdAt: {
           gte: startDate,
@@ -171,7 +171,7 @@ export async function GET(req) {
 
     // Group by date
     const dailyJobs = jobs.reduce((acc, job) => {
-      const date = job.createdAt.toISOString().split("T")[0];
+      const date = jobs.createdAt.toISOString().split("T")[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {});
@@ -196,7 +196,7 @@ export async function GET(req) {
     }
 
     // Get jobs by department
-    const jobsByDepartment = await appPrisma.job.groupBy({
+    const jobsByDepartment = await appPrisma.jobs.groupBy({
       by: ["department"],
       _count: {
         id: true,
@@ -210,7 +210,7 @@ export async function GET(req) {
     });
 
     // Calculate real average time to hire
-    const hiredApplications = await appPrisma.application.findMany({
+    const hiredApplications = await appPrisma.applications.findMany({
       where: {
         status: "Hired",
         appliedAt: {
@@ -226,12 +226,14 @@ export async function GET(req) {
 
     const avgTimeToHire =
       hiredApplications.length > 0
-        ? Math.round(hiredApplications.reduce((acc, app) => {
-            const days = Math.ceil(
-              (app.updatedAt - app.appliedAt) / (1000 * 60 * 60 * 24)
-            );
-            return acc + days;
-          }, 0) / hiredApplications.length)
+        ? Math.round(
+            hiredApplications.reduce((acc, app) => {
+              const days = Math.ceil(
+                (app.updatedAt - app.appliedAt) / (1000 * 60 * 60 * 24)
+              );
+              return acc + days;
+            }, 0) / hiredApplications.length
+          )
         : 0; // Use 0 when no data
 
     // Get additional real metrics
@@ -244,9 +246,9 @@ export async function GET(req) {
       featuredJobs,
       emailCampaigns,
       totalResumes,
-      auditLogs
+      auditLogs,
     ] = await Promise.all([
-      appPrisma.email.count({
+      appPrisma.emails.count({
         where: {
           sent_at: {
             gte: startDate,
@@ -254,7 +256,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.interview.count({
+      appPrisma.interviews.count({
         where: {
           createdAt: {
             gte: startDate,
@@ -262,7 +264,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           status: "Active",
           createdAt: {
@@ -271,7 +273,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           status: "Closed",
           createdAt: {
@@ -280,7 +282,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.savedJob.count({
+      appPrisma.savedJobs.count({
         where: {
           savedAt: {
             gte: startDate,
@@ -288,7 +290,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           featured: true,
           createdAt: {
@@ -297,7 +299,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.emailCampaign.count({
+      appPrisma.emailCampaigns.count({
         where: {
           created_at: {
             gte: startDate,
@@ -305,7 +307,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.userResume.count({
+      appPrisma.userResumes.count({
         where: {
           uploadedAt: {
             gte: startDate,
@@ -313,7 +315,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.auditLog.count({
+      appPrisma.audit_logs.count({
         where: {
           createdAt: {
             gte: startDate,
@@ -324,7 +326,7 @@ export async function GET(req) {
     ]);
 
     // Get application status distribution
-    const applicationStatus = await appPrisma.application.groupBy({
+    const applicationStatus = await appPrisma.applications.groupBy({
       by: ["status"],
       _count: {
         id: true,
@@ -337,7 +339,7 @@ export async function GET(req) {
       },
     });
 
-    const topJobs = await appPrisma.job.findMany({
+    const topJobs = await appPrisma.jobs.findMany({
       select: {
         title: true,
         viewCount: true,
@@ -369,7 +371,7 @@ export async function GET(req) {
     // Get conversion funnel data
     const totalViews = totalJobViews._sum.viewCount || 0;
     const startedApplications = Math.floor(totalApplications * 1.5); // Estimate based on completed apps
-    const interviews = await appPrisma.application.count({
+    const interviews = await appPrisma.applications.count({
       where: {
         status: "Interview",
         appliedAt: {
@@ -378,7 +380,7 @@ export async function GET(req) {
         },
       },
     });
-    const hired = await appPrisma.application.count({
+    const hired = await appPrisma.applications.count({
       where: {
         status: "Hired",
         appliedAt: {
@@ -392,7 +394,7 @@ export async function GET(req) {
       {
         stage: "Job Views",
         count: totalViews,
-        percentage: 100.00,
+        percentage: 100.0,
       },
       {
         stage: "Started Application",
@@ -400,15 +402,17 @@ export async function GET(req) {
         percentage:
           totalViews > 0
             ? parseFloat(((startedApplications / totalViews) * 100).toFixed(2))
-            : 0.00,
+            : 0.0,
       },
       {
         stage: "Completed Application",
         count: totalApplications,
         percentage:
           startedApplications > 0
-            ? parseFloat(((totalApplications / startedApplications) * 100).toFixed(2))
-            : 0.00,
+            ? parseFloat(
+                ((totalApplications / startedApplications) * 100).toFixed(2)
+              )
+            : 0.0,
       },
       {
         stage: "Interview",
@@ -416,13 +420,15 @@ export async function GET(req) {
         percentage:
           totalApplications > 0
             ? parseFloat(((interviews / totalApplications) * 100).toFixed(2))
-            : 0.00,
+            : 0.0,
       },
       {
         stage: "Hired",
         count: hired,
         percentage:
-          interviews > 0 ? parseFloat(((hired / interviews) * 100).toFixed(2)) : 0.00,
+          interviews > 0
+            ? parseFloat(((hired / interviews) * 100).toFixed(2))
+            : 0.0,
       },
     ];
 
@@ -442,13 +448,16 @@ export async function GET(req) {
         emailCampaigns,
         totalResumes,
         auditLogs,
-        jobsChange: parseFloat(calculateChange(totalJobs, previousJobs).toFixed(2)),
-        applicationsChange: parseFloat(calculateChange(
-          totalApplications,
-          previousApplications
-        ).toFixed(2)),
-        usersChange: parseFloat(calculateChange(totalUsers, previousUsers).toFixed(2)),
-        viewsChange: 0.00, // No previous view data tracking for now
+        jobsChange: parseFloat(
+          calculateChange(totalJobs, previousJobs).toFixed(2)
+        ),
+        applicationsChange: parseFloat(
+          calculateChange(totalApplications, previousApplications).toFixed(2)
+        ),
+        usersChange: parseFloat(
+          calculateChange(totalUsers, previousUsers).toFixed(2)
+        ),
+        viewsChange: 0.0, // No previous view data tracking for now
       },
       applicationsByDay: dailyData,
       jobsByDepartment: jobsByDepartment.map((dept) => ({
@@ -468,17 +477,21 @@ export async function GET(req) {
         successRate:
           totalApplications > 0
             ? parseFloat(((hired / totalApplications) * 100).toFixed(2))
-            : 0.00,
+            : 0.0,
         avgApplicationsPerJob:
-          totalJobs > 0 ? parseFloat((totalApplications / totalJobs).toFixed(2)) : 0.00,
+          totalJobs > 0
+            ? parseFloat((totalApplications / totalJobs).toFixed(2))
+            : 0.0,
         interviewRate:
           totalApplications > 0
-            ? parseFloat(((totalInterviews / totalApplications) * 100).toFixed(2))
-            : 0.00,
+            ? parseFloat(
+                ((totalInterviews / totalApplications) * 100).toFixed(2)
+              )
+            : 0.0,
         saveRate:
           totalViews > 0
             ? parseFloat(((totalSavedJobs / totalViews) * 100).toFixed(2))
-            : 0.00,
+            : 0.0,
         emailsSent: totalEmails,
         resumesUploaded: totalResumes,
       },

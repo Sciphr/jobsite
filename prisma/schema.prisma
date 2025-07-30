@@ -8,207 +8,140 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                              String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                           String                       @unique
-  password                        String?
-  firstName                       String?
-  lastName                        String?
-  phone                           String?
-  createdAt                       DateTime                     @default(now())
-  updatedAt                       DateTime                     @updatedAt
-  role                            String?                      @default("user") @db.VarChar
-  privilegeLevel                  Int?                         @default(0)
-  isActive                        Boolean?                     @default(true)
-  privilege_level                 Int?                         @default(0)
-  is_active                       Boolean?                     @default(true)
-  googleAccessToken               String?                      @map("google_access_token")
-  googleRefreshToken              String?                      @map("google_refresh_token")
-  googleTokenExpiresAt            DateTime?                    @map("google_token_expires_at") @db.Timestamp(6)
-  googleCalendarId                String?                      @default("primary") @map("google_calendar_id") @db.VarChar(255)
-  googleEmail                     String?                      @map("google_email") @db.VarChar(255)
-  calendarIntegrationEnabled      Boolean?                     @default(false) @map("calendar_integration_enabled")
-  calendarIntegrationConnectedAt  DateTime?                    @map("calendar_integration_connected_at") @db.Timestamp(6)
-  calendarTimezone                String?                      @default("America/Toronto") @map("calendar_timezone") @db.VarChar(100)
-  zoomAccessToken                 String?                      @map("zoom_access_token") @db.VarChar(500)
-  zoomRefreshToken                String?                      @map("zoom_refresh_token") @db.VarChar(500)
-  zoomTokenExpiresAt              DateTime?                    @map("zoom_token_expires_at") @db.Timestamp(6)
-  zoomUserId                      String?                      @map("zoom_user_id") @db.VarChar(255)
-  zoomEmail                       String?                      @map("zoom_email") @db.VarChar(255)
-  zoomIntegrationEnabled          Boolean?                     @default(false) @map("zoom_integration_enabled")
-  zoomIntegrationConnectedAt      DateTime?                    @map("zoom_integration_connected_at") @db.Timestamp(6)
-  microsoftAccessToken            String?                      @map("microsoft_access_token")
-  microsoftRefreshToken           String?                      @map("microsoft_refresh_token")
-  microsoftTokenExpiresAt         DateTime?                    @map("microsoft_token_expires_at") @db.Timestamp(6)
-  microsoftUserId                 String?                      @map("microsoft_user_id") @db.VarChar(255)
-  microsoftEmail                  String?                      @map("microsoft_email") @db.VarChar(255)
-  microsoftTenantId               String?                      @map("microsoft_tenant_id") @db.VarChar(255)
-  microsoftIntegrationEnabled     Boolean?                     @default(false) @map("microsoft_integration_enabled")
-  microsoftIntegrationConnectedAt DateTime?                    @map("microsoft_integration_connected_at") @db.Timestamp(6)
-  applications                    Application[]
-  auditLogsAsActor                AuditLog[]                   @relation("AuditLogActor")
-  auditLogsAsRelatedUser          AuditLog[]                   @relation("AuditLogRelatedUser")
-  email_automation_rules          EmailAutomationRule[]
-  email_campaigns                 EmailCampaign[]
-  email_templates                 EmailTemplate[]
-  emails                          Email[]
-  reviewedRescheduleRequests      InterviewRescheduleRequest[]
-  createdInterviews               Interview[]                  @relation("InterviewCreator")
-  conductedInterviews             Interview[]                  @relation("InterviewConductor")
-  createdJobs                     Job[]                        @relation("JobCreator")
-  savedJobs                       SavedJob[]
-  settings                        Setting[]
-  resumes                         UserResume[]
-
-  @@map("users")
+model application_notes {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id      String   @db.Uuid
+  content             String
+  type                String   @default("note") @db.VarChar(50)
+  author_id           String?  @db.Uuid
+  author_name         String?  @db.VarChar(255)
+  created_at          DateTime @default(now()) @db.Timestamp(6)
+  updated_at          DateTime @default(now()) @db.Timestamp(6)
+  metadata            Json?
+  is_system_generated Boolean? @default(false)
 }
 
-model Category {
+model applications {
+  id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status                        String                          @default("Applied")
+  coverLetter                   String?
+  resumeUrl                     String?
+  notes                         String?
+  appliedAt                     DateTime                        @default(now())
+  updatedAt                     DateTime
+  userId                        String?                         @db.Uuid
+  jobId                         String                          @db.Uuid
+  name                          String?
+  email                         String?
+  phone                         String?
+  jobs                          jobs                            @relation(fields: [jobId], references: [id])
+  users                         users?                          @relation(fields: [userId], references: [id])
+  audit_logs                    audit_logs[]
+  emails                        emails[]
+  interview_reschedule_requests interview_reschedule_requests[]
+  interview_tokens              interview_tokens[]
+  interviews                    interviews[]
+
+  @@unique([userId, jobId])
+}
+
+model audit_logs {
+  id                                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_type                              String        @db.VarChar(100)
+  category                                String        @db.VarChar(50)
+  subcategory                             String?       @db.VarChar(50)
+  entity_type                             String?       @db.VarChar(50)
+  entity_id                               String?       @db.Uuid
+  entity_name                             String?       @db.VarChar(255)
+  actor_id                                String?       @db.Uuid
+  actor_type                              String        @default("user") @db.VarChar(20)
+  actor_name                              String?       @db.VarChar(255)
+  action                                  String        @db.VarChar(255)
+  description                             String?
+  old_values                              Json?
+  new_values                              Json?
+  changes                                 Json?
+  ip_address                              String?       @db.VarChar(45)
+  user_agent                              String?       @db.VarChar(500)
+  session_id                              String?       @db.VarChar(255)
+  request_id                              String?       @db.VarChar(255)
+  related_user_id                         String?       @db.Uuid
+  related_job_id                          String?       @db.Uuid
+  related_application_id                  String?       @db.Uuid
+  created_at                              DateTime      @default(now()) @db.Timestamp(6)
+  severity                                String        @default("info") @db.VarChar(20)
+  status                                  String        @default("success") @db.VarChar(20)
+  tags                                    String[]      @default([])
+  metadata                                Json?
+  users_audit_logs_actor_idTousers        users?        @relation("audit_logs_actor_idTousers", fields: [actor_id], references: [id], onUpdate: NoAction, map: "fk_audit_logs_actor")
+  applications                            applications? @relation(fields: [related_application_id], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_application")
+  jobs                                    jobs?         @relation(fields: [related_job_id], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_job")
+  users_audit_logs_related_user_idTousers users?        @relation("audit_logs_related_user_idTousers", fields: [related_user_id], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_user")
+
+  @@index([actor_id], map: "idx_audit_logs_actor")
+  @@index([category, created_at], map: "idx_audit_logs_category_date")
+  @@index([created_at], map: "idx_audit_logs_created_at")
+  @@index([entity_type, entity_id], map: "idx_audit_logs_entity")
+  @@index([entity_type, entity_id, created_at], map: "idx_audit_logs_entity_timeline")
+  @@index([related_application_id], map: "idx_audit_logs_related_application")
+  @@index([related_job_id], map: "idx_audit_logs_related_job")
+  @@index([related_user_id], map: "idx_audit_logs_related_user")
+}
+
+model categories {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String  @unique
   description String?
-  jobs        Job[]
-
-  @@map("categories")
+  jobs        jobs[]
 }
 
-model Job {
-  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title                   String
-  slug                    String          @unique
-  description             String
-  summary                 String?
-  department              String
-  employmentType          String
-  experienceLevel         String
-  location                String
-  remotePolicy            String
-  salaryMin               Int?
-  salaryMax               Int?
-  salaryCurrency          String          @default("USD")
-  salaryType              String          @default("Annual")
-  benefits                String?
-  requirements            String
-  preferredQualifications String?
-  educationRequired       String?
-  yearsExperienceRequired Int?
-  applicationDeadline     DateTime?
-  startDate               DateTime?
-  applicationInstructions String?
-  status                  String          @default("Draft")
-  featured                Boolean         @default(false)
-  priority                Int             @default(0)
-  viewCount               Int             @default(0)
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  postedAt                DateTime?
-  categoryId              String          @db.Uuid
-  createdBy               String?         @db.Uuid
-  autoExpiresAt           DateTime?
-  lastExpiredCheck        DateTime?
-  showSalary              Boolean         @default(true)
-  auto_expires_at         DateTime?       @db.Timestamp(6)
-  last_expired_check      DateTime?       @db.Timestamp(6)
-  applicationCount        Int?            @default(0)
-  applications            Application[]
-  auditLogs               AuditLog[]      @relation("AuditLogRelatedJob")
-  email_campaigns         EmailCampaign[]
-  emails                  Email[]
-  interviews              Interview[]
-  category                Category        @relation(fields: [categoryId], references: [id])
-  creator                 User?           @relation("JobCreator", fields: [createdBy], references: [id])
-  savedJobs               SavedJob[]
-
-  @@map("jobs")
+model communication_settings {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String    @unique @db.VarChar(255)
+  value       String
+  category    String    @db.VarChar(100)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
 }
 
-model Application {
-  id                 String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status             String                       @default("Applied")
-  coverLetter        String?
-  resumeUrl          String?
-  notes              String?
-  appliedAt          DateTime                     @default(now())
-  updatedAt          DateTime                     @updatedAt
-  userId             String?                      @db.Uuid
-  jobId              String                       @db.Uuid
-  name               String?
-  email              String?
-  phone              String?
-  job                Job                          @relation(fields: [jobId], references: [id])
-  user               User?                        @relation(fields: [userId], references: [id])
-  auditLogs          AuditLog[]                   @relation("AuditLogRelatedApplication")
-  emails             Email[]
-  rescheduleRequests InterviewRescheduleRequest[]
-  interviewTokens    InterviewToken[]
-  interviews         Interview[]
-
-  @@unique([userId, jobId])
-  @@map("applications")
+model email_automation_rules {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  trigger        String    @db.VarChar(100)
+  conditions     String
+  template_id    String    @db.Uuid
+  is_active      Boolean?  @default(true)
+  created_by     String    @db.Uuid
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  recipient_type String?   @default("applicant") @db.VarChar(50)
+  users          users     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model ApplicationNote {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  applicationId     String   @map("application_id") @db.Uuid
-  content           String
-  type              String   @default("note") @db.VarChar(50)
-  authorId          String?  @map("author_id") @db.Uuid
-  authorName        String?  @map("author_name") @db.VarChar(255)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  metadata          Json?
-  isSystemGenerated Boolean? @default(false) @map("is_system_generated")
+model email_campaigns {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String    @db.VarChar(255)
+  subject          String
+  content          String
+  job_id           String?   @db.Uuid
+  status           String?   @db.VarChar(50)
+  filters          String?
+  total_recipients Int?      @default(0)
+  successful_sends Int?      @default(0)
+  failed_sends     Int?      @default(0)
+  created_by       String    @db.Uuid
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  sent_at          DateTime? @db.Timestamp(6)
+  users            users     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobs             jobs?     @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  emails           emails[]
 
-  @@map("application_notes")
+  @@index([created_by], map: "idx_email_campaigns_created_by")
+  @@index([job_id], map: "idx_email_campaigns_job_id")
 }
 
-model SavedJob {
-  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  savedAt DateTime @default(now())
-  userId  String   @db.Uuid
-  jobId   String   @db.Uuid
-  job     Job      @relation(fields: [jobId], references: [id])
-  user    User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, jobId])
-  @@map("saved_jobs")
-}
-
-model UserResume {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  fileName    String   @map("file_name") @db.VarChar(255)
-  fileSize    Int      @map("file_size")
-  fileType    String   @map("file_type") @db.VarChar(50)
-  storagePath String   @map("storage_path") @db.VarChar(500)
-  isDefault   Boolean  @default(false) @map("is_default")
-  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamp(6)
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId], map: "idx_user_resumes_user_id")
-  @@index([userId, isDefault], map: "idx_user_resumes_default")
-  @@map("user_resumes")
-}
-
-model Setting {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key            String
-  value          String
-  category       String
-  userId         String?  @db.Uuid
-  privilegeLevel Int      @default(0)
-  dataType       String   @default("string")
-  description    String?
-  createdAt      DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6)
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([key, userId])
-  @@map("settings")
-}
-
-model EmailTemplate {
+model email_templates {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String    @db.VarChar(255)
   subject      String
@@ -225,37 +158,36 @@ model EmailTemplate {
   tags         String[]
   usage_count  Int?      @default(0)
   last_used_at DateTime? @db.Timestamp(6)
-  users        User?     @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_email_templates_created_by")
+  users        users?    @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "fk_email_templates_created_by")
 
   @@index([is_active], map: "idx_email_templates_is_active")
   @@index([type], map: "idx_email_templates_type")
-  @@map("email_templates")
 }
 
-model Email {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model emails {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subject         String
   content         String
   html_content    String?
-  recipient_email String         @db.VarChar(255)
-  recipient_name  String?        @db.VarChar(255)
-  application_id  String?        @db.Uuid
-  job_id          String?        @db.Uuid
-  template_id     String?        @db.Uuid
-  email_provider  String?        @db.VarChar(100)
-  message_id      String?        @db.VarChar(255)
-  status          String?        @default("pending") @db.VarChar(50)
+  recipient_email String           @db.VarChar(255)
+  recipient_name  String?          @db.VarChar(255)
+  application_id  String?          @db.Uuid
+  job_id          String?          @db.Uuid
+  template_id     String?          @db.Uuid
+  email_provider  String?          @db.VarChar(100)
+  message_id      String?          @db.VarChar(255)
+  status          String?          @default("pending") @db.VarChar(50)
   failure_reason  String?
-  opened_at       DateTime?      @db.Timestamp(6)
-  clicked_at      DateTime?      @db.Timestamp(6)
-  replied_at      DateTime?      @db.Timestamp(6)
-  sent_by         String         @db.Uuid
-  sent_at         DateTime?      @default(now()) @db.Timestamp(6)
-  campaign_id     String?        @db.Uuid
-  applications    Application?   @relation(fields: [application_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  email_campaigns EmailCampaign? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  jobs            Job?           @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users           User           @relation(fields: [sent_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  opened_at       DateTime?        @db.Timestamp(6)
+  clicked_at      DateTime?        @db.Timestamp(6)
+  replied_at      DateTime?        @db.Timestamp(6)
+  sent_by         String           @db.Uuid
+  sent_at         DateTime?        @default(now()) @db.Timestamp(6)
+  campaign_id     String?          @db.Uuid
+  applications    applications?    @relation(fields: [application_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email_campaigns email_campaigns? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  jobs            jobs?            @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users           users            @relation(fields: [sent_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([application_id], map: "idx_emails_application_id")
   @@index([job_id], map: "idx_emails_job_id")
@@ -263,194 +195,320 @@ model Email {
   @@index([sent_by], map: "idx_emails_sent_by")
   @@index([status], map: "idx_emails_status")
   @@index([template_id], map: "idx_emails_template_id")
-  @@map("emails")
 }
 
-model EmailCampaign {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String    @db.VarChar(255)
-  subject          String
-  content          String
-  job_id           String?   @db.Uuid
-  status           String?   @db.VarChar(50)
-  filters          String?
-  total_recipients Int?      @default(0)
-  successful_sends Int?      @default(0)
-  failed_sends     Int?      @default(0)
-  created_by       String    @db.Uuid
-  created_at       DateTime? @default(now()) @db.Timestamp(6)
-  sent_at          DateTime? @db.Timestamp(6)
-  users            User      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  jobs             Job?      @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  emails           Email[]
+model interview_reschedule_requests {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interview_token_id String           @db.Uuid
+  application_id     String           @db.Uuid
+  response_type      String           @db.VarChar(50)
+  alternative_times  Json?            @db.Json
+  written_response   String?
+  status             String           @default("pending") @db.VarChar(50)
+  submitted_at       DateTime         @db.Timestamp(6)
+  reviewed_at        DateTime?        @db.Timestamp(6)
+  reviewed_by        String?          @db.Uuid
+  review_notes       String?
+  created_at         DateTime         @default(now()) @db.Timestamp(6)
+  updated_at         DateTime         @default(now()) @db.Timestamp(6)
+  applications       applications     @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_application")
+  users              users?           @relation(fields: [reviewed_by], references: [id], onUpdate: NoAction, map: "fk_interview_reschedule_requests_reviewer")
+  interview_tokens   interview_tokens @relation(fields: [interview_token_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_token")
 
-  @@index([created_by], map: "idx_email_campaigns_created_by")
-  @@index([job_id], map: "idx_email_campaigns_job_id")
-  @@map("email_campaigns")
-}
-
-model CommunicationSetting {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key         String    @unique @db.VarChar(255)
-  value       String
-  category    String    @db.VarChar(100)
-  description String?
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-
-  @@map("communication_settings")
-}
-
-model EmailAutomationRule {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String    @db.VarChar(255)
-  trigger        String    @db.VarChar(100)
-  conditions     String
-  template_id    String    @db.Uuid
-  is_active      Boolean?  @default(true)
-  created_by     String    @db.Uuid
-  created_at     DateTime? @default(now()) @db.Timestamp(6)
-  updated_at     DateTime? @default(now()) @db.Timestamp(6)
-  recipient_type String?   @default("applicant") @db.VarChar(50)
-  users          User      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("email_automation_rules")
-}
-
-model AuditLog {
-  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventType            String       @map("event_type") @db.VarChar(100)
-  category             String       @db.VarChar(50)
-  subcategory          String?      @db.VarChar(50)
-  entityType           String?      @map("entity_type") @db.VarChar(50)
-  entityId             String?      @map("entity_id") @db.Uuid
-  entityName           String?      @map("entity_name") @db.VarChar(255)
-  actorId              String?      @map("actor_id") @db.Uuid
-  actorType            String       @default("user") @map("actor_type") @db.VarChar(20)
-  actorName            String?      @map("actor_name") @db.VarChar(255)
-  action               String       @db.VarChar(255)
-  description          String?
-  oldValues            Json?        @map("old_values")
-  newValues            Json?        @map("new_values")
-  changes              Json?
-  ipAddress            String?      @map("ip_address") @db.VarChar(45)
-  userAgent            String?      @map("user_agent") @db.VarChar(500)
-  sessionId            String?      @map("session_id") @db.VarChar(255)
-  requestId            String?      @map("request_id") @db.VarChar(255)
-  relatedUserId        String?      @map("related_user_id") @db.Uuid
-  relatedJobId         String?      @map("related_job_id") @db.Uuid
-  relatedApplicationId String?      @map("related_application_id") @db.Uuid
-  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
-  severity             String       @default("info") @db.VarChar(20)
-  status               String       @default("success") @db.VarChar(20)
-  tags                 String[]     @default([])
-  metadata             Json?
-  actor                User?        @relation("AuditLogActor", fields: [actorId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_actor")
-  relatedApplication   Application? @relation("AuditLogRelatedApplication", fields: [relatedApplicationId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_application")
-  relatedJob           Job?         @relation("AuditLogRelatedJob", fields: [relatedJobId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_job")
-  relatedUser          User?        @relation("AuditLogRelatedUser", fields: [relatedUserId], references: [id], onUpdate: NoAction, map: "fk_audit_logs_related_user")
-
-  @@index([actorId], map: "idx_audit_logs_actor")
-  @@index([category, createdAt], map: "idx_audit_logs_category_date")
-  @@index([createdAt], map: "idx_audit_logs_created_at")
-  @@index([entityType, entityId], map: "idx_audit_logs_entity")
-  @@index([entityType, entityId, createdAt], map: "idx_audit_logs_entity_timeline")
-  @@index([relatedApplicationId], map: "idx_audit_logs_related_application")
-  @@index([relatedJobId], map: "idx_audit_logs_related_job")
-  @@index([relatedUserId], map: "idx_audit_logs_related_user")
-  @@map("audit_logs")
-}
-
-model Interview {
-  id                     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  applicationId          String      @map("application_id") @db.Uuid
-  interviewerId          String      @map("interviewer_id") @db.Uuid
-  jobId                  String      @map("job_id") @db.Uuid
-  type                   String      @db.VarChar(20)
-  status                 String      @default("scheduled") @db.VarChar(20)
-  durationMinutes        Int         @default(45) @map("duration_minutes")
-  proposedTimeSlots      Json?       @map("proposed_time_slots")
-  scheduledAt            DateTime?   @map("scheduled_at") @db.Timestamp(6)
-  confirmedAt            DateTime?   @map("confirmed_at") @db.Timestamp(6)
-  timezone               String      @default("America/Toronto") @db.VarChar(100)
-  meetingLink            String?     @map("meeting_link")
-  meetingLocation        String?     @map("meeting_location")
-  agenda                 String?
-  notes                  String?
-  additionalInterviewers Json?       @map("additional_interviewers")
-  googleCalendarEventId  String?     @map("google_calendar_event_id") @db.VarChar(255)
-  calendarEventCreated   Boolean?    @default(false) @map("calendar_event_created")
-  invitationSentAt       DateTime?   @map("invitation_sent_at") @db.Timestamp(6)
-  reminderSentAt         DateTime?   @map("reminder_sent_at") @db.Timestamp(6)
-  createdAt              DateTime?   @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt              DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  createdBy              String?     @map("created_by") @db.Uuid
-  application            Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  creator                User?       @relation("InterviewCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  interviewer            User        @relation("InterviewConductor", fields: [interviewerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  job                    Job         @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([applicationId], map: "idx_interviews_application_id")
-  @@index([interviewerId], map: "idx_interviews_interviewer_id")
-  @@index([jobId], map: "idx_interviews_job_id")
-  @@index([scheduledAt], map: "idx_interviews_scheduled_at")
-  @@index([status], map: "idx_interviews_status")
-  @@index([createdAt], map: "idx_interviews_created_at")
-  @@map("interviews")
-}
-
-model InterviewToken {
-  id                 String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  applicationId      String                       @map("application_id") @db.Uuid
-  rescheduleToken    String                       @unique @map("reschedule_token") @db.VarChar(255)
-  acceptanceToken    String                       @unique @map("acceptance_token") @db.VarChar(255)
-  scheduledAt        DateTime                     @map("scheduled_at") @db.Timestamp(6)
-  duration           Int                          @default(45)
-  type               String                       @db.VarChar(50)
-  interviewers       Json?                        @db.Json
-  location           String?
-  agenda             String?
-  notes              String?
-  calendarEventId    String?                      @map("calendar_event_id") @db.VarChar(255)
-  status             String                       @default("pending") @db.VarChar(50)
-  respondedAt        DateTime?                    @map("responded_at") @db.Timestamp(6)
-  expiresAt          DateTime                     @map("expires_at") @db.Timestamp(6)
-  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime                     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  meetingLink        String?                      @map("meeting_link") @db.VarChar(500)
-  meetingProvider    String?                      @default("google") @map("meeting_provider") @db.VarChar(50)
-  rescheduleRequests InterviewRescheduleRequest[]
-  application        Application                  @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_tokens_application")
-
-  @@index([applicationId], map: "idx_interview_tokens_application_id")
-  @@index([rescheduleToken], map: "idx_interview_tokens_reschedule_token")
-  @@index([acceptanceToken], map: "idx_interview_tokens_acceptance_token")
-  @@index([status], map: "idx_interview_tokens_status")
-  @@index([expiresAt], map: "idx_interview_tokens_expires_at")
-  @@map("interview_tokens")
-}
-
-model InterviewRescheduleRequest {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  interviewTokenId String         @map("interview_token_id") @db.Uuid
-  applicationId    String         @map("application_id") @db.Uuid
-  responseType     String         @map("response_type") @db.VarChar(50)
-  alternativeTimes Json?          @map("alternative_times") @db.Json
-  writtenResponse  String?        @map("written_response")
-  status           String         @default("pending") @db.VarChar(50)
-  submittedAt      DateTime       @map("submitted_at") @db.Timestamp(6)
-  reviewedAt       DateTime?      @map("reviewed_at") @db.Timestamp(6)
-  reviewedBy       String?        @map("reviewed_by") @db.Uuid
-  reviewNotes      String?        @map("review_notes")
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  application      Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_application")
-  reviewer         User?          @relation(fields: [reviewedBy], references: [id], onUpdate: NoAction, map: "fk_interview_reschedule_requests_reviewer")
-  interviewToken   InterviewToken @relation(fields: [interviewTokenId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_reschedule_requests_token")
-
-  @@index([interviewTokenId], map: "idx_interview_reschedule_requests_token_id")
-  @@index([applicationId], map: "idx_interview_reschedule_requests_application_id")
+  @@index([application_id], map: "idx_interview_reschedule_requests_application_id")
   @@index([status], map: "idx_interview_reschedule_requests_status")
-  @@index([submittedAt], map: "idx_interview_reschedule_requests_submitted_at")
-  @@map("interview_reschedule_requests")
+  @@index([submitted_at], map: "idx_interview_reschedule_requests_submitted_at")
+  @@index([interview_token_id], map: "idx_interview_reschedule_requests_token_id")
+}
+
+model interview_tokens {
+  id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id                String                          @db.Uuid
+  reschedule_token              String                          @unique @db.VarChar(255)
+  acceptance_token              String                          @unique @db.VarChar(255)
+  scheduled_at                  DateTime                        @db.Timestamp(6)
+  duration                      Int                             @default(45)
+  type                          String                          @db.VarChar(50)
+  interviewers                  Json?                           @db.Json
+  location                      String?
+  agenda                        String?
+  notes                         String?
+  calendar_event_id             String?                         @db.VarChar(255)
+  status                        String                          @default("pending") @db.VarChar(50)
+  responded_at                  DateTime?                       @db.Timestamp(6)
+  expires_at                    DateTime                        @db.Timestamp(6)
+  created_at                    DateTime                        @default(now()) @db.Timestamp(6)
+  updated_at                    DateTime                        @default(now()) @db.Timestamp(6)
+  meeting_link                  String?                         @db.VarChar(500)
+  meeting_provider              String?                         @default("google") @db.VarChar(50)
+  interview_reschedule_requests interview_reschedule_requests[]
+  applications                  applications                    @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interview_tokens_application")
+
+  @@index([acceptance_token], map: "idx_interview_tokens_acceptance_token")
+  @@index([application_id], map: "idx_interview_tokens_application_id")
+  @@index([expires_at], map: "idx_interview_tokens_expires_at")
+  @@index([reschedule_token], map: "idx_interview_tokens_reschedule_token")
+  @@index([status], map: "idx_interview_tokens_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model interviews {
+  id                                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id                         String       @db.Uuid
+  interviewer_id                         String       @db.Uuid
+  job_id                                 String       @db.Uuid
+  type                                   String       @db.VarChar(20)
+  status                                 String       @default("scheduled") @db.VarChar(20)
+  duration_minutes                       Int          @default(45)
+  proposed_time_slots                    Json?
+  scheduled_at                           DateTime?    @db.Timestamp(6)
+  confirmed_at                           DateTime?    @db.Timestamp(6)
+  timezone                               String       @default("America/Toronto") @db.VarChar(100)
+  meeting_link                           String?
+  meeting_location                       String?
+  agenda                                 String?
+  notes                                  String?
+  additional_interviewers                Json?
+  google_calendar_event_id               String?      @db.VarChar(255)
+  calendar_event_created                 Boolean?     @default(false)
+  invitation_sent_at                     DateTime?    @db.Timestamp(6)
+  reminder_sent_at                       DateTime?    @db.Timestamp(6)
+  created_at                             DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at                             DateTime?    @default(now()) @db.Timestamp(6)
+  created_by                             String?      @db.Uuid
+  applications                           applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_interviews_created_byTousers     users?       @relation("interviews_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_interviews_interviewer_idTousers users        @relation("interviews_interviewer_idTousers", fields: [interviewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                                   jobs         @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([application_id], map: "idx_interviews_application_id")
+  @@index([created_at], map: "idx_interviews_created_at")
+  @@index([interviewer_id], map: "idx_interviews_interviewer_id")
+  @@index([job_id], map: "idx_interviews_job_id")
+  @@index([scheduled_at], map: "idx_interviews_scheduled_at")
+  @@index([status], map: "idx_interviews_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model jobs {
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                   String
+  slug                    String            @unique
+  description             String
+  summary                 String?
+  department              String
+  employmentType          String
+  experienceLevel         String
+  location                String
+  remotePolicy            String
+  salaryMin               Int?
+  salaryMax               Int?
+  salaryCurrency          String            @default("USD")
+  salaryType              String            @default("Annual")
+  benefits                String?
+  requirements            String
+  preferredQualifications String?
+  educationRequired       String?
+  yearsExperienceRequired Int?
+  applicationDeadline     DateTime?
+  startDate               DateTime?
+  applicationInstructions String?
+  status                  String            @default("Draft")
+  featured                Boolean           @default(false)
+  priority                Int               @default(0)
+  viewCount               Int               @default(0)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime
+  postedAt                DateTime?
+  categoryId              String            @db.Uuid
+  createdBy               String?           @db.Uuid
+  autoExpiresAt           DateTime?
+  lastExpiredCheck        DateTime?
+  showSalary              Boolean           @default(true)
+  auto_expires_at         DateTime?         @db.Timestamp(6)
+  last_expired_check      DateTime?         @db.Timestamp(6)
+  applicationCount        Int?              @default(0)
+  applications            applications[]
+  audit_logs              audit_logs[]
+  email_campaigns         email_campaigns[]
+  emails                  emails[]
+  interviews              interviews[]
+  categories              categories        @relation(fields: [categoryId], references: [id])
+  users                   users?            @relation(fields: [createdBy], references: [id])
+  saved_jobs              saved_jobs[]
+}
+
+model permissions {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resource             String             @db.VarChar(50)
+  action               String             @db.VarChar(50)
+  description          String
+  category             String             @db.VarChar(50)
+  is_system_permission Boolean?           @default(true)
+  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  role_permissions     role_permissions[]
+
+  @@unique([resource, action])
+  @@index([resource, action], map: "idx_permissions_resource_action")
+}
+
+model role_permissions {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  granted_at    DateTime?   @default(now()) @db.Timestamptz(6)
+  granted_by    String?     @db.Uuid
+  users         users?      @relation(fields: [granted_by], references: [id], onUpdate: NoAction)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([role_id, permission_id])
+  @@index([permission_id], map: "idx_role_permissions_permission_id")
+  @@index([role_id], map: "idx_role_permissions_role_id")
+}
+
+model roles {
+  id                            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                          String             @unique @db.VarChar(100)
+  description                   String?
+  color                         String?            @default("#6b7280") @db.VarChar(7)
+  is_system_role                Boolean?           @default(false)
+  is_active                     Boolean?           @default(true)
+  created_at                    DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime?          @default(now()) @db.Timestamptz(6)
+  created_by                    String?            @db.Uuid
+  role_permissions              role_permissions[]
+  users_roles_created_byTousers users?             @relation("roles_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
+  users_users_role_idToroles    users[]            @relation("users_role_idToroles")
+
+  @@index([is_active], map: "idx_roles_active")
+}
+
+model saved_jobs {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  savedAt DateTime @default(now())
+  userId  String   @db.Uuid
+  jobId   String   @db.Uuid
+  jobs    jobs     @relation(fields: [jobId], references: [id])
+  users   users    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, jobId])
+}
+
+model settings {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key            String
+  value          String
+  category       String
+  userId         String?  @db.Uuid
+  privilegeLevel Int      @default(0)
+  dataType       String   @default("string")
+  description    String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
+  users          users?   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([key, userId])
+}
+
+model user_resumes {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  file_name    String   @db.VarChar(255)
+  file_size    Int
+  file_type    String   @db.VarChar(50)
+  storage_path String   @db.VarChar(500)
+  is_default   Boolean  @default(false)
+  uploaded_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_default], map: "idx_user_resumes_default")
+  @@index([user_id], map: "idx_user_resumes_user_id")
+}
+
+model users {
+  id                                           String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                        String                          @unique
+  password                                     String?
+  firstName                                    String?
+  lastName                                     String?
+  phone                                        String?
+  createdAt                                    DateTime                        @default(now())
+  updatedAt                                    DateTime
+  role                                         String?                         @default("user") @db.VarChar
+  privilegeLevel                               Int?                            @default(0)
+  isActive                                     Boolean?                        @default(true)
+  is_active                                    Boolean?                        @default(true)
+  google_access_token                          String?
+  google_refresh_token                         String?
+  google_token_expires_at                      DateTime?                       @db.Timestamp(6)
+  google_calendar_id                           String?                         @default("primary") @db.VarChar(255)
+  google_email                                 String?                         @db.VarChar(255)
+  calendar_integration_enabled                 Boolean?                        @default(false)
+  calendar_integration_connected_at            DateTime?                       @db.Timestamp(6)
+  calendar_timezone                            String?                         @default("America/Toronto") @db.VarChar(100)
+  zoom_access_token                            String?                         @db.VarChar(500)
+  zoom_refresh_token                           String?                         @db.VarChar(500)
+  zoom_token_expires_at                        DateTime?                       @db.Timestamp(6)
+  zoom_user_id                                 String?                         @db.VarChar(255)
+  zoom_email                                   String?                         @db.VarChar(255)
+  zoom_integration_enabled                     Boolean?                        @default(false)
+  zoom_integration_connected_at                DateTime?                       @db.Timestamp(6)
+  microsoft_access_token                       String?
+  microsoft_refresh_token                      String?
+  microsoft_token_expires_at                   DateTime?                       @db.Timestamp(6)
+  microsoft_user_id                            String?                         @db.VarChar(255)
+  microsoft_email                              String?                         @db.VarChar(255)
+  microsoft_tenant_id                          String?                         @db.VarChar(255)
+  microsoft_integration_enabled                Boolean?                        @default(false)
+  microsoft_integration_connected_at           DateTime?                       @db.Timestamp(6)
+  role_id                                      String?                         @db.Uuid
+  applications                                 applications[]
+  audit_logs_audit_logs_actor_idTousers        audit_logs[]                    @relation("audit_logs_actor_idTousers")
+  audit_logs_audit_logs_related_user_idTousers audit_logs[]                    @relation("audit_logs_related_user_idTousers")
+  email_automation_rules                       email_automation_rules[]
+  email_campaigns                              email_campaigns[]
+  email_templates                              email_templates[]
+  emails                                       emails[]
+  interview_reschedule_requests                interview_reschedule_requests[]
+  interviews_interviews_created_byTousers      interviews[]                    @relation("interviews_created_byTousers")
+  interviews_interviews_interviewer_idTousers  interviews[]                    @relation("interviews_interviewer_idTousers")
+  jobs                                         jobs[]
+  role_permissions                             role_permissions[]
+  roles_roles_created_byTousers                roles[]                         @relation("roles_created_byTousers")
+  saved_jobs                                   saved_jobs[]
+  settings                                     settings[]
+  user_resumes                                 user_resumes[]
+  roles_users_role_idToroles                   roles?                          @relation("users_role_idToroles", fields: [role_id], references: [id], onUpdate: NoAction)
+  weekly_digests                               weekly_digests[]
+
+  @@index([role_id], map: "idx_users_role_id")
+}
+
+model weekly_digests {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  week_start        DateTime @db.Timestamp(6)
+  week_end          DateTime @db.Timestamp(6)
+  digest_type       String   @default("scheduled") @db.VarChar(20)
+  recipient_count   Int
+  successful_sends  Int
+  failed_sends      Int
+  sent_at           DateTime @db.Timestamp(6)
+  sent_by           String   @db.Uuid
+  theme             String?  @db.VarChar(50)
+  sections_included Json?    @db.Json
+  configuration     Json?    @db.Json
+  date_range        String?  @db.VarChar(100)
+  status            String   @default("completed") @db.VarChar(20)
+  error_message     String?
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+  updated_at        DateTime @default(now()) @db.Timestamp(6)
+  users             users    @relation(fields: [sent_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_weekly_digests_sent_by")
+
+  @@index([sent_at], map: "idx_weekly_digests_sent_at")
+  @@index([sent_by], map: "idx_weekly_digests_sent_by")
+  @@index([status], map: "idx_weekly_digests_status")
+  @@index([digest_type], map: "idx_weekly_digests_type")
+  @@index([week_start], map: "idx_weekly_digests_week_start")
 }

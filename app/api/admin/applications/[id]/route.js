@@ -1,7 +1,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
-import { auditApplication, extractRequestContext } from "../../../../lib/auditLog";
+import {
+  auditApplication,
+  extractRequestContext,
+} from "../../../../lib/auditLog";
 import { triggerStatusChangeAutomation } from "../../../../lib/emailAutomation";
 
 export async function PATCH(req, { params }) {
@@ -23,29 +26,34 @@ export async function PATCH(req, { params }) {
   try {
     const body = await req.json();
     const { status, notes } = body;
-    
+
     // Extract request context for audit logging
     const { ipAddress, userAgent, requestId } = extractRequestContext(req);
 
     // Get current application data for audit logging
-    const currentApplication = await appPrisma.application.findUnique({
+    const currentApplication = await appPrisma.applications.findUnique({
       where: { id },
       include: {
         job: { select: { id: true, title: true } },
-        user: { select: { id: true, firstName: true, lastName: true, email: true } }
-      }
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
     });
 
     if (!currentApplication) {
-      return new Response(JSON.stringify({ message: "Application not found" }), {
-        status: 404,
-      });
+      return new Response(
+        JSON.stringify({ message: "Application not found" }),
+        {
+          status: 404,
+        }
+      );
     }
 
     // Validate status
     const validStatuses = [
       "Applied",
-      "Reviewing", 
+      "Reviewing",
       "Interview",
       "Hired",
       "Rejected",
@@ -57,7 +65,7 @@ export async function PATCH(req, { params }) {
     }
 
     // Update the application
-    const updatedApplication = await appPrisma.application.update({
+    const updatedApplication = await appPrisma.applications.update({
       where: { id },
       data: {
         ...(status && { status }),
@@ -89,11 +97,15 @@ export async function PATCH(req, { params }) {
     });
 
     // Create audit logs for the changes
-    const applicantName = updatedApplication.name || 
-      (updatedApplication.user ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim() : 'Unknown');
-    const actorName = (session.user.firstName && session.user.lastName) 
-      ? `${session.user.firstName} ${session.user.lastName}`.trim() 
-      : session.user.email || 'System';
+    const applicantName =
+      updatedApplication.name ||
+      (updatedApplication.user
+        ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim()
+        : "Unknown");
+    const actorName =
+      session.user.firstName && session.user.lastName
+        ? `${session.user.firstName} ${session.user.lastName}`.trim()
+        : session.user.email || "System";
 
     // Log status change if status was updated
     if (status && status !== currentApplication.status) {
@@ -121,10 +133,12 @@ export async function PATCH(req, { params }) {
             requestId,
           }
         );
-        
-        console.log(`🤖 Email automation processed: ${automationResult.triggered}/${automationResult.processed} rules triggered`);
+
+        console.log(
+          `🤖 Email automation processed: ${automationResult.triggered}/${automationResult.processed} rules triggered`
+        );
       } catch (automationError) {
-        console.error('Error in email automation:', automationError);
+        console.error("Error in email automation:", automationError);
         // Don't fail the status update if automation fails
       }
     }
@@ -198,7 +212,7 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
-    const application = await appPrisma.application.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: { id },
       include: {
         job: {
@@ -281,7 +295,7 @@ export async function DELETE(req, { params }) {
 
   try {
     // Check if application exists
-    const application = await appPrisma.application.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: { id },
     });
 
@@ -295,12 +309,12 @@ export async function DELETE(req, { params }) {
     }
 
     // Delete the application
-    await appPrisma.application.delete({
+    await appPrisma.applications.delete({
       where: { id },
     });
 
     // Decrement application count for the job
-    await appPrisma.job.update({
+    await appPrisma.jobs.update({
       where: { id: application.jobId },
       data: {
         applicationCount: {

@@ -29,7 +29,7 @@ export async function PATCH(req, { params }) {
 
     // If trying to feature a job, check the limit
     if (featured) {
-      const currentFeaturedCount = await appPrisma.job.count({
+      const currentFeaturedCount = await appPrisma.jobs.count({
         where: {
           featured: true,
           status: "Active",
@@ -49,7 +49,7 @@ export async function PATCH(req, { params }) {
     }
 
     // Update the job
-    const updatedJob = await appPrisma.job.update({
+    const updatedJob = await appPrisma.jobs.update({
       where: { id },
       data: {
         featured,
@@ -99,13 +99,13 @@ export async function GET(req) {
     const maxFeaturedJobs = await getSystemSetting("max_featured_jobs", 5);
 
     const [currentFeaturedCount, featuredJobs] = await Promise.all([
-      appPrisma.job.count({
+      appPrisma.jobs.count({
         where: {
           featured: true,
           status: "Active",
         },
       }),
-      appPrisma.job.findMany({
+      appPrisma.jobs.findMany({
         where: {
           featured: true,
           status: "Active",

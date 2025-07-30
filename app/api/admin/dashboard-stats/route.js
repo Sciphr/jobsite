@@ -23,12 +23,12 @@ export async function GET(req) {
 
     // Applications (HR level and above can see)
     if (userPrivilegeLevel >= 1) {
-      const totalApplications = await appPrisma.application.count();
-      const recentApplications = await appPrisma.application.findMany({
+      const totalApplications = await appPrisma.applications.count();
+      const recentApplications = await appPrisma.applications.findMany({
         take: 5,
         orderBy: { appliedAt: "desc" },
         include: {
-          job: {
+          jobs: {
             select: { title: true },
           },
         },
@@ -37,7 +37,7 @@ export async function GET(req) {
       stats.totalApplications = totalApplications;
       stats.recentApplications = recentApplications.map((app) => ({
         name: app.name || app.email,
-        jobTitle: app.job.title,
+        jobTitle: app.jobs.title,
         status: app.status,
         appliedAt: app.appliedAt,
       }));
@@ -45,10 +45,10 @@ export async function GET(req) {
 
     // Jobs (Admin level and above can see)
     if (userPrivilegeLevel >= 2) {
-      const totalJobs = await appPrisma.job.count({
+      const totalJobs = await appPrisma.jobs.count({
         where: { status: "Active" },
       });
-      const recentJobs = await appPrisma.job.findMany({
+      const recentJobs = await appPrisma.jobs.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
         select: {
@@ -58,9 +58,9 @@ export async function GET(req) {
           createdAt: true,
           _count: {
             select: {
-              applications: true
-            }
-          }
+              applications: true,
+            },
+          },
         },
       });
 
@@ -70,7 +70,7 @@ export async function GET(req) {
 
     // Users (Super Admin only)
     if (userPrivilegeLevel >= 3) {
-      const totalUsers = await appPrisma.user.count();
+      const totalUsers = await appPrisma.users.count();
       stats.totalUsers = totalUsers;
     }
 

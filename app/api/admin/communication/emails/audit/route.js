@@ -84,10 +84,10 @@ export async function GET(request) {
     const skip = (page - 1) * limit;
 
     // Get total count for pagination
-    const totalCount = await prisma.auditLog.count({ where });
+    const totalCount = await prisma.audit_logs.count({ where });
 
     // Fetch audit logs for email events
-    const auditLogs = await prisma.auditLog.findMany({
+    const auditLogs = await prisma.audit_logs.findMany({
       where,
       skip,
       take: limit,
@@ -277,17 +277,17 @@ export async function GET(request) {
       bulkCampaigns,
       uniqueSenders,
     ] = await Promise.all([
-      prisma.auditLog.count({ where: statsQuery }),
-      prisma.auditLog.count({
+      prisma.audit_logs.count({ where: statsQuery }),
+      prisma.audit_logs.count({
         where: { ...statsQuery, status: "success", eventType: "SEND" },
       }),
-      prisma.auditLog.count({
+      prisma.audit_logs.count({
         where: { ...statsQuery, status: "failure" },
       }),
-      prisma.auditLog.count({
+      prisma.audit_logs.count({
         where: { ...statsQuery, subcategory: "BULK_SEND" },
       }),
-      prisma.auditLog.findMany({
+      prisma.audit_logs.findMany({
         where: statsQuery,
         select: { actorId: true },
         distinct: ["actorId"],
@@ -298,7 +298,7 @@ export async function GET(request) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activityTrends = await prisma.auditLog.groupBy({
+    const activityTrends = await prisma.audit_logs.groupBy({
       by: ["createdAt"],
       where: {
         category: "EMAIL",

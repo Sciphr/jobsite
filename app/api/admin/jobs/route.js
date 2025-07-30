@@ -22,9 +22,9 @@ export async function GET(req) {
   }
 
   try {
-    const jobs = await appPrisma.job.findMany({
+    const jobs = await appPrisma.jobs.findMany({
       include: {
-        category: {
+        categories: {
           select: {
             id: true,
             name: true,
@@ -42,7 +42,7 @@ export async function GET(req) {
         let creator = null;
         if (job.createdBy) {
           try {
-            creator = await appPrisma.user.findUnique({
+            creator = await appPrisma.users.findUnique({
               where: { id: job.createdBy },
               select: {
                 id: true,
@@ -313,7 +313,7 @@ export async function POST(req) {
         tags: ["job", "create", newJob.status.toLowerCase(), "admin_action"],
         metadata: {
           autoPublished: autoPublishJobs && newJob.status === "Active",
-          category: newJob.category.name,
+          category: newJob.categories.name,
           salary:
             newJob.salaryMin && newJob.salaryMax
               ? `${newJob.salaryMin}-${newJob.salaryMax} ${newJob.salaryCurrency}`

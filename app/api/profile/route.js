@@ -19,7 +19,7 @@ export async function GET(req) {
   const userId = session.user.id;
 
   try {
-    const user = await appPrisma.user.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -33,7 +33,7 @@ export async function GET(req) {
         createdAt: true,
         // Include admin-specific data if user is admin
         ...(session.user.privilegeLevel > 0 && {
-          createdJobs: {
+          jobs: {
             select: {
               id: true,
               title: true,
@@ -41,7 +41,7 @@ export async function GET(req) {
               applicationCount: true,
               createdAt: true,
             },
-            take: 5, // Recent jobs
+            take: 5,
             orderBy: { createdAt: "desc" },
           },
         }),
@@ -106,7 +106,7 @@ export async function PUT(req) {
       phone,
     };
 
-    const updatedUser = await appPrisma.user.update({
+    const updatedUser = await appPrisma.users.update({
       where: { id: userId },
       data: updateData,
       select: {

@@ -40,7 +40,7 @@ export async function POST(req) {
     console.log(`📅 Cutoff date: ${cutoffDate.toISOString()}`);
 
     // Find and expire jobs that are too old
-    const expiredByAge = await appPrisma.job.updateMany({
+    const expiredByAge = await appPrisma.jobs.updateMany({
       where: {
         status: "Active",
         postedAt: {
@@ -57,7 +57,7 @@ export async function POST(req) {
     console.log(`📊 Expired ${expiredByAge.count} jobs by age`);
 
     // Also handle jobs with specific expiration dates that have passed
-    const expiredByDeadline = await appPrisma.job.updateMany({
+    const expiredByDeadline = await appPrisma.jobs.updateMany({
       where: {
         status: "Active",
         applicationDeadline: {
@@ -125,7 +125,7 @@ export async function GET(req) {
     cutoffDate.setDate(cutoffDate.getDate() - autoExpireDays);
 
     // Find jobs that WOULD be expired (preview mode - don't actually expire)
-    const jobsToExpireByAge = await appPrisma.job.findMany({
+    const jobsToExpireByAge = await appPrisma.jobs.findMany({
       where: {
         status: "Active",
         postedAt: {
@@ -141,7 +141,7 @@ export async function GET(req) {
       },
     });
 
-    const jobsToExpireByDeadline = await appPrisma.job.findMany({
+    const jobsToExpireByDeadline = await appPrisma.jobs.findMany({
       where: {
         status: "Active",
         applicationDeadline: {

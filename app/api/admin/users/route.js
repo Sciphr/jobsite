@@ -18,7 +18,7 @@ export async function GET(req) {
   }
 
   try {
-    const users = await appPrisma.user.findMany({
+    const users = await appPrisma.users.findMany({
       select: {
         id: true,
         email: true,
@@ -32,9 +32,9 @@ export async function GET(req) {
         updatedAt: true,
         _count: {
           select: {
-            createdJobs: true,
+            jobs: true,
             applications: true,
-            savedJobs: true,
+            saved_jobs: true,
           },
         },
       },
@@ -117,7 +117,7 @@ export async function POST(req) {
     }
 
     // Check if user already exists
-    const existingUser = await appPrisma.user.findUnique({
+    const existingUser = await appPrisma.users.findUnique({
       where: { email },
     });
 
@@ -134,7 +134,7 @@ export async function POST(req) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const newUser = await appPrisma.user.create({
+    const newUser = await appPrisma.users.create({
       data: {
         email,
         password: hashedPassword,

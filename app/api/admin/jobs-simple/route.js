@@ -17,7 +17,7 @@ export async function GET(req) {
   }
 
   try {
-    const jobs = await appPrisma.job.findMany({
+    const jobs = await appPrisma.jobs.findMany({
       select: {
         id: true,
         title: true,

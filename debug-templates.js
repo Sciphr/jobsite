@@ -11,23 +11,19 @@ async function debugTemplates() {
         id: true,
         name: true,
         type: true,
-        category: true,
+        categories: true,
         is_default: true,
         is_active: true,
         created_at: true,
       },
-      orderBy: [
-        { category: 'asc' },
-        { is_default: 'desc' },
-        { name: 'asc' }
-      ]
+      orderBy: [{ category: "asc" }, { is_default: "desc" }, { name: "asc" }],
     });
 
-    allTemplates.forEach(template => {
+    allTemplates.forEach((template) => {
       console.log(`
 Name: ${template.name}
 Type: ${template.type}
-Category: ${template.category || 'NULL'}
+Category: ${template.category || "NULL"}
 Is Default: ${template.is_default}
 Is Active: ${template.is_active}
 ID: ${template.id}
@@ -44,25 +40,26 @@ ID: ${template.id}
         id: true,
         name: true,
         type: true,
-        category: true,
+        categories: true,
       },
-      orderBy: { category: 'asc' }
+      orderBy: { category: "asc" },
     });
 
     const categoryGroups = {};
-    defaultTemplates.forEach(template => {
-      const cat = template.category || 'NULL';
+    defaultTemplates.forEach((template) => {
+      const cat = template.category || "NULL";
       if (!categoryGroups[cat]) categoryGroups[cat] = [];
       categoryGroups[cat].push(template);
     });
 
     Object.entries(categoryGroups).forEach(([category, templates]) => {
-      console.log(`\n${category} category: ${templates.length} default template(s)`);
-      templates.forEach(template => {
+      console.log(
+        `\n${category} category: ${templates.length} default template(s)`
+      );
+      templates.forEach((template) => {
         console.log(`  - ${template.name} (${template.type})`);
       });
     });
-
   } catch (error) {
     console.error("Error:", error);
   } finally {

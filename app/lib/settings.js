@@ -6,7 +6,7 @@ import { appPrisma } from "./prisma";
  */
 export async function getSystemSetting(key, defaultValue = null) {
   try {
-    const setting = await appPrisma.setting.findFirst({
+    const setting = await appPrisma.settings.findFirst({
       where: {
         key,
         userId: null, // System settings only
@@ -29,7 +29,7 @@ export async function getSystemSetting(key, defaultValue = null) {
  */
 export async function getUserSetting(userId, key, defaultValue = null) {
   try {
-    const setting = await appPrisma.setting.findFirst({
+    const setting = await appPrisma.settings.findFirst({
       where: {
         key,
         userId,
@@ -55,7 +55,7 @@ export async function getUserSetting(userId, key, defaultValue = null) {
  */
 export async function getSystemSettings(keys) {
   try {
-    const settings = await appPrisma.setting.findMany({
+    const settings = await appPrisma.settings.findMany({
       where: {
         key: { in: keys },
         userId: null,

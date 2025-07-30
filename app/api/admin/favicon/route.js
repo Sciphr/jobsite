@@ -3,11 +3,20 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
-import { uploadToMinio, deleteFromMinio, getMinioDownloadUrl } from "../../../lib/minio-storage";
+import {
+  uploadToMinio,
+  deleteFromMinio,
+  getMinioDownloadUrl,
+} from "../../../lib/minio-storage";
 
 // Helper function to validate favicon types
 function isValidFaviconType(fileType) {
-  const allowedTypes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/svg+xml'];
+  const allowedTypes = [
+    "image/x-icon",
+    "image/vnd.microsoft.icon",
+    "image/png",
+    "image/svg+xml",
+  ];
   return allowedTypes.includes(fileType.toLowerCase());
 }
 
@@ -25,11 +34,11 @@ export async function GET() {
     }
 
     // Get current favicon setting
-    const faviconSetting = await appPrisma.setting.findFirst({
+    const faviconSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_favicon_url",
-        userId: null // Global setting
-      }
+        userId: null, // Global setting
+      },
     });
 
     if (!faviconSetting || !faviconSetting.value) {
@@ -37,16 +46,19 @@ export async function GET() {
     }
 
     // Generate download URL for the current favicon
-    const { data, error } = await getMinioDownloadUrl(faviconSetting.value, 86400); // 24 hours
-    
+    const { data, error } = await getMinioDownloadUrl(
+      faviconSetting.value,
+      86400
+    ); // 24 hours
+
     if (error) {
       console.error("Error generating favicon download URL:", error);
       return NextResponse.json({ faviconUrl: null });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       faviconUrl: data.signedUrl,
-      storagePath: faviconSetting.value 
+      storagePath: faviconSetting.value,
     });
   } catch (error) {
     console.error("Error fetching favicon:", error);
@@ -75,7 +87,8 @@ export async function POST(request) {
     if (!isValidFaviconType(file.type)) {
       return NextResponse.json(
         {
-          error: "Invalid file type. Please upload ICO, PNG, or SVG files only.",
+          error:
+            "Invalid file type. Please upload ICO, PNG, or SVG files only.",
         },
         { status: 400 }
       );
@@ -87,7 +100,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error: `File size too large. Maximum size is 1MB. Your file is ${(
-            file.size / (1024 * 1024)
+            file.size /
+            (1024 * 1024)
           ).toFixed(2)}MB.`,
         },
         { status: 413 }
@@ -104,8 +118,8 @@ export async function POST(request) {
     const existingFaviconSetting = await appPrisma.setting.findFirst({
       where: {
         key: "site_favicon_url",
-        userId: null
-      }
+        userId: null,
+      },
     });
 
     // Upload new favicon to MinIO first
@@ -138,8 +152,8 @@ export async function POST(request) {
           where: { id: existingFaviconSetting.id },
           data: {
             value: filePath,
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         });
       } else {
         // Create new favicon setting
@@ -151,8 +165,8 @@ export async function POST(request) {
             category: "branding",
             description: "Site favicon image path in storage",
             dataType: "string",
-            privilegeLevel: 2
-          }
+            privilegeLevel: 2,
+          },
         });
       }
 
@@ -173,8 +187,11 @@ export async function POST(request) {
       }
 
       // Generate download URL for the new favicon
-      const { data: urlData, error: urlError } = await getMinioDownloadUrl(filePath, 86400);
-      
+      const { data: urlData, error: urlError } = await getMinioDownloadUrl(
+        filePath,
+        86400
+      );
+
       if (urlError) {
         console.error("Error generating download URL:", urlError);
         // Don't fail - the upload was successful
@@ -183,9 +200,8 @@ export async function POST(request) {
       return NextResponse.json({
         message: "Favicon uploaded successfully",
         faviconUrl: urlData?.signedUrl || null,
-        storagePath: filePath
+        storagePath: filePath,
       });
-
     } catch (dbError) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded favicon:", dbError);
@@ -214,11 +230,11 @@ export async function DELETE() {
     }
 
     // Find the current favicon setting
-    const faviconSetting = await appPrisma.setting.findFirst({
+    const faviconSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_favicon_url",
-        userId: null
-      }
+        userId: null,
+      },
     });
 
     if (!faviconSetting) {
@@ -233,7 +249,7 @@ export async function DELETE() {
     // Delete from database first
     console.log("Deleting favicon setting from database...");
     await appPrisma.setting.delete({
-      where: { id: faviconSetting.id }
+      where: { id: faviconSetting.id },
     });
 
     console.log("Favicon setting deleted from database successfully");

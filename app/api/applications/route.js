@@ -27,7 +27,7 @@ export async function POST(request) {
     }
 
     // Check if job exists
-    const job = await appPrisma.job.findUnique({
+    const job = await appPrisma.jobs.findUnique({
       where: { id: jobId },
       select: {
         id: true,
@@ -60,7 +60,7 @@ export async function POST(request) {
 
     if (userId) {
       // Logged-in user: Get user profile data
-      const user = await appPrisma.user.findUnique({
+      const user = await appPrisma.users.findUnique({
         where: { id: userId },
         select: {
           firstName: true,
@@ -75,7 +75,7 @@ export async function POST(request) {
       }
 
       // Check for duplicate application
-      const existingApplication = await appPrisma.application.findUnique({
+      const existingApplication = await appPrisma.applications.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -123,10 +123,10 @@ export async function POST(request) {
     }
 
     // Create the application
-    const application = await appPrisma.application.create({
+    const application = await appPrisma.applications.create({
       data: applicationData,
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -145,7 +145,7 @@ export async function POST(request) {
     });
 
     // Increment application count for the job
-    await appPrisma.job.update({
+    await appPrisma.jobs.update({
       where: { id: jobId },
       data: {
         applicationCount: {
@@ -285,10 +285,10 @@ export async function GET(request) {
   const userId = session.user.id;
 
   try {
-    const applications = await appPrisma.application.findMany({
+    const applications = await appPrisma.applications.findMany({
       where: { userId },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,

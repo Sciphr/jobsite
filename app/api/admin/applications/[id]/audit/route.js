@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
     const includeSystem = searchParams.get("includeSystem") === "true";
 
     // Verify application exists
-    const application = await prisma.application.findUnique({
+    const application = await prisma.applications.findUnique({
       where: { id },
       select: {
         id: true,
@@ -56,7 +56,7 @@ export async function GET(request, { params }) {
     }
 
     // Fetch audit logs related to this application
-    const auditLogs = await prisma.auditLog.findMany({
+    const auditLogs = await prisma.audit_logs.findMany({
       where,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -88,7 +88,7 @@ export async function GET(request, { params }) {
     });
 
     // Transform audit logs for timeline display
-    const transformedLogs = auditLogs.map((log) => {
+    const transformedLogs = audit_logs.map((log) => {
       const actorName = log.actor
         ? `${log.actor.firstName || ""} ${log.actor.lastName || ""}`.trim() ||
           log.actor.email
@@ -96,14 +96,14 @@ export async function GET(request, { params }) {
 
       return {
         id: log.id,
-        type: getTimelineType(log.eventType, log.category, log.subcategory),
+        type: getTimelineType(log.eventType, log.categories, log.subcategory),
         content: log.description || log.action,
         action: log.action,
         timestamp: log.createdAt,
         author: actorName,
         authorId: log.actorId,
         eventType: log.eventType,
-        category: log.category,
+        categories: log.categories,
         subcategory: log.subcategory,
         severity: log.severity,
         status: log.status,

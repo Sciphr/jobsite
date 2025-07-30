@@ -28,12 +28,15 @@ export async function POST(req) {
     }
 
     console.log("🔍 Generating email preview for:", session.user.email);
+    console.log("📋 Digest config received:", JSON.stringify(digestConfig, null, 2));
 
     // Calculate date ranges
     weeklyDigestService.calculateDateRanges();
+    console.log("📅 Date ranges calculated");
 
     // Collect data using the provided configuration
     const digestData = await weeklyDigestService.collectWeeklyData(digestConfig);
+    console.log("📊 Data collected successfully");
 
     // Create a mock admin user for preview
     const mockAdmin = {
@@ -42,9 +45,11 @@ export async function POST(req) {
       firstName: session.user.firstName || "Admin",
       lastName: session.user.lastName || "User",
     };
+    console.log("👤 Mock admin created:", mockAdmin);
 
     // Generate the email HTML
     const emailHtml = await weeklyDigestService.generateEmailHTML(mockAdmin, digestData);
+    console.log("📧 Email HTML generated, length:", emailHtml?.length);
 
     return NextResponse.json({
       success: true,

@@ -20,10 +20,10 @@ export async function POST(req, { params }) {
 
   try {
     // Get the original job
-    const originalJob = await appPrisma.job.findUnique({
+    const originalJob = await appPrisma.jobs.findUnique({
       where: { id },
       include: {
-        category: true,
+        categories: true,
       },
     });
 
@@ -39,13 +39,13 @@ export async function POST(req, { params }) {
     let counter = 1;
 
     // Check if slug exists and increment until we find a unique one
-    while (await appPrisma.job.findUnique({ where: { slug: newSlug } })) {
+    while (await appPrisma.jobs.findUnique({ where: { slug: newSlug } })) {
       newSlug = `${baseSlug}-${counter}`;
       counter++;
     }
 
     // Create the duplicate job
-    const duplicatedJob = await appPrisma.job.create({
+    const duplicatedJob = await appPrisma.jobs.create({
       data: {
         title: `${originalJob.title} (Copy)`,
         slug: newSlug,

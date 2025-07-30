@@ -20,7 +20,7 @@ export async function GET(request) {
   try {
     // If jobId is provided, check if specific job is saved
     if (jobId) {
-      const savedJob = await appPrisma.savedJob.findUnique({
+      const savedJob = await appPrisma.saved_jobs.findUnique({
         where: {
           userId_jobId: {
             userId,
@@ -33,10 +33,10 @@ export async function GET(request) {
     }
 
     // Otherwise, return all saved jobs
-    const savedJobs = await appPrisma.savedJob.findMany({
+    const savedJobs = await appPrisma.saved_jobs.findMany({
       where: { userId },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -84,13 +84,13 @@ export async function POST(request) {
       );
     }
 
-    const job = await appPrisma.job.findUnique({ where: { id: jobId } });
+    const job = await appPrisma.jobs.findUnique({ where: { id: jobId } });
 
     if (!job) {
       return NextResponse.json({ message: "Job not found" }, { status: 404 });
     }
 
-    const existingSave = await appPrisma.savedJob.findUnique({
+    const existingSave = await appPrisma.saved_jobs.findUnique({
       where: {
         userId_jobId: {
           userId,
@@ -106,10 +106,10 @@ export async function POST(request) {
       );
     }
 
-    const savedJob = await appPrisma.savedJob.create({
+    const savedJob = await appPrisma.saved_jobs.create({
       data: { userId, jobId },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -156,8 +156,8 @@ export async function DELETE(request) {
       );
     }
 
-    // FIXED: Changed from appPrisma.savedJobs.delete to appPrisma.savedJob.delete
-    await appPrisma.savedJob.delete({
+    // FIXED: Changed from appPrisma.savedJobs.delete to appPrisma.saved_jobs.delete
+    await appPrisma.saved_jobs.delete({
       where: {
         userId_jobId: {
           userId,

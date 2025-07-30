@@ -27,9 +27,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const resumes = await appPrisma.userResume.findMany({
-      where: { userId: session.user.id },
-      orderBy: { uploadedAt: "desc" },
+    const resumes = await appPrisma.user_resumes.findMany({
+      where: { user_id: session.user.id },
+      orderBy: { uploaded_at: "desc" },
     });
 
     return NextResponse.json(resumes);
@@ -90,8 +90,8 @@ export async function POST(request) {
     }
 
     // Check if user already has a resume
-    const existingResume = await appPrisma.userResume.findFirst({
-      where: { userId: session.user.id },
+    const existingResume = await appPrisma.user_resumes.findFirst({
+      where: { user_id: session.user.id },
     });
 
     // Generate unique filename with length limits
@@ -129,13 +129,13 @@ export async function POST(request) {
 
     // Create or update resume record with safe values
     const resumeData = {
-      userId: session.user.id,
-      fileName: truncateString(file.name, 255),
-      fileSize: file.size,
-      fileType: truncateString(file.type, 50),
-      storagePath: truncateString(filePath, 500),
+      user_id: session.user.id,
+      file_name: truncateString(file.name, 255),
+      file_size: file.size,
+      file_type: truncateString(file.type, 50),
+      storage_path: truncateString(filePath, 500),
       uploadedAt: new Date(),
-      isDefault: true,
+      is_default: true,
     };
 
     let resume;
@@ -144,18 +144,18 @@ export async function POST(request) {
     try {
       if (existingResume) {
         // Store old path for cleanup
-        oldStoragePath = existingResume.storagePath;
+        oldStoragePath = existingResume.storage_path;
 
         // Update existing resume in database
         ("Updating existing resume record...");
-        resume = await appPrisma.userResume.update({
+        resume = await appPrisma.user_resumes.update({
           where: { id: existingResume.id },
           data: resumeData,
         });
       } else {
         // Create new resume
         ("Creating new resume record...");
-        resume = await appPrisma.userResume.create({
+        resume = await appPrisma.user_resumes.create({
           data: resumeData,
         });
       }
@@ -214,8 +214,8 @@ export async function DELETE() {
     }
 
     // Find the user's resume
-    const resume = await appPrisma.userResume.findFirst({
-      where: { userId: session.user.id },
+    const resume = await appPrisma.user_resumes.findFirst({
+      where: { user_id: session.user.id },
     });
 
     if (!resume) {
@@ -225,11 +225,11 @@ export async function DELETE() {
       );
     }
 
-    const storagePath = resume.storagePath;
+    const storagePath = resume.storage_path;
 
     // Delete from database first
     ("Deleting resume from database...");
-    await appPrisma.userResume.delete({
+    await appPrisma.user_resumes.delete({
       where: { id: resume.id },
     });
 

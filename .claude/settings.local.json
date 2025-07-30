@@ -26,7 +26,10 @@
       "Bash(else)",
       "Bash(fi)",
       "Bash(__NEW_LINE__ if [ -z \"$MICROSOFT_CLIENT_SECRET\" ])",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(npx prisma db pull:*)",
+      "Bash(rd:*)"
     ],
     "deny": []
   }

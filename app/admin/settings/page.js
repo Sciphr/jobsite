@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { updateSettingGlobally } from "@/app/hooks/useSettings";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
@@ -46,6 +47,8 @@ import {
 
 export default function AdminSettings() {
   const { data: session } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { getButtonClasses } = useThemeClasses();
   const [saving, setSaving] = useState({});
   const [activeTab, setActiveTab] = useState("system");
@@ -57,6 +60,22 @@ export default function AdminSettings() {
   const { data: settingsData, isLoading, refetch } = useSettings();
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Function to change tab and update URL
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('tab', tabId);
+    router.push(newUrl.pathname + newUrl.search, { scroll: false });
+  };
+
+  // Handle URL parameters for tab state
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['system', 'branding', 'personal', 'notifications'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (settingsData) {
@@ -441,12 +460,13 @@ export default function AdminSettings() {
     },
   ].filter((tab) => userPrivilegeLevel >= tab.minPrivilege);
 
-  // Set initial tab to first available tab
+  // Set initial tab to first available tab (only if no tab is in URL and current tab is invalid)
   useEffect(() => {
-    if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
+    const urlTab = searchParams.get('tab');
+    if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab) && !urlTab) {
       setActiveTab(tabs[0].id);
     }
-  }, [tabs]);
+  }, [tabs, activeTab, searchParams]);
 
   const renderSettingInput = (setting) => {
     const { key, parsedValue, dataType, description, canEdit } = setting;
@@ -828,7 +848,7 @@ export default function AdminSettings() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`group inline-flex items-center space-x-2 py-4 px-2 sm:px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap ${
                   isActive
                     ? "border-blue-500"

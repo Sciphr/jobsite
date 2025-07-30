@@ -3,7 +3,10 @@ import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
 import { deleteFromMinio } from "../../../../lib/minio-storage";
 import bcrypt from "bcryptjs";
-import { logAuditEvent, calculateChanges } from "../../../../../lib/auditMiddleware";
+import {
+  logAuditEvent,
+  calculateChanges,
+} from "../../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../../lib/auditLog";
 
 export async function GET(req, { params }) {
@@ -23,7 +26,7 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
-    const user = await appPrisma.user.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id },
       select: {
         id: true,
@@ -106,7 +109,7 @@ export async function PATCH(req, { params }) {
     const requestContext = extractRequestContext(req);
 
     // Get current user data for audit logging
-    const currentUser = await appPrisma.user.findUnique({
+    const currentUser = await appPrisma.users.findUnique({
       where: { id },
       select: {
         id: true,
@@ -122,18 +125,21 @@ export async function PATCH(req, { params }) {
 
     if (!currentUser) {
       // Log failed attempt to update non-existent user
-      await logAuditEvent({
-        eventType: 'UPDATE',
-        category: 'USER',
-        entityType: 'user',
-        entityId: id,
-        action: 'Failed to update user - User not found',
-        description: `Attempted to update non-existent user with ID: ${id}`,
-        severity: 'warning',
-        status: 'failure',
-        tags: ['user', 'update', 'not_found'],
-        ...requestContext
-      }, req);
+      await logAuditEvent(
+        {
+          eventType: "UPDATE",
+          category: "USER",
+          entityType: "user",
+          entityId: id,
+          action: "Failed to update user - User not found",
+          description: `Attempted to update non-existent user with ID: ${id}`,
+          severity: "warning",
+          status: "failure",
+          tags: ["user", "update", "not_found"],
+          ...requestContext,
+        },
+        req
+      );
 
       return new Response(JSON.stringify({ message: "User not found" }), {
         status: 404,
@@ -221,7 +227,7 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    const updatedUser = await appPrisma.user.update({
+    const updatedUser = await appPrisma.users.update({
       where: { id },
       data: updateData,
       select: {
@@ -248,53 +254,70 @@ export async function PATCH(req, { params }) {
     // Calculate what changed for audit log
     const changes = calculateChanges(currentUser, updateData);
     const changedFields = Object.keys(changes || {});
-    
+
     // Log successful user update
-    await logAuditEvent({
-      eventType: 'UPDATE',
-      category: 'USER',
-      subcategory: changedFields.includes('privilegeLevel') ? 'PRIVILEGE_CHANGE' : 'PROFILE_UPDATE',
-      entityType: 'user',
-      entityId: id,
-      entityName: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.email,
-      action: `User updated: ${changedFields.join(', ')}`,
-      description: `Updated user profile. Changed fields: ${changedFields.join(', ')}`,
-      oldValues: currentUser,
-      newValues: updateData,
-      changes,
-      relatedUserId: id,
-      severity: changedFields.includes('privilegeLevel') || changedFields.includes('role') ? 'warning' : 'info',
-      status: 'success',
-      tags: ['user', 'update', 'admin_action', ...changedFields],
-      metadata: {
-        changedFields,
-        updateData: { ...updateData, password: updateData.password ? '[REDACTED]' : undefined },
-        isSelfUpdate: id === session.user.id
+    await logAuditEvent(
+      {
+        eventType: "UPDATE",
+        category: "USER",
+        subcategory: changedFields.includes("privilegeLevel")
+          ? "PRIVILEGE_CHANGE"
+          : "PROFILE_UPDATE",
+        entityType: "user",
+        entityId: id,
+        entityName:
+          `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
+          currentUser.email,
+        action: `User updated: ${changedFields.join(", ")}`,
+        description: `Updated user profile. Changed fields: ${changedFields.join(", ")}`,
+        oldValues: currentUser,
+        newValues: updateData,
+        changes,
+        relatedUserId: id,
+        severity:
+          changedFields.includes("privilegeLevel") ||
+          changedFields.includes("role")
+            ? "warning"
+            : "info",
+        status: "success",
+        tags: ["user", "update", "admin_action", ...changedFields],
+        metadata: {
+          changedFields,
+          updateData: {
+            ...updateData,
+            password: updateData.password ? "[REDACTED]" : undefined,
+          },
+          isSelfUpdate: id === session.user.id,
+        },
+        ...requestContext,
       },
-      ...requestContext
-    }, req);
+      req
+    );
 
     return new Response(JSON.stringify(updatedUser), { status: 200 });
   } catch (error) {
     console.error("User update error:", error);
 
     // Log the error
-    await logAuditEvent({
-      eventType: 'ERROR',
-      category: 'USER',
-      entityType: 'user',
-      entityId: id,
-      action: 'Failed to update user',
-      description: `User update failed: ${error.message}`,
-      severity: 'error',
-      status: 'failure',
-      tags: ['user', 'update', 'error'],
-      metadata: {
-        errorCode: error.code,
-        errorMessage: error.message,
-        attempted: body
-      }
-    }, req);
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "USER",
+        entityType: "user",
+        entityId: id,
+        action: "Failed to update user",
+        description: `User update failed: ${error.message}`,
+        severity: "error",
+        status: "failure",
+        tags: ["user", "update", "error"],
+        metadata: {
+          errorCode: error.code,
+          errorMessage: error.message,
+          attempted: body,
+        },
+      },
+      req
+    );
 
     if (error.code === "P2025") {
       return new Response(JSON.stringify({ message: "User not found" }), {
@@ -342,7 +365,7 @@ export async function DELETE(req, { params }) {
 
   try {
     // Get user data and all related records
-    const userToDelete = await appPrisma.user.findUnique({
+    const userToDelete = await appPrisma.users.findUnique({
       where: { id },
       include: {
         resumes: true, // Get all resume records with storage paths
@@ -408,23 +431,10 @@ export async function DELETE(req, { params }) {
       console.log(`User has ${userToDelete.createdJobs.length} created jobs`);
 
       // Option A: Set createdBy to null (recommended)
-      await appPrisma.job.updateMany({
+      await appPrisma.jobs.updateMany({
         where: { createdBy: id },
         data: { createdBy: null },
       });
-
-      // Option B: Delete jobs and their applications (uncomment if preferred)
-      // for (const job of userToDelete.createdJobs) {
-      //   await appPrisma.application.deleteMany({
-      //     where: { jobId: job.id }
-      //   });
-      //   await appPrisma.savedJob.deleteMany({
-      //     where: { jobId: job.id }
-      //   });
-      // }
-      // await appPrisma.job.deleteMany({
-      //   where: { createdBy: id }
-      // });
     }
 
     // Step 3: Delete user's applications
@@ -444,7 +454,7 @@ export async function DELETE(req, { params }) {
     }
 
     // Step 5: Delete the user (this will CASCADE delete resumes and settings automatically)
-    await appPrisma.user.delete({
+    await appPrisma.users.delete({
       where: { id },
     });
 

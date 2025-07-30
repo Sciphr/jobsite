@@ -17,9 +17,9 @@ export async function GET(req) {
   }
 
   try {
-    const applications = await appPrisma.application.findMany({
+    const applications = await appPrisma.applications.findMany({
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -34,7 +34,7 @@ export async function GET(req) {
             salaryCurrency: true,
           },
         },
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,

@@ -18,7 +18,7 @@ export async function GET(req) {
     }
 
     // Get all weekly digest settings
-    const settings = await appPrisma.setting.findMany({
+    const settings = await appPrisma.settings.findMany({
       where: {
         key: {
           in: [

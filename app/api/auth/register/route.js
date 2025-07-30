@@ -24,7 +24,7 @@ export async function POST(request) {
     }
 
     // Check if user already exists
-    const existingUser = await appPrisma.user.findUnique({
+    const existingUser = await appPrisma.users.findUnique({
       where: { email },
     });
 
@@ -39,7 +39,7 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const user = await appPrisma.user.create({
+    const user = await appPrisma.users.create({
       data: {
         firstName,
         lastName,

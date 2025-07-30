@@ -27,7 +27,7 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
-    const job = await appPrisma.job.findUnique({
+    const job = await appPrisma.jobs.findUnique({
       where: { id },
       include: {
         category: {
@@ -57,7 +57,7 @@ export async function GET(req, { params }) {
     let creator = null;
     if (job.createdBy) {
       try {
-        creator = await appPrisma.user.findUnique({
+        creator = await appPrisma.users.findUnique({
           where: { id: job.createdBy },
           select: {
             id: true,
@@ -328,7 +328,7 @@ export async function PATCH(req, { params }) {
     let creator = null;
     if (updatedJob.createdBy) {
       try {
-        creator = await appPrisma.user.findUnique({
+        creator = await appPrisma.users.findUnique({
           where: { id: updatedJob.createdBy },
           select: {
             id: true,

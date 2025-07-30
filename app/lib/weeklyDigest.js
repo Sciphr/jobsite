@@ -172,7 +172,7 @@ export class WeeklyDigestService {
    * Get application statistics for current and previous week
    */
   async getApplicationStats(customizations = {}) {
-    const thisWeekApplications = await appPrisma.application.findMany({
+    const thisWeekApplications = await appPrisma.applications.findMany({
       where: {
         appliedAt: {
           gte: this.weekStart,
@@ -187,7 +187,7 @@ export class WeeklyDigestService {
       },
     });
 
-    const previousWeekApplications = await appPrisma.application.findMany({
+    const previousWeekApplications = await appPrisma.applications.findMany({
       where: {
         appliedAt: {
           gte: this.previousWeekStart,
@@ -232,7 +232,7 @@ export class WeeklyDigestService {
    * Get user registration statistics
    */
   async getUserStats(customizations = {}) {
-    const thisWeekUsers = await appPrisma.user.count({
+    const thisWeekUsers = await appPrisma.users.count({
       where: {
         createdAt: {
           gte: this.weekStart,
@@ -241,7 +241,7 @@ export class WeeklyDigestService {
       },
     });
 
-    const previousWeekUsers = await appPrisma.user.count({
+    const previousWeekUsers = await appPrisma.users.count({
       where: {
         createdAt: {
           gte: this.previousWeekStart,
@@ -254,7 +254,7 @@ export class WeeklyDigestService {
     let activeUsers = 0;
     if (customizations.activeUsers) {
       // Users who logged in or performed actions this week
-      activeUsers = await appPrisma.user.count({
+      activeUsers = await appPrisma.users.count({
         where: {
           OR: [
             {
@@ -289,7 +289,7 @@ export class WeeklyDigestService {
     }
 
     return {
-      thisWeek: { 
+      thisWeek: {
         total: thisWeekUsers,
         active: activeUsers,
       },
@@ -309,7 +309,7 @@ export class WeeklyDigestService {
    * Get top performing jobs (most applications this week)
    */
   async getTopPerformingJobs() {
-    const topJobs = await appPrisma.job.findMany({
+    const topJobs = await appPrisma.jobs.findMany({
       select: {
         id: true,
         title: true,
@@ -362,7 +362,7 @@ export class WeeklyDigestService {
     const thresholdDate = new Date();
     thresholdDate.setDate(thresholdDate.getDate() - lowApplicationDays);
 
-    const lowJobs = await appPrisma.job.findMany({
+    const lowJobs = await appPrisma.jobs.findMany({
       where: {
         status: "Active",
         createdAt: { lte: thresholdDate },
@@ -399,7 +399,7 @@ export class WeeklyDigestService {
    * Get department statistics
    */
   async getDepartmentStats() {
-    const departmentData = await appPrisma.application.groupBy({
+    const departmentData = await appPrisma.applications.groupBy({
       by: ["jobId"],
       where: {
         appliedAt: {
@@ -412,7 +412,7 @@ export class WeeklyDigestService {
 
     // Get job details for department grouping
     const jobIds = departmentData.map((d) => d.jobId);
-    const jobs = await appPrisma.job.findMany({
+    const jobs = await appPrisma.jobs.findMany({
       where: { id: { in: jobIds } },
       select: { id: true, department: true },
     });
@@ -437,8 +437,8 @@ export class WeeklyDigestService {
    * Get users by role breakdown
    */
   async getUsersByRole() {
-    const usersByRole = await appPrisma.user.groupBy({
-      by: ['role'],
+    const usersByRole = await appPrisma.users.groupBy({
+      by: ["role"],
       where: {
         createdAt: {
           gte: this.weekStart,
@@ -450,7 +450,7 @@ export class WeeklyDigestService {
       },
     });
 
-    return usersByRole.map(role => ({
+    return usersByRole.map((role) => ({
       role: role.role,
       count: role._count.id,
     }));
@@ -470,7 +470,7 @@ export class WeeklyDigestService {
       const dayEnd = new Date(currentDate);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const count = await appPrisma.user.count({
+      const count = await appPrisma.users.count({
         where: {
           createdAt: {
             gte: dayStart,
@@ -500,16 +500,16 @@ export class WeeklyDigestService {
   async getUserGrowthData() {
     const growthData = [];
     const weeksBack = 4;
-    
+
     for (let i = weeksBack - 1; i >= 0; i--) {
       const weekStart = new Date(this.weekStart);
-      weekStart.setDate(weekStart.getDate() - (i * 7));
-      
+      weekStart.setDate(weekStart.getDate() - i * 7);
+
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      const count = await appPrisma.user.count({
+      const count = await appPrisma.users.count({
         where: {
           createdAt: {
             gte: weekStart,
@@ -544,7 +544,7 @@ export class WeeklyDigestService {
       const dayEnd = new Date(currentDate);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const count = await appPrisma.application.count({
+      const count = await appPrisma.applications.count({
         where: {
           appliedAt: {
             gte: dayStart,
@@ -573,9 +573,9 @@ export class WeeklyDigestService {
    */
   async getSystemHealthMetrics(customizations = {}) {
     const [activeJobs, totalUsers, totalApplications] = await Promise.all([
-      appPrisma.job.count({ where: { status: "Active" } }),
-      appPrisma.user.count(),
-      appPrisma.application.count(),
+      appPrisma.jobs.count({ where: { status: "Active" } }),
+      appPrisma.users.count(),
+      appPrisma.applications.count(),
     ]);
 
     // Email performance metrics (this week)
@@ -596,7 +596,7 @@ export class WeeklyDigestService {
               gte: this.weekStart,
               lte: this.weekEnd,
             },
-            status: 'sent',
+            status: "sent",
           },
         }),
         appPrisma.email.count({
@@ -605,7 +605,7 @@ export class WeeklyDigestService {
               gte: this.weekStart,
               lte: this.weekEnd,
             },
-            status: 'failed',
+            status: "failed",
           },
         }),
       ]);
@@ -614,86 +614,96 @@ export class WeeklyDigestService {
         total: totalEmails,
         successful: successfulEmails,
         failed: failedEmails,
-        successRate: totalEmails > 0 ? ((successfulEmails / totalEmails) * 100).toFixed(1) : 100,
-        failureRate: totalEmails > 0 ? ((failedEmails / totalEmails) * 100).toFixed(1) : 0,
+        successRate:
+          totalEmails > 0
+            ? ((successfulEmails / totalEmails) * 100).toFixed(1)
+            : 100,
+        failureRate:
+          totalEmails > 0 ? ((failedEmails / totalEmails) * 100).toFixed(1) : 0,
       };
     }
 
     // Error summary from audit logs (this week)
     let errorSummary = null;
     if (customizations.errorSummary || customizations.systemStatus) {
-      const [totalAuditEntries, errorEntries, warningEntries, criticalEntries] = await Promise.all([
-        appPrisma.auditLog.count({
-          where: {
-            createdAt: {
-              gte: this.weekStart,
-              lte: this.weekEnd,
+      const [totalAuditEntries, errorEntries, warningEntries, criticalEntries] =
+        await Promise.all([
+          appPrisma.audit_logs.count({
+            where: {
+              createdAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
             },
-          },
-        }),
-        appPrisma.auditLog.count({
-          where: {
-            createdAt: {
-              gte: this.weekStart,
-              lte: this.weekEnd,
+          }),
+          appPrisma.audit_logs.count({
+            where: {
+              createdAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
+              severity: "error",
             },
-            severity: 'error',
-          },
-        }),
-        appPrisma.auditLog.count({
-          where: {
-            createdAt: {
-              gte: this.weekStart,
-              lte: this.weekEnd,
+          }),
+          appPrisma.audit_logs.count({
+            where: {
+              createdAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
+              severity: "warning",
             },
-            severity: 'warning',
-          },
-        }),
-        appPrisma.auditLog.count({
-          where: {
-            createdAt: {
-              gte: this.weekStart,
-              lte: this.weekEnd,
+          }),
+          appPrisma.audit_logs.count({
+            where: {
+              createdAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
+              severity: "critical",
             },
-            severity: 'critical',
-          },
-        }),
-      ]);
+          }),
+        ]);
 
       // Get recent errors for details
-      const recentErrors = customizations.errorSummary ? await appPrisma.auditLog.findMany({
-        where: {
-          createdAt: {
-            gte: this.weekStart,
-            lte: this.weekEnd,
-          },
-          severity: {
-            in: ['error', 'critical'],
-          },
-        },
-        select: {
-          severity: true,
-          action: true,
-          description: true,
-          createdAt: true,
-          category: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 10,
-      }) : [];
+      const recentErrors = customizations.errorSummary
+        ? await appPrisma.audit_logs.findMany({
+            where: {
+              createdAt: {
+                gte: this.weekStart,
+                lte: this.weekEnd,
+              },
+              severity: {
+                in: ["error", "critical"],
+              },
+            },
+            select: {
+              severity: true,
+              action: true,
+              description: true,
+              createdAt: true,
+              categories: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 10,
+          })
+        : [];
 
       errorSummary = {
         totalEntries: totalAuditEntries,
         errors: errorEntries,
         warnings: warningEntries,
         critical: criticalEntries,
-        errorRate: totalAuditEntries > 0 ? ((errorEntries / totalAuditEntries) * 100).toFixed(1) : 0,
-        recentErrors: recentErrors.map(error => ({
+        errorRate:
+          totalAuditEntries > 0
+            ? ((errorEntries / totalAuditEntries) * 100).toFixed(1)
+            : 0,
+        recentErrors: recentErrors.map((error) => ({
           severity: error.severity,
           action: error.action,
-          description: error.description || 'No description',
+          description: error.description || "No description",
           date: error.createdAt.toLocaleDateString(),
           category: error.category,
         })),
@@ -701,25 +711,30 @@ export class WeeklyDigestService {
     }
 
     // Determine overall system status based on metrics
-    let systemStatus = 'healthy';
-    let statusReason = 'All systems operating normally';
+    let systemStatus = "healthy";
+    let statusReason = "All systems operating normally";
 
     if (emailPerformance || errorSummary) {
-      const emailFailureRate = emailPerformance ? parseFloat(emailPerformance.failureRate) : 0;
+      const emailFailureRate = emailPerformance
+        ? parseFloat(emailPerformance.failureRate)
+        : 0;
       const errorRate = errorSummary ? parseFloat(errorSummary.errorRate) : 0;
-      const hasCriticalErrors = errorSummary ? errorSummary.critical > 0 : false;
+      const hasCriticalErrors = errorSummary
+        ? errorSummary.critical > 0
+        : false;
 
       if (hasCriticalErrors) {
-        systemStatus = 'critical';
-        statusReason = `${errorSummary.critical} critical error${errorSummary.critical > 1 ? 's' : ''} detected`;
+        systemStatus = "critical";
+        statusReason = `${errorSummary.critical} critical error${errorSummary.critical > 1 ? "s" : ""} detected`;
       } else if (emailFailureRate > 10 || errorRate > 5) {
-        systemStatus = 'degraded';
-        statusReason = emailFailureRate > 10 
-          ? `High email failure rate: ${emailFailureRate}%`
-          : `Elevated error rate: ${errorRate}%`;
+        systemStatus = "degraded";
+        statusReason =
+          emailFailureRate > 10
+            ? `High email failure rate: ${emailFailureRate}%`
+            : `Elevated error rate: ${errorRate}%`;
       } else if (emailFailureRate > 5 || errorRate > 2) {
-        systemStatus = 'warning';
-        statusReason = 'Some issues detected, but system is stable';
+        systemStatus = "warning";
+        statusReason = "Some issues detected, but system is stable";
       }
     }
 
@@ -819,7 +834,9 @@ export class WeeklyDigestService {
         insightPromises.push(this.getUserGrowthData());
       }
       if (config.sections.systemHealth) {
-        insightPromises.push(this.getSystemHealthMetrics(config.sectionCustomizations.systemHealth));
+        insightPromises.push(
+          this.getSystemHealthMetrics(config.sectionCustomizations.systemHealth)
+        );
       }
 
       const [basicData, insightData] = await Promise.all([
@@ -918,7 +935,7 @@ export class WeeklyDigestService {
    * Get job statistics for current and previous week
    */
   async getJobStats(customizations = {}) {
-    const thisWeekJobs = await appPrisma.job.findMany({
+    const thisWeekJobs = await appPrisma.jobs.findMany({
       where: {
         createdAt: {
           gte: this.weekStart,
@@ -935,7 +952,7 @@ export class WeeklyDigestService {
       },
     });
 
-    const previousWeekJobs = await appPrisma.job.findMany({
+    const previousWeekJobs = await appPrisma.jobs.findMany({
       where: {
         createdAt: {
           gte: this.previousWeekStart,
@@ -983,8 +1000,9 @@ export class WeeklyDigestService {
   /**
    * Generate and send the weekly digest
    * @param {Array} customRecipients - Optional array of user IDs to override config recipients
+   * @param {String} sentBy - User ID of who triggered the digest send
    */
-  async generateAndSend(customRecipients = null) {
+  async generateAndSend(customRecipients = null, sentBy = null) {
     try {
       console.log("🚀 Starting weekly digest generation...");
 
@@ -1008,7 +1026,7 @@ export class WeeklyDigestService {
       const digestData = await this.collectWeeklyData(config);
 
       // Get the specific users who should receive the digest
-      const recipients = await appPrisma.user.findMany({
+      const recipients = await appPrisma.users.findMany({
         where: {
           id: { in: recipientIds },
           isActive: true,
@@ -1063,6 +1081,37 @@ export class WeeklyDigestService {
       console.log(
         `✅ ${recipientType === "test" ? "Test" : "Weekly"} digest complete: ${successCount} sent, ${failureCount} failed`
       );
+
+      // Record the digest send in the database
+      if (sentBy) {
+        try {
+          await appPrisma.weeklyDigests.create({
+            data: {
+              weekStart: this.weekStart,
+              weekEnd: this.weekEnd,
+              digestType: recipientType,
+              recipientCount: recipients.length,
+              successfulSends: successCount,
+              failedSends: failureCount,
+              sentAt: new Date(),
+              sentBy: sentBy,
+              theme: config.emailTheme || "professional",
+              sectionsIncluded: config.sections,
+              configuration: config.sectionCustomizations,
+              dateRange: digestData.dateRange.formatted,
+              status: successCount > 0 ? "completed" : "failed",
+              errorMessage:
+                failureCount > 0
+                  ? `${failureCount} emails failed to send`
+                  : null,
+            },
+          });
+          console.log("📝 Digest send recorded successfully");
+        } catch (recordError) {
+          console.error("⚠️ Failed to record digest send:", recordError);
+          // Don't fail the whole operation if recording fails
+        }
+      }
 
       return {
         success: true,

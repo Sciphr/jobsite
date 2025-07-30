@@ -154,6 +154,46 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
       `);
     }
 
+    if (isEnabled("applicationData", "applied") && summary.applications) {
+      metrics.push(`
+        <div class="${cardClass}">
+          <div class="metric-number">${summary.applications.thisWeek.applied}</div>
+          <div class="metric-label">AWAITING REVIEW</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "📝✨" : "📝"} New submissions</div>
+        </div>
+      `);
+    }
+
+    if (isEnabled("applicationData", "reviewing") && summary.applications) {
+      metrics.push(`
+        <div class="${cardClass}">
+          <div class="metric-number">${summary.applications.thisWeek.reviewing}</div>
+          <div class="metric-label">UNDER REVIEW</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "👀✨" : "👀"} Being evaluated</div>
+        </div>
+      `);
+    }
+
+    if (isEnabled("applicationData", "interview") && summary.applications) {
+      metrics.push(`
+        <div class="${cardClass}">
+          <div class="metric-number">${summary.applications.thisWeek.interview}</div>
+          <div class="metric-label">IN INTERVIEWS</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "🤝✨" : "🤝"} Progressing well</div>
+        </div>
+      `);
+    }
+
+    if (isEnabled("applicationData", "rejected") && summary.applications) {
+      metrics.push(`
+        <div class="${cardClass}">
+          <div class="metric-number">${summary.applications.thisWeek.rejected}</div>
+          <div class="metric-label">NOT SELECTED</div>
+          <div class="metric-change">${selectedTheme === "modern" ? "📋✨" : "📋"} Process complete</div>
+        </div>
+      `);
+    }
+
     if (isEnabled("userMetrics", "newUsers") && summary.users) {
       metrics.push(`
         <div class="${cardClass}">
@@ -756,6 +796,46 @@ export async function generateWeeklyDigestHTML(admin, digestData) {
                     <p style="margin: 10px 0 0 0; color: #0284c7; font-size: 12px;">
                         Total: ${insights.dailyRegistrations.reduce((sum, day) => sum + day.registrations, 0)} new registrations this week
                     </p>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- Application Trends Section -->
+            ${
+              isEnabled("applicationData", "appTrends") && summary.applications
+                ? `
+            <div class="section">
+                <h2>${selectedTheme === "modern" ? "📊✨" : "📊"} Application Trends</h2>
+                <div style="background: ${selectedTheme === "minimalist" ? "#f8fafc" : selectedTheme === "modern" ? "linear-gradient(145deg, #ffffff, #f8fafc)" : "#f8fafc"}; border-radius: ${currentTheme.borderRadius}; padding: 20px; margin: 20px 0; ${selectedTheme === "modern" ? "box-shadow: 0 4px 16px rgba(0,0,0,0.1);" : ""}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-size: 28px; font-weight: bold; color: ${currentTheme.primaryColor}; margin-bottom: 5px;">
+                                ${summary.applications.thisWeek.total}
+                            </div>
+                            <div style="color: ${currentTheme.mutedColor}; font-size: 14px;">Applications This Week</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 18px; font-weight: 600; color: ${summary.applications.change.totalPercent >= 0 ? '#059669' : '#dc2626'}; margin-bottom: 5px;">
+                                ${summary.applications.change.totalPercent >= 0 ? '↗️' : '↘️'} ${Math.abs(summary.applications.change.totalPercent)}%
+                            </div>
+                            <div style="color: ${currentTheme.mutedColor}; font-size: 12px;">vs. Last Week</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 16px; font-weight: bold; color: ${currentTheme.textColor};">Previous Week</div>
+                            <div style="font-size: 14px; color: ${currentTheme.mutedColor}; margin-top: 5px;">${summary.applications.previousWeek.total} applications</div>
+                        </div>
+                        <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0; padding-left: 20px;">
+                            <div style="font-size: 16px; font-weight: bold; color: ${currentTheme.textColor};">Change</div>
+                            <div style="font-size: 14px; color: ${summary.applications.change.total >= 0 ? '#059669' : '#dc2626'}; margin-top: 5px;">
+                                ${summary.applications.change.total >= 0 ? '+' : ''}${summary.applications.change.total} applications
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             `

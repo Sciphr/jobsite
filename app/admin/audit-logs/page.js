@@ -29,13 +29,29 @@ export default function AuditLogsPage() {
     severity: '',
     dateFrom: '',
     dateTo: '',
-    search: ''
+    search: '',
+    ipAddress: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+  
+  // Column configuration
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem('auditlog-columns');
+    return saved ? JSON.parse(saved) : {
+      timestamp: true,
+      event: true,
+      actor: true,
+      action: true,
+      severity: true,
+      ipAddress: false,
+      details: true
+    };
+  });
 
   const loadAuditLogs = async () => {
     setLoading(true);
@@ -62,6 +78,27 @@ export default function AuditLogsPage() {
   useEffect(() => {
     loadAuditLogs();
   }, [currentPage, filters]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showColumnSettings && !event.target.closest('.relative')) {
+        setShowColumnSettings(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showColumnSettings]);
+
+  // Save column preferences to localStorage
+  const toggleColumn = (columnKey) => {
+    const newColumns = { ...visibleColumns, [columnKey]: !visibleColumns[columnKey] };
+    setVisibleColumns(newColumns);
+    localStorage.setItem('auditlog-columns', JSON.stringify(newColumns));
+  };
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
@@ -150,6 +187,45 @@ export default function AuditLogsPage() {
             <Filter className="h-4 w-4 mr-2" />
             <span>Filters</span>
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnSettings(!showColumnSettings)}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              <span>Columns</span>
+            </button>
+            
+            {/* Column Settings Dropdown */}
+            {showColumnSettings && (
+              <div className="absolute right-0 mt-2 w-64 sm:w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10 max-w-[90vw]">
+                <div className="p-3">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Show/Hide Columns</h3>
+                  <div className="space-y-2">
+                    {Object.entries({
+                      timestamp: 'Timestamp',
+                      event: 'Event',
+                      actor: 'Actor',
+                      action: 'Action',
+                      severity: 'Severity',
+                      ipAddress: 'IP Address',
+                      details: 'Details'
+                    }).map(([key, label]) => (
+                      <label key={key} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns[key]}
+                          onChange={() => toggleColumn(key)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex space-x-2">
             <button
               onClick={exportLogs}
@@ -173,7 +249,7 @@ export default function AuditLogsPage() {
       {/* Filters Panel */}
       {showFilters && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Search
@@ -270,6 +346,19 @@ export default function AuditLogsPage() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                IP Address
+              </label>
+              <input
+                type="text"
+                value={filters.ipAddress}
+                onChange={(e) => setFilters({...filters, ipAddress: e.target.value})}
+                placeholder="192.168.1.1"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -286,85 +375,119 @@ export default function AuditLogsPage() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Timestamp
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Event
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Actor
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Action
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Severity
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Details
-                    </th>
+                    {visibleColumns.timestamp && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Timestamp
+                      </th>
+                    )}
+                    {visibleColumns.event && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Event
+                      </th>
+                    )}
+                    {visibleColumns.actor && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Actor
+                      </th>
+                    )}
+                    {visibleColumns.action && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Action
+                      </th>
+                    )}
+                    {visibleColumns.severity && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Severity
+                      </th>
+                    )}
+                    {visibleColumns.ipAddress && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        IP Address
+                      </th>
+                    )}
+                    {visibleColumns.details && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Details
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {auditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span>{formatDate(log.createdAt)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {log.category}
+                      {visibleColumns.timestamp && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span>{formatDate(log.createdAt)}</span>
                           </div>
-                          <div className="text-gray-500 dark:text-gray-400">
-                            {log.eventType}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-gray-400" />
+                        </td>
+                      )}
+                      {visibleColumns.event && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white">
-                              {log.actorName || 'System'}
+                              {log.category}
                             </div>
                             <div className="text-gray-500 dark:text-gray-400">
-                              {log.actorType}
+                              {log.eventType}
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        <div className="max-w-xs truncate">
-                          {log.action}
-                        </div>
-                        {log.description && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                            {log.description}
+                        </td>
+                      )}
+                      {visibleColumns.actor && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center space-x-2">
+                            <User className="h-4 w-4 text-gray-400" />
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {log.actorName || 'System'}
+                              </div>
+                              <div className="text-gray-500 dark:text-gray-400">
+                                {log.actorType}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center space-x-2">
-                          {getSeverityIcon(log.severity)}
-                          <span className={getSeverityBadge(log.severity)}>
-                            {log.severity}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button 
-                          onClick={() => openDetailsModal(log)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </td>
+                        </td>
+                      )}
+                      {visibleColumns.action && (
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                          <div className="max-w-xs truncate">
+                            {log.action}
+                          </div>
+                          {log.description && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                              {log.description}
+                            </div>
+                          )}
+                        </td>
+                      )}
+                      {visibleColumns.severity && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center space-x-2">
+                            {getSeverityIcon(log.severity)}
+                            <span className={getSeverityBadge(log.severity)}>
+                              {log.severity}
+                            </span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.ipAddress && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          <span>{log.ipAddress || '-'}</span>
+                        </td>
+                      )}
+                      {visibleColumns.details && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button 
+                            onClick={() => openDetailsModal(log)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title="View details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

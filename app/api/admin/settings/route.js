@@ -28,7 +28,7 @@ export async function GET(request) {
     }
 
     // Get settings based on user privilege level
-    const settings = await appPrisma.setting.findMany({
+    const settings = await appPrisma.settings.findMany({
       where: {
         ...whereClause,
         OR: [
@@ -104,7 +104,7 @@ export async function POST(request) {
 
     const stringValue = stringifySettingValue(value, dataType);
 
-    const setting = await appPrisma.setting.create({
+    const setting = await appPrisma.settings.create({
       data: {
         key,
         value: stringValue,

@@ -17,7 +17,7 @@ export async function GET(req) {
   }
 
   try {
-    const categories = await appPrisma.category.findMany({
+    const categories = await appPrisma.categories.findMany({
       select: {
         id: true,
         name: true,
@@ -77,7 +77,7 @@ export async function POST(req) {
       );
     }
 
-    const category = await appPrisma.category.create({
+    const category = await appPrisma.categories.create({
       data: {
         name,
         description,

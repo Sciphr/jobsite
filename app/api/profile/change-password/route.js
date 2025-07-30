@@ -48,7 +48,7 @@ export async function POST(req) {
     }
 
     // Get user from database
-    const user = await appPrisma.user.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
@@ -95,7 +95,7 @@ export async function POST(req) {
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
     // Update password in database
-    await appPrisma.user.update({
+    await appPrisma.users.update({
       where: { id: session.user.id },
       data: {
         password: hashedNewPassword,

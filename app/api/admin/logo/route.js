@@ -3,11 +3,21 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
-import { uploadToMinio, deleteFromMinio, getMinioDownloadUrl } from "../../../lib/minio-storage";
+import {
+  uploadToMinio,
+  deleteFromMinio,
+  getMinioDownloadUrl,
+} from "../../../lib/minio-storage";
 
 // Helper function to validate image types
 function isValidImageType(fileType) {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/svg+xml",
+  ];
   return allowedTypes.includes(fileType.toLowerCase());
 }
 
@@ -25,11 +35,11 @@ export async function GET() {
     }
 
     // Get current logo setting
-    const logoSetting = await appPrisma.setting.findFirst({
+    const logoSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_logo_url",
-        userId: null // Global setting
-      }
+        userId: null, // Global setting
+      },
     });
 
     if (!logoSetting || !logoSetting.value) {
@@ -38,15 +48,15 @@ export async function GET() {
 
     // Generate download URL for the current logo
     const { data, error } = await getMinioDownloadUrl(logoSetting.value, 86400); // 24 hours
-    
+
     if (error) {
       console.error("Error generating logo download URL:", error);
       return NextResponse.json({ logoUrl: null });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       logoUrl: data.signedUrl,
-      storagePath: logoSetting.value 
+      storagePath: logoSetting.value,
     });
   } catch (error) {
     console.error("Error fetching logo:", error);
@@ -75,7 +85,8 @@ export async function POST(request) {
     if (!isValidImageType(file.type)) {
       return NextResponse.json(
         {
-          error: "Invalid file type. Please upload JPG, PNG, WebP, or SVG images only.",
+          error:
+            "Invalid file type. Please upload JPG, PNG, WebP, or SVG images only.",
         },
         { status: 400 }
       );
@@ -87,7 +98,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error: `File size too large. Maximum size is 5MB. Your file is ${(
-            file.size / (1024 * 1024)
+            file.size /
+            (1024 * 1024)
           ).toFixed(2)}MB.`,
         },
         { status: 413 }
@@ -104,8 +116,8 @@ export async function POST(request) {
     const existingLogoSetting = await appPrisma.setting.findFirst({
       where: {
         key: "site_logo_url",
-        userId: null
-      }
+        userId: null,
+      },
     });
 
     // Upload new logo to MinIO first
@@ -138,8 +150,8 @@ export async function POST(request) {
           where: { id: existingLogoSetting.id },
           data: {
             value: filePath,
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         });
       } else {
         // Create new logo setting
@@ -151,8 +163,8 @@ export async function POST(request) {
             category: "branding",
             description: "Site logo image path in storage",
             dataType: "string",
-            privilegeLevel: 2
-          }
+            privilegeLevel: 2,
+          },
         });
       }
 
@@ -173,8 +185,11 @@ export async function POST(request) {
       }
 
       // Generate download URL for the new logo
-      const { data: urlData, error: urlError } = await getMinioDownloadUrl(filePath, 86400);
-      
+      const { data: urlData, error: urlError } = await getMinioDownloadUrl(
+        filePath,
+        86400
+      );
+
       if (urlError) {
         console.error("Error generating download URL:", urlError);
         // Don't fail - the upload was successful
@@ -183,9 +198,8 @@ export async function POST(request) {
       return NextResponse.json({
         message: "Logo uploaded successfully",
         logoUrl: urlData?.signedUrl || null,
-        storagePath: filePath
+        storagePath: filePath,
       });
-
     } catch (dbError) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded logo:", dbError);
@@ -214,11 +228,11 @@ export async function DELETE() {
     }
 
     // Find the current logo setting
-    const logoSetting = await appPrisma.setting.findFirst({
+    const logoSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_logo_url",
-        userId: null
-      }
+        userId: null,
+      },
     });
 
     if (!logoSetting) {
@@ -233,7 +247,7 @@ export async function DELETE() {
     // Delete from database first
     console.log("Deleting logo setting from database...");
     await appPrisma.setting.delete({
-      where: { id: logoSetting.id }
+      where: { id: logoSetting.id },
     });
 
     console.log("Logo setting deleted from database successfully");

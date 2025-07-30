@@ -39,6 +39,7 @@ export async function GET(request) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
+        scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/OnlineMeetings.ReadWrite https://graph.microsoft.com/User.Read offline_access',
       }),
     });
 

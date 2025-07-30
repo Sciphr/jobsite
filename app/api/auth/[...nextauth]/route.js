@@ -30,7 +30,7 @@ export const authOptions = {
         try {
           "🔍 Looking up user with email:", credentials.email;
 
-          const user = await authPrisma.user.findUnique({
+          const user = await authPrisma.users.findUnique({
             where: { email: credentials.email },
             select: {
               id: true,
@@ -174,6 +174,7 @@ export const authOptions = {
         token.id = user.id;
         token.role = user.role;
         token.privilegeLevel = user.privilegeLevel;
+        // roleId and userRole removed for now
         "✅ Added user details to token:",
           {
             id: user.id,
@@ -194,6 +195,7 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.privilegeLevel = token.privilegeLevel;
+        // roleId and userRole removed for now
         "✅ Added user details to session:",
           {
             id: token.id,
@@ -204,85 +206,15 @@ export const authOptions = {
       return session;
     },
 
-    // Add this callback to refresh user data from database
-    async jwt({ token, user, trigger, session }) {
-      "🔍 JWT callback:",
-        {
-          hasUser: !!user,
-          hasToken: !!token,
-          trigger,
-        };
-
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.privilegeLevel = user.privilegeLevel;
-        "✅ Added user details to token:",
-          {
-            id: user.id,
-            role: user.role,
-            privilegeLevel: user.privilegeLevel,
-          };
-      }
-
-      // Refresh user data from database when session is accessed
-      if (trigger === "update" || (!token.role && token.id)) {
-        try {
-          const refreshedUser = await authPrisma.user.findUnique({
-            where: { id: token.id },
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              role: true,
-              privilegeLevel: true,
-              isActive: true,
-            },
-          });
-
-          if (refreshedUser) {
-            token.role = refreshedUser.role;
-            token.privilegeLevel = refreshedUser.privilegeLevel;
-            token.isActive = refreshedUser.isActive;
-            "🔄 Refreshed user data:",
-              {
-                role: refreshedUser.role,
-                privilegeLevel: refreshedUser.privilegeLevel,
-              };
-          }
-        } catch (error) {
-          console.error("Error refreshing user data:", error);
-        }
-      }
-
-      return token;
-    },
 
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
-          const existingUser = await authPrisma.user.findUnique({
+          const existingUser = await authPrisma.users.findUnique({
             where: { email: user.email },
           });
 
-          if (existingUser) {
-            await authPrisma.account.create({
-              data: {
-                userId: existingUser.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                refresh_token: account.refresh_token,
-                access_token: account.access_token,
-                expires_at: account.expires_at,
-                token_type: account.token_type,
-                scope: account.scope,
-                id_token: account.id_token,
-                session_state: account.session_state,
-              },
-            });
-          }
+          // Account creation skipped - no account table in schema
         } catch (error) {
           console.error("SignIn callback error:", error);
           return false;

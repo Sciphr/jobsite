@@ -46,7 +46,7 @@ export async function POST(req) {
     console.log(`🧪 Sending test digest to ${testRecipients.length} test recipients`);
 
     // Generate and send to test recipients only
-    const result = await weeklyDigestService.generateAndSend(testRecipients);
+    const result = await weeklyDigestService.generateAndSend(testRecipients, session.user.id);
 
     if (result.success) {
       return NextResponse.json({

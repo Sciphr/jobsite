@@ -12,7 +12,7 @@ async function getJob(slug) {
         status: "Active", // Only show active jobs
       },
       include: {
-        category: true,
+        categories: true,
         creator: {
           select: {
             id: true,

@@ -44,72 +44,75 @@ export default function JobCard({ job, applicationStatus }) {
             {job.summary}
           </p>
         </div>
-        <span className="text-xs px-2 py-1 rounded-full ml-4 transition-colors duration-200 text-white" style={{backgroundColor: 'var(--site-primary)'}}>
-          {job.category.name}
+        <span
+          className="text-xs px-2 py-1 rounded-full ml-4 transition-colors duration-200 text-white"
+          style={{ backgroundColor: "var(--site-primary)" }}
+        >
+          {job.categories.name}
         </span>
       </div>
 
       {/* Main content area - takes up available space */}
       <div className="flex-1">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4 transition-colors duration-200">
-        <div>
-          <span className="font-medium">Location:</span>
-          <br />
-          <span className="text-gray-700 dark:text-gray-300">
-            {job.location}
-          </span>
+          <div>
+            <span className="font-medium">Location:</span>
+            <br />
+            <span className="text-gray-700 dark:text-gray-300">
+              {job.location}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium">Type:</span>
+            <br />
+            <span className="text-gray-700 dark:text-gray-300">
+              {job.employmentType}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium">Experience:</span>
+            <br />
+            <span className="text-gray-700 dark:text-gray-300">
+              {job.experienceLevel}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium">Remote:</span>
+            <br />
+            <span className="text-gray-700 dark:text-gray-300">
+              {job.remotePolicy === "Remote" ? "Yes" : job.remotePolicy}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="font-medium">Type:</span>
-          <br />
-          <span className="text-gray-700 dark:text-gray-300">
-            {job.employmentType}
-          </span>
-        </div>
-        <div>
-          <span className="font-medium">Experience:</span>
-          <br />
-          <span className="text-gray-700 dark:text-gray-300">
-            {job.experienceLevel}
-          </span>
-        </div>
-        <div>
-          <span className="font-medium">Remote:</span>
-          <br />
-          <span className="text-gray-700 dark:text-gray-300">
-            {job.remotePolicy === "Remote" ? "Yes" : job.remotePolicy}
-          </span>
-        </div>
-      </div>
 
-      {job.showSalary && job.salaryMin && job.salaryMax && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-200">
-          <span className="font-medium">Salary:</span>{" "}
-          <span className="text-green-600 dark:text-green-400">
-            {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
-          </span>
-        </div>
-      )}
+        {job.showSalary && job.salaryMin && job.salaryMax && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-200">
+            <span className="font-medium">Salary:</span>{" "}
+            <span className="text-green-600 dark:text-green-400">
+              {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
+            </span>
+          </div>
+        )}
 
-      {job.applicationDeadline && (
-        <div className="text-sm text-orange-600 dark:text-orange-400 mb-4 flex items-center gap-1 transition-colors duration-200">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span className="font-medium">Deadline:</span>{" "}
-          {new Date(job.applicationDeadline).toLocaleDateString()}
-        </div>
-      )}
+        {job.applicationDeadline && (
+          <div className="text-sm text-orange-600 dark:text-orange-400 mb-4 flex items-center gap-1 transition-colors duration-200">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="font-medium">Deadline:</span>{" "}
+            {new Date(job.applicationDeadline).toLocaleDateString()}
+          </div>
+        )}
       </div>
 
       {/* Button section - always at bottom */}

@@ -47,7 +47,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Find existing setting
-    let existingSetting = await appPrisma.setting.findFirst({
+    let existingSetting = await appPrisma.settings.findFirst({
       where: {
         key,
         userId: targetUserId,
@@ -60,7 +60,7 @@ export async function PATCH(request, { params }) {
     if (!existingSetting) {
       if (key === "admin_dashboard_theme") {
         // Always create theme setting as personal
-        existingSetting = await appPrisma.setting.create({
+        existingSetting = await appPrisma.settings.create({
           data: {
             key,
             value: stringifySettingValue(value, "string"),
@@ -83,7 +83,7 @@ export async function PATCH(request, { params }) {
 
         if (systemSetting && shouldBePersonal) {
           // Create personal setting based on system setting structure
-          existingSetting = await appPrisma.setting.create({
+          existingSetting = await appPrisma.settings.create({
             data: {
               key,
               value: stringifySettingValue(value, systemSetting.dataType),
@@ -115,7 +115,7 @@ export async function PATCH(request, { params }) {
 
     const stringValue = stringifySettingValue(value, existingSetting.dataType);
 
-    const updatedSetting = await appPrisma.setting.update({
+    const updatedSetting = await appPrisma.settings.update({
       where: { id: existingSetting.id },
       data: {
         value: stringValue,
@@ -173,7 +173,7 @@ export async function GET(request, { params }) {
     const shouldCheckPersonal = isPersonal || key === "admin_dashboard_theme";
     const targetUserId = shouldCheckPersonal ? session.user.id : null;
 
-    const setting = await appPrisma.setting.findFirst({
+    const setting = await appPrisma.settings.findFirst({
       where: {
         key,
         userId: targetUserId,

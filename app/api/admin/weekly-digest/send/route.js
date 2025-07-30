@@ -18,7 +18,7 @@ export async function POST(req) {
 
     console.log("📧 Weekly digest requested by:", session.user.email);
 
-    const result = await weeklyDigestService.generateAndSend();
+    const result = await weeklyDigestService.generateAndSend(null, session.user.id);
 
     if (result.success) {
       return NextResponse.json({
