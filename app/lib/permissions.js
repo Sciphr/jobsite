@@ -1,8 +1,44 @@
 // app/lib/permissions.js
 import { appPrisma } from "./prisma";
 
+// Constants for permission checking
+export const RESOURCES = {
+  JOBS: "jobs",
+  APPLICATIONS: "applications", 
+  USERS: "users",
+  ROLES: "roles",
+  INTERVIEWS: "interviews",
+  ANALYTICS: "analytics",
+  SETTINGS: "settings",
+  AUDIT_LOGS: "audit_logs",
+  EMAIL_CAMPAIGNS: "email_campaigns",
+  WEEKLY_DIGEST: "weekly_digest"
+};
+
+export const ACTIONS = {
+  VIEW: "view",
+  CREATE: "create", 
+  EDIT: "edit",
+  DELETE: "delete",
+  PUBLISH: "publish",
+  EXPORT: "export",
+  ASSIGN: "assign",
+  BULK_ACTIONS: "bulk_actions",
+  FEATURE: "feature"
+};
+
 /**
- * Get all permissions for a user by their ID
+ * Create a permission key from resource and action
+ * @param {string} resource - The resource name
+ * @param {string} action - The action name  
+ * @returns {string} Permission key in format "resource:action"
+ */
+export function createPermissionKey(resource, action) {
+  return `${resource}:${action}`;
+}
+
+/**
+ * Get all permissions for a user by their ID (supports multiple roles)
  * @param {string} userId - The user's ID
  * @returns {Promise<Array>} Array of user's permissions
  */
@@ -11,11 +47,16 @@ export async function getUserPermissions(userId) {
     const user = await appPrisma.users.findUnique({
       where: { id: userId },
       include: {
-        userRole: {
+        user_roles: {
+          where: { is_active: true },
           include: {
-            rolePermissions: {
+            roles: {
               include: {
-                permission: true,
+                role_permissions: {
+                  include: {
+                    permissions: true,
+                  },
+                },
               },
             },
           },
@@ -23,20 +64,52 @@ export async function getUserPermissions(userId) {
       },
     });
 
-    if (!user || !user.userRole) {
+    if (!user) {
       return [];
     }
 
-    // Extract permissions from the role
-    const permissions = user.userRole.rolePermissions.map((rp) => ({
-      id: rp.permission.id,
-      resource: rp.permission.resource,
-      action: rp.permission.action,
-      description: rp.permission.description,
-      category: rp.permission.category,
-    }));
+    // Super admins have all permissions
+    if (user.privilegeLevel >= 3) {
+      // Get all available permissions for super admins
+      const allPermissions = await appPrisma.permissions.findMany({
+        select: {
+          id: true,
+          resource: true,
+          action: true,
+          description: true,
+          category: true,
+        },
+      });
+      return allPermissions;
+    }
 
-    return permissions;
+    if (!user.user_roles || user.user_roles.length === 0) {
+      return [];
+    }
+
+    // Collect permissions from all active roles (remove duplicates)
+    const permissionsMap = new Map();
+    
+    user.user_roles.forEach((userRole) => {
+      if (userRole.roles && userRole.roles.role_permissions) {
+        userRole.roles.role_permissions.forEach((rp) => {
+          const permission = rp.permissions;
+          const key = `${permission.resource}:${permission.action}`;
+          
+          if (!permissionsMap.has(key)) {
+            permissionsMap.set(key, {
+              id: permission.id,
+              resource: permission.resource,
+              action: permission.action,
+              description: permission.description,
+              category: permission.category,
+            });
+          }
+        });
+      }
+    });
+
+    return Array.from(permissionsMap.values());
   } catch (error) {
     console.error("Error fetching user permissions:", error);
     return [];
@@ -44,7 +117,7 @@ export async function getUserPermissions(userId) {
 }
 
 /**
- * Check if a user has a specific permission
+ * Check if a user has a specific permission (supports multiple roles)
  * @param {string} userId - The user's ID
  * @param {string} resource - The resource (e.g., 'jobs', 'applications')
  * @param {string} action - The action (e.g., 'view', 'create', 'edit', 'delete')
@@ -52,16 +125,29 @@ export async function getUserPermissions(userId) {
  */
 export async function userHasPermission(userId, resource, action) {
   try {
-    const count = await appPrisma.rolePermission.count({
+    // First check if user is super admin (privilege level 3 or higher)
+    const user = await appPrisma.users.findUnique({
+      where: { id: userId },
+      select: { privilegeLevel: true },
+    });
+
+    // Super admins have all permissions
+    if (user && user.privilegeLevel >= 3) {
+      return true;
+    }
+
+    // Check if user has the permission through any of their active roles
+    const count = await appPrisma.role_permissions.count({
       where: {
-        role: {
-          users: {
+        roles: {
+          user_roles: {
             some: {
-              id: userId,
+              user_id: userId,
+              is_active: true,
             },
           },
         },
-        permission: {
+        permissions: {
           resource: resource,
           action: action,
         },
@@ -76,46 +162,108 @@ export async function userHasPermission(userId, resource, action) {
 }
 
 /**
- * Check multiple permissions at once
+ * Get detailed permission information for a user (for debugging/admin purposes)
  * @param {string} userId - The user's ID
- * @param {Array} permissionChecks - Array of {resource, action} objects
- * @returns {Promise<Object>} Object with permission results
+ * @returns {Promise<Object>} Detailed permission info
  */
-export async function userHasPermissions(userId, permissionChecks) {
+export async function getUserPermissionDetails(userId) {
   try {
-    const results = {};
+    const user = await appPrisma.users.findUnique({
+      where: { id: userId },
+      include: {
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                is_system_role: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    for (const check of permissionChecks) {
-      const key = `${check.resource}:${check.action}`;
-      results[key] = await userHasPermission(
-        userId,
-        check.resource,
-        check.action
-      );
+    if (!user) {
+      return null;
     }
 
-    return results;
+    const permissions = await getUserPermissions(userId);
+    
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        privilegeLevel: user.privilegeLevel,
+      },
+      roles: user.user_roles.map(ur => ur.roles),
+      permissions: permissions,
+      isSuperAdmin: user.privilegeLevel >= 3,
+    };
   } catch (error) {
-    console.error("Error checking multiple permissions:", error);
-    return {};
+    console.error("Error fetching user permission details:", error);
+    return null;
   }
 }
 
 /**
- * Get user's role information
+ * Check if a user can manage roles (convenience function)
  * @param {string} userId - The user's ID
- * @returns {Promise<Object|null>} User's role information
+ * @returns {Promise<boolean>} Whether the user can manage roles
+ */
+export async function canManageRoles(userId) {
+  return await userHasPermission(userId, "roles", "edit");
+}
+
+/**
+ * Check if a user can manage users (convenience function)
+ * @param {string} userId - The user's ID
+ * @returns {Promise<boolean>} Whether the user can manage users
+ */
+export async function canManageUsers(userId) {
+  return await userHasPermission(userId, "users", "edit");
+}
+
+/**
+ * Get user's roles (for backward compatibility with single role systems)
+ * @param {string} userId - The user's ID
+ * @returns {Promise<Object|null>} User's primary role or null
+ * @deprecated Use getUserRoles() for multiple roles support
  */
 export async function getUserRole(userId) {
   try {
     const user = await appPrisma.users.findUnique({
       where: { id: userId },
       include: {
-        userRole: true,
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                description: true,
+                is_system_role: true,
+              },
+            },
+          },
+          orderBy: { assigned_at: "asc" }, // Return the first assigned role as "primary"
+        },
       },
     });
 
-    return user?.userRole || null;
+    if (!user || !user.user_roles || user.user_roles.length === 0) {
+      return null;
+    }
+
+    // Return the first role as the "primary" role for backward compatibility
+    return user.user_roles[0].roles;
   } catch (error) {
     console.error("Error fetching user role:", error);
     return null;
@@ -123,104 +271,210 @@ export async function getUserRole(userId) {
 }
 
 /**
- * Check if user has any permission for a resource (useful for showing/hiding sections)
+ * Get all user's roles (recommended for multiple roles support)
  * @param {string} userId - The user's ID
- * @param {string} resource - The resource to check
- * @returns {Promise<boolean>} Whether user has any permission for the resource
+ * @returns {Promise<Array>} Array of user's roles
  */
-export async function userHasAnyPermissionForResource(userId, resource) {
+export async function getUserRoles(userId) {
   try {
-    const count = await appPrisma.rolePermission.count({
-      where: {
-        role: {
-          users: {
-            some: {
-              id: userId,
+    const user = await appPrisma.users.findUnique({
+      where: { id: userId },
+      include: {
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                description: true,
+                is_system_role: true,
+              },
             },
           },
-        },
-        permission: {
-          resource: resource,
+          orderBy: { assigned_at: "asc" },
         },
       },
     });
 
-    return count > 0;
+    if (!user || !user.user_roles) {
+      return [];
+    }
+
+    return user.user_roles.map(ur => ur.roles);
   } catch (error) {
-    console.error("Error checking resource permissions:", error);
+    console.error("Error fetching user roles:", error);
+    return [];
+  }
+}
+
+/**
+ * Ensure user has the default "User" role if they have no other roles
+ * @param {string} userId - The user's ID
+ * @returns {Promise<Object>} Result with success status and message
+ */
+export async function ensureUserHasDefaultRole(userId) {
+  try {
+    // Find the default "User" system role
+    const defaultRole = await appPrisma.roles.findFirst({
+      where: {
+        name: "User",
+        is_system_role: true,
+        is_active: true,
+      },
+    });
+
+    if (!defaultRole) {
+      throw new Error("Default 'User' role not found. System roles may not be properly configured.");
+    }
+
+    // Check if user already has this role (active)
+    const existingActiveAssignment = await appPrisma.user_roles.findFirst({
+      where: {
+        user_id: userId,
+        role_id: defaultRole.id,
+        is_active: true,
+      },
+    });
+
+    if (existingActiveAssignment) {
+      return {
+        success: true,
+        message: "User already has default role",
+        roleAssigned: false,
+      };
+    }
+
+    // Check if there's an inactive assignment we can reactivate
+    const existingInactiveAssignment = await appPrisma.user_roles.findFirst({
+      where: {
+        user_id: userId,
+        role_id: defaultRole.id,
+        is_active: false,
+      },
+    });
+
+    if (existingInactiveAssignment) {
+      // Reactivate existing inactive assignment
+      await appPrisma.user_roles.update({
+        where: { id: existingInactiveAssignment.id },
+        data: {
+          is_active: true,
+          assigned_at: new Date(),
+        },
+      });
+    } else {
+      // Create new assignment if none exists
+      await appPrisma.user_roles.create({
+        data: {
+          user_id: userId,
+          role_id: defaultRole.id,
+          is_active: true,
+          assigned_at: new Date(),
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: `User automatically assigned to default '${defaultRole.name}' role`,
+      roleAssigned: true,
+      defaultRole,
+    };
+  } catch (error) {
+    console.error("Error ensuring user has default role:", error);
+    return {
+      success: false,
+      message: error.message,
+      roleAssigned: false,
+    };
+  }
+}
+
+/**
+ * Check if removing a role would leave user with no roles
+ * @param {string} userId - The user's ID
+ * @param {string} roleIdToRemove - The role ID being removed
+ * @returns {Promise<boolean>} True if this would be the user's last role
+ */
+export async function wouldBeLastRole(userId, roleIdToRemove) {
+  try {
+    const activeRoles = await appPrisma.user_roles.count({
+      where: {
+        user_id: userId,
+        is_active: true,
+        role_id: { not: roleIdToRemove },
+      },
+    });
+
+    return activeRoles === 0;
+  } catch (error) {
+    console.error("Error checking if would be last role:", error);
     return false;
   }
 }
 
 /**
- * Constants for resources and actions
- */
-export const RESOURCES = {
-  JOBS: "jobs",
-  APPLICATIONS: "applications",
-  USERS: "users",
-  INTERVIEWS: "interviews",
-  ANALYTICS: "analytics",
-  SETTINGS: "settings",
-  EMAILS: "emails",
-  WEEKLY_DIGEST: "weekly_digest",
-  AUDIT_LOGS: "audit_logs",
-  ROLES: "roles",
-};
-
-export const ACTIONS = {
-  VIEW: "view",
-  CREATE: "create",
-  EDIT: "edit",
-  DELETE: "delete",
-  PUBLISH: "publish",
-  FEATURE: "feature",
-  CLONE: "clone",
-  EXPORT: "export",
-  STATUS_CHANGE: "status_change",
-  ASSIGN: "assign",
-  NOTES: "notes",
-  BULK_ACTIONS: "bulk_actions",
-  IMPERSONATE: "impersonate",
-  ROLES: "roles",
-  RESCHEDULE: "reschedule",
-  CALENDAR: "calendar",
-  ADVANCED: "advanced",
-  EDIT_SYSTEM: "edit_system",
-  EDIT_BRANDING: "edit_branding",
-  EDIT_NOTIFICATIONS: "edit_notifications",
-  INTEGRATIONS: "integrations",
-  SEND: "send",
-  TEMPLATES: "templates",
-  AUTOMATION: "automation",
-};
-
-/**
- * Helper function to create permission keys
- */
-export const createPermissionKey = (resource, action) =>
-  `${resource}:${action}`;
-
-/**
- * Batch permission checker for better performance
+ * Middleware function to ensure a user has at least one role
  * @param {string} userId - The user's ID
- * @param {Array} permissions - Array of permission objects {resource, action}
- * @returns {Promise<Set>} Set of permission keys the user has
+ * @returns {Promise<boolean>} True if user has at least one role (after ensuring)
  */
-export async function getUserPermissionSet(userId) {
+export async function ensureUserHasAtLeastOneRole(userId) {
   try {
-    const permissions = await getUserPermissions(userId);
-    const permissionSet = new Set();
-
-    permissions.forEach((permission) => {
-      permissionSet.add(
-        createPermissionKey(permission.resource, permission.action)
-      );
+    // Check if user has any active roles
+    const activeRoleCount = await appPrisma.user_roles.count({
+      where: {
+        user_id: userId,
+        is_active: true,
+      },
     });
 
-    return permissionSet;
+    if (activeRoleCount === 0) {
+      console.log(`🔧 User ${userId} has no roles, applying default role fallback`);
+      const result = await ensureUserHasDefaultRole(userId);
+      return result.success;
+    }
+
+    return true;
   } catch (error) {
-    console.error("Error creating permission set:", error);
-    return new Set();
+    console.error("Error ensuring user has at least one role:", error);
+    return false;
+  }
+}
+
+/**
+ * Get all users with their roles and permissions (admin function)
+ * @returns {Promise<Array>} Array of users with role information
+ */
+export async function getAllUsersWithRoles() {
+  try {
+    const users = await appPrisma.users.findMany({
+      include: {
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                is_system_role: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { email: "asc" }],
+    });
+
+    return users.map(user => ({
+      ...user,
+      roleNames: user.user_roles.map(ur => ur.roles.name),
+      primaryRole: user.user_roles[0]?.roles || null,
+    }));
+  } catch (error) {
+    console.error("Error fetching users with roles:", error);
+    return [];
   }
 }

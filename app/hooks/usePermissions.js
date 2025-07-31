@@ -15,9 +15,9 @@ export function usePermissions() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user permissions when session changes
+  // Load permissions from session when available, fallback to API
   useEffect(() => {
-    async function fetchPermissions() {
+    async function loadPermissions() {
       if (!session?.user?.id) {
         setPermissions(new Set());
         setUserRole(null);
@@ -27,8 +27,25 @@ export function usePermissions() {
 
       try {
         setLoading(true);
-        
-        // Fetch user permissions and role
+
+        // Check if permissions are available in session (from NextAuth)
+        if (session.user.permissions && session.user.permissions.length > 0) {
+          console.log("📦 Using permissions from session cache");
+          const permissionSet = new Set(session.user.permissions);
+          setPermissions(permissionSet);
+          
+          // Set primary role from session
+          const primaryRole = session.user.roles && session.user.roles.length > 0 
+            ? session.user.roles[0] 
+            : null;
+          setUserRole(primaryRole);
+          
+          setLoading(false);
+          return;
+        }
+
+        // Fallback to API if permissions not in session
+        console.log("🔄 Fetching permissions from API (session cache miss)");
         const [permissionsResponse, roleResponse] = await Promise.all([
           fetch(`/api/permissions/user/${session.user.id}`),
           fetch(`/api/permissions/user/${session.user.id}/role`)
@@ -50,7 +67,7 @@ export function usePermissions() {
           setUserRole(roleData.role);
         }
       } catch (error) {
-        console.error("Error fetching permissions:", error);
+        console.error("Error loading permissions:", error);
         setPermissions(new Set());
         setUserRole(null);
       } finally {
@@ -58,8 +75,8 @@ export function usePermissions() {
       }
     }
 
-    fetchPermissions();
-  }, [session?.user?.id]);
+    loadPermissions();
+  }, [session?.user?.id, session?.user?.permissions, session?.user?.permissionsLastUpdated]);
 
   // Core permission checking function
   const hasPermission = useMemo(() => {
@@ -152,6 +169,7 @@ export function usePermissions() {
   const isSuperAdmin = useMemo(() => {
     return userRole?.name === 'Super Admin';
   }, [userRole]);
+
 
   // Get user's role information
   const roleInfo = useMemo(() => ({

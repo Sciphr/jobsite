@@ -17,7 +17,7 @@ export async function GET(request) {
   }
 
   try {
-    const application = await appPrisma.application.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: {
         userId_jobId: {
           userId: session.user.id,

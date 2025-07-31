@@ -19,7 +19,7 @@ export async function POST(request) {
       );
     }
 
-    const applications = await appPrisma.application.findMany({
+    const applications = await appPrisma.applications.findMany({
       where: {
         userId: session.user.id,
         jobId: { in: jobIds },

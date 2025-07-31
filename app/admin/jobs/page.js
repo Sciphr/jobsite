@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
+import { CanCreate, CanEdit, CanDelete, PermissionButton } from "@/app/components/guards/ComponentPermissionGuard";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import {
   useJobs,
@@ -44,7 +46,7 @@ import {
 } from "lucide-react";
 import { exportJobsToExcel, exportJobsToCSV } from "@/app/utils/jobsExport";
 
-export default function AdminJobs() {
+function AdminJobsContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
@@ -852,5 +854,18 @@ export default function AdminJobs() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap the jobs page with permission checking
+export default function AdminJobs() {
+  return (
+    <ResourcePermissionGuard 
+      resource="jobs" 
+      actions={["view"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <AdminJobsContent />
+    </ResourcePermissionGuard>
   );
 }

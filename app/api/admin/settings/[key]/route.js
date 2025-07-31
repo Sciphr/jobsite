@@ -74,7 +74,7 @@ export async function PATCH(request, { params }) {
         console.log("Created new theme setting:", existingSetting);
       } else {
         // For other settings, check if there's a system default
-        const systemSetting = await appPrisma.setting.findFirst({
+        const systemSetting = await appPrisma.settings.findFirst({
           where: {
             key,
             userId: null,

@@ -6,14 +6,14 @@ import JobDetailsClient from "./JobDetailsClient";
 
 async function getJob(slug) {
   try {
-    const job = await appPrisma.job.findUnique({
+    const job = await appPrisma.jobs.findUnique({
       where: {
         slug,
         status: "Active", // Only show active jobs
       },
       include: {
         categories: true,
-        creator: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -29,12 +29,16 @@ async function getJob(slug) {
     }
 
     // Increment view count
-    await appPrisma.job.update({
+    await appPrisma.jobs.update({
       where: { id: job.id },
       data: { viewCount: { increment: 1 } },
     });
 
-    return job;
+    // Add alias for backward compatibility
+    return {
+      ...job,
+      creator: job.users // Alias users as creator for backward compatibility
+    };
   } catch (error) {
     console.error("Error fetching job:", error);
     return null;

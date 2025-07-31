@@ -3,20 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { PrismaClient } from "@/app/generated/prisma";
 import { CATEGORIES, EVENT_TYPES, SEVERITY } from "@/app/lib/auditLog";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 const prisma = new PrismaClient();
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
+    // Check if user has permission to view audit logs
+    const authResult = await protectRoute("audit_logs", "view");
+    if (authResult.error) return authResult.error;
 
-    // Check if user is admin (privilege level 2 or higher for audit logs)
-    if (!session?.user?.privilegeLevel || session.user.privilegeLevel < 2) {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 401 }
-      );
-    }
+    const { session } = authResult;
 
     const { searchParams } = new URL(request.url);
 
@@ -54,18 +51,18 @@ export async function GET(request) {
     const where = {};
 
     if (category) where.category = category;
-    if (eventType) where.eventType = eventType;
+    if (eventType) where.event_type = eventType;
     if (subcategory) where.subcategory = subcategory;
-    if (entityType) where.entityType = entityType;
-    if (entityId) where.entityId = entityId;
+    if (entityType) where.entity_type = entityType;
+    if (entityId) where.entity_id = entityId;
     if (actor_id) where.actor_id = actor_id;
     if (severity) where.severity = severity;
     if (status) where.status = status;
     if (ipAddress)
-      where.ipAddress = { contains: ipAddress, mode: "insensitive" };
-    if (relatedUserId) where.relatedUserId = relatedUserId;
-    if (relatedJobId) where.relatedJobId = relatedJobId;
-    if (relatedApplicationId) where.relatedApplicationId = relatedApplicationId;
+      where.ip_address = { contains: ipAddress, mode: "insensitive" };
+    if (relatedUserId) where.related_user_id = relatedUserId;
+    if (relatedJobId) where.related_job_id = relatedJobId;
+    if (relatedApplicationId) where.related_application_id = relatedApplicationId;
 
     // Date range filter
     if (dateFrom || dateTo) {
@@ -79,7 +76,7 @@ export async function GET(request) {
       where.OR = [
         { action: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
-        { entityName: { contains: search, mode: "insensitive" } },
+        { entity_name: { contains: search, mode: "insensitive" } },
         { actor_name: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -98,7 +95,7 @@ export async function GET(request) {
       take: limit,
       orderBy,
       include: {
-        actor: {
+        users_audit_logs_actor_idTousers: {
           select: {
             id: true,
             firstName: true,
@@ -106,7 +103,7 @@ export async function GET(request) {
             email: true,
           },
         },
-        relatedUser: {
+        users_audit_logs_related_user_idTousers: {
           select: {
             id: true,
             firstName: true,
@@ -114,14 +111,14 @@ export async function GET(request) {
             email: true,
           },
         },
-        relatedJob: {
+        jobs: {
           select: {
             id: true,
             title: true,
             department: true,
           },
         },
-        relatedApplication: {
+        applications: {
           select: {
             id: true,
             name: true,
@@ -135,27 +132,27 @@ export async function GET(request) {
     // Transform data for frontend
     const transformedLogs = auditLogs.map((log) => ({
       id: log.id,
-      eventType: log.eventType,
+      eventType: log.event_type,
       category: log.category,
       subcategory: log.subcategory,
-      entityType: log.entityType,
-      entityId: log.entityId,
-      entityName: log.entityName,
-      actorId: log.actorId,
-      actorType: log.actorType,
-      actorName: log.actorName,
+      entityType: log.entity_type,
+      entityId: log.entity_id,
+      entityName: log.entity_name,
+      actorId: log.actor_id,
+      actorType: log.actor_type,
+      actorName: log.actor_name,
       action: log.action,
       description: log.description,
-      oldValues: log.oldValues,
-      newValues: log.newValues,
+      oldValues: log.old_values,
+      newValues: log.new_values,
       changes: log.changes,
-      ipAddress: log.ipAddress,
-      userAgent: log.userAgent,
-      sessionId: log.sessionId,
-      requestId: log.requestId,
-      relatedUserId: log.relatedUserId,
-      relatedJobId: log.relatedJobId,
-      relatedApplicationId: log.relatedApplicationId,
+      ipAddress: log.ip_address,
+      userAgent: log.user_agent,
+      sessionId: log.session_id,
+      requestId: log.request_id,
+      relatedUserId: log.related_user_id,
+      relatedJobId: log.related_job_id,
+      relatedApplicationId: log.related_application_id,
       created_at: log.created_at,
       severity: log.severity,
       status: log.status,
@@ -163,33 +160,33 @@ export async function GET(request) {
       metadata: log.metadata,
 
       // Related entities (for easy display)
-      actor: log.actor
+      actor: log.users_audit_logs_actor_idTousers
         ? {
             name:
-              `${log.actor.firstName || ""} ${log.actor.lastName || ""}`.trim() ||
-              log.actor.email,
-            email: log.actor.email,
+              `${log.users_audit_logs_actor_idTousers.firstName || ""} ${log.users_audit_logs_actor_idTousers.lastName || ""}`.trim() ||
+              log.users_audit_logs_actor_idTousers.email,
+            email: log.users_audit_logs_actor_idTousers.email,
           }
         : null,
-      relatedUser: log.relatedUser
+      relatedUser: log.users_audit_logs_related_user_idTousers
         ? {
             name:
-              `${log.relatedUser.firstName || ""} ${log.relatedUser.lastName || ""}`.trim() ||
-              log.relatedUser.email,
-            email: log.relatedUser.email,
+              `${log.users_audit_logs_related_user_idTousers.firstName || ""} ${log.users_audit_logs_related_user_idTousers.lastName || ""}`.trim() ||
+              log.users_audit_logs_related_user_idTousers.email,
+            email: log.users_audit_logs_related_user_idTousers.email,
           }
         : null,
-      relatedJob: log.relatedJob
+      relatedJob: log.jobs
         ? {
-            title: log.relatedJob.title,
-            department: log.relatedJob.department,
+            title: log.jobs.title,
+            department: log.jobs.department,
           }
         : null,
-      relatedApplication: log.relatedApplication
+      relatedApplication: log.applications
         ? {
-            name: log.relatedApplication.name,
-            email: log.relatedApplication.email,
-            status: log.relatedApplication.status,
+            name: log.applications.name,
+            email: log.applications.email,
+            status: log.applications.status,
           }
         : null,
     }));
@@ -255,7 +252,7 @@ async function getAuditLogStats(where) {
 
     // Get counts by event type
     const eventTypeStats = await prisma.audit_logs.groupBy({
-      by: ["eventType"],
+      by: ["event_type"],
       where,
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
@@ -281,7 +278,7 @@ async function getAuditLogStats(where) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activityStats = await prisma.groupBy({
+    const activityStats = await prisma.audit_logs.groupBy({
       by: ["created_at"],
       where: {
         ...where,
@@ -297,7 +294,7 @@ async function getAuditLogStats(where) {
         count: stat._count.id,
       })),
       byEventType: eventTypeStats.map((stat) => ({
-        eventType: stat.eventType,
+        eventType: stat.event_type,
         count: stat._count.id,
       })),
       bySeverity: severityStats.map((stat) => ({
@@ -348,8 +345,8 @@ export async function OPTIONS(request) {
         select: { category: true },
       }),
       prisma.audit_logs.findMany({
-        distinct: ["eventType"],
-        select: { eventType: true },
+        distinct: ["event_type"],
+        select: { event_type: true },
       }),
       prisma.audit_logs.findMany({
         distinct: ["subcategory"],
@@ -357,9 +354,9 @@ export async function OPTIONS(request) {
         where: { subcategory: { not: null } },
       }),
       prisma.audit_logs.findMany({
-        distinct: ["entityType"],
-        select: { entityType: true },
-        where: { entityType: { not: null } },
+        distinct: ["entity_type"],
+        select: { entity_type: true },
+        where: { entity_type: { not: null } },
       }),
       prisma.audit_logs.findMany({
         distinct: ["severity"],
@@ -375,9 +372,9 @@ export async function OPTIONS(request) {
       success: true,
       filterOptions: {
         categories: categories.map((c) => c.category).sort(),
-        eventTypes: eventTypes.map((e) => e.eventType).sort(),
+        eventTypes: eventTypes.map((e) => e.event_type).sort(),
         subcategories: subcategories.map((s) => s.subcategory).sort(),
-        entityTypes: entityTypes.map((e) => e.entityType).sort(),
+        entityTypes: entityTypes.map((e) => e.entity_type).sort(),
         severities: severities.map((s) => s.severity).sort(),
         statuses: statuses.map((s) => s.status).sort(),
       },

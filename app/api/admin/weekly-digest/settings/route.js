@@ -273,7 +273,7 @@ export async function POST(req) {
     for (const setting of settingsToSave) {
       try {
         // First try to find existing setting
-        const existingSetting = await appPrisma.setting.findFirst({
+        const existingSetting = await appPrisma.settings.findFirst({
           where: {
             key: setting.key,
             userId: null,
@@ -282,7 +282,7 @@ export async function POST(req) {
 
         if (existingSetting) {
           // Update existing setting
-          await appPrisma.setting.update({
+          await appPrisma.settings.update({
             where: { id: existingSetting.id },
             data: {
               value: setting.value,
@@ -292,7 +292,7 @@ export async function POST(req) {
           console.log(`✅ Updated setting: ${setting.key}`);
         } else {
           // Create new setting
-          await appPrisma.setting.create({
+          await appPrisma.settings.create({
             data: {
               key: setting.key,
               value: setting.value,

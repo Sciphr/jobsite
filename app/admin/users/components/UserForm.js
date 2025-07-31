@@ -15,9 +15,11 @@ import {
   EyeOff,
   Calendar,
   CheckCircle,
+  Settings,
 } from "lucide-react";
+import UserRoleManager from "./UserRoleManager";
 
-export default function UserForm({ userId = null, initialData = null }) {
+export default function UserForm({ userId = null, initialData = null, refreshTrigger = 0, availableRoles = [], onRoleChange = null }) {
   const router = useRouter();
   const { data: session } = useSession();
   const isEdit = !!userId;
@@ -55,7 +57,7 @@ export default function UserForm({ userId = null, initialData = null }) {
         isActive: initialData.isActive ?? true,
       });
     }
-  }, [initialData]);
+  }, [initialData, refreshTrigger]);
 
   const roleOptions = [
     {
@@ -220,10 +222,14 @@ export default function UserForm({ userId = null, initialData = null }) {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone || null,
-        role: formData.role,
-        privilegeLevel: formData.privilegeLevel,
         isActive: formData.isActive,
       };
+
+      // For new users, still include role for initial assignment
+      if (!isEdit) {
+        submitData.role = formData.role;
+        submitData.privilegeLevel = formData.privilegeLevel;
+      }
 
       // Only include password if it's provided
       if (formData.password) {
@@ -521,77 +527,133 @@ export default function UserForm({ userId = null, initialData = null }) {
           </div>
         </div>
 
-        {/* Role & Permissions */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Shield className="h-5 w-5 text-green-600" />
+        {/* Role & Permissions / Account Settings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Roles */}
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Settings className="h-5 w-5 text-green-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {isEdit ? "User Roles" : "Initial Role"}
+              </h2>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Role & Permissions
-            </h2>
+
+            {isEdit ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Current Roles:</span>
+                  <span className="text-xs text-gray-500">
+                    {initialData?.user_roles?.length || 0} role{(initialData?.user_roles?.length || 0) !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                
+                {initialData && (
+                  <UserRoleManager
+                    user={initialData}
+                    availableRoles={availableRoles}
+                    onRoleChange={onRoleChange}
+                    isLoading={false}
+                    compact={true}
+                  />
+                )}
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700">
+                    Changes take effect immediately. Users automatically get "User" role if all roles are removed.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Initial User Role
+                </label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={(e) => handleInputChange("role", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600 bg-white"
+                >
+                  {roleOptions.map((role) => (
+                    <option
+                      key={role.value}
+                      value={role.value}
+                      className="text-gray-600"
+                    >
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  {
+                    roleOptions.find((r) => r.value === formData.role)
+                      ?.description
+                  }
+                </p>
+                <p className="mt-2 text-xs text-blue-600">
+                  Additional roles can be assigned after creation.
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                User Role
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
-                disabled={isSelfEdit}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-600 ${
-                  isSelfEdit ? "bg-gray-100 cursor-not-allowed" : "bg-white"
-                }`}
-              >
-                {roleOptions.map((role) => (
-                  <option
-                    key={role.value}
-                    value={role.value}
-                    className="text-gray-600"
-                  >
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-sm text-gray-500">
-                {
-                  roleOptions.find((r) => r.value === formData.role)
-                    ?.description
-                }
-              </p>
-              {isSelfEdit && (
-                <p className="mt-1 text-sm text-orange-600">
-                  You cannot change your own role
-                </p>
-              )}
+          {/* Right Column - Account Status */}
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Shield className="h-5 w-5 text-orange-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Account Status
+              </h2>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  handleInputChange("isActive", e.target.checked)
-                }
-                disabled={isSelfEdit}
-                className={`rounded border-gray-300 text-purple-600 focus:ring-purple-500 ${
-                  isSelfEdit ? "cursor-not-allowed" : ""
-                }`}
-              />
-              <label
-                htmlFor="isActive"
-                className="text-sm font-medium text-gray-700"
-              >
-                Active User
-              </label>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) =>
+                    handleInputChange("isActive", e.target.checked)
+                  }
+                  disabled={isSelfEdit}
+                  className={`rounded border-gray-300 text-purple-600 focus:ring-purple-500 ${
+                    isSelfEdit ? "cursor-not-allowed" : ""
+                  }`}
+                />
+                <label
+                  htmlFor="isActive"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Active User
+                </label>
+              </div>
+              
               {isSelfEdit && (
-                <span className="text-sm text-orange-600">
-                  (Cannot deactivate your own account)
-                </span>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-xs text-orange-700">
+                    You cannot deactivate your own account for security reasons.
+                  </p>
+                </div>
+              )}
+              
+              <p className="text-sm text-gray-500">
+                {formData.isActive 
+                  ? "✓ User can log in and access the system"
+                  : "⚠️ User cannot log in but data is preserved"
+                }
+              </p>
+
+              {isEdit && initialData && (
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p><strong>Member since:</strong> {new Date(initialData.createdAt).toLocaleDateString()}</p>
+                    <p><strong>Last updated:</strong> {new Date(initialData.updatedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

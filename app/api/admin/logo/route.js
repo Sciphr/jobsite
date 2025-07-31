@@ -113,7 +113,7 @@ export async function POST(request) {
     const filePath = `settings/logos/${fileName}`;
 
     // Check for existing logo
-    const existingLogoSetting = await appPrisma.setting.findFirst({
+    const existingLogoSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_logo_url",
         userId: null,
@@ -146,7 +146,7 @@ export async function POST(request) {
 
         // Update existing logo setting
         console.log("Updating existing logo setting...");
-        await appPrisma.setting.update({
+        await appPrisma.settings.update({
           where: { id: existingLogoSetting.id },
           data: {
             value: filePath,
@@ -156,7 +156,7 @@ export async function POST(request) {
       } else {
         // Create new logo setting
         console.log("Creating new logo setting...");
-        await appPrisma.setting.create({
+        await appPrisma.settings.create({
           data: {
             key: "site_logo_url",
             value: filePath,
@@ -246,7 +246,7 @@ export async function DELETE() {
 
     // Delete from database first
     console.log("Deleting logo setting from database...");
-    await appPrisma.setting.delete({
+    await appPrisma.settings.delete({
       where: { id: logoSetting.id },
     });
 

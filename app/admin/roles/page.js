@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePermissions } from "@/app/hooks/usePermissions";
+import { useRoles } from "@/app/hooks/useAdminData";
 import RoleCard from "./components/RoleCard";
 import CreateRoleModal from "./components/CreateRoleModal";
 import EditRoleModal from "./components/EditRoleModal";
@@ -11,10 +12,8 @@ import UserRoleAssignmentModal from "./components/UserRoleAssignmentModal";
 
 export default function RoleManagementPage() {
   const { data: session } = useSession();
-  const { can, RESOURCES } = usePermissions();
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { can, loading: permissionsLoading } = usePermissions();
+  const { data: roles = [], isLoading, isError, error: queryError, refetch } = useRoles();
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,33 +25,12 @@ export default function RoleManagementPage() {
   // Check if user can manage roles
   const canManageRoles = can.manageRoles && can.manageRoles();
 
-  useEffect(() => {
-    if (!canManageRoles) {
-      setError("You don't have permission to manage roles");
-      setLoading(false);
-      return;
-    }
-    
-    fetchRoles();
-  }, [canManageRoles]);
-
-  const fetchRoles = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/roles");
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch roles");
-      }
-      
-      const data = await response.json();
-      setRoles(data.roles);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Set error state if no permissions
+  const error = (!permissionsLoading && !canManageRoles) 
+    ? "You don't have permission to manage roles" 
+    : (isError ? queryError?.message : null);
+  
+  const loading = permissionsLoading || isLoading;
 
   const handleCreateRole = () => {
     setShowCreateModal(true);
@@ -73,21 +51,19 @@ export default function RoleManagementPage() {
     setShowAssignModal(true);
   };
 
-  const onRoleCreated = (newRole) => {
-    setRoles([...roles, newRole]);
+  const onRoleCreated = () => {
+    refetch(); // Refetch roles after creation
     setShowCreateModal(false);
   };
 
-  const onRoleUpdated = (updatedRole) => {
-    setRoles(roles.map(role => 
-      role.id === updatedRole.id ? updatedRole : role
-    ));
+  const onRoleUpdated = () => {
+    refetch(); // Refetch roles after update
     setShowEditModal(false);
     setSelectedRole(null);
   };
 
-  const onRoleDeleted = (deletedRoleId) => {
-    setRoles(roles.filter(role => role.id !== deletedRoleId));
+  const onRoleDeleted = () => {
+    refetch(); // Refetch roles after deletion
     setShowDeleteModal(false);
     setSelectedRole(null);
   };
@@ -182,7 +158,7 @@ export default function RoleManagementPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Active Roles</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {roles.filter(role => role.isActive).length}
+                    {roles.filter(role => role.is_active).length}
                   </dd>
                 </dl>
               </div>
@@ -202,7 +178,7 @@ export default function RoleManagementPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Custom Roles</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {roles.filter(role => !role.isSystemRole).length}
+                    {roles.filter(role => !role.is_system_role).length}
                   </dd>
                 </dl>
               </div>
@@ -222,7 +198,7 @@ export default function RoleManagementPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {roles.reduce((sum, role) => sum + (role._count?.users || 0), 0)}
+                    {roles.reduce((sum, role) => sum + (role._count?.user_roles || 0), 0)}
                   </dd>
                 </dl>
               </div>
@@ -307,7 +283,7 @@ export default function RoleManagementPage() {
             setShowAssignModal(false);
             setSelectedRole(null);
           }}
-          onUsersUpdated={fetchRoles}
+          onUsersUpdated={refetch}
         />
       )}
     </div>

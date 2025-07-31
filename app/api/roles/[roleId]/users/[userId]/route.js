@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { userHasPermission } from "@/app/lib/permissions";
-import { appPrisma } from "@/lib/prisma";
+import { userHasPermission, ensureUserHasDefaultRole, wouldBeLastRole } from "@/app/lib/permissions";
+import { appPrisma } from "../../../../../lib/prisma";
 
-// POST /api/roles/[roleId]/users/[userId] - Assign user to role
+// POST /api/roles/[roleId]/users/[userId] - Assign user to role (many-to-many)
 export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,7 +13,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { roleId, userId } = params;
+    const { roleId, userId } = await params;
 
     // Check if user has permission to assign roles
     const canAssignRoles = await userHasPermission(
@@ -29,7 +29,7 @@ export async function POST(request, { params }) {
     }
 
     // Check if role exists and is active
-    const role = await appPrisma.role.findUnique({
+    const role = await appPrisma.roles.findUnique({
       where: { id: roleId },
     });
 
@@ -37,7 +37,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
 
-    if (!role.isActive) {
+    if (!role.is_active) {
       return NextResponse.json(
         { error: "Cannot assign users to inactive roles" },
         { status: 400 }
@@ -48,9 +48,16 @@ export async function POST(request, { params }) {
     const user = await appPrisma.users.findUnique({
       where: { id: userId },
       include: {
-        userRole: {
-          select: {
-            name: true,
+        user_roles: {
+          // Include both active and inactive to check for reactivation
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
       },
@@ -60,8 +67,11 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user is already assigned to this role
-    if (user.roleId === roleId) {
+    // Check if user is already assigned to this role (active)
+    const existingActiveAssignment = user.user_roles.find(
+      (ur) => ur.role_id === roleId && ur.is_active
+    );
+    if (existingActiveAssignment) {
       return NextResponse.json(
         {
           error: "User is already assigned to this role",
@@ -70,25 +80,80 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Update user's role
-    const updatedUser = await appPrisma.users.update({
+    // Check if there's an inactive assignment we can reactivate
+    const existingInactiveAssignment = user.user_roles.find(
+      (ur) => ur.role_id === roleId && !ur.is_active
+    );
+
+    let userRole;
+    if (existingInactiveAssignment) {
+      // Reactivate existing inactive assignment
+      userRole = await appPrisma.user_roles.update({
+        where: { id: existingInactiveAssignment.id },
+        data: {
+          is_active: true,
+          assigned_at: new Date(),
+          assigned_by: session.user.id,
+        },
+        include: {
+          roles: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+            },
+          },
+        },
+      });
+    } else {
+      // Create new user-role assignment
+      userRole = await appPrisma.user_roles.create({
+        data: {
+          user_id: userId,
+          role_id: roleId,
+          assigned_by: session.user.id,
+          is_active: true,
+        },
+        include: {
+          roles: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Get updated user with all roles
+    const updatedUser = await appPrisma.users.findUnique({
       where: { id: userId },
-      data: { roleId: roleId },
       include: {
-        userRole: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
       },
     });
 
+    const currentRoleNames = user.user_roles
+      .filter((ur) => ur.is_active)
+      .map((ur) => ur.roles.name)
+      .join(", ");
+
     return NextResponse.json({
       success: true,
       user: updatedUser,
-      message: `User ${user.name || user.email} assigned to role ${role.name}${user.userRole ? ` (previously ${user.userRole.name})` : ""}`,
+      message: `User ${user.firstName || user.email} assigned to role ${role.name}${currentRoleNames ? ` (also has: ${currentRoleNames})` : ""}`,
     });
   } catch (error) {
     console.error("Error assigning user to role:", error);
@@ -99,7 +164,7 @@ export async function POST(request, { params }) {
   }
 }
 
-// DELETE /api/roles/[roleId]/users/[userId] - Remove user from role
+// DELETE /api/roles/[roleId]/users/[userId] - Remove user from role (many-to-many)
 export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -108,7 +173,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { roleId, userId } = params;
+    const { roleId, userId } = await params;
 
     // Check if user has permission to assign roles
     const canAssignRoles = await userHasPermission(
@@ -124,7 +189,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Check if role exists
-    const role = await appPrisma.role.findUnique({
+    const role = await appPrisma.roles.findUnique({
       where: { id: roleId },
     });
 
@@ -135,13 +200,31 @@ export async function DELETE(request, { params }) {
     // Check if user exists and is assigned to this role
     const user = await appPrisma.users.findUnique({
       where: { id: userId },
+      include: {
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (user.roleId !== roleId) {
+    // Find the specific user-role assignment
+    const userRoleAssignment = user.user_roles.find(
+      (ur) => ur.role_id === roleId
+    );
+    if (!userRoleAssignment) {
       return NextResponse.json(
         {
           error: "User is not assigned to this role",
@@ -150,42 +233,61 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Find the default "User" role to assign when removing from current role
-    const defaultRole = await appPrisma.role.findFirst({
-      where: {
-        name: "User",
-        isSystem: true,
-      },
+    // Check if this would be the user's last role
+    const isLastRole = await wouldBeLastRole(userId, roleId);
+    let fallbackMessage = "";
+
+    // Remove the user-role assignment (set inactive or delete)
+    await appPrisma.user_roles.update({
+      where: { id: userRoleAssignment.id },
+      data: { is_active: false },
     });
 
-    if (!defaultRole) {
-      return NextResponse.json(
-        {
-          error: "Default user role not found. Cannot remove user from role.",
-        },
-        { status: 500 }
-      );
+    // If this was their last role, automatically assign the default User role
+    if (isLastRole) {
+      const fallbackResult = await ensureUserHasDefaultRole(userId);
+      if (fallbackResult.success && fallbackResult.roleAssigned) {
+        fallbackMessage = ` (automatically assigned to '${fallbackResult.defaultRole.name}' role as fallback)`;
+      } else if (!fallbackResult.success) {
+        // If we can't assign default role, this is a critical error
+        return NextResponse.json(
+          {
+            error: `Failed to assign default role after removing last role: ${fallbackResult.message}`,
+          },
+          { status: 500 }
+        );
+      }
     }
 
-    // Update user's role to default
-    const updatedUser = await appPrisma.users.update({
+    // Get updated user with remaining roles
+    const updatedUser = await appPrisma.users.findUnique({
       where: { id: userId },
-      data: { roleId: defaultRole.id },
       include: {
-        userRole: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
       },
     });
 
+    const remainingRoleNames = updatedUser.user_roles
+      .map((ur) => ur.roles.name)
+      .join(", ");
+
     return NextResponse.json({
       success: true,
       user: updatedUser,
-      message: `User ${user.name || user.email} removed from role ${role.name} and assigned to ${defaultRole.name}`,
+      message: `User ${user.firstName || user.email} removed from role ${role.name}${remainingRoleNames ? ` (still has: ${remainingRoleNames})` : ""}${fallbackMessage}`,
+      wasLastRole: isLastRole,
+      fallbackApplied: isLastRole && fallbackMessage !== "",
     });
   } catch (error) {
     console.error("Error removing user from role:", error);

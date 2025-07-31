@@ -34,19 +34,35 @@ export async function GET(req, { params }) {
         firstName: true,
         lastName: true,
         phone: true,
-        role: true,
+        role: true, // Keep for backward compatibility
         privilegeLevel: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        user_roles: {
+          where: { is_active: true },
+          select: {
+            id: true,
+            assigned_at: true,
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                is_system_role: true,
+              },
+            },
+          },
+          orderBy: { assigned_at: "asc" },
+        },
         _count: {
           select: {
-            createdJobs: true,
+            jobs: true,
             applications: true,
-            savedJobs: true,
+            saved_jobs: true,
           },
         },
-        createdJobs: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -61,7 +77,7 @@ export async function GET(req, { params }) {
             id: true,
             status: true,
             appliedAt: true,
-            job: {
+            jobs: {
               select: {
                 title: true,
               },
@@ -241,11 +257,27 @@ export async function PATCH(req, { params }) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        user_roles: {
+          where: { is_active: true },
+          select: {
+            id: true,
+            assigned_at: true,
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                is_system_role: true,
+              },
+            },
+          },
+          orderBy: { assigned_at: "asc" },
+        },
         _count: {
           select: {
-            createdJobs: true,
+            jobs: true,
             applications: true,
-            savedJobs: true,
+            saved_jobs: true,
           },
         },
       },
@@ -370,14 +402,14 @@ export async function DELETE(req, { params }) {
       include: {
         resumes: true, // Get all resume records with storage paths
         applications: true,
-        savedJobs: true,
+        saved_jobs: true,
         createdJobs: true,
         settings: true,
         _count: {
           select: {
-            createdJobs: true,
+            jobs: true,
             applications: true,
-            savedJobs: true,
+            saved_jobs: true,
             resumes: true,
             settings: true,
           },

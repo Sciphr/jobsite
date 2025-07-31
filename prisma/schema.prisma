@@ -379,7 +379,7 @@ model roles {
   created_by                    String?            @db.Uuid
   role_permissions              role_permissions[]
   users_roles_created_byTousers users?             @relation("roles_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
-  users_users_role_idToroles    users[]            @relation("users_role_idToroles")
+  user_roles                    user_roles[]
 
   @@index([is_active], map: "idx_roles_active")
 }
@@ -463,7 +463,6 @@ model users {
   microsoft_tenant_id                          String?                         @db.VarChar(255)
   microsoft_integration_enabled                Boolean?                        @default(false)
   microsoft_integration_connected_at           DateTime?                       @db.Timestamp(6)
-  role_id                                      String?                         @db.Uuid
   applications                                 applications[]
   audit_logs_audit_logs_actor_idTousers        audit_logs[]                    @relation("audit_logs_actor_idTousers")
   audit_logs_audit_logs_related_user_idTousers audit_logs[]                    @relation("audit_logs_related_user_idTousers")
@@ -480,10 +479,24 @@ model users {
   saved_jobs                                   saved_jobs[]
   settings                                     settings[]
   user_resumes                                 user_resumes[]
-  roles_users_role_idToroles                   roles?                          @relation("users_role_idToroles", fields: [role_id], references: [id], onUpdate: NoAction)
+  user_roles                                   user_roles[]
   weekly_digests                               weekly_digests[]
+}
 
-  @@index([role_id], map: "idx_users_role_id")
+model user_roles {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  role_id     String    @db.Uuid
+  assigned_at DateTime? @default(now()) @db.Timestamptz(6)
+  assigned_by String?   @db.Uuid
+  is_active   Boolean?  @default(true)
+  roles       roles     @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_role_id")
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_user_id")
+
+  @@unique([user_id, role_id], map: "unique_user_role")
+  @@index([user_id], map: "idx_user_roles_user_id")
+  @@index([role_id], map: "idx_user_roles_role_id")
+  @@index([is_active], map: "idx_user_roles_active")
 }
 
 model weekly_digests {

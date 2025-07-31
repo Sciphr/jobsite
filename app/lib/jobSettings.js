@@ -99,7 +99,7 @@ export async function checkFeaturedJobsLimit(currentFeaturedCount = null) {
   if (currentFeaturedCount === null) {
     // Count current featured jobs if not provided
     const { appPrisma } = await import("./prisma");
-    currentFeaturedCount = await appPrisma.job.count({
+    currentFeaturedCount = await appPrisma.jobs.count({
       where: {
         featured: true,
         status: "Active",

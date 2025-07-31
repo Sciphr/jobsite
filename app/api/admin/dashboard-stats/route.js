@@ -1,21 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectAdminRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
+  // Dashboard stats require basic admin access - no specific permission needed
+  const authResult = await protectAdminRoute(1);
+  if (authResult.error) return authResult.error;
 
-  // Check if user is admin (privilege level 1 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
-
+  const { session } = authResult;
   const userPrivilegeLevel = session.user.privilegeLevel;
 
   try {

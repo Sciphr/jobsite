@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
 
 export const authOptions = {
   adapter: PrismaAdapter(authPrisma),
@@ -168,40 +169,72 @@ export const authOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
-      "🔍 JWT callback:", { hasUser: !!user, hasToken: !!token };
+    async jwt({ token, user, account, trigger }) {
+      console.log("🔍 JWT callback:", { hasUser: !!user, hasToken: !!token, trigger });
+      
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.privilegeLevel = user.privilegeLevel;
-        // roleId and userRole removed for now
-        "✅ Added user details to token:",
+        console.log("✅ Added user details to token:",
           {
             id: user.id,
             role: user.role,
             privilegeLevel: user.privilegeLevel,
-          };
+          });
       }
+
+      // Refresh permissions on token update or if permissions aren't cached
+      if (token.id && (!token.permissions || !token.roles || trigger === 'update')) {
+        try {
+          const [permissions, roles] = await Promise.all([
+            getUserPermissions(token.id),
+            getUserRoles(token.id)
+          ]);
+
+          // Store permissions as simple array for efficient client-side checking
+          token.permissions = permissions.map(p => `${p.resource}:${p.action}`);
+          token.roles = roles;
+          token.permissionsLastUpdated = Date.now();
+
+          console.log("✅ Updated token with permissions:", {
+            userId: token.id,
+            permissionCount: token.permissions.length,
+            roleCount: token.roles.length
+          });
+        } catch (error) {
+          console.error("❌ Error fetching permissions for token:", error);
+          token.permissions = [];
+          token.roles = [];
+        }
+      }
+
       return token;
     },
 
     async session({ session, token }) {
-      "🔍 Session callback:",
+      console.log("🔍 Session callback:",
         {
           hasSession: !!session,
           hasToken: !!token,
-        };
+        });
+      
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.privilegeLevel = token.privilegeLevel;
-        // roleId and userRole removed for now
-        "✅ Added user details to session:",
+        session.user.permissions = token.permissions || [];
+        session.user.roles = token.roles || [];
+        session.user.permissionsLastUpdated = token.permissionsLastUpdated;
+
+        console.log("✅ Added user details to session:",
           {
             id: token.id,
             role: token.role,
             privilegeLevel: token.privilegeLevel,
-          };
+            permissionCount: session.user.permissions.length,
+            roleCount: session.user.roles.length
+          });
       }
       return session;
     },

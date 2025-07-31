@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "@/app/lib/permissions";
-import { appPrisma } from "@/lib/prisma";
+import { appPrisma } from "../../../../lib/prisma";
 
 // GET /api/roles/[roleId]/users - Get users for role assignment
 export async function GET(request, { params }) {
@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { roleId } = params;
+    const { roleId } = await params;
 
     // Check if user has permission to view roles and users
     const canViewRoles = await userHasPermission(
@@ -35,7 +35,7 @@ export async function GET(request, { params }) {
     }
 
     // Check if role exists
-    const role = await appPrisma.role.findUnique({
+    const role = await appPrisma.roles.findUnique({
       where: { id: roleId },
     });
 
@@ -46,20 +46,29 @@ export async function GET(request, { params }) {
     // Get all users with their current roles
     const allUsers = await appPrisma.users.findMany({
       include: {
-        userRole: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
+        user_roles: {
+          where: { is_active: true },
+          include: {
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
       },
-      orderBy: [{ name: "asc" }, { email: "asc" }],
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { email: "asc" }],
     });
 
     // Separate users assigned to this role vs available users
-    const assignedUsers = allUsers.filter((user) => user.roleId === roleId);
-    const availableUsers = allUsers.filter((user) => user.roleId !== roleId);
+    const assignedUsers = allUsers.filter((user) => 
+      user.user_roles.some(ur => ur.role_id === roleId && ur.is_active)
+    );
+    const availableUsers = allUsers.filter((user) => 
+      !user.user_roles.some(ur => ur.role_id === roleId && ur.is_active)
+    );
 
     return NextResponse.json({
       success: true,

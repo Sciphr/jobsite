@@ -12,7 +12,7 @@ export async function GET(request) {
   }
 
   try {
-    const rules = await appPrisma.emailAutomationRule.findMany({
+    const rules = await appPrisma.email_automation_rules.findMany({
       include: {
         users: {
           select: {
@@ -22,14 +22,11 @@ export async function GET(request) {
           },
         },
       },
-      orderBy: [
-        { is_active: "desc" },
-        { name: "asc" },
-      ],
+      orderBy: [{ is_active: "desc" }, { name: "asc" }],
     });
 
     // Parse conditions from string to JSON for each rule
-    const rulesWithParsedConditions = rules.map(rule => ({
+    const rulesWithParsedConditions = rules.map((rule) => ({
       ...rule,
       conditions: rule.conditions ? JSON.parse(rule.conditions) : {},
     }));
@@ -53,7 +50,14 @@ export async function POST(request) {
   }
 
   try {
-    const { name, trigger, conditions, template_id, recipient_type, is_active } = await request.json();
+    const {
+      name,
+      trigger,
+      conditions,
+      template_id,
+      recipient_type,
+      is_active,
+    } = await request.json();
 
     // Validate required fields
     if (!name || !trigger || !template_id) {
@@ -75,13 +79,13 @@ export async function POST(request) {
       );
     }
 
-    const rule = await appPrisma.emailAutomationRule.create({
+    const rule = await appPrisma.email_automation_rules.create({
       data: {
         name,
         trigger,
         conditions: JSON.stringify(conditions || {}),
         template_id,
-        recipient_type: recipient_type || 'applicant',
+        recipient_type: recipient_type || "applicant",
         is_active: is_active ?? true,
         created_by: session.user.id,
       },

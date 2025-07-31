@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "@/app/lib/permissions";
-import { appPrisma } from "@/lib/prisma";
+import { appPrisma } from "../../../../../lib/prisma";
 
 // POST /api/roles/[roleId]/users/bulk - Bulk assign users to role
 export async function POST(request, { params }) {
@@ -13,7 +13,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { roleId } = params;
+    const { roleId } = await params;
     const { userIds } = await request.json();
 
     // Check if user has permission to assign roles
@@ -45,7 +45,7 @@ export async function POST(request, { params }) {
     }
 
     // Check if role exists and is active
-    const role = await appPrisma.role.findUnique({
+    const role = await appPrisma.roles.findUnique({
       where: { id: roleId },
     });
 
@@ -132,7 +132,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { roleId } = params;
+    const { roleId } = await params;
     const { userIds } = await request.json();
 
     // Check if user has permission to assign roles

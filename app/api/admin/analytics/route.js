@@ -1,20 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
+  // Check if user has permission to view analytics
+  const authResult = await protectRoute("analytics", "view");
+  if (authResult.error) return authResult.error;
 
-  // Check if user is admin (privilege level 2 or higher for analytics)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const { session } = authResult;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -171,7 +165,7 @@ export async function GET(req) {
 
     // Group by date
     const dailyJobs = jobs.reduce((acc, job) => {
-      const date = jobs.createdAt.toISOString().split("T")[0];
+      const date = job.createdAt.toISOString().split("T")[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {});
@@ -258,7 +252,7 @@ export async function GET(req) {
       }),
       appPrisma.interviews.count({
         where: {
-          createdAt: {
+          created_at: {
             gte: startDate,
             lte: now,
           },
@@ -282,7 +276,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.savedJobs.count({
+      appPrisma.saved_jobs.count({
         where: {
           savedAt: {
             gte: startDate,
@@ -299,7 +293,7 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.emailCampaigns.count({
+      appPrisma.email_campaigns.count({
         where: {
           created_at: {
             gte: startDate,
@@ -307,9 +301,9 @@ export async function GET(req) {
           },
         },
       }),
-      appPrisma.userResumes.count({
+      appPrisma.user_resumes.count({
         where: {
-          uploadedAt: {
+          uploaded_at: {
             gte: startDate,
             lte: now,
           },
@@ -317,7 +311,7 @@ export async function GET(req) {
       }),
       appPrisma.audit_logs.count({
         where: {
-          createdAt: {
+          created_at: {
             gte: startDate,
             lte: now,
           },

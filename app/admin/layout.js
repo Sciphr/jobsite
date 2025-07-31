@@ -28,6 +28,7 @@ import {
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
 import { usePrefetchAdminData } from "../hooks/useAdminData";
+import { usePermissions } from "../hooks/usePermissions";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
@@ -35,6 +36,7 @@ function AdminLayoutContent({ children }) {
   const { loading: themeLoading } = useAdminTheme();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
 
   // Mobile state management
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -74,8 +76,8 @@ function AdminLayoutContent({ children }) {
     }
   }, [session?.user?.privilegeLevel, prefetchAll]); // Only run when session changes
 
-  // Show loading while checking session or theme
-  if (status === "loading" || themeLoading) {
+  // Show loading while checking session, theme, or permissions
+  if (status === "loading" || themeLoading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -99,77 +101,85 @@ function AdminLayoutContent({ children }) {
   const userPrivilegeLevel = session.user.privilegeLevel;
   const userRole = session.user.role;
 
-  // Navigation items based on privilege level
+  // Navigation items based on permissions
   const navigationItems = [
     {
       name: "Dashboard",
       href: "/admin/dashboard",
       icon: LayoutDashboard,
-      requiredLevel: 1,
+      requiredPermission: null, // Dashboard is always available to admin users
       description: "Overview and stats",
     },
     {
       name: "Applications",
       href: "/admin/applications",
       icon: FileText,
-      requiredLevel: 1,
+      requiredPermission: { resource: "applications", action: "view" },
       description: "View job applications",
     },
     {
       name: "Jobs",
       href: "/admin/jobs",
       icon: Briefcase,
-      requiredLevel: 2,
+      requiredPermission: { resource: "jobs", action: "view" },
       description: "Manage job postings",
     },
     {
       name: "Users",
       href: "/admin/users",
       icon: Users,
-      requiredLevel: 3,
+      requiredPermission: { resource: "users", action: "view" },
       description: "Manage all users",
     },
     {
       name: "Roles",
       href: "/admin/roles",
       icon: Users,
-      requiredLevel: 3,
+      requiredPermission: { resource: "roles", action: "view" },
       description: "Manage all Roles",
     },
     {
       name: "Analytics",
       href: "/admin/analytics",
       icon: BarChart3,
-      requiredLevel: 2,
+      requiredPermission: { resource: "analytics", action: "view" },
       description: "View detailed reports",
     },
     {
       name: "Weekly Digest",
       href: "/admin/weekly-digest",
-      icon: Mail, // You'll need to import Mail from lucide-react
-      requiredLevel: 1,
+      icon: Mail,
+      requiredPermission: { resource: "weekly_digest", action: "view" },
       description: "Configure digest emails",
     },
     {
       name: "Audit Logs",
       href: "/admin/audit-logs",
       icon: FileSearch,
-      requiredLevel: 2,
+      requiredPermission: { resource: "audit_logs", action: "view" },
       description: "View system activity logs",
     },
     {
       name: "Settings",
       href: "/admin/settings",
       icon: Settings,
-      requiredLevel: 3,
+      requiredPermission: { resource: "settings", action: "view" },
       description: "System configuration",
     },
   ];
 
-  // Filter navigation based on user privilege
-  const allowedNavItems = navigationItems.filter(
-    (item) => userPrivilegeLevel >= item.requiredLevel
-  );
+  // Filter navigation based on user permissions
+  const allowedNavItems = navigationItems.filter((item) => {
+    // Dashboard is always available to admin users
+    if (!item.requiredPermission) return true;
+    
+    // Super admins get access to everything
+    if (userPrivilegeLevel >= 3) return true;
+    
+    // Check specific permission
+    const { resource, action } = item.requiredPermission;
+    return hasPermission(resource, action);
+  });
 
   const getRoleBadge = () => {
     const cleanRole = userRole?.trim().toLowerCase();
@@ -200,10 +210,10 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
+    <div className="h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden">
       {/* Mobile Header */}
       {isMobile && (
-        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-30 relative">
           <div className="flex items-center space-x-3">
             <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
               <Shield className="h-5 w-5" />
@@ -225,7 +235,7 @@ function AdminLayoutContent({ children }) {
         </div>
       )}
 
-      <div className="flex">
+      <div className={`flex ${isMobile ? 'h-[calc(100vh-4rem)]' : 'h-full'}`}>
         {/* Sidebar - Desktop: always visible, Mobile: overlay when open */}
         <AnimatePresence>
           {(!isMobile || isMobileMenuOpen) && (
@@ -250,8 +260,8 @@ function AdminLayoutContent({ children }) {
                 className={`${
                   isMobile
                     ? "fixed left-0 top-0 h-full w-80 z-50"
-                    : "w-64 relative"
-                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col`}
+                    : "w-64 flex-shrink-0"
+                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col h-full`}
               >
                 {/* Desktop Header - only show on desktop */}
                 {!isMobile && (
@@ -280,7 +290,7 @@ function AdminLayoutContent({ children }) {
                   </div>
                 )}
 
-                <nav className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2`}>
+                <nav className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2 flex-1 overflow-y-auto`}>
                   {allowedNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -343,8 +353,8 @@ function AdminLayoutContent({ children }) {
                   })}
                 </nav>
 
-                {/* User Info at Bottom */}
-                <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200">
+                {/* User Info at Bottom - Fixed Position */}
+                <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200 bg-white dark:bg-gray-800">
                   <div className="flex items-center space-x-3">
                     <div
                       className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
@@ -365,13 +375,23 @@ function AdminLayoutContent({ children }) {
                     </div>
                   </div>
 
-                  <Link
-                    href="/"
-                    className={`mt-3 w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${getButtonClasses("accent")} border border-opacity-20`}
-                  >
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Back to Site
-                  </Link>
+                  <div className="mt-3 space-y-2">
+                    <Link
+                      href="/"
+                      className={`w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${getButtonClasses("accent")} border border-opacity-20`}
+                    >
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Back to Site
+                    </Link>
+                    
+                    <Link
+                      href="/auth/signout"
+                      className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/30"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Link>
+                  </div>
                 </div>
               </motion.div>
             </>
@@ -379,13 +399,13 @@ function AdminLayoutContent({ children }) {
         </AnimatePresence>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden h-full">
           <AnimatePresence mode="wait">
             <motion.main
               key={pathname}
               className={`flex-1 bg-gray-50 dark:bg-gray-900 transition-colors duration-200 ${
                 isMobile ? "p-4" : "p-8"
-              }`}
+              } overflow-y-auto`}
               data-main-content
             >
               {children}

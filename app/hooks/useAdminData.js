@@ -119,6 +119,51 @@ export const useSettings = (category = null) => {
   });
 };
 
+export const useAuditLogs = (page = 1, limit = 20, filters = {}) => {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    ...filters,
+  });
+
+  return useQuery({
+    queryKey: ["admin", "audit-logs", page, limit, filters],
+    queryFn: () => fetcher(`/api/admin/audit-logs?${queryParams}`),
+    ...commonQueryOptions,
+    staleTime: 5 * 60 * 1000, // 5 minutes - logs are frequently updated
+  });
+};
+
+export const useRoles = () => {
+  return useQuery({
+    queryKey: ["admin", "roles"],
+    queryFn: async () => {
+      const response = await fetcher("/api/roles");
+      return response.roles; // Extract roles array from API response
+    },
+    ...commonQueryOptions,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+};
+
+export const useWeeklyDigestSettings = () => {
+  return useQuery({
+    queryKey: ["admin", "weekly-digest", "settings"],
+    queryFn: () => fetcher("/api/admin/weekly-digest/settings"),
+    ...commonQueryOptions,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+};
+
+export const useWeeklyDigestRecent = () => {
+  return useQuery({
+    queryKey: ["admin", "weekly-digest", "recent"],
+    queryFn: () => fetcher("/api/admin/weekly-digest/recent"),
+    ...commonQueryOptions,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
 // Specific item hooks with conditional fetching
 export const useJob = (jobId) => {
   return useQuery({
@@ -173,6 +218,12 @@ export const usePrefetchAdminData = () => {
       "admin",
       "categories",
     ]);
+    const existingAnalytics = queryClient.getQueryData(["admin", "analytics", "30d"]);
+    const existingSettings = queryClient.getQueryData(["admin", "settings"]);
+    const existingAuditLogs = queryClient.getQueryData(["admin", "audit-logs"]);
+    const existingRoles = queryClient.getQueryData(["admin", "roles"]);
+    const existingSystemStatus = queryClient.getQueryData(["admin", "system-status"]);
+    const existingWeeklyDigestSettings = queryClient.getQueryData(["admin", "weekly-digest", "settings"]);
 
     console.log("📊 Cache status:", {
       jobs: !!existingJobs,
@@ -180,6 +231,12 @@ export const usePrefetchAdminData = () => {
       users: !!existingUsers,
       dashboard: !!existingDashboard,
       categories: !!existingCategories,
+      analytics: !!existingAnalytics,
+      settings: !!existingSettings,
+      auditLogs: !!existingAuditLogs,
+      roles: !!existingRoles,
+      systemStatus: !!existingSystemStatus,
+      weeklyDigestSettings: !!existingWeeklyDigestSettings,
     });
 
     const prefetchPromises = [];
@@ -241,6 +298,75 @@ export const usePrefetchAdminData = () => {
       } catch (error) {
         console.log("👤 Skipping users prefetch");
       }
+    }
+
+    // Prefetch analytics data (default 30d)
+    if (!existingAnalytics) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "analytics", "30d"],
+          queryFn: () => fetcher("/api/admin/analytics?range=30d"),
+          staleTime: 15 * 60 * 1000,
+        })
+      );
+    }
+
+    // Prefetch settings
+    if (!existingSettings) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "settings"],
+          queryFn: () => fetcher("/api/admin/settings"),
+          staleTime: 60 * 60 * 1000, // 1 hour - settings rarely change
+        })
+      );
+    }
+
+    // Prefetch audit logs (first page)
+    if (!existingAuditLogs) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "audit-logs"],
+          queryFn: () => fetcher("/api/admin/audit-logs?page=1&limit=20"),
+          staleTime: 5 * 60 * 1000, // 5 minutes - logs are frequently updated
+        })
+      );
+    }
+
+    // Prefetch roles
+    if (!existingRoles) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "roles"],
+          queryFn: async () => {
+            const response = await fetcher("/api/roles");
+            return response.roles; // Extract roles array from API response
+          },
+          staleTime: 30 * 60 * 1000, // 30 minutes
+        })
+      );
+    }
+
+    // Prefetch system status
+    if (!existingSystemStatus) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "system-status"],
+          queryFn: () => fetcher("/api/admin/system-status"),
+          staleTime: 2 * 60 * 1000, // 2 minutes - system status changes frequently
+        })
+      );
+    }
+
+    // Prefetch weekly digest settings
+    if (!existingWeeklyDigestSettings) {
+      prefetchPromises.push(
+        queryClient.prefetchQuery({
+          queryKey: ["admin", "weekly-digest", "settings"],
+          queryFn: () => fetcher("/api/admin/weekly-digest/settings"),
+          staleTime: 30 * 60 * 1000, // 30 minutes
+        })
+      );
     }
 
     // Prefetch jobs-simple for dropdowns
@@ -410,6 +536,18 @@ export const useInvalidateAdminData = () => {
       queryClient.invalidateQueries({
         queryKey: ["admin", "application", applicationId],
       });
+    },
+    invalidateAuditLogs: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
+    },
+    invalidateRoles: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "roles"] });
+    },
+    invalidateWeeklyDigest: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "weekly-digest"] });
+    },
+    invalidateSystemStatus: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "system-status"] });
     },
   };
 };

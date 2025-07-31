@@ -2,20 +2,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is super admin (privilege level 3)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 3
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  // Check if user has permission to view users
+  const authResult = await protectRoute("users", "view");
+  if (authResult.error) return authResult.error;
+  
+  const { session } = authResult;
 
   try {
     const users = await appPrisma.users.findMany({
@@ -25,11 +19,27 @@ export async function GET(req) {
         firstName: true,
         lastName: true,
         phone: true,
-        role: true,
+        role: true, // Keep for backward compatibility
         privilegeLevel: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        user_roles: {
+          where: { is_active: true },
+          select: {
+            id: true,
+            assigned_at: true,
+            roles: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                is_system_role: true,
+              },
+            },
+          },
+          orderBy: { assigned_at: "asc" },
+        },
         _count: {
           select: {
             jobs: true,
@@ -53,18 +63,11 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is super admin (privilege level 3)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 3
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  // Check if user has permission to create users
+  const authResult = await protectRoute("users", "create");
+  if (authResult.error) return authResult.error;
+  
+  const { session } = authResult;
 
   try {
     const body = await req.json();
@@ -158,9 +161,9 @@ export async function POST(req) {
         updatedAt: true,
         _count: {
           select: {
-            createdJobs: true,
+            jobs: true,
             applications: true,
-            savedJobs: true,
+            saved_jobs: true,
           },
         },
       },

@@ -40,7 +40,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
             <div className={`w-3 h-3 rounded-full ${getBadgeColorClass(role.color)}`}></div>
             <div>
               <h3 className="text-lg font-medium text-gray-900">{role.name}</h3>
-              {role.isSystemRole && (
+              {role.is_system_role && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                   System Role
                 </span>
@@ -49,7 +49,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
           </div>
           
           <div className="flex items-center space-x-2">
-            {role.isActive ? (
+            {role.is_active ? (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 Active
               </span>
@@ -70,31 +70,31 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <div className="text-lg font-semibold text-gray-900">
-              {role._count?.rolePermissions || 0}
+              {role._count?.role_permissions || 0}
             </div>
             <div className="text-xs text-gray-500">Permissions</div>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <div className="text-lg font-semibold text-gray-900">
-              {role._count?.users || 0}
+              {role._count?.user_roles || 0}
             </div>
             <div className="text-xs text-gray-500">Users</div>
           </div>
         </div>
 
         {/* Permission Preview */}
-        {showDetails && role.rolePermissions && role.rolePermissions.length > 0 && (
+        {showDetails && role.role_permissions && role.role_permissions.length > 0 && (
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
             <h4 className="text-sm font-medium text-gray-900 mb-2">Permissions:</h4>
             <div className="space-y-1 max-h-32 overflow-y-auto">
-              {role.rolePermissions.slice(0, 5).map((perm, index) => (
+              {role.role_permissions.slice(0, 5).map((perm, index) => (
                 <div key={index} className="text-xs text-gray-600">
-                  • {perm.permission.resource}:{perm.permission.action}
+                  • {perm.permissions.resource}:{perm.permissions.action}
                 </div>
               ))}
-              {role.rolePermissions.length > 5 && (
+              {role.role_permissions.length > 5 && (
                 <div className="text-xs text-gray-500">
-                  + {role.rolePermissions.length - 5} more permissions
+                  + {role.role_permissions.length - 5} more permissions
                 </div>
               )}
             </div>
@@ -131,7 +131,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
               Edit
             </button>
 
-            {!role.isSystemRole && (
+            {!role.is_system_role && (
               <button
                 onClick={() => onDelete(role)}
                 className="inline-flex items-center px-3 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -147,7 +147,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
         </div>
 
         {/* System Role Warning */}
-        {role.isSystemRole && (
+        {role.is_system_role && (
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
             <div className="flex">
               <div className="flex-shrink-0">

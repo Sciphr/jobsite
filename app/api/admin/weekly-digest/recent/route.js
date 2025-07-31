@@ -18,13 +18,13 @@ export async function GET(req) {
     }
 
     // Get recent digests, ordered by most recent first
-    const recentDigests = await appPrisma.weeklyDigests.findMany({
+    const recentDigests = await appPrisma.weekly_digests.findMany({
       orderBy: {
-        sentAt: "desc",
+        sent_at: "desc",
       },
       take: 10, // Get last 10 digests
       include: {
-        sender: {
+        users: {
           select: {
             firstName: true,
             lastName: true,
@@ -37,23 +37,23 @@ export async function GET(req) {
     // Format the data for the frontend
     const formattedDigests = recentDigests.map((digest) => ({
       id: digest.id,
-      dateRange: digest.dateRange,
-      weekStart: digest.weekStart,
-      weekEnd: digest.weekEnd,
-      digestType: digest.digestType,
-      recipientCount: digest.recipientCount,
-      successfulSends: digest.successfulSends,
-      failedSends: digest.failedSends,
-      sentAt: digest.sentAt,
+      dateRange: digest.date_range,
+      weekStart: digest.week_start,
+      weekEnd: digest.week_end,
+      digestType: digest.digest_type,
+      recipientCount: digest.recipient_count,
+      successfulSends: digest.successful_sends,
+      failedSends: digest.failed_sends,
+      sentAt: digest.sent_at,
       theme: digest.theme,
       status: digest.status,
-      errorMessage: digest.errorMessage,
-      sender: digest.sender
+      errorMessage: digest.error_message,
+      sender: digest.users
         ? {
             name:
-              `${digest.sender.firstName || ""} ${digest.sender.lastName || ""}`.trim() ||
+              `${digest.users.firstName || ""} ${digest.users.lastName || ""}`.trim() ||
               "System",
-            email: digest.sender.email,
+            email: digest.users.email,
           }
         : {
             name: "System",
@@ -61,16 +61,16 @@ export async function GET(req) {
           },
       // Format for display
       displayName:
-        digest.digestType === "test"
-          ? `Test Digest - ${digest.dateRange}`
-          : `Weekly Digest - ${digest.dateRange}`,
+        digest.digest_type === "test"
+          ? `Test Digest - ${digest.date_range}`
+          : `Weekly Digest - ${digest.date_range}`,
       displayStatus:
         digest.status === "completed"
-          ? `Sent to ${digest.successfulSends} recipient${digest.successfulSends !== 1 ? "s" : ""}`
+          ? `Sent to ${digest.successful_sends} recipient${digest.successful_sends !== 1 ? "s" : ""}`
           : digest.status === "failed"
-            ? `Failed - ${digest.errorMessage}`
+            ? `Failed - ${digest.error_message}`
             : digest.status,
-      sentAgo: formatTimeAgo(digest.sentAt),
+      sentAgo: formatTimeAgo(digest.sent_at),
     }));
 
     return NextResponse.json({

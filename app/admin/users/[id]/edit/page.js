@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import UserForm from "../../components/UserForm";
-import { User, AlertCircle, Shield, ArrowLeft, Loader2 } from "lucide-react";
+import { User, AlertCircle, Shield, ArrowLeft, Loader2, Settings } from "lucide-react";
 import { useUser } from "@/app/hooks/useAdminData";
+import UserRoleManager from "../../components/UserRoleManager";
 
 export default function EditUserPage() {
   const { data: session, status } = useSession();
@@ -21,12 +22,31 @@ export default function EditUserPage() {
     error: queryError,
   } = useUser(userId);
   const [error, setError] = useState(null);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (isError) {
       setError(queryError?.message || "Failed to load user data");
     }
   }, [isError, queryError]);
+
+  // Fetch available roles for role management
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch('/api/roles');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableRoles(data.roles || []);
+        }
+      } catch (error) {
+        console.error('Error fetching roles:', error);
+      }
+    };
+
+    fetchRoles();
+  }, []);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -45,6 +65,27 @@ export default function EditUserPage() {
       return;
     }
   }, [session, status, userId, router]);
+
+  // Handle role changes
+  const handleRoleChange = async (userId, roleId, action) => {
+    try {
+      const url = `/api/roles/${roleId}/users/${userId}`;
+      const method = action === 'add' ? 'POST' : 'DELETE';
+      
+      const response = await fetch(url, { method });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} role`);
+      }
+
+      // Trigger a refresh of user data
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error managing role:', error);
+      throw error; // Re-throw for UserRoleManager to handle
+    }
+  };
 
   // Show loading state while checking session or fetching data
   if (status === "loading" || loading) {
@@ -148,11 +189,16 @@ export default function EditUserPage() {
               Editing User Profile
             </h3>
             <div className="text-sm text-purple-700 space-y-1">
-              <p>
-                <strong>Current Role:</strong>{" "}
-                {userData?.role?.replace("_", " ")}
-                (Level {userData?.privilegeLevel})
-              </p>
+              <div>
+                <strong>Current Roles:</strong>{" "}
+                {userData?.user_roles && userData.user_roles.length > 0 
+                  ? userData.user_roles.map(ur => ur.roles.name).join(", ")
+                  : userData?.role?.replace("_", " ") || "No roles assigned"
+                }
+                {userData?.privilegeLevel !== undefined && (
+                  <span className="ml-1">(Level {userData.privilegeLevel})</span>
+                )}
+              </div>
               <p>
                 <strong>Status:</strong>{" "}
                 {userData?.isActive ? "Active" : "Inactive"}
@@ -241,7 +287,13 @@ export default function EditUserPage() {
       )}
 
       {/* User Form */}
-      <UserForm userId={userId} initialData={userData} />
+      <UserForm 
+        userId={userId} 
+        initialData={userData} 
+        refreshTrigger={refreshTrigger}
+        availableRoles={availableRoles}
+        onRoleChange={handleRoleChange}
+      />
 
       {/* Additional Actions */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">

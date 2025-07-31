@@ -1,20 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
+  // Check if user has permission to view applications
+  const authResult = await protectRoute("applications", "view");
+  if (authResult.error) return authResult.error;
 
-  // Check if user is admin (privilege level 1 or higher - HR can see applications)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const { session } = authResult;
 
   try {
     const applications = await appPrisma.applications.findMany({
@@ -53,8 +47,8 @@ export async function GET(req) {
       id: app.id,
       name:
         app.name ||
-        (app.user ? `${app.user.firstName} ${app.user.lastName}`.trim() : null),
-      email: app.email || app.user?.email,
+        (app.users ? `${app.users.firstName} ${app.users.lastName}`.trim() : null),
+      email: app.email || app.users?.email,
       phone: app.phone,
       status: app.status,
       coverLetter: app.coverLetter,
@@ -64,7 +58,7 @@ export async function GET(req) {
       updatedAt: app.updatedAt,
       jobId: app.jobId,
       userId: app.userId,
-      job: app.job,
+      job: app.jobs, // Alias for frontend compatibility
     }));
 
     return new Response(JSON.stringify(formattedApplications), { status: 200 });

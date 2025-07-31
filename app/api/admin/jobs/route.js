@@ -6,20 +6,14 @@ import { getSystemSetting } from "../../../lib/settings";
 import { sendJobPublishedNotification } from "../../../lib/email";
 import { logAuditEvent } from "../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../lib/auditLog";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher for jobs management)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  // Check if user has permission to view jobs
+  const authResult = await protectRoute("jobs", "view");
+  if (authResult.error) return authResult.error;
+  
+  const { session } = authResult;
 
   try {
     const jobs = await appPrisma.jobs.findMany({
@@ -188,7 +182,7 @@ export async function POST(req) {
     }
 
     // Check if slug is unique
-    const existingJob = await appPrisma.job.findUnique({
+    const existingJob = await appPrisma.jobs.findUnique({
       where: { slug },
     });
 
@@ -232,7 +226,7 @@ export async function POST(req) {
       }
     }
 
-    const newJob = await appPrisma.job.create({
+    const newJob = await appPrisma.jobs.create({
       data: {
         title,
         slug,

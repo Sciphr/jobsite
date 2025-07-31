@@ -2,20 +2,15 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
+    // Check if user has permission to view settings
+    const authResult = await protectRoute("settings", "view");
+    if (authResult.error) return authResult.error;
 
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
+    const { session } = authResult;
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
@@ -72,17 +67,11 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
+    // Check if user has permission to edit settings
+    const authResult = await protectRoute("settings", "edit_system");
+    if (authResult.error) return authResult.error;
 
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
+    const { session } = authResult;
 
     const {
       key,

@@ -30,7 +30,7 @@ export async function GET(req, { params }) {
     const job = await appPrisma.jobs.findUnique({
       where: { id },
       include: {
-        category: {
+        categories: {
           select: {
             id: true,
             name: true,
@@ -97,13 +97,14 @@ export async function PATCH(req, { params }) {
   }
 
   const { id } = await params;
+  let body;
 
   try {
-    const body = await req.json();
+    body = await req.json();
     const requestContext = extractRequestContext(req);
 
     // Get current job data for audit logging
-    const currentJob = await appPrisma.job.findUnique({
+    const currentJob = await appPrisma.jobs.findUnique({
       where: { id },
       select: {
         id: true,
@@ -168,7 +169,7 @@ export async function PATCH(req, { params }) {
         );
         if (autoExpireDays > 0) {
           // Only set auto-expiration if it's not already set
-          const currentJob = await appPrisma.job.findUnique({
+          const currentJob = await appPrisma.jobs.findUnique({
             where: { id },
             select: { autoExpiresAt: true, postedAt: true },
           });
@@ -269,11 +270,11 @@ export async function PATCH(req, { params }) {
 
     console.log("Update data being sent to Prisma:", updateData);
 
-    const updatedJob = await appPrisma.job.update({
+    const updatedJob = await appPrisma.jobs.update({
       where: { id },
       data: updateData,
       include: {
-        category: {
+        categories: {
           select: {
             id: true,
             name: true,
@@ -317,7 +318,7 @@ export async function PATCH(req, { params }) {
           changedFields,
           wasJustPublished,
 
-          category: updatedJob.category?.name,
+          category: updatedJob.categories?.name,
         },
         ...requestContext,
       },
@@ -401,7 +402,7 @@ export async function DELETE(req, { params }) {
     const requestContext = extractRequestContext(req);
 
     // Check if job has applications and get job data for audit
-    const jobWithApplications = await appPrisma.job.findUnique({
+    const jobWithApplications = await appPrisma.jobs.findUnique({
       where: { id },
       include: {
         applications: true,
@@ -444,7 +445,7 @@ export async function DELETE(req, { params }) {
     }
 
     // Delete the job
-    await appPrisma.job.delete({
+    await appPrisma.jobs.delete({
       where: { id },
     });
 

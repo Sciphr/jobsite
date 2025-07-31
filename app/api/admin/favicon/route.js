@@ -148,7 +148,7 @@ export async function POST(request) {
 
         // Update existing favicon setting
         console.log("Updating existing favicon setting...");
-        await appPrisma.setting.update({
+        await appPrisma.settings.update({
           where: { id: existingFaviconSetting.id },
           data: {
             value: filePath,
@@ -158,7 +158,7 @@ export async function POST(request) {
       } else {
         // Create new favicon setting
         console.log("Creating new favicon setting...");
-        await appPrisma.setting.create({
+        await appPrisma.settings.create({
           data: {
             key: "site_favicon_url",
             value: filePath,
@@ -248,7 +248,7 @@ export async function DELETE() {
 
     // Delete from database first
     console.log("Deleting favicon setting from database...");
-    await appPrisma.setting.delete({
+    await appPrisma.settings.delete({
       where: { id: faviconSetting.id },
     });
 

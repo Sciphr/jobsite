@@ -7,11 +7,21 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("assigned"); // "assigned" or "available"
 
   useEffect(() => {
     if (isOpen && role) {
+      console.log('🔍 UserRoleAssignmentModal Debug:', { isOpen, role, roleId: role?.id });
+      console.log('🔍 Modal rendering state:', { 
+        loading, 
+        error, 
+        usersLength: users.length,
+        assignedLength: assignedUsers.length,
+        availableLength: availableUsers.length,
+        selectedTab 
+      });
       fetchUsers();
     }
   }, [isOpen, role]);
@@ -19,8 +29,10 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
+      console.log('📡 Fetching users for role:', role.id);
       const response = await fetch(`/api/roles/${role.id}/users`);
       
       if (!response.ok) {
@@ -28,10 +40,17 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
       }
 
       const data = await response.json();
+      console.log('📊 User data received:', data);
       setUsers(data.allUsers || []);
       setAssignedUsers(data.assignedUsers || []);
       setAvailableUsers(data.availableUsers || []);
+      console.log('📊 State after setting:', {
+        allUsersCount: data.allUsers?.length || 0,
+        assignedCount: data.assignedUsers?.length || 0,
+        availableCount: data.availableUsers?.length || 0
+      });
     } catch (err) {
+      console.error('❌ Error fetching users:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -41,6 +60,7 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
   const handleAssignUser = async (userId) => {
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch(`/api/roles/${role.id}/users/${userId}`, {
@@ -58,6 +78,11 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
         setAssignedUsers(prev => [...prev, user]);
         setAvailableUsers(prev => prev.filter(u => u.id !== userId));
       }
+
+      // Refresh parent component data to update role counts
+      if (onUsersUpdated) {
+        onUsersUpdated();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -68,6 +93,7 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
   const handleUnassignUser = async (userId) => {
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch(`/api/roles/${role.id}/users/${userId}`, {
@@ -79,11 +105,29 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
         throw new Error(errorData.error || "Failed to unassign user");
       }
 
-      // Move user from assigned to available
+      const result = await response.json();
+      
+      // Show special message if fallback was applied
+      if (result.fallbackApplied) {
+        setSuccessMessage(`${result.message} - This ensures the user maintains system access.`);
+        // Auto-hide success message after 8 seconds
+        setTimeout(() => setSuccessMessage(null), 8000);
+      }
+
+      // Move user from assigned to available (if they don't have the role anymore)
+      // Note: If fallback was applied, they might still appear in available users for other roles
       const user = assignedUsers.find(u => u.id === userId);
-      if (user) {
+      if (user && !result.fallbackApplied) {
         setAvailableUsers(prev => [...prev, user]);
         setAssignedUsers(prev => prev.filter(u => u.id !== userId));
+      }
+
+      // Refresh the data to show updated roles
+      await fetchUsers();
+      
+      // Also refresh parent component data to update role counts
+      if (onUsersUpdated) {
+        onUsersUpdated();
       }
     } catch (err) {
       setError(err.message);
@@ -120,24 +164,27 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
   };
 
   const handleClose = () => {
+    // Refresh parent component data to update role counts
     onUsersUpdated();
     onClose();
   };
 
-  const filteredAssignedUsers = assignedUsers.filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAssignedUsers = assignedUsers.filter(user => {
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
-  const filteredAvailableUsers = availableUsers.filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAvailableUsers = availableUsers.filter(user => {
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   if (!isOpen || !role) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[60] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Backdrop */}
         <div
@@ -146,7 +193,7 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
         ></div>
 
         {/* Modal */}
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6 relative z-[61]">
           <div className="sm:flex sm:items-start">
             <div className="w-full">
               {/* Header */}
@@ -187,7 +234,7 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
                   </div>
                   <div>
                     <div className="text-lg font-semibold text-gray-900">
-                      {role._count?.permissions || 0}
+                      {role._count?.role_permissions || 0}
                     </div>
                     <div className="text-sm text-gray-600">Permissions</div>
                   </div>
@@ -205,6 +252,23 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
                     </div>
                     <div className="ml-3">
                       <p className="text-sm text-red-800">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Message Display */}
+              {successMessage && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-800">Automatic Role Assignment</h3>
+                      <p className="text-sm text-blue-700 mt-1">{successMessage}</p>
                     </div>
                   </div>
                 </div>
@@ -279,18 +343,18 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
                               <div className="flex-shrink-0">
                                 <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
                                   <span className="text-sm font-medium text-white">
-                                    {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                                    {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                                   </span>
                                 </div>
                               </div>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {user.name || "Unnamed User"}
+                                  {`${user.firstName || ''} ${user.lastName || ''}`.trim() || "Unnamed User"}
                                 </div>
                                 <div className="text-sm text-gray-500">{user.email}</div>
-                                {user.userRole && (
+                                {user.user_roles && user.user_roles.length > 0 && (
                                   <div className="text-xs text-gray-400">
-                                    Previous role: {user.userRole.name}
+                                    Other roles: {user.user_roles.filter(ur => ur.role_id !== role.id).map(ur => ur.roles.name).join(", ")}
                                   </div>
                                 )}
                               </div>
@@ -330,18 +394,18 @@ export default function UserRoleAssignmentModal({ isOpen, role, onClose, onUsers
                               <div className="flex-shrink-0">
                                 <div className="h-8 w-8 bg-gray-500 rounded-full flex items-center justify-center">
                                   <span className="text-sm font-medium text-white">
-                                    {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                                    {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                                   </span>
                                 </div>
                               </div>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {user.name || "Unnamed User"}
+                                  {`${user.firstName || ''} ${user.lastName || ''}`.trim() || "Unnamed User"}
                                 </div>
                                 <div className="text-sm text-gray-500">{user.email}</div>
-                                {user.userRole && (
+                                {user.user_roles && user.user_roles.length > 0 && (
                                   <div className="text-xs text-gray-400">
-                                    Current role: {user.userRole.name}
+                                    Current roles: {user.user_roles.map(ur => ur.roles.name).join(", ")}
                                   </div>
                                 )}
                               </div>

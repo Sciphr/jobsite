@@ -24,23 +24,25 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [allowSubmission, setAllowSubmission] = useState(false);
 
   useEffect(() => {
     if (isOpen && role) {
+      console.log('🔍 EditRoleModal Debug:', { isOpen, role, currentStep, initialLoad });
       // Populate form with role data
       setFormData({
         name: role.name || "",
         description: role.description || "",
         color: role.color || "blue",
-        isActive: role.isActive ?? true,
+        isActive: role.is_active ?? true,
       });
 
       // Convert role permissions to set
       const permissionSet = new Set();
-      if (role.rolePermissions) {
-        role.rolePermissions.forEach(rp => {
-          if (rp.permission) {
-            permissionSet.add(`${rp.permission.resource}:${rp.permission.action}`);
+      if (role.role_permissions) {
+        role.role_permissions.forEach(rp => {
+          if (rp.permissions) {
+            permissionSet.add(`${rp.permissions.resource}:${rp.permissions.action}`);
           }
         });
       }
@@ -49,6 +51,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
       setCurrentStep(1);
       setError(null);
       setInitialLoad(false);
+      setAllowSubmission(false);
     }
   }, [isOpen, role]);
 
@@ -65,16 +68,20 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
   };
 
   const handleNextStep = () => {
+    console.log('🔧 handleNextStep called, currentStep:', currentStep, 'formData:', formData);
     if (currentStep === 1) {
       // Validate basic info
       if (!formData.name.trim()) {
+        console.log('❌ Validation failed: name required');
         setError("Role name is required");
         return;
       }
       if (formData.name.length < 2) {
+        console.log('❌ Validation failed: name too short');
         setError("Role name must be at least 2 characters long");
         return;
       }
+      console.log('✅ Validation passed, moving to step 2');
       setError(null);
       setCurrentStep(2);
     }
@@ -88,6 +95,14 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔧 handleSubmit called, currentStep:', currentStep, 'allowSubmission:', allowSubmission);
+    
+    // Only allow submission on step 2 and when explicitly requested
+    if (currentStep !== 2 || !allowSubmission) {
+      console.log('❌ Form submission blocked - not on final step or not allowed');
+      setAllowSubmission(false); // Reset flag
+      return;
+    }
     
     if (selectedPermissions.size === 0) {
       setError("Please select at least one permission");
@@ -104,7 +119,10 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
+          color: formData.color,
+          is_active: formData.isActive,
           permissions: Array.from(selectedPermissions),
         }),
       });
@@ -115,6 +133,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
       }
 
       const data = await response.json();
+      console.log('✅ Role updated successfully, calling onRoleUpdated');
       onRoleUpdated(data.role);
     } catch (err) {
       setError(err.message);
@@ -126,7 +145,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
   if (!isOpen || !role) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[60] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Backdrop */}
         <div
@@ -135,7 +154,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
         ></div>
 
         {/* Modal */}
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6 relative z-[61]">
           <div className="sm:flex sm:items-start">
             <div className="w-full">
               {/* Header */}
@@ -148,7 +167,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
                     <p className="text-sm text-gray-500">
                       Step {currentStep} of 2: {currentStep === 1 ? "Basic Information" : "Permissions"}
                     </p>
-                    {role.isSystemRole && (
+                    {role.is_system_role && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         System Role
                       </span>
@@ -167,7 +186,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
               </div>
 
               {/* System Role Warning */}
-              {role.isSystemRole && (
+              {role.is_system_role && (
                 <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                   <div className="flex">
                     <div className="flex-shrink-0">
@@ -228,7 +247,12 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
                 </div>
               )}
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} onKeyDown={(e) => {
+                if (e.key === 'Enter' && currentStep === 1) {
+                  e.preventDefault();
+                  handleNextStep();
+                }
+              }}>
                 {currentStep === 1 && (
                   <div className="space-y-6">
                     {/* Role Name */}
@@ -243,13 +267,13 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
                         required
                         value={formData.name}
                         onChange={handleInputChange}
-                        disabled={role.isSystemRole}
+                        disabled={role.is_system_role}
                         className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          role.isSystemRole ? 'bg-gray-100 cursor-not-allowed' : ''
+                          role.is_system_role ? 'bg-gray-100 cursor-not-allowed' : ''
                         }`}
                         placeholder="e.g., Content Manager, Team Lead, etc."
                       />
-                      {role.isSystemRole && (
+                      {role.is_system_role && (
                         <p className="mt-1 text-xs text-gray-500">System role names cannot be modified</p>
                       )}
                     </div>
@@ -313,6 +337,10 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
 
                 {currentStep === 2 && !initialLoad && (
                   <div>
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">Select Permissions</h4>
+                      <p className="text-sm text-gray-600">Choose the permissions this role should have.</p>
+                    </div>
                     <PermissionSelector
                       selectedPermissions={selectedPermissions}
                       onPermissionChange={setSelectedPermissions}
@@ -361,6 +389,7 @@ export default function EditRoleModal({ isOpen, role, onClose, onRoleUpdated }) 
                       <button
                         type="submit"
                         disabled={loading || selectedPermissions.size === 0}
+                        onClick={() => setAllowSubmission(true)}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? (

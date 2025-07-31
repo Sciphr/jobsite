@@ -34,8 +34,8 @@ export async function PATCH(req, { params }) {
     const currentApplication = await appPrisma.applications.findUnique({
       where: { id },
       include: {
-        job: { select: { id: true, title: true } },
-        user: {
+        jobs: { select: { id: true, title: true } },
+        users: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
       },
@@ -73,7 +73,7 @@ export async function PATCH(req, { params }) {
         updatedAt: new Date(),
       },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -85,7 +85,7 @@ export async function PATCH(req, { params }) {
             applicationDeadline: true,
           },
         },
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -99,8 +99,8 @@ export async function PATCH(req, { params }) {
     // Create audit logs for the changes
     const applicantName =
       updatedApplication.name ||
-      (updatedApplication.user
-        ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim()
+      (updatedApplication.users
+        ? `${updatedApplication.users.firstName} ${updatedApplication.users.lastName}`.trim()
         : "Unknown");
     const actorName =
       session.user.firstName && session.user.lastName
@@ -160,10 +160,10 @@ export async function PATCH(req, { params }) {
       id: updatedApplication.id,
       name:
         updatedApplication.name ||
-        (updatedApplication.user
-          ? `${updatedApplication.user.firstName} ${updatedApplication.user.lastName}`.trim()
+        (updatedApplication.users
+          ? `${updatedApplication.users.firstName} ${updatedApplication.users.lastName}`.trim()
           : null),
-      email: updatedApplication.email || updatedApplication.user?.email,
+      email: updatedApplication.email || updatedApplication.users?.email,
       phone: updatedApplication.phone,
       status: updatedApplication.status,
       coverLetter: updatedApplication.coverLetter,
@@ -173,7 +173,7 @@ export async function PATCH(req, { params }) {
       updatedAt: updatedApplication.updatedAt,
       jobId: updatedApplication.jobId,
       userId: updatedApplication.userId,
-      job: updatedApplication.job,
+      job: updatedApplication.jobs, // Alias for frontend compatibility
     };
 
     return new Response(JSON.stringify(formattedApplication), { status: 200 });
@@ -215,7 +215,7 @@ export async function GET(req, { params }) {
     const application = await appPrisma.applications.findUnique({
       where: { id },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -225,7 +225,7 @@ export async function GET(req, { params }) {
             requirements: true,
           },
         },
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -251,11 +251,11 @@ export async function GET(req, { params }) {
       id: application.id,
       name:
         application.name ||
-        (application.user
-          ? `${application.user.firstName} ${application.user.lastName}`.trim()
+        (application.users
+          ? `${application.users.firstName} ${application.users.lastName}`.trim()
           : null),
-      email: application.email || application.user?.email,
-      phone: application.phone || application.user?.phone,
+      email: application.email || application.users?.email,
+      phone: application.phone || application.users?.phone,
       status: application.status,
       coverLetter: application.coverLetter,
       resumeUrl: application.resumeUrl,
@@ -264,8 +264,8 @@ export async function GET(req, { params }) {
       updatedAt: application.updatedAt,
       jobId: application.jobId,
       userId: application.userId,
-      job: application.job,
-      user: application.user,
+      job: application.jobs, // Alias for frontend compatibility
+      user: application.users, // Alias for frontend compatibility
     };
 
     return new Response(JSON.stringify(formattedApplication), { status: 200 });

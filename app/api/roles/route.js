@@ -27,22 +27,26 @@ export async function GET(request) {
     }
 
     // Fetch all roles with their permissions and user counts
-    const roles = await appPrisma.role.findMany({
+    const roles = await appPrisma.roles.findMany({
       include: {
-        rolePermissions: {
+        role_permissions: {
           include: {
-            permission: true,
+            permissions: true,
           },
         },
         _count: {
           select: {
-            users: true,
-            rolePermissions: true,
+            user_roles: {
+              where: {
+                is_active: true
+              }
+            },
+            role_permissions: true,
           },
         },
       },
       orderBy: [
-        { isSystemRole: "desc" }, // System roles first
+        { is_system_role: "desc" }, // System roles first
         { name: "asc" },
       ],
     });
@@ -105,7 +109,7 @@ export async function POST(request) {
     }
 
     // Check if role name already exists
-    const existingRole = await appPrisma.role.findFirst({
+    const existingRole = await appPrisma.roles.findFirst({
       where: {
         name: name.trim(),
       },
@@ -124,7 +128,7 @@ export async function POST(request) {
       return { resource, action };
     });
 
-    const validPermissions = await appPrisma.permission.findMany({
+    const validPermissions = await appPrisma.permissions.findMany({
       where: {
         OR: permissionKeys,
       },
@@ -140,39 +144,41 @@ export async function POST(request) {
     // Create the role with permissions in a transaction
     const newRole = await appPrisma.$transaction(async (prisma) => {
       // Create the role
-      const role = await prisma.role.create({
+      const role = await prisma.roles.create({
         data: {
           name: name.trim(),
           description: description?.trim() || null,
-          color: color || "blue",
-          isActive: isActive ?? true,
-          isSystemRole: false,
+          color: color || "#6b7280",
+          is_active: isActive ?? true,
+          is_system_role: false,
+          created_by: session.user.id,
         },
       });
 
       // Create role-permission associations
       const rolePermissions = validPermissions.map((permission) => ({
-        roleId: role.id,
-        permissionId: permission.id,
+        role_id: role.id,
+        permission_id: permission.id,
+        granted_by: session.user.id,
       }));
 
-      await prisma.rolePermission.createMany({
+      await prisma.role_permissions.createMany({
         data: rolePermissions,
       });
 
       // Return role with permissions and counts
-      return await prisma.role.findUnique({
+      return await prisma.roles.findUnique({
         where: { id: role.id },
         include: {
-          rolePermissions: {
+          role_permissions: {
             include: {
-              permission: true,
+              permissions: true,
             },
           },
           _count: {
             select: {
-              users: true,
-              rolePermissions: true,
+              user_roles: true,
+              role_permissions: true,
             },
           },
         },

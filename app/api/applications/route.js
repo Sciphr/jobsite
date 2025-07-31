@@ -247,7 +247,14 @@ export async function POST(request) {
       request
     );
 
-    return Response.json(application, { status: 201 });
+    // Transform the response to alias 'jobs' as 'job' for frontend compatibility
+    const transformedApplication = {
+      ...application,
+      job: application.jobs, // Alias jobs as job
+      jobs: undefined // Remove the original jobs field
+    };
+
+    return Response.json(transformedApplication, { status: 201 });
   } catch (error) {
     console.error("Apply to job error:", error);
 
@@ -303,7 +310,14 @@ export async function GET(request) {
       orderBy: { appliedAt: "desc" },
     });
 
-    return Response.json(applications, { status: 200 });
+    // Transform the response to alias 'jobs' as 'job' for frontend compatibility
+    const transformedApplications = applications.map(app => ({
+      ...app,
+      job: app.jobs, // Alias jobs as job
+      jobs: undefined // Remove the original jobs field
+    }));
+
+    return Response.json(transformedApplications, { status: 200 });
   } catch (error) {
     console.error("Applications fetch error:", error);
     return Response.json({ message: "Internal server error" }, { status: 500 });

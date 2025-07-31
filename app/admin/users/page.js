@@ -35,7 +35,15 @@ import {
   FileSpreadsheet,
   FileText,
   Loader2,
+  Settings,
+  X,
+  Grid3X3,
+  List,
+  Move,
 } from "lucide-react";
+import UserRoleManager from "./components/UserRoleManager";
+import UserEditRoleModal from "./components/UserEditRoleModal";
+import SimpleDragDropFallback from "./components/SimpleDragDropFallback";
 
 export default function AdminUsers() {
   const { data: session } = useSession();
@@ -43,9 +51,15 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [roleCountFilter, setRoleCountFilter] = useState("all");
+  const [roleComboFilter, setRoleComboFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUserForRoles, setSelectedUserForRoles] = useState(null);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [viewMode, setViewMode] = useState("list"); // "list" or "interactive"
   const { prefetchAll } = usePrefetchAdminData();
   const { data: users = [], isLoading, isError, error, refetch } = useUsers();
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +68,24 @@ export default function AdminUsers() {
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
 
-  // ✅ REPLACE WITH THIS:
+  // Fetch available roles for role management
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch('/api/roles');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableRoles(data.roles || []);
+        }
+      } catch (error) {
+        console.error('Error fetching roles:', error);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
+  // ✅ Enhanced filtering with advanced options
   const filteredUsers = useMemo(() => {
     let filtered = users;
 
@@ -68,9 +99,14 @@ export default function AdminUsers() {
       );
     }
 
-    // Role filter
+    // Role filter - now works with multiple roles
     if (roleFilter !== "all") {
-      filtered = filtered.filter((user) => user.role === roleFilter);
+      filtered = filtered.filter((user) => {
+        // Check both old role field and new user_roles
+        if (user.role === roleFilter) return true;
+        if (user.user_roles?.some(ur => ur.roles.name.toLowerCase().replace(' ', '_') === roleFilter)) return true;
+        return false;
+      });
     }
 
     // Status filter
@@ -79,8 +115,47 @@ export default function AdminUsers() {
       filtered = filtered.filter((user) => user.isActive === isActive);
     }
 
+    // Role count filter
+    if (roleCountFilter !== "all") {
+      filtered = filtered.filter((user) => {
+        const roleCount = user.user_roles?.length || 0;
+        switch (roleCountFilter) {
+          case "single":
+            return roleCount === 1;
+          case "multiple":
+            return roleCount >= 2;
+          case "none":
+            return roleCount === 0;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Role combination filter
+    if (roleComboFilter !== "all") {
+      filtered = filtered.filter((user) => {
+        const userRoleNames = user.user_roles?.map(ur => ur.roles.name) || [];
+        
+        switch (roleComboFilter) {
+          case "admin_no_hr":
+            return userRoleNames.includes("Admin") && !userRoleNames.includes("HR");
+          case "hr_no_admin":
+            return userRoleNames.includes("HR") && !userRoleNames.includes("Admin");
+          case "user_only":
+            return userRoleNames.length === 1 && userRoleNames.includes("User");
+          case "missing_user":
+            return !userRoleNames.includes("User");
+          case "super_admin_combo":
+            return userRoleNames.includes("Super Admin") && userRoleNames.length > 1;
+          default:
+            return true;
+        }
+      });
+    }
+
     return filtered;
-  }, [users, searchTerm, roleFilter, statusFilter]); // ✅ Depend on actual data, not .length
+  }, [users, searchTerm, roleFilter, statusFilter, roleCountFilter, roleComboFilter]);
 
   // ✅ NEW: Client-side pagination
   const paginatedUsers = useMemo(() => {
@@ -114,6 +189,197 @@ export default function AdminUsers() {
       console.error("Error refreshing users:", error);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleManageRoles = (user) => {
+    setSelectedUserForRoles(user);
+    setShowRoleModal(true);
+  };
+
+  const handleRoleChange = async (userId, roleId, action) => {
+    try {
+      const url = `/api/roles/${roleId}/users/${userId}`;
+      const method = action === 'add' ? 'POST' : 'DELETE';
+      
+      const response = await fetch(url, { method });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} role`);
+      }
+
+      // Refresh users data to show updated roles
+      await refetch();
+    } catch (error) {
+      console.error('Error managing role:', error);
+    }
+  };
+
+  const handleCloseRoleModal = () => {
+    setShowRoleModal(false);
+    setSelectedUserForRoles(null);
+  };
+
+  // Bulk role assignment handler
+  const handleBulkRoleAssignment = async (roleId, action) => {
+    if (selectedUsers.length === 0) return;
+
+    const roleName = availableRoles.find(r => r.id === roleId)?.name || 'Unknown Role';
+    const actionText = action === 'add' ? 'assign' : 'remove';
+    const actionPastTense = action === 'add' ? 'assigned' : 'removed';
+    
+    const confirmMessage = `Are you sure you want to ${actionText} the "${roleName}" role ${action === 'add' ? 'to' : 'from'} ${selectedUsers.length} user${selectedUsers.length !== 1 ? 's' : ''}?`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    const results = {
+      success: 0,
+      failed: 0,
+      alreadyHad: 0,
+      didntHave: 0,
+      errors: []
+    };
+
+    try {
+      // Process each user
+      for (const userId of selectedUsers) {
+        try {
+          const url = `/api/roles/${roleId}/users/${userId}`;
+          const method = action === 'add' ? 'POST' : 'DELETE';
+          
+          const response = await fetch(url, { method });
+          
+          if (response.ok) {
+            results.success++;
+          } else {
+            const errorData = await response.json();
+            if (errorData.error?.includes('already assigned') || errorData.error?.includes('already has')) {
+              results.alreadyHad++;
+            } else if (errorData.error?.includes('not assigned') || errorData.error?.includes('not found')) {
+              results.didntHave++;
+            } else {
+              results.failed++;
+              results.errors.push(`User ${userId}: ${errorData.error}`);
+            }
+          }
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`User ${userId}: ${error.message}`);
+        }
+      }
+
+      // Show results summary
+      let message = '';
+      if (results.success > 0) {
+        message += `✅ ${results.success} user${results.success !== 1 ? 's' : ''} successfully ${actionPastTense}. `;
+      }
+      if (results.alreadyHad > 0) {
+        message += `ℹ️ ${results.alreadyHad} user${results.alreadyHad !== 1 ? 's' : ''} already had the role. `;
+      }
+      if (results.didntHave > 0) {
+        message += `ℹ️ ${results.didntHave} user${results.didntHave !== 1 ? 's' : ''} didn't have the role. `;
+      }
+      if (results.failed > 0) {
+        message += `❌ ${results.failed} operation${results.failed !== 1 ? 's' : ''} failed.`;
+      }
+
+      alert(message || 'No changes were made.');
+
+      // Refresh the user list
+      if (results.success > 0) {
+        await refetch();
+        setSelectedUsers([]); // Clear selection
+      }
+
+    } catch (error) {
+      console.error('Bulk role assignment error:', error);
+      alert('An error occurred during bulk role assignment. Please try again.');
+    }
+  };
+
+  // Role templates handler  
+  const handleBulkRoleTemplate = async (templateType) => {
+    if (selectedUsers.length === 0) return;
+
+    // Define role templates
+    const templates = {
+      new_employee: {
+        name: 'New Employee',
+        roles: ['User']
+      },
+      manager: {
+        name: 'Team Manager', 
+        roles: ['User', 'HR']
+      },
+      admin: {
+        name: 'Administrator',
+        roles: ['User', 'Admin']
+      },
+      super_admin: {
+        name: 'Super Administrator',
+        roles: ['User', 'HR', 'Admin', 'Super Admin']
+      }
+    };
+
+    const template = templates[templateType];
+    if (!template) return;
+
+    const confirmMessage = `Are you sure you want to apply the "${template.name}" template to ${selectedUsers.length} user${selectedUsers.length !== 1 ? 's' : ''}?\n\nThis will assign the following roles:\n• ${template.roles.join('\n• ')}`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
+
+    try {
+      // For each user, assign all roles in the template
+      for (const userId of selectedUsers) {
+        for (const roleName of template.roles) {
+          // Find the role ID by name
+          const role = availableRoles.find(r => r.name === roleName);
+          if (!role) continue;
+
+          try {
+            const response = await fetch(`/api/roles/${role.id}/users/${userId}`, {
+              method: 'POST'
+            });
+            
+            if (response.ok) {
+              totalSuccess++;
+            } else {
+              const errorData = await response.json();
+              // Don't count "already assigned" as failures
+              if (!errorData.error?.includes('already assigned') && !errorData.error?.includes('already has')) {
+                totalFailed++;
+              }
+            }
+          } catch (error) {
+            totalFailed++;
+          }
+        }
+      }
+
+      // Show results
+      let message = `Template "${template.name}" applied!\n`;
+      if (totalSuccess > 0) {
+        message += `✅ ${totalSuccess} role assignments completed successfully.\n`;
+      }
+      if (totalFailed > 0) {
+        message += `❌ ${totalFailed} role assignments failed.`;
+      }
+
+      alert(message);
+
+      // Refresh the user list
+      if (totalSuccess > 0) {
+        await refetch();
+        setSelectedUsers([]); // Clear selection
+      }
+
+    } catch (error) {
+      console.error('Template assignment error:', error);
+      alert('An error occurred during template assignment. Please try again.');
     }
   };
 
@@ -322,6 +588,33 @@ export default function AdminUsers() {
           <p className="admin-text-light mt-2 text-sm sm:text-base">
             Manage user accounts and permissions
           </p>
+          
+          {/* View Mode Toggle */}
+          <div className="flex items-center space-x-1 mt-3">
+            <span className="text-xs admin-text-light mr-2">View:</span>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
+                viewMode === "list"
+                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                  : "admin-text-light hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              <List className="h-3 w-3" />
+              <span>List View</span>
+            </button>
+            <button
+              onClick={() => setViewMode("interactive")}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
+                viewMode === "interactive"
+                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                  : "admin-text-light hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              <Settings className="h-3 w-3" />
+              <span>Visual Mode</span>
+            </button>
+          </div>
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           {/* ✅ NEW: Export Dropdown */}
@@ -375,7 +668,13 @@ export default function AdminUsers() {
       {/* Stats Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {roleOptions.map((role, index) => {
-          const count = users.filter((user) => user.role === role.value).length;
+          // Count users with this role in new multiple roles system
+          const count = users.filter((user) => {
+            // Check both old role field and new user_roles
+            if (user.role === role.value) return true;
+            if (user.user_roles?.some(ur => ur.roles.name.toLowerCase().replace(' ', '_') === role.value)) return true;
+            return false;
+          }).length;
           const RoleIcon = getRoleIcon(role.value);
           const statClasses = getStatCardClasses(index);
 
@@ -400,57 +699,118 @@ export default function AdminUsers() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="admin-card p-4 sm:p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
-            />
+      {/* Enhanced Filters - Only show in list view */}
+      {viewMode === "list" && (
+        <div className="admin-card p-4 sm:p-6 rounded-lg shadow">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium admin-text">Filter & Search</h3>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setRoleFilter('all');
+                setStatusFilter('all');
+                setRoleCountFilter('all');
+                setRoleComboFilter('all');
+              }}
+              className="text-xs text-purple-600 hover:text-purple-800 font-medium"
+            >
+              Clear All Filters
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Enhanced Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search users, emails..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-600 dark:placeholder-gray-400 admin-text bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            {/* Role Filter */}
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            >
+              <option value="all">All Roles</option>
+              {availableRoles.map((role) => (
+                <option key={role.id} value={role.name.toLowerCase().replace(' ', '_')}>
+                  Has {role.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            {/* Role Count Filter */}  
+            <select
+              value={roleCountFilter}
+              onChange={(e) => setRoleCountFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            >
+              <option value="all">Any Role Count</option>
+              <option value="single">Single Role (1)</option>
+              <option value="multiple">Multiple Roles (2+)</option>
+              <option value="none">No Roles (0)</option>
+            </select>
           </div>
 
-          {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
-          >
-            <option value="all">All Roles</option>
-            {roleOptions.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </select>
+          {/* Advanced Filter Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Role Combination Filter */}
+            <select
+              value={roleComboFilter}
+              onChange={(e) => setRoleComboFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            >
+              <option value="all">All Role Combinations</option>
+              <option value="admin_no_hr">Admin but not HR</option>
+              <option value="hr_no_admin">HR but not Admin</option>
+              <option value="user_only">User role only</option>
+              <option value="missing_user">Missing User role</option>
+              <option value="super_admin_combo">Super Admin + other roles</option>
+            </select>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            {/* Filter Results Summary */}
+            <div className="flex items-center justify-end text-sm admin-text-light">
+              <span>
+                Showing {filteredUsers.length} of {users.length} users
+                {(searchTerm || roleFilter !== 'all' || statusFilter !== 'all' || roleCountFilter !== 'all' || roleComboFilter !== 'all') && 
+                  <span className="ml-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                    Filtered
+                  </span>
+                }
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+        </div>
+      )}
 
-      {/* ✅ NEW: Bulk Actions */}
-      {selectedUsers.length > 0 && (
+      {/* ✅ NEW: Bulk Actions - Only show in list view */}
+      {viewMode === "list" && selectedUsers.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex flex-col space-y-3 sm:flex-row items-start sm:items-center justify-between">
             <span className="text-blue-800 dark:text-blue-200 font-medium">
               {selectedUsers.length} user{selectedUsers.length !== 1 ? "s" : ""} selected
             </span>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Role Change Dropdown */}
+              {/* Bulk Role Actions */}
               <div className="relative group">
                 <button 
                   disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
@@ -459,22 +819,127 @@ export default function AdminUsers() {
                   {updateUserMutation.isLoading ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : null}
-                  <span>Change Role</span>
+                  <span>Assign Roles</span>
                 </button>
                 {/* Invisible bridge to prevent dropdown from disappearing */}
-                <div className="absolute right-0 top-6 w-40 h-4 invisible group-hover:visible z-10"></div>
-                <div className="absolute right-0 top-9 w-40 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                <div className="absolute right-0 top-6 w-48 h-4 invisible group-hover:visible z-10"></div>
+                <div className="absolute right-0 top-9 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
                   <div className="p-2">
-                    {roleOptions.map((role) => (
+                    <div className="text-xs font-medium admin-text-light uppercase tracking-wider px-3 py-2 border-b border-gray-200">
+                      Add Roles to Selected Users
+                    </div>
+                    {availableRoles.map((role) => (
                       <button
-                        key={role.value}
-                        onClick={() => handleBulkRoleUpdate(role.value, role.privilegeLevel)}
+                        key={role.id}
+                        onClick={() => handleBulkRoleAssignment(role.id, 'add')}
                         disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
                         className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span>{role.label}</span>
+                        <Plus className="h-3 w-3 text-green-600" />
+                        <span>Add {role.name}</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Remove Roles Dropdown */}
+              <div className="relative group">
+                <button 
+                  disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                  className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                >
+                  {updateUserMutation.isLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  <span>Remove Roles</span>
+                </button>
+                <div className="absolute right-0 top-6 w-48 h-4 invisible group-hover:visible z-10"></div>
+                <div className="absolute right-0 top-9 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                  <div className="p-2">
+                    <div className="text-xs font-medium admin-text-light uppercase tracking-wider px-3 py-2 border-b border-gray-200">
+                      Remove Roles from Selected Users
+                    </div>
+                    {availableRoles.map((role) => (
+                      <button
+                        key={role.id}
+                        onClick={() => handleBulkRoleAssignment(role.id, 'remove')}
+                        disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <X className="h-3 w-3 text-red-600" />
+                        <span>Remove {role.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Role Templates Quick Actions */}
+              <div className="relative group">
+                <button 
+                  disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                  className="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                >
+                  {updateUserMutation.isLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  <span>Quick Assign</span>
+                </button>
+                <div className="absolute right-0 top-6 w-56 h-4 invisible group-hover:visible z-10"></div>
+                <div className="absolute right-0 top-9 w-56 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                  <div className="p-2">
+                    <div className="text-xs font-medium admin-text-light uppercase tracking-wider px-3 py-2 border-b border-gray-200">
+                      Role Templates
+                    </div>
+                    
+                    <button
+                      onClick={() => handleBulkRoleTemplate('new_employee')}
+                      disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <User className="h-3 w-3 text-blue-600" />
+                      <div>
+                        <div className="font-medium">New Employee</div>
+                        <div className="text-xs text-gray-500">Assigns basic User role</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleBulkRoleTemplate('manager')}
+                      disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <UserCheck className="h-3 w-3 text-green-600" />
+                      <div>
+                        <div className="font-medium">Team Manager</div>
+                        <div className="text-xs text-gray-500">User + HR roles</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleBulkRoleTemplate('admin')}
+                      disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Shield className="h-3 w-3 text-orange-600" />
+                      <div>
+                        <div className="font-medium">Administrator</div>
+                        <div className="text-xs text-gray-500">User + Admin roles</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleBulkRoleTemplate('super_admin')}
+                      disabled={updateUserMutation.isLoading || deleteUserMutation.isLoading}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Crown className="h-3 w-3 text-purple-600" />
+                      <div>
+                        <div className="font-medium">Super Administrator</div>
+                        <div className="text-xs text-gray-500">All available roles</div>
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -514,10 +979,13 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* Users Table */}
-      <div className="admin-card rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      {/* Conditional Content Based on View Mode */}
+      {viewMode === "list" ? (
+        <>
+          {/* Users Table */}
+          <div className="admin-card rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium admin-text-light uppercase tracking-wider">
@@ -599,34 +1067,13 @@ export default function AdminUsers() {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={user.role}
-                        onChange={(e) => {
-                          const selectedRole = roleOptions.find(
-                            (r) => r.value === e.target.value
-                          );
-                          updateUserRole(
-                            user.id,
-                            e.target.value,
-                            selectedRole.privilegeLevel
-                          );
-                        }}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-purple-500 ${roleColor} dark:border-gray-600 ${updateUserMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={user.id === session?.user?.id || updateUserMutation.isLoading}
-                      >
-                        {roleOptions.map((role) => (
-                          <option
-                            key={role.value}
-                            value={role.value}
-                            className="text-gray-800 bg-white"
-                          >
-                            {role.label}
-                          </option>
-                        ))}
-                      </select>
-                      {updateUserMutation.isLoading && (
-                        <Loader2 className="inline-block ml-2 h-3 w-3 animate-spin text-gray-400" />
-                      )}
+                      <UserRoleManager
+                        user={user}
+                        availableRoles={availableRoles}
+                        onRoleChange={handleRoleChange}
+                        isLoading={updateUserMutation.isLoading}
+                        compact={true}
+                      />
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -683,6 +1130,14 @@ export default function AdminUsers() {
 
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                        <button
+                          onClick={() => handleManageRoles(user)}
+                          className="text-blue-600 hover:text-blue-900 p-2 sm:p-2 hover:bg-blue-50 rounded transition-colors duration-200 touch-action-manipulation"
+                          title="Manage roles"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </button>
+                        
                         <Link
                           href={`/admin/users/${user.id}/edit`}
                           className="text-purple-600 hover:text-purple-900 p-2 sm:p-2 hover:bg-purple-50 rounded transition-colors duration-200 touch-action-manipulation"
@@ -750,6 +1205,37 @@ export default function AdminUsers() {
           )}
         </div>
       )}
+        </>
+      ) : (
+        /* Visual Role Assignment View */
+        <div>
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-sm text-green-800">
+              <strong>✨ Visual Role Assignment:</strong> Perfect for multiple roles per user. Select users and roles to assign or remove roles with clear visual feedback.
+            </p>
+          </div>
+          <SimpleDragDropFallback
+            users={filteredUsers}
+            roles={availableRoles}
+            onRoleChange={handleRoleChange}
+            isLoading={isLoading}
+          />
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600">
+              💡 <strong>Why this works better than drag-and-drop:</strong> With multiple roles per user, it's unclear what dragging means. 
+              This interface makes every action explicit - select a user, select a role, then choose assign or remove.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Role Management Modal */}
+      <UserEditRoleModal
+        isOpen={showRoleModal}
+        user={selectedUserForRoles}
+        onClose={handleCloseRoleModal}
+        onUserUpdated={refetch}
+      />
     </div>
   );
 }
