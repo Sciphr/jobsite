@@ -14,6 +14,21 @@ export function usePermissions() {
   const [permissions, setPermissions] = useState(new Set());
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [permissionsInitialized, setPermissionsInitialized] = useState(false);
+
+  // Monitor when permissions are actually updated
+  useEffect(() => {
+    if (!loading && session?.user?.id) {
+      // If we have session permissions and they match our Set size, we're ready
+      if (session.user.permissions && permissions.size === session.user.permissions.length) {
+        setPermissionsInitialized(true);
+      }
+      // If session has no permissions and our Set is empty, we're ready
+      else if (!session.user.permissions?.length && permissions.size === 0) {
+        setPermissionsInitialized(true);
+      }
+    }
+  }, [loading, permissions.size, session?.user?.permissions?.length, session?.user?.id]);
 
   // Load permissions from session when available, fallback to API
   useEffect(() => {
@@ -27,25 +42,24 @@ export function usePermissions() {
 
       try {
         setLoading(true);
+        setPermissionsInitialized(false);
 
         // Check if permissions are available in session (from NextAuth)
         if (session.user.permissions && session.user.permissions.length > 0) {
-          console.log("📦 Using permissions from session cache");
           const permissionSet = new Set(session.user.permissions);
-          setPermissions(permissionSet);
           
           // Set primary role from session
           const primaryRole = session.user.roles && session.user.roles.length > 0 
             ? session.user.roles[0] 
             : null;
-          setUserRole(primaryRole);
           
+          setPermissions(permissionSet);
+          setUserRole(primaryRole);
           setLoading(false);
           return;
         }
 
         // Fallback to API if permissions not in session
-        console.log("🔄 Fetching permissions from API (session cache miss)");
         const [permissionsResponse, roleResponse] = await Promise.all([
           fetch(`/api/permissions/user/${session.user.id}`),
           fetch(`/api/permissions/user/${session.user.id}/role`)
@@ -81,7 +95,11 @@ export function usePermissions() {
   // Core permission checking function
   const hasPermission = useMemo(() => {
     return (resource, action) => {
-      return permissions.has(createPermissionKey(resource, action));
+      const permissionKey = createPermissionKey(resource, action);
+      const hasAccess = permissions.has(permissionKey);
+      
+      
+      return hasAccess;
     };
   }, [permissions]);
 
@@ -195,6 +213,7 @@ export function usePermissions() {
     // State
     permissions: Array.from(permissions),
     loading,
+    permissionsReady: permissionsInitialized, // Ready when permissions state matches session
     
     // Raw data
     permissionSet: permissions,

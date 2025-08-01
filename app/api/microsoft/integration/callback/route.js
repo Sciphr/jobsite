@@ -12,7 +12,6 @@ export async function GET(request) {
 
     // Get the correct base URL for redirects
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    console.log("🔍 Callback Debug - Base URL for redirects:", baseUrl);
 
     if (error) {
       console.error("Microsoft OAuth error:", error);
@@ -75,22 +74,23 @@ export async function GET(request) {
 
     // Update user with Microsoft integration data
     try {
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: state },
         data: {
-          microsoftAccessToken: tokens.access_token,
-          microsoftRefreshToken: tokens.refresh_token,
-          microsoftTokenExpiresAt: expiresAt,
-          microsoftUserId: microsoftUser.id,
-          microsoftEmail: microsoftUser.mail || microsoftUser.userPrincipalName,
-          microsoftTenantId: microsoftUser.tenant || 'common',
-          microsoftIntegrationEnabled: true,
-          microsoftIntegrationConnectedAt: new Date(),
+          microsoft_access_token: tokens.access_token,
+          microsoft_refresh_token: tokens.refresh_token,
+          microsoft_token_expires_at: expiresAt,
+          microsoft_user_id: microsoftUser.id,
+          microsoft_email: microsoftUser.mail || microsoftUser.userPrincipalName,
+          microsoft_tenant_id: microsoftUser.tenant || 'common',
+          microsoft_integration_enabled: true,
+          microsoft_integration_connected_at: new Date(),
         },
       });
 
+      // Add session refresh trigger to URL to force NextAuth to refresh the session
       return NextResponse.redirect(
-        new URL('/admin/settings?microsoft_success=connected', baseUrl)
+        new URL('/admin/settings?microsoft_success=connected&refresh_session=true', baseUrl)
       );
     } catch (dbError) {
       console.error("Database error during Microsoft integration:", dbError);

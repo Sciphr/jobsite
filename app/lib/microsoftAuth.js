@@ -4,7 +4,7 @@ import { PrismaClient } from "@/app/generated/prisma";
 const prisma = new PrismaClient();
 
 export async function refreshMicrosoftToken(user) {
-  if (!user.microsoftRefreshToken) {
+  if (!user.microsoft_refresh_token) {
     throw new Error("No refresh token available");
   }
 
@@ -19,7 +19,7 @@ export async function refreshMicrosoftToken(user) {
       client_id: process.env.MICROSOFT_CLIENT_ID,
       client_secret: process.env.MICROSOFT_CLIENT_SECRET,
       grant_type: 'refresh_token',
-      refresh_token: user.microsoftRefreshToken,
+      refresh_token: user.microsoft_refresh_token,
       scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/OnlineMeetings.ReadWrite https://graph.microsoft.com/User.Read offline_access',
     }),
   });
@@ -37,12 +37,12 @@ export async function refreshMicrosoftToken(user) {
   expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
 
   // Update user with new tokens
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: user.id },
     data: {
-      microsoftAccessToken: tokens.access_token,
-      microsoftRefreshToken: tokens.refresh_token || user.microsoftRefreshToken,
-      microsoftTokenExpiresAt: expiresAt,
+      microsoft_access_token: tokens.access_token,
+      microsoft_refresh_token: tokens.refresh_token || user.microsoft_refresh_token,
+      microsoft_token_expires_at: expiresAt,
     },
   });
 
@@ -50,49 +50,49 @@ export async function refreshMicrosoftToken(user) {
   return {
     accessToken: tokens.access_token,
     expiresAt: expiresAt,
-    refreshToken: tokens.refresh_token || user.microsoftRefreshToken,
+    refreshToken: tokens.refresh_token || user.microsoft_refresh_token,
   };
 }
 
 export async function getMicrosoftAccessToken(userId, forceRefresh = false) {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        microsoftAccessToken: true,
-        microsoftRefreshToken: true,
-        microsoftTokenExpiresAt: true,
-        microsoftIntegrationEnabled: true,
+        microsoft_access_token: true,
+        microsoft_refresh_token: true,
+        microsoft_token_expires_at: true,
+        microsoft_integration_enabled: true,
       },
     });
 
-    if (!user?.microsoftIntegrationEnabled) {
+    if (!user?.microsoft_integration_enabled) {
       throw new Error("Microsoft integration not enabled");
     }
 
-    if (!user.microsoftAccessToken) {
+    if (!user.microsoft_access_token) {
       throw new Error("No Microsoft access token found");
     }
 
     const now = new Date();
-    const tokenExpiresAt = new Date(user.microsoftTokenExpiresAt);
+    const tokenExpiresAt = new Date(user.microsoft_token_expires_at);
     const shouldRefresh = forceRefresh || tokenExpiresAt <= new Date(now.getTime() + 5 * 60 * 1000); // Refresh if expires within 5 minutes
 
-    if (shouldRefresh && user.microsoftRefreshToken) {
+    if (shouldRefresh && user.microsoft_refresh_token) {
       try {
         const refreshResult = await refreshMicrosoftToken(user);
         return refreshResult.accessToken;
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         // Disable integration if refresh fails
-        await prisma.user.update({
+        await prisma.users.update({
           where: { id: userId },
           data: {
-            microsoftIntegrationEnabled: false,
-            microsoftAccessToken: null,
-            microsoftRefreshToken: null,
-            microsoftTokenExpiresAt: null,
+            microsoft_integration_enabled: false,
+            microsoft_access_token: null,
+            microsoft_refresh_token: null,
+            microsoft_token_expires_at: null,
           },
         });
         throw new Error("Microsoft token expired and refresh failed. Please reconnect.");
@@ -104,7 +104,7 @@ export async function getMicrosoftAccessToken(userId, forceRefresh = false) {
       throw new Error("Microsoft token expired and no refresh token available. Please reconnect.");
     }
 
-    return user.microsoftAccessToken;
+    return user.microsoft_access_token;
   } finally {
     await prisma.$disconnect();
   }

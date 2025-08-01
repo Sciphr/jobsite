@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 async function refreshTokenIfNeeded(oauth2Client, user) {
   const now = new Date();
-  const tokenExpiresAt = new Date(user.googleTokenExpiresAt);
+  const tokenExpiresAt = new Date(user.google_token_expires_at);
   
   // If token expires within 5 minutes, refresh it
   if (tokenExpiresAt <= new Date(now.getTime() + 5 * 60 * 1000)) {
@@ -25,12 +25,12 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
         expiresAt.setHours(expiresAt.getHours() + 1);
       }
       
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: user.id },
         data: {
-          googleAccessToken: credentials.access_token,
-          googleTokenExpiresAt: expiresAt,
-          ...(credentials.refresh_token && { googleRefreshToken: credentials.refresh_token }),
+          google_access_token: credentials.access_token,
+          google_token_expires_at: expiresAt,
+          ...(credentials.refresh_token && { google_refresh_token: credentials.refresh_token }),
         },
       });
       
@@ -45,7 +45,7 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
     }
   }
   
-  return { success: true, accessToken: user.googleAccessToken };
+  return { success: true, accessToken: user.google_access_token };
 }
 
 export async function GET() {
@@ -56,18 +56,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
-        calendarIntegrationEnabled: true,
-        googleEmail: true,
-        googleCalendarId: true,
-        calendarIntegrationConnectedAt: true,
-        calendarTimezone: true,
-        googleTokenExpiresAt: true,
-        googleAccessToken: true,
-        googleRefreshToken: true,
+        calendar_integration_enabled: true,
+        google_email: true,
+        google_calendar_id: true,
+        calendar_integration_connected_at: true,
+        calendar_timezone: true,
+        google_token_expires_at: true,
+        google_access_token: true,
+        google_refresh_token: true,
       },
     });
 
@@ -77,19 +77,19 @@ export async function GET() {
 
     let isConnected = false;
     let tokenValid = false;
-    let updatedExpiresAt = user.googleTokenExpiresAt;
+    let updatedExpiresAt = user.google_token_expires_at;
 
-    if (user.calendarIntegrationEnabled && user.googleAccessToken && user.googleTokenExpiresAt) {
+    if (user.calendar_integration_enabled && user.google_access_token && user.google_token_expires_at) {
       // Check if we need to refresh the token
-      if (user.googleRefreshToken) {
+      if (user.google_refresh_token) {
         const oauth2Client = new google.auth.OAuth2(
           process.env.GOOGLE_CLIENT_ID,
           process.env.GOOGLE_CLIENT_SECRET
         );
 
         oauth2Client.setCredentials({
-          access_token: user.googleAccessToken,
-          refresh_token: user.googleRefreshToken,
+          access_token: user.google_access_token,
+          refresh_token: user.google_refresh_token,
         });
 
         const refreshResult = await refreshTokenIfNeeded(oauth2Client, user);
@@ -102,13 +102,13 @@ export async function GET() {
           }
         } else {
           // Refresh failed, disable integration
-          await prisma.user.update({
+          await prisma.users.update({
             where: { id: user.id },
             data: {
-              calendarIntegrationEnabled: false,
-              googleAccessToken: null,
-              googleRefreshToken: null,
-              googleTokenExpiresAt: null,
+              calendar_integration_enabled: false,
+              google_access_token: null,
+              google_refresh_token: null,
+              google_token_expires_at: null,
             },
           });
           isConnected = false;
@@ -116,17 +116,17 @@ export async function GET() {
         }
       } else {
         // No refresh token, check if current token is still valid
-        tokenValid = new Date(user.googleTokenExpiresAt) > new Date();
+        tokenValid = new Date(user.google_token_expires_at) > new Date();
         isConnected = tokenValid;
       }
     }
 
     return NextResponse.json({
       connected: isConnected,
-      googleEmail: user.googleEmail,
-      calendarId: user.googleCalendarId,
-      connectedAt: user.calendarIntegrationConnectedAt,
-      timezone: user.calendarTimezone,
+      googleEmail: user.google_email,
+      calendarId: user.google_calendar_id,
+      connectedAt: user.calendar_integration_connected_at,
+      timezone: user.calendar_timezone,
       tokenValid: tokenValid,
       tokenExpiresAt: updatedExpiresAt,
     });

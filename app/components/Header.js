@@ -7,6 +7,7 @@ import { Briefcase, Menu, X, User, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useSetting } from "../hooks/useSettings";
+import { usePermissions } from "../hooks/usePermissions";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
@@ -14,13 +15,14 @@ export default function Header() {
   const [logoDownloadUrl, setLogoDownloadUrl] = useState(null);
   const [logoFetching, setLogoFetching] = useState(false);
   const { data: session, status } = useSession();
+  const { hasAnyPermissionFor, loading: permissionsLoading } = usePermissions();
 
   // Get both value and loading state from useSetting
   const { value: siteName, loading: siteNameLoading } = useSetting(
     "site_name",
     "JobSite"
   );
-  
+
   // Get custom logo URL if available
   const { value: logoUrl, loading: logoLoading } = useSetting(
     "site_logo_url",
@@ -33,7 +35,7 @@ export default function Header() {
       if (logoUrl && !logoLoading) {
         setLogoFetching(true);
         try {
-          const response = await fetch('/api/admin/logo');
+          const response = await fetch("/api/admin/logo");
           if (response.ok) {
             const data = await response.json();
             if (data.logoUrl) {
@@ -45,7 +47,7 @@ export default function Header() {
             setLogoDownloadUrl(null);
           }
         } catch (error) {
-          console.error('Error fetching logo URL:', error);
+          console.error("Error fetching logo URL:", error);
           setLogoDownloadUrl(null);
         } finally {
           setLogoFetching(false);
@@ -74,50 +76,61 @@ export default function Header() {
       .slice(0, 2);
   };
 
-  // Check admin privileges
-  const isAdmin = session?.user?.privilegeLevel >= 1; // HR level and above
-  const canManageJobs = session?.user?.privilegeLevel >= 2; // Admin level and above
-  const isSuperAdmin = session?.user?.privilegeLevel >= 3; // Super admin
+  // Check if user has any admin permissions (meaning they're some kind of employee/admin)
+  const hasAnyAdminPermissions =
+    session?.user &&
+    (hasAnyPermissionFor("applications") ||
+      hasAnyPermissionFor("jobs") ||
+      hasAnyPermissionFor("users") ||
+      hasAnyPermissionFor("analytics") ||
+      hasAnyPermissionFor("settings") ||
+      hasAnyPermissionFor("roles") ||
+      hasAnyPermissionFor("audit_logs") ||
+      hasAnyPermissionFor("weekly_digest") ||
+      hasAnyPermissionFor("emails") ||
+      hasAnyPermissionFor("interviews"));
+
+  const isAdmin = hasAnyAdminPermissions;
+  const canManageJobs = session?.user?.privilegeLevel >= 2; // Keep for other logic
+  const isSuperAdmin = session?.user?.privilegeLevel >= 3; // Keep for other logic
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
-            {(logoLoading || logoFetching) ? (
-              <div className="p-1 rounded-lg flex items-center justify-center">
-                <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
-              </div>
+          <Link href="/" className="flex items-center">
+            {logoLoading || logoFetching ? (
+              <div className="h-12 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+            ) : logoDownloadUrl ? (
+              <Image
+                src={logoDownloadUrl}
+                alt={siteName || "Site Logo"}
+                width={192} // 48 * 4 for better quality
+                height={48}
+                className="h-auto w-auto max-w-[200px] object-contain"
+                onError={(e) => {
+                  console.error("Logo failed to load, falling back to text");
+                  setLogoDownloadUrl(null);
+                }}
+                priority
+              />
             ) : (
-              <div className={`${logoDownloadUrl ? 'p-1' : 'bg-blue-600 dark:bg-blue-500 p-2'} rounded-lg transition-colors duration-200 flex items-center justify-center`}>
-                {logoDownloadUrl ? (
-                  <Image 
-                    src={logoDownloadUrl} 
-                    alt="Site Logo" 
-                    width={40}
-                    height={40}
-                    className="object-contain"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      setLogoDownloadUrl(null);
-                    }}
-                  />
-                ) : (
+              // Fallback to text logo when no custom logo is set
+              <div className="flex items-center space-x-2">
+                <div className="bg-blue-600 dark:bg-blue-500 p-2 rounded-lg transition-colors duration-200">
                   <Briefcase className="h-6 w-6 text-white" />
-                )}
+                </div>
+                <h1 className="text-2xl font-bold site-text-gradient transition-colors duration-200">
+                  {siteNameLoading ? (
+                    <span className="inline-block w-24 h-8 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></span>
+                  ) : (
+                    siteName
+                  )}
+                </h1>
               </div>
             )}
-            <Link href="/" className="flex items-center">
-              <h1 className="text-2xl font-bold site-text-gradient transition-colors duration-200">
-                {siteNameLoading ? (
-                  <span className="inline-block w-24 h-8 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></span>
-                ) : (
-                  siteName
-                )}
-              </h1>
-            </Link>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -213,9 +226,14 @@ export default function Header() {
                   <Link
                     href="/auth/signup"
                     className="text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200 site-primary"
-                    style={{backgroundColor: 'var(--site-primary)'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+                    style={{ backgroundColor: "var(--site-primary)" }}
+                    onMouseEnter={(e) =>
+                      (e.target.style.backgroundColor =
+                        "var(--site-primary-hover)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.target.style.backgroundColor = "var(--site-primary)")
+                    }
                   >
                     Get Started
                   </Link>
@@ -347,9 +365,14 @@ export default function Header() {
                   <Link
                     href="/auth/signup"
                     className="text-white px-4 py-2 rounded-lg font-medium text-center transition-all duration-200 site-primary"
-                    style={{backgroundColor: 'var(--site-primary)'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+                    style={{ backgroundColor: "var(--site-primary)" }}
+                    onMouseEnter={(e) =>
+                      (e.target.style.backgroundColor =
+                        "var(--site-primary-hover)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.target.style.backgroundColor = "var(--site-primary)")
+                    }
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Get Started

@@ -5,6 +5,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { usePermissions } from "@/app/hooks/usePermissions";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
   useApplications,
   useJobsSimple,
@@ -40,7 +42,7 @@ import {
 } from "lucide-react";
 import { exportApplicationsToExcel, exportApplicationsToCSV } from "@/app/utils/applicationsExport";
 
-export default function AdminApplications() {
+function AdminApplicationsContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1239,5 +1241,17 @@ export default function AdminApplications() {
         </>
       )}
     </div>
+  );
+}
+
+export default function AdminApplications() {
+  return (
+    <ResourcePermissionGuard 
+      resource="applications" 
+      actions={["view"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <AdminApplicationsContent />
+    </ResourcePermissionGuard>
   );
 }

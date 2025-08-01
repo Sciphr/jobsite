@@ -17,19 +17,19 @@ export async function GET() {
     // Get user's Microsoft integration status
     let user;
     try {
-      user = await prisma.user.findUnique({
+      user = await prisma.users.findUnique({
         where: { id: session.user.id },
         select: {
           id: true,
-          microsoftIntegrationEnabled: true,
-          microsoftIntegrationConnectedAt: true,
-          microsoftEmail: true,
-          microsoftUserId: true,
-          microsoftTenantId: true,
-          microsoftTokenExpiresAt: true,
-          microsoftAccessToken: true,
-          microsoftRefreshToken: true,
-          calendarTimezone: true,
+          microsoft_integration_enabled: true,
+          microsoft_integration_connected_at: true,
+          microsoft_email: true,
+          microsoft_user_id: true,
+          microsoft_tenant_id: true,
+          microsoft_token_expires_at: true,
+          microsoft_access_token: true,
+          microsoft_refresh_token: true,
+          calendar_timezone: true,
         },
       });
     } catch (dbError) {
@@ -55,13 +55,13 @@ export async function GET() {
 
     let isConnected = false;
     let tokenValid = false;
-    let updatedExpiresAt = user.microsoftTokenExpiresAt;
+    let updatedExpiresAt = user.microsoft_token_expires_at;
 
-    if (user.microsoftIntegrationEnabled && user.microsoftAccessToken && user.microsoftTokenExpiresAt) {
+    if (user.microsoft_integration_enabled && user.microsoft_access_token && user.microsoft_token_expires_at) {
       // Check if we need to refresh the token
-      if (user.microsoftRefreshToken) {
+      if (user.microsoft_refresh_token) {
         const now = new Date();
-        const tokenExpiresAt = new Date(user.microsoftTokenExpiresAt);
+        const tokenExpiresAt = new Date(user.microsoft_token_expires_at);
         const shouldRefresh = tokenExpiresAt <= new Date(now.getTime() + 5 * 60 * 1000); // Refresh if expires within 5 minutes
 
         if (shouldRefresh) {
@@ -73,13 +73,13 @@ export async function GET() {
           } catch (refreshError) {
             console.error("Token refresh failed:", refreshError);
             // Refresh failed, disable integration
-            await prisma.user.update({
+            await prisma.users.update({
               where: { id: user.id },
               data: {
-                microsoftIntegrationEnabled: false,
-                microsoftAccessToken: null,
-                microsoftRefreshToken: null,
-                microsoftTokenExpiresAt: null,
+                microsoft_integration_enabled: false,
+                microsoft_access_token: null,
+                microsoft_refresh_token: null,
+                microsoft_token_expires_at: null,
               },
             });
             isConnected = false;
@@ -91,18 +91,18 @@ export async function GET() {
         }
       } else {
         // No refresh token, check if current token is still valid
-        tokenValid = new Date(user.microsoftTokenExpiresAt) > new Date();
+        tokenValid = new Date(user.microsoft_token_expires_at) > new Date();
         isConnected = tokenValid;
       }
     }
 
     return NextResponse.json({
       connected: isConnected,
-      microsoftEmail: user.microsoftEmail,
-      userId: user.microsoftUserId,
-      tenantId: user.microsoftTenantId,
-      connectedAt: user.microsoftIntegrationConnectedAt,
-      timezone: user.calendarTimezone || "America/Toronto",
+      microsoftEmail: user.microsoft_email,
+      userId: user.microsoft_user_id,
+      tenantId: user.microsoft_tenant_id,
+      connectedAt: user.microsoft_integration_connected_at,
+      timezone: user.calendar_timezone || "America/Toronto",
       tokenValid: tokenValid,
       tokenExpiresAt: updatedExpiresAt,
     });

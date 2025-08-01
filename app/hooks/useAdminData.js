@@ -66,21 +66,23 @@ export const useAnalytics = (timeRange = "30d") => {
   });
 };
 
-export const useDashboardStats = () => {
+export const useDashboardStats = (options = {}) => {
   return useQuery({
     queryKey: ["admin", "dashboard-stats"],
     queryFn: () => fetcher("/api/admin/dashboard-stats"),
     ...commonQueryOptions,
     staleTime: 15 * 60 * 1000, // 15 minutes for dashboard stats
+    ...options, // Allow overriding with enabled, etc.
   });
 };
 
-export const useSystemStatus = () => {
+export const useSystemStatus = (options = {}) => {
   return useQuery({
     queryKey: ["admin", "system-status"],
     queryFn: () => fetcher("/api/admin/system-status"),
     ...commonQueryOptions,
     staleTime: 5 * 60 * 1000, // 5 minutes for system status
+    ...options, // Allow overriding with enabled, etc.
   });
 };
 
@@ -199,9 +201,10 @@ export const useApplication = (applicationId) => {
 export const usePrefetchAdminData = () => {
   const queryClient = useQueryClient();
 
-  // ✅ RESTORE FAST NAVIGATION - Replace prefetchAll in useAdminData.js:
+  // ✅ TEMPORARILY DISABLED to stop infinite loop
   const prefetchAll = async () => {
-    console.log("🚀 Starting aggressive prefetch for fast navigation...");
+    console.log("🚫 Prefetch disabled to prevent infinite loop");
+    return; // Early return to stop prefetching
 
     // Check what's already cached
     const existingJobs = queryClient.getQueryData(["admin", "jobs"]);

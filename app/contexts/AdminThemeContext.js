@@ -95,9 +95,17 @@ export function AdminThemeProvider({ children }) {
 
   const loadUserTheme = async () => {
     try {
+      // Add 5 second timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(
-        `/api/admin/settings/admin_dashboard_theme?personal=true`
+        `/api/admin/settings/admin_dashboard_theme?personal=true`,
+        { signal: controller.signal }
       );
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const setting = await response.json();
         const serverTheme = setting.parsedValue || "default";
@@ -106,7 +114,11 @@ export function AdminThemeProvider({ children }) {
         }
       }
     } catch (error) {
-      console.error("Error loading theme:", error);
+      if (error.name === 'AbortError') {
+        console.warn("Theme loading timed out - using current theme");
+      } else {
+        console.error("Error loading theme:", error);
+      }
     } finally {
       setLoading(false);
     }

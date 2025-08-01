@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import JobForm from "../components/JobForm";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
   Briefcase,
   AlertCircle,
@@ -13,7 +14,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-export default function CreateJobPage() {
+function CreateJobPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -374,5 +375,17 @@ export default function CreateJobPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateJobPage() {
+  return (
+    <ResourcePermissionGuard 
+      resource="jobs" 
+      actions={["create"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <CreateJobPageContent />
+    </ResourcePermissionGuard>
   );
 }

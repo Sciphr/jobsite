@@ -14,14 +14,14 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       select: {
-        zoomIntegrationEnabled: true,
-        zoomIntegrationConnectedAt: true,
-        zoomEmail: true,
-        zoomUserId: true,
-        zoomTokenExpiresAt: true,
+        zoom_integration_enabled: true,
+        zoom_integration_connected_at: true,
+        zoom_email: true,
+        zoom_user_id: true,
+        zoom_token_expires_at: true,
       },
     });
 
@@ -29,14 +29,14 @@ export async function GET(request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const isTokenValid = user.zoomTokenExpiresAt && new Date() < new Date(user.zoomTokenExpiresAt);
+    const isTokenValid = user.zoom_token_expires_at && new Date() < new Date(user.zoom_token_expires_at);
 
     return NextResponse.json({
-      connected: user.zoomIntegrationEnabled && isTokenValid,
-      zoomEmail: user.zoomEmail,
-      zoomUserId: user.zoomUserId,
-      connectedAt: user.zoomIntegrationConnectedAt,
-      tokenExpiresAt: user.zoomTokenExpiresAt,
+      connected: user.zoom_integration_enabled && isTokenValid,
+      zoomEmail: user.zoom_email,
+      zoomUserId: user.zoom_user_id,
+      connectedAt: user.zoom_integration_connected_at,
+      tokenExpiresAt: user.zoom_token_expires_at,
       tokenValid: isTokenValid,
     });
 

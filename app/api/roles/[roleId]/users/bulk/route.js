@@ -3,13 +3,32 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "@/app/lib/permissions";
 import { appPrisma } from "../../../../../lib/prisma";
+import { logAuditEvent, extractRequestContext } from "../../../../../../lib/auditMiddleware";
 
 // POST /api/roles/[roleId]/users/bulk - Bulk assign users to role
 export async function POST(request, { params }) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
+      // Log unauthorized bulk role assignment attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized bulk role assignment attempt",
+        description: "Bulk role assignment attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["roles", "bulk_assign", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -107,6 +126,37 @@ export async function POST(request, { params }) {
 
     const skippedCount = users.length - usersToUpdate.length;
 
+    // Log successful bulk role assignment
+    await logAuditEvent({
+      eventType: "ASSIGN",
+      category: "ADMIN",
+      action: "Bulk role assignment completed",
+      description: `Admin ${session.user.email} bulk assigned ${updateResult.count} users to role '${role.name}'`,
+      entityType: "role",
+      entityId: roleId,
+      entityName: role.name,
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["roles", "bulk_assign", "success", "admin", "privilege_change"],
+      metadata: {
+        roleId: roleId,
+        roleName: role.name,
+        totalRequested: userIds.length,
+        actuallyAssigned: updateResult.count,
+        skippedCount: skippedCount,
+        affectedUserIds: usersToUpdate.map(u => u.id),
+        affectedUserEmails: usersToUpdate.map(u => u.email),
+        assignedBy: session.user.email
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json({
       success: true,
       message: `Successfully assigned ${updateResult.count} user${updateResult.count !== 1 ? "s" : ""} to role ${role.name}${skippedCount > 0 ? `. ${skippedCount} user${skippedCount !== 1 ? "s were" : " was"} already assigned.` : ""}`,
@@ -116,6 +166,35 @@ export async function POST(request, { params }) {
     });
   } catch (error) {
     console.error("Error bulk assigning users to role:", error);
+    
+    // Log server error during bulk role assignment
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Bulk role assignment failed - server error",
+      description: `Server error during bulk role assignment for admin: ${session?.user?.email || 'unknown'}`,
+      entityType: "role",
+      entityId: roleId,
+      entityName: role?.name || 'unknown',
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["roles", "bulk_assign", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        roleId: roleId,
+        requestedUserCount: userIds?.length || 0,
+        assignedBy: session?.user?.email
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

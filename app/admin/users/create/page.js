@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import UserForm from "../components/UserForm";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import { User, AlertCircle, Shield, ArrowLeft, Loader2 } from "lucide-react";
 
-export default function CreateUserPage() {
+function CreateUserPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -195,5 +196,17 @@ export default function CreateUserPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateUserPage() {
+  return (
+    <ResourcePermissionGuard 
+      resource="users" 
+      actions={["create"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <CreateUserPageContent />
+    </ResourcePermissionGuard>
   );
 }

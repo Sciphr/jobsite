@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 
 export default function AdminSettings() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getButtonClasses } = useThemeClasses();
@@ -69,13 +69,25 @@ export default function AdminSettings() {
     router.push(newUrl.pathname + newUrl.search, { scroll: false });
   };
 
-  // Handle URL parameters for tab state
+  // Handle URL parameters for tab state and session refresh
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && ['system', 'branding', 'personal', 'notifications'].includes(tab)) {
       setActiveTab(tab);
     }
-  }, [searchParams]);
+
+    // Check if we need to refresh the session after OAuth callback
+    const shouldRefreshSession = searchParams.get('refresh_session');
+    if (shouldRefreshSession === 'true') {
+      // Use NextAuth's update method to refresh the session
+      update().then(() => {
+        // Clean up the URL by removing the refresh_session parameter
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('refresh_session');
+        router.replace(newUrl.pathname + newUrl.search, { scroll: false });
+      });
+    }
+  }, [searchParams, update, router]);
 
   useEffect(() => {
     if (settingsData) {

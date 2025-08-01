@@ -17,20 +17,11 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        "🔍 Authorize called with:",
-          {
-            email: credentials?.email,
-            hasPassword: !!credentials?.password,
-          };
-
         if (!credentials?.email || !credentials?.password) {
-          ("❌ Missing credentials");
           return null;
         }
 
         try {
-          "🔍 Looking up user with email:", credentials.email;
-
           const user = await authPrisma.users.findUnique({
             where: { email: credentials.email },
             select: {
@@ -45,18 +36,7 @@ export const authOptions = {
             },
           });
 
-          "🔍 User found:",
-            {
-              found: !!user,
-              hasPassword: !!user?.password,
-              userId: user?.id,
-              role: user?.role,
-              privilegeLevel: user?.privilegeLevel,
-              isActive: user?.isActive,
-            };
-
           if (!user || !user.password) {
-            ("❌ User not found or no password");
             // Log failed login attempt - user not found
             await logAuditEvent({
               eventType: "LOGIN",
@@ -73,7 +53,6 @@ export const authOptions = {
           }
 
           if (!user.isActive) {
-            ("❌ User account is deactivated");
             // Log failed login attempt - account deactivated
             await logAuditEvent({
               eventType: "LOGIN",
@@ -94,16 +73,12 @@ export const authOptions = {
             return null;
           }
 
-          ("🔍 Comparing passwords...");
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
-          "🔍 Password valid:", isPasswordValid;
-
           if (!isPasswordValid) {
-            ("❌ Invalid password");
             // Log failed login attempt - invalid password
             await logAuditEvent({
               eventType: "LOGIN",
@@ -131,8 +106,6 @@ export const authOptions = {
             role: user.role,
             privilegeLevel: user.privilegeLevel,
           };
-
-          "✅ Authorization successful:", returnUser;
           // Log successful login attempt
           await logAuditEvent({
             eventType: "LOGIN",
@@ -161,6 +134,7 @@ export const authOptions = {
 
   session: {
     strategy: "jwt",
+    // Removed temporary short maxAge that was causing loops
   },
 
   pages: {
@@ -170,23 +144,34 @@ export const authOptions = {
 
   callbacks: {
     async jwt({ token, user, account, trigger }) {
-      console.log("🔍 JWT callback:", { hasUser: !!user, hasToken: !!token, trigger });
-      
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.privilegeLevel = user.privilegeLevel;
-        console.log("✅ Added user details to token:",
-          {
-            id: user.id,
-            role: user.role,
-            privilegeLevel: user.privilegeLevel,
-          });
       }
 
-      // Refresh permissions on token update or if permissions aren't cached
-      if (token.id && (!token.permissions || !token.roles || trigger === 'update')) {
+      // Refresh permissions and user data on token update or if data isn't cached
+      const shouldRefresh = token.id && (!token.permissions || !token.roles || trigger === 'update');
+      if (shouldRefresh) {
         try {
+          // Fetch fresh user data to ensure role/privilegeLevel are current
+          const freshUser = await authPrisma.users.findUnique({
+            where: { id: token.id },
+            select: {
+              id: true,
+              role: true,
+              privilegeLevel: true,
+              isActive: true,
+            },
+          });
+
+          if (freshUser) {
+            // Update token with fresh user data
+            token.role = freshUser.role;
+            token.privilegeLevel = freshUser.privilegeLevel;
+            token.isActive = freshUser.isActive;
+          }
+
           const [permissions, roles] = await Promise.all([
             getUserPermissions(token.id),
             getUserRoles(token.id)
@@ -196,12 +181,6 @@ export const authOptions = {
           token.permissions = permissions.map(p => `${p.resource}:${p.action}`);
           token.roles = roles;
           token.permissionsLastUpdated = Date.now();
-
-          console.log("✅ Updated token with permissions:", {
-            userId: token.id,
-            permissionCount: token.permissions.length,
-            roleCount: token.roles.length
-          });
         } catch (error) {
           console.error("❌ Error fetching permissions for token:", error);
           token.permissions = [];
@@ -213,12 +192,6 @@ export const authOptions = {
     },
 
     async session({ session, token }) {
-      console.log("🔍 Session callback:",
-        {
-          hasSession: !!session,
-          hasToken: !!token,
-        });
-      
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
@@ -226,19 +199,9 @@ export const authOptions = {
         session.user.permissions = token.permissions || [];
         session.user.roles = token.roles || [];
         session.user.permissionsLastUpdated = token.permissionsLastUpdated;
-
-        console.log("✅ Added user details to session:",
-          {
-            id: token.id,
-            role: token.role,
-            privilegeLevel: token.privilegeLevel,
-            permissionCount: session.user.permissions.length,
-            roleCount: session.user.roles.length
-          });
       }
       return session;
     },
-
 
     async signIn({ user, account, profile }) {
       if (account?.provider === "google" || account?.provider === "github") {
@@ -256,8 +219,6 @@ export const authOptions = {
       return true;
     },
   },
-
-  debug: true,
 };
 
 const handler = NextAuth(authOptions);

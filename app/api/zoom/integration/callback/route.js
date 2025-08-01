@@ -96,21 +96,21 @@ export async function GET(request) {
     expiresAt.setSeconds(expiresAt.getSeconds() + tokenData.expires_in);
 
     // Update user with Zoom integration data
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: {
-        zoomAccessToken: tokenData.access_token,
-        zoomRefreshToken: tokenData.refresh_token,
-        zoomTokenExpiresAt: expiresAt,
-        zoomUserId: zoomUser.id,
-        zoomEmail: zoomUser.email,
-        zoomIntegrationEnabled: true,
-        zoomIntegrationConnectedAt: new Date(),
+        zoom_access_token: tokenData.access_token,
+        zoom_refresh_token: tokenData.refresh_token,
+        zoom_token_expires_at: expiresAt,
+        zoom_user_id: zoomUser.id,
+        zoom_email: zoomUser.email,
+        zoom_integration_enabled: true,
+        zoom_integration_connected_at: new Date(),
       },
     });
 
     return NextResponse.redirect(
-      new URL('/admin/settings?zoom_success=connected', request.url)
+      new URL('/admin/settings?zoom_success=connected&refresh_session=true', request.url)
     );
 
   } catch (error) {

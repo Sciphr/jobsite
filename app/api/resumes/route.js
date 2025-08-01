@@ -5,6 +5,7 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
 import { uploadToMinio, deleteFromMinio } from "../../lib/minio-storage";
 import { getSystemSetting } from "../../lib/settings";
+import { logAuditEvent, extractRequestContext } from "../../../lib/auditMiddleware";
 
 //const prisma = new prismaClient();
 
@@ -20,10 +21,28 @@ function getFileExtension(filename) {
   return parts.length > 1 ? parts.pop() : "";
 }
 
-export async function GET() {
+export async function GET(request) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      // Log unauthorized resume access attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized resume access attempt",
+        description: "Resume list access attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["resumes", "access", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -32,9 +51,56 @@ export async function GET() {
       orderBy: { uploaded_at: "desc" },
     });
 
+    // Log successful resume list access
+    await logAuditEvent({
+      eventType: "VIEW",
+      category: "FILE",
+      action: "Resume list accessed",
+      description: `User ${session.user.email} accessed their resume list (${resumes.length} resumes)`,
+      entityType: "user_resumes",
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["resumes", "access", "list", "files"],
+      metadata: {
+        resumeCount: resumes.length,
+        accessedBy: session.user.email
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json(resumes);
   } catch (error) {
     console.error("Error fetching resumes:", error);
+    
+    // Log server error during resume list access
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Resume list access failed - server error",
+      description: `Server error while accessing resume list for user: ${session?.user?.email || 'unknown'}`,
+      entityType: "user_resumes",
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["resumes", "access", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -43,9 +109,27 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      // Log unauthorized resume upload attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized resume upload attempt",
+        description: "Resume upload attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["resumes", "upload", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -177,6 +261,46 @@ export async function POST(request) {
         }
       }
 
+      // Log successful resume upload/update
+      await logAuditEvent({
+        eventType: existingResume ? "UPDATE" : "UPLOAD",
+        category: "FILE",
+        action: existingResume ? "Resume updated successfully" : "Resume uploaded successfully",
+        description: `User ${session.user.email} ${existingResume ? 'updated' : 'uploaded'} resume: ${file.name}`,
+        entityType: "user_resume",
+        entityId: resume.id,
+        entityName: file.name,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        oldValues: existingResume ? {
+          fileName: existingResume.file_name,
+          fileSize: existingResume.file_size,
+          storagePath: existingResume.storage_path
+        } : null,
+        newValues: {
+          fileName: file.name,
+          fileSize: file.size,
+          storagePath: filePath
+        },
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "info",
+        status: "success",
+        tags: ["resumes", existingResume ? "update" : "upload", "success", "files"],
+        metadata: {
+          resumeId: resume.id,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          storagePath: filePath,
+          isUpdate: !!existingResume,
+          uploadedBy: session.user.email
+        }
+      }, request).catch(console.error);
+
       return NextResponse.json(
         {
           resume,
@@ -206,10 +330,28 @@ export async function POST(request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      // Log unauthorized resume deletion attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized resume deletion attempt",
+        description: "Resume deletion attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["resumes", "delete", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -253,9 +395,67 @@ export async function DELETE() {
 
     ("File deleted successfully from storage");
 
+    // Log successful resume deletion
+    await logAuditEvent({
+      eventType: "DELETE",
+      category: "FILE",
+      action: "Resume deleted successfully",
+      description: `User ${session.user.email} deleted their resume: ${resume.file_name}`,
+      entityType: "user_resume",
+      entityId: resume.id,
+      entityName: resume.file_name,
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      oldValues: {
+        fileName: resume.file_name,
+        fileSize: resume.file_size,
+        storagePath: resume.storage_path
+      },
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["resumes", "delete", "success", "files"],
+      metadata: {
+        resumeId: resume.id,
+        fileName: resume.file_name,
+        fileSize: resume.file_size,
+        storagePath: resume.storage_path,
+        deletedBy: session.user.email
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json({ message: "Resume deleted successfully" });
   } catch (error) {
     console.error("Error deleting resume:", error);
+    
+    // Log server error during resume deletion
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Resume deletion failed - server error",
+      description: `Server error during resume deletion for user: ${session?.user?.email || 'unknown'}`,
+      entityType: "user_resume",
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["resumes", "delete", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        deletedBy: session?.user?.email
+      }
+    }, request).catch(console.error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

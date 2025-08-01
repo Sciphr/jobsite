@@ -3,8 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
+import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
 
 export async function GET(request) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     // Check if user has permission to view settings
     const authResult = await protectRoute("settings", "view");
@@ -54,11 +57,60 @@ export async function GET(request) {
       return acc;
     }, {});
 
+    // Log successful settings access
+    await logAuditEvent({
+      eventType: "VIEW",
+      category: "ADMIN",
+      action: "Settings accessed",
+      description: `Admin ${session.user.email} accessed system settings${category ? ` (category: ${category})` : ''}`,
+      entityType: "settings",
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["settings", "admin", "view", "access"],
+      metadata: {
+        settingsCount: parsedSettings.length,
+        category: category || 'all',
+        accessedBy: session.user.email,
+        privilegeLevel: session.user.privilegeLevel
+      }
+    }, request).catch(console.error);
+
     return new Response(JSON.stringify({ settings: parsedSettings, grouped }), {
       status: 200,
     });
   } catch (error) {
     console.error("Error fetching settings:", error);
+    
+    // Log server error during settings access
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Settings access failed - server error",
+      description: `Server error while accessing settings for admin: ${session?.user?.email || 'unknown'}`,
+      entityType: "settings",
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["settings", "admin", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack
+      }
+    }, request).catch(console.error);
+
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
     });
@@ -66,6 +118,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     // Check if user has permission to edit settings
     const authResult = await protectRoute("settings", "edit_system");
@@ -85,6 +139,32 @@ export async function POST(request) {
 
     // Check if user has permission to create this setting
     if (session.user.privilegeLevel < privilegeLevel) {
+      // Log insufficient privileges for setting creation
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Setting creation failed - insufficient privileges",
+        description: `Admin ${session.user.email} attempted to create setting '${key}' requiring privilege level ${privilegeLevel}`,
+        entityType: "setting",
+        entityName: key,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["settings", "create", "insufficient_privileges", "security"],
+        metadata: {
+          settingKey: key,
+          requiredPrivilegeLevel: privilegeLevel,
+          userPrivilegeLevel: session.user.privilegeLevel,
+          category: category
+        }
+      }, request).catch(console.error);
+
       return new Response(
         JSON.stringify({ error: "Insufficient privileges" }),
         { status: 403 }
@@ -105,6 +185,46 @@ export async function POST(request) {
       },
     });
 
+    // Log successful setting creation
+    await logAuditEvent({
+      eventType: "CREATE",
+      category: "ADMIN",
+      subcategory: "SETTING_CHANGE",
+      action: "Setting created successfully",
+      description: `Admin ${session.user.email} created new setting '${key}' in category '${category}'`,
+      entityType: "setting",
+      entityId: setting.id,
+      entityName: key,
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      newValues: {
+        key: key,
+        value: value,
+        category: category,
+        description: description,
+        dataType: dataType,
+        privilegeLevel: privilegeLevel,
+        isPersonal: isPersonal
+      },
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["settings", "create", "success", "admin", "configuration"],
+      metadata: {
+        settingId: setting.id,
+        settingKey: key,
+        category: category,
+        dataType: dataType,
+        privilegeLevel: privilegeLevel,
+        isPersonal: isPersonal,
+        createdBy: session.user.email
+      }
+    }, request).catch(console.error);
+
     return new Response(
       JSON.stringify({
         ...setting,
@@ -116,11 +236,66 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error creating setting:", error);
+    
     if (error.code === "P2002") {
+      // Log duplicate setting creation attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "Setting creation failed - already exists",
+        description: `Admin ${session?.user?.email} attempted to create duplicate setting: ${key}`,
+        entityType: "setting",
+        entityName: key,
+        actorId: session?.user?.id,
+        actorType: "user",
+        actorName: session?.user?.name || session?.user?.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session?.user?.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["settings", "create", "duplicate", "failed"],
+        metadata: {
+          settingKey: key,
+          category: category,
+          errorCode: error.code,
+          createdBy: session?.user?.email
+        }
+      }, request).catch(console.error);
+
       return new Response(JSON.stringify({ error: "Setting already exists" }), {
         status: 409,
       });
     }
+
+    // Log server error during setting creation
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Setting creation failed - server error",
+      description: `Server error during setting creation for admin: ${session?.user?.email || 'unknown'}`,
+      entityType: "setting",
+      entityName: key,
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["settings", "create", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        settingKey: key,
+        category: category,
+        createdBy: session?.user?.email
+      }
+    }, request).catch(console.error);
+
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
     });

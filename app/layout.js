@@ -79,9 +79,13 @@ export async function generateMetadata() {
 export default async function RootLayout({ children }) {
   // Get the site theme server-side to prevent flickering
   const siteTheme = await getSystemSetting("site_color_theme", "ocean-blue");
-  
+
   return (
-    <html lang="en" suppressHydrationWarning data-site-theme={siteTheme !== 'ocean-blue' ? siteTheme : undefined}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-site-theme={siteTheme !== "ocean-blue" ? siteTheme : undefined}
+    >
       <head>
         <ThemeScript />
       </head>
@@ -97,7 +101,6 @@ export default async function RootLayout({ children }) {
               <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                 {children}
               </main>
-              <Footer />
             </Providers>
           </ThemeProvider>
         </QueryProvider>

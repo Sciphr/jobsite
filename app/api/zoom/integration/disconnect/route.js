@@ -15,15 +15,15 @@ export async function POST(request) {
     }
 
     // Get user's current Zoom tokens
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       select: {
-        zoomAccessToken: true,
+        zoom_access_token: true,
       },
     });
 
     // Optionally revoke the token with Zoom (if they support it)
-    if (user?.zoomAccessToken) {
+    if (user?.zoom_access_token) {
       try {
         await fetch('https://zoom.us/oauth/revoke', {
           method: 'POST',
@@ -32,7 +32,7 @@ export async function POST(request) {
             'Authorization': `Basic ${Buffer.from(`${process.env.ZOOM_CLIENT_ID}:${process.env.ZOOM_CLIENT_SECRET}`).toString('base64')}`
           },
           body: new URLSearchParams({
-            token: user.zoomAccessToken
+            token: user.zoom_access_token
           })
         });
       } catch (revokeError) {
@@ -42,16 +42,16 @@ export async function POST(request) {
     }
 
     // Clear Zoom integration data from database
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: session.user.id },
       data: {
-        zoomAccessToken: null,
-        zoomRefreshToken: null,
-        zoomTokenExpiresAt: null,
-        zoomUserId: null,
-        zoomEmail: null,
-        zoomIntegrationEnabled: false,
-        zoomIntegrationConnectedAt: null,
+        zoom_access_token: null,
+        zoom_refresh_token: null,
+        zoom_token_expires_at: null,
+        zoom_user_id: null,
+        zoom_email: null,
+        zoom_integration_enabled: false,
+        zoom_integration_connected_at: null,
       },
     });
 

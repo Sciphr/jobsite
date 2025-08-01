@@ -26,7 +26,7 @@ export async function GET(request) {
     }
 
     // Verify user exists
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: state },
     });
 
@@ -60,21 +60,21 @@ export async function GET(request) {
     }
 
     // Save tokens to database
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: state },
       data: {
-        googleAccessToken: tokens.access_token,
-        googleRefreshToken: tokens.refresh_token,
-        googleTokenExpiresAt: expiresAt,
-        googleEmail: userInfo.email,
-        calendarIntegrationEnabled: true,
-        calendarIntegrationConnectedAt: new Date(),
+        google_access_token: tokens.access_token,
+        google_refresh_token: tokens.refresh_token,
+        google_token_expires_at: expiresAt,
+        google_email: userInfo.email,
+        calendar_integration_enabled: true,
+        calendar_integration_connected_at: new Date(),
       },
     });
 
     // Redirect back to settings with success
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/admin/settings?calendar_success=connected`
+      `${process.env.NEXTAUTH_URL}/admin/settings?calendar_success=connected&refresh_session=true`
     );
   } catch (error) {
     console.error("Error in Google Calendar OAuth callback:", error);

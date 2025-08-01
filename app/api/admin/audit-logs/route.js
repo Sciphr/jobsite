@@ -153,7 +153,7 @@ export async function GET(request) {
       relatedUserId: log.related_user_id,
       relatedJobId: log.related_job_id,
       relatedApplicationId: log.related_application_id,
-      created_at: log.created_at,
+      createdAt: log.created_at?.toISOString() || null,
       severity: log.severity,
       status: log.status,
       tags: log.tags,
@@ -306,7 +306,7 @@ async function getAuditLogStats(where) {
         count: stat._count.id,
       })),
       recentActivity: activityStats.map((stat) => ({
-        date: stat.created_at,
+        date: stat.created_at?.toISOString() || null,
         count: stat._count.id,
       })),
     };

@@ -47,10 +47,11 @@ export async function protectRoute(resource, action, options = {}) {
       };
     }
 
-    // Super admins bypass all permission checks
-    if (session.user.privilegeLevel >= 3) {
-      return { session };
-    }
+    // TODO: Implement proper system admin concept
+    // For now, disable super admin bypass to test permission system
+    // if (session.user.privilegeLevel >= 3) {
+    //   return { session };
+    // }
 
     // Custom check
     if (customCheck) {
@@ -103,10 +104,11 @@ export function canAccessUserData(session, targetUserId, requiredPermission = nu
     return true;
   }
 
-  // Super admins can access any user's data
-  if (session.user.privilegeLevel >= 3) {
-    return true;
-  }
+  // TODO: Implement proper system admin concept
+  // For now, disable super admin bypass to test permission system  
+  // if (session.user.privilegeLevel >= 3) {
+  //   return true;
+  // }
 
   // If a specific permission is required, that would be checked separately
   return false;

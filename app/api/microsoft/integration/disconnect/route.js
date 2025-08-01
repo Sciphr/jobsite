@@ -17,17 +17,17 @@ export async function POST(request) {
     }
 
     // Clear all Microsoft integration data
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: session.user.id },
       data: {
-        microsoftAccessToken: null,
-        microsoftRefreshToken: null,
-        microsoftTokenExpiresAt: null,
-        microsoftUserId: null,
-        microsoftEmail: null,
-        microsoftTenantId: null,
-        microsoftIntegrationEnabled: false,
-        microsoftIntegrationConnectedAt: null,
+        microsoft_access_token: null,
+        microsoft_refresh_token: null,
+        microsoft_token_expires_at: null,
+        microsoft_user_id: null,
+        microsoft_email: null,
+        microsoft_tenant_id: null,
+        microsoft_integration_enabled: false,
+        microsoft_integration_connected_at: null,
       },
     });
 

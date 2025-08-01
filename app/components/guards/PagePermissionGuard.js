@@ -42,12 +42,13 @@ export default function PagePermissionGuard({
       try {
         setChecking(true);
 
-        // Super admins bypass all checks
-        if (isSuperAdmin) {
-          setAccessGranted(true);
-          setChecking(false);
-          return;
-        }
+        // TODO: Implement proper system admin concept
+        // For now, disable super admin bypass to test permission system
+        // if (isSuperAdmin) {
+        //   setAccessGranted(true);
+        //   setChecking(false);
+        //   return;
+        // }
 
         // Check minimum privilege level
         if (minPrivilegeLevel !== null && (session.user.privilegeLevel || 0) < minPrivilegeLevel) {

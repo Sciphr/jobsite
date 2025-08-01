@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import Pagination from "../jobs/components/ui/Pagination";
 import { 
   useUsers, 
@@ -45,7 +46,7 @@ import UserRoleManager from "./components/UserRoleManager";
 import UserEditRoleModal from "./components/UserEditRoleModal";
 import SimpleDragDropFallback from "./components/SimpleDragDropFallback";
 
-export default function AdminUsers() {
+function AdminUsersContent() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [searchTerm, setSearchTerm] = useState("");
@@ -1237,5 +1238,17 @@ export default function AdminUsers() {
         onUserUpdated={refetch}
       />
     </div>
+  );
+}
+
+export default function AdminUsers() {
+  return (
+    <ResourcePermissionGuard 
+      resource="users" 
+      actions={["view"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <AdminUsersContent />
+    </ResourcePermissionGuard>
   );
 }

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import { useAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
   BarChart3,
   TrendingUp,
@@ -45,7 +46,7 @@ import {
 } from "recharts";
 import { exportAnalyticsToExcel, exportAnalyticsToCSV } from "@/app/utils/analyticsExport";
 
-export default function AdminAnalytics() {
+function AdminAnalyticsContent() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [timeRange, setTimeRange] = useState("30d");
@@ -628,5 +629,17 @@ export default function AdminAnalytics() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminAnalytics() {
+  return (
+    <ResourcePermissionGuard 
+      resource="analytics" 
+      actions={["view"]}
+      fallbackPath="/admin/dashboard"
+    >
+      <AdminAnalyticsContent />
+    </ResourcePermissionGuard>
   );
 }

@@ -2,10 +2,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -33,10 +32,21 @@ import { usePermissions } from "../hooks/usePermissions";
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const { loading: themeLoading } = useAdminTheme();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
-  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { hasPermission, loading: permissionsLoading, permissionsReady } = usePermissions();
+  
+  // Add fallback timeout to prevent infinite loading
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoadingTimeout(true);
+    }, 10000); // 10 second fallback timeout
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Mobile state management
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -67,35 +77,70 @@ function AdminLayoutContent({ children }) {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // ✅ REPLACE your useEffect with this ONE-TIME prefetch:
-  useEffect(() => {
-    // Only prefetch once when admin layout first loads
-    if (session?.user?.privilegeLevel >= 1) {
-      console.log("🎯 Admin layout loaded - starting one-time prefetch");
-      prefetchAll();
-    }
-  }, [session?.user?.privilegeLevel, prefetchAll]); // Only run when session changes
+  // Check if user has any admin permissions (using useMemo to prevent re-calculations)
+  const hasAnyAdminPermissions = useMemo(() => {
+    // Return null when still loading or permissions not ready to prevent premature redirects
+    if (!session?.user || permissionsLoading || !permissionsReady) return null;
+    
+    return (
+      hasPermission("applications", "view") ||
+      hasPermission("jobs", "view") ||
+      hasPermission("users", "view") ||
+      hasPermission("analytics", "view") ||
+      hasPermission("settings", "view") ||
+      hasPermission("roles", "view") ||
+      hasPermission("audit_logs", "view") ||
+      hasPermission("weekly_digest", "view") ||
+      hasPermission("emails", "view") ||
+      hasPermission("interviews", "view")
+    );
+  }, [session?.user, permissionsLoading, permissionsReady, hasPermission]);
 
-  // Show loading while checking session, theme, or permissions
-  if (status === "loading" || themeLoading || permissionsLoading) {
+  // Prefetch data when admin layout loads (temporarily disabled to prevent infinite loop)
+  // useEffect(() => {
+  //   if (hasAnyAdminPermissions) {
+  //     prefetchAll();
+  //   }
+  // }, [hasAnyAdminPermissions, prefetchAll]);
+
+  // Handle redirects in useEffect to maintain hook order
+  useEffect(() => {
+    if (status === "loading" || permissionsLoading || !permissionsReady) return;
+    
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
+
+    // Only redirect if we're sure permissions are loaded and user has no admin access
+    if (session && !permissionsLoading && permissionsReady && hasAnyAdminPermissions === false) {
+      router.push("/");
+      return;
+    }
+  }, [session?.user?.id, hasAnyAdminPermissions, status, permissionsLoading, permissionsReady, router]);
+
+  // Show loading while checking session, theme, or permissions (with timeout fallback)
+  if ((status === "loading" || themeLoading || permissionsLoading || !permissionsReady) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {status === "loading" ? "Loading..." : "Initializing theme..."}
+            {status === "loading" 
+              ? "Loading..." 
+              : themeLoading 
+                ? "Initializing theme..." 
+                : "Loading permissions..."
+            }
           </p>
         </div>
       </div>
     );
   }
 
-  // Check if user is admin (privilege level 1 or higher)
-  const isAdmin = session?.user?.privilegeLevel >= 1;
-
-  if (!session || !isAdmin) {
-    redirect("/auth/signin");
-    return null;
+  // Don't render anything if no session or no admin permissions (but only after permissions are loaded)
+  if (!session || (!permissionsLoading && permissionsReady && hasAnyAdminPermissions === false)) {
+    return null; // The useEffect above handles the redirects
   }
 
   const userPrivilegeLevel = session.user.privilegeLevel;
@@ -169,12 +214,10 @@ function AdminLayoutContent({ children }) {
   ];
 
   // Filter navigation based on user permissions
+
   const allowedNavItems = navigationItems.filter((item) => {
     // Dashboard is always available to admin users
     if (!item.requiredPermission) return true;
-    
-    // Super admins get access to everything
-    if (userPrivilegeLevel >= 3) return true;
     
     // Check specific permission
     const { resource, action } = item.requiredPermission;

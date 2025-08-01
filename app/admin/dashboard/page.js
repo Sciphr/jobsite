@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
+import { usePermissions } from "@/app/hooks/usePermissions";
 import {
   useDashboardStats,
   usePrefetchAdminData,
@@ -30,10 +31,11 @@ export default function AdminDashboard() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses, getThemeClasses } =
     useThemeClasses();
+  const { hasPermission, can, loading: permissionsLoading } = usePermissions();
 
   const { prefetchAll } = usePrefetchAdminData();
 
-  // Use React Query for dashboard stats
+  // Use React Query for dashboard stats (for any admin user)
   const {
     data: stats,
     isLoading,
@@ -42,20 +44,15 @@ export default function AdminDashboard() {
     refetch,
   } = useDashboardStats();
 
-  // Use React Query for system status
+  // Use React Query for system status (for any admin user)
   const {
     data: systemStatus,
     isLoading: statusLoading,
     isError: statusError,
   } = useSystemStatus();
 
-  // Check if user is admin (privilege level 1 or higher)
-  const isAdmin = session?.user?.privilegeLevel >= 1;
-
-  if (!session || !isAdmin) {
-    redirect("/auth/signin");
-    return null;
-  }
+  // Admin access is now handled by the AdminLayout
+  // No need for additional checks here since the layout already protects this route
 
   const userPrivilegeLevel = session.user.privilegeLevel;
   const userRole = session.user.role;
@@ -65,7 +62,7 @@ export default function AdminDashboard() {
   }, [prefetchAll]);
 
   // Loading state (much faster now with React Query cache!)
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -109,43 +106,41 @@ export default function AdminDashboard() {
   const quickStats = [
     {
       title: "Total Applications",
-      value: stats?.totalApplications || 0,
+      value: stats?.totalApplications || "0",
       icon: FileText,
-      change: "+12%",
-      visible: userPrivilegeLevel >= 1,
+      change: stats ? "+12%" : "—",
+      canAccess: true, // All admin users can access all sections
       href: "/admin/applications",
       statIndex: 0,
     },
     {
-      title: "Active Jobs",
-      value: stats?.totalJobs || 0,
+      title: "Active Jobs", 
+      value: stats?.totalJobs || "0",
       icon: Briefcase,
-      change: "+3%",
-      visible: userPrivilegeLevel >= 2,
+      change: stats ? "+3%" : "—",
+      canAccess: true, // All admin users can access all sections
       href: "/admin/jobs",
       statIndex: 1,
     },
     {
       title: "Total Users",
-      value: stats?.totalUsers || 0,
+      value: stats?.totalUsers || "0",
       icon: Users,
-      change: "+8%",
-      visible: userPrivilegeLevel >= 3,
+      change: stats ? "+8%" : "—",
+      canAccess: true, // All admin users can access all sections
       href: "/admin/users",
       statIndex: 2,
     },
     {
       title: "Job Views",
-      value: 2847,
+      value: stats?.totalViews || "0",
       icon: Eye,
-      change: "+15%",
-      visible: userPrivilegeLevel >= 2,
+      change: stats ? "+15%" : "—",
+      canAccess: true, // All admin users can access all sections
       href: "/admin/analytics",
       statIndex: 3,
     },
   ];
-
-  const visibleStats = quickStats.filter((stat) => stat.visible);
 
   return (
     <div className="space-y-8 dark:bg-gray-900">
@@ -169,50 +164,71 @@ export default function AdminDashboard() {
 
       {/* Quick Stats with Theme Support */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {visibleStats.map((stat, index) => {
+        {quickStats.map((stat, index) => {
           const Icon = stat.icon;
           const statClasses = getStatCardClasses(stat.statIndex);
-
-          return (
-            <Link
-              key={index}
-              href={stat.href}
-              className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium admin-text-light">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl lg:text-3xl font-bold admin-text mt-2">
-                    {typeof stat.value === "number"
-                      ? stat.value.toLocaleString()
-                      : stat.value}
-                  </p>
-                  <div className="flex items-center mt-2 flex-wrap">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-600 ml-1">
-                      {stat.change}
-                    </span>
-                    <span className="text-xs lg:text-sm admin-text-light ml-1">
-                      vs last month
-                    </span>
-                  </div>
-                </div>
-                <div className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}>
-                  <Icon className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`} />
+          
+          // Create the stat content
+          const statContent = (
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium admin-text-light">
+                  {stat.title}
+                </p>
+                <p className="text-2xl lg:text-3xl font-bold admin-text mt-2">
+                  {typeof stat.value === "number"
+                    ? stat.value.toLocaleString()
+                    : stat.value}
+                </p>
+                <div className="flex items-center mt-2 flex-wrap">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600 ml-1">
+                    {stat.change}
+                  </span>
+                  <span className="text-xs lg:text-sm admin-text-light ml-1">
+                    vs last month
+                  </span>
                 </div>
               </div>
-            </Link>
+              <div className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}>
+                <Icon className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`} />
+              </div>
+            </div>
           );
+
+          // If user has access, wrap in Link; otherwise, show as non-clickable div
+          if (stat.canAccess) {
+            return (
+              <Link
+                key={index}
+                href={stat.href}
+                className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${statClasses.border} ${statClasses.hover} hover:shadow-md transition-all duration-200 group cursor-pointer`}
+              >
+                {statContent}
+              </Link>
+            );
+          } else {
+            return (
+              <div
+                key={index}
+                className={`stat-card admin-card p-4 lg:p-6 rounded-lg shadow ${statClasses.border} opacity-75 transition-all duration-200 relative`}
+              >
+                {statContent}
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-80 rounded-lg">
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">
+                    View access required
+                  </span>
+                </div>
+              </div>
+            );
+          }
         })}
       </div>
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Applications (HR and above) */}
-        {userPrivilegeLevel >= 1 && (
-          <div className="admin-card rounded-lg shadow">
+        {/* Recent Applications */}
+        <div className="admin-card rounded-lg shadow">
             <div className="p-4 lg:p-6 border-b admin-text-light flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <h2 className="text-lg font-semibold admin-text">
                 Recent Applications
@@ -283,20 +299,18 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-        )}
 
-        {/* Recent Jobs (Admin and above) */}
-        {userPrivilegeLevel >= 2 && (
-          <div className="admin-card rounded-lg shadow">
-            <div className="p-4 lg:p-6 border-b admin-text-light flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-              <h2 className="text-lg font-semibold admin-text">Recent Jobs</h2>
-              <Link
-                href="/admin/jobs"
-                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1 transition-colors duration-200 self-start sm:self-auto"
-              >
-                <span>View all</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+        {/* Recent Jobs */}
+        <div className="admin-card rounded-lg shadow">
+          <div className="p-4 lg:p-6 border-b admin-text-light flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <h2 className="text-lg font-semibold admin-text">Recent Jobs</h2>
+            <Link
+              href="/admin/jobs"
+              className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center space-x-1 transition-colors duration-200 self-start sm:self-auto"
+            >
+              <span>View all</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
             </div>
             <div className="p-4 lg:p-6">
               {stats?.recentJobs?.length > 0 ? (
@@ -351,60 +365,52 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-        )}
       </div>
 
       {/* Quick Actions with Theme Support */}
       <div className="admin-card rounded-lg shadow p-4 lg:p-6">
         <h2 className="text-lg font-semibold admin-text mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {userPrivilegeLevel >= 1 && (
-            <Link
-              href="/admin/applications"
-              className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 text-center group"
-            >
-              <FileText className="h-8 w-8 text-gray-400 group-hover:text-blue-600 mx-auto mb-2 transition-colors duration-200" />
-              <div className="text-sm font-medium admin-text">
-                Review Applications
-              </div>
-              <div className="text-xs admin-text-light">
-                Check new applications
-              </div>
-            </Link>
-          )}
+          <Link
+            href="/admin/applications"
+            className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 text-center group"
+          >
+            <FileText className="h-8 w-8 text-gray-400 group-hover:text-blue-600 mx-auto mb-2 transition-colors duration-200" />
+            <div className="text-sm font-medium admin-text">
+              Review Applications
+            </div>
+            <div className="text-xs admin-text-light">
+              Check new applications
+            </div>
+          </Link>
 
-          {userPrivilegeLevel >= 2 && (
-            <Link
-              href="/admin/jobs/create"
-              className={`p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors duration-200 text-center group ${getButtonClasses("primary")} hover:border-opacity-0`}
-            >
-              <div className="flex items-center justify-center mb-2">
-                <Briefcase className="h-6 w-6 text-white transition-colors duration-200" />
-                <Plus className="h-4 w-4 text-white ml-1 transition-colors duration-200" />
-              </div>
-              <div className="text-sm font-medium text-white">Create Job</div>
-              <div className="text-xs text-white text-opacity-80">
-                Post a new position
-              </div>
-            </Link>
-          )}
+          <Link
+            href="/admin/jobs/create"
+            className={`p-4 border-2 border-dashed border-gray-300 rounded-lg transition-colors duration-200 text-center group ${getButtonClasses("primary")} hover:border-opacity-0`}
+          >
+            <div className="flex items-center justify-center mb-2">
+              <Briefcase className="h-6 w-6 text-white transition-colors duration-200" />
+              <Plus className="h-4 w-4 text-white ml-1 transition-colors duration-200" />
+            </div>
+            <div className="text-sm font-medium text-white">Create Job</div>
+            <div className="text-xs text-white text-opacity-80">
+              Post a new position
+            </div>
+          </Link>
 
-          {userPrivilegeLevel >= 3 && (
-            <Link
-              href="/admin/users"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors duration-200 text-center group"
-            >
-              <Users className="h-8 w-8 text-gray-400 group-hover:text-purple-600 mx-auto mb-2 transition-colors duration-200" />
-              <div className="text-sm font-medium admin-text">Manage Users</div>
-              <div className="text-xs admin-text-light">Add or edit users</div>
-            </Link>
-          )}
+          <Link
+            href="/admin/users"
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors duration-200 text-center group"
+          >
+            <Users className="h-8 w-8 text-gray-400 group-hover:text-purple-600 mx-auto mb-2 transition-colors duration-200" />
+            <div className="text-sm font-medium admin-text">Manage Users</div>
+            <div className="text-xs admin-text-light">Add or edit users</div>
+          </Link>
         </div>
       </div>
 
-      {/* System Status (Super Admin only) */}
-      {userPrivilegeLevel >= 3 && (
-        <div className="admin-card rounded-lg shadow p-4 lg:p-6">
+      {/* System Status */}
+      <div className="admin-card rounded-lg shadow p-4 lg:p-6">
           <h2 className="text-lg font-semibold admin-text mb-4">
             System Status
           </h2>
@@ -514,7 +520,6 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

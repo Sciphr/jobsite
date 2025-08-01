@@ -3,8 +3,11 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
+import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
 
 export async function GET(req) {
+  const requestContext = extractRequestContext(req);
+  
   // Check if user has permission to view users
   const authResult = await protectRoute("users", "view");
   if (authResult.error) return authResult.error;
@@ -53,9 +56,56 @@ export async function GET(req) {
       },
     });
 
+    // Log successful user list access
+    await logAuditEvent({
+      eventType: "VIEW",
+      category: "ADMIN",
+      action: "User list accessed",
+      description: `Admin user ${session.user.email} accessed user list (${users.length} users)`,
+      entityType: "users",
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["users", "admin", "view", "list_access"],
+      metadata: {
+        userCount: users.length,
+        accessedBy: session.user.email
+      }
+    }, req).catch(console.error);
+
     return new Response(JSON.stringify(users), { status: 200 });
   } catch (error) {
     console.error("Users fetch error:", error);
+    
+    // Log server error during user list access
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "User list access failed - server error",
+      description: `Server error while accessing user list for admin: ${session?.user?.email || 'unknown'}`,
+      entityType: "users",
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["users", "admin", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack
+      }
+    }, req).catch(console.error);
+
     return new Response(JSON.stringify({ message: "Internal server error" }), {
       status: 500,
     });
@@ -63,6 +113,8 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
+  const requestContext = extractRequestContext(req);
+  
   // Check if user has permission to create users
   const authResult = await protectRoute("users", "create");
   if (authResult.error) return authResult.error;
@@ -83,6 +135,29 @@ export async function POST(req) {
 
     // Validation
     if (!email || !password) {
+      // Log validation failure
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - missing required fields",
+        description: `Admin user creation validation failed for ${session.user.email}`,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "validation", "failed"],
+        metadata: {
+          missingEmail: !email,
+          missingPassword: !password,
+          attemptedEmail: email || 'not_provided'
+        }
+      }, req).catch(console.error);
+
       return new Response(
         JSON.stringify({ message: "Email and password are required" }),
         {
@@ -94,6 +169,27 @@ export async function POST(req) {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      // Log invalid email format
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - invalid email format",
+        description: `Admin user creation failed due to invalid email format: ${email}`,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "validation", "invalid_email"],
+        metadata: {
+          attemptedEmail: email
+        }
+      }, req).catch(console.error);
+
       return new Response(JSON.stringify({ message: "Invalid email format" }), {
         status: 400,
       });
@@ -102,6 +198,29 @@ export async function POST(req) {
     // Validate role and privilege level
     const validRoles = ["user", "hr", "admin", "super_admin"];
     if (role && !validRoles.includes(role)) {
+      // Log invalid role
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - invalid role",
+        description: `Admin user creation failed due to invalid role: ${role} for email: ${email}`,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "validation", "invalid_role"],
+        metadata: {
+          attemptedEmail: email,
+          attemptedRole: role,
+          validRoles: validRoles
+        }
+      }, req).catch(console.error);
+
       return new Response(JSON.stringify({ message: "Invalid role" }), {
         status: 400,
       });
@@ -111,6 +230,29 @@ export async function POST(req) {
       privilegeLevel !== undefined &&
       (privilegeLevel < 0 || privilegeLevel > 3)
     ) {
+      // Log invalid privilege level
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - invalid privilege level",
+        description: `Admin user creation failed due to invalid privilege level: ${privilegeLevel} for email: ${email}`,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "validation", "invalid_privilege"],
+        metadata: {
+          attemptedEmail: email,
+          attemptedPrivilegeLevel: privilegeLevel,
+          validRange: "0-3"
+        }
+      }, req).catch(console.error);
+
       return new Response(
         JSON.stringify({ message: "Privilege level must be between 0 and 3" }),
         {
@@ -125,6 +267,32 @@ export async function POST(req) {
     });
 
     if (existingUser) {
+      // Log duplicate user creation attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - duplicate email",
+        description: `Admin attempted to create user with existing email: ${email}`,
+        entityType: "user",
+        entityId: existingUser.id,
+        entityName: email,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "duplicate", "failed"],
+        metadata: {
+          attemptedEmail: email,
+          existingUserId: existingUser.id,
+          createdBy: session.user.email
+        }
+      }, req).catch(console.error);
+
       return new Response(
         JSON.stringify({ message: "User with this email already exists" }),
         {
@@ -169,11 +337,64 @@ export async function POST(req) {
       },
     });
 
+    // Log successful user creation
+    await logAuditEvent({
+      eventType: "CREATE",
+      category: "ADMIN",
+      action: "User created successfully by admin",
+      description: `Admin ${session.user.email} created new user: ${email}`,
+      entityType: "user",
+      entityId: newUser.id,
+      entityName: email,
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: newUser.id,
+      severity: "info",
+      status: "success",
+      tags: ["users", "admin", "create", "success"],
+      metadata: {
+        newUserId: newUser.id,
+        newUserEmail: email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role: role || "user",
+        privilegeLevel: privilegeLevel !== undefined ? privilegeLevel : 0,
+        createdBy: session.user.email
+      }
+    }, req).catch(console.error);
+
     return new Response(JSON.stringify(newUser), { status: 201 });
   } catch (error) {
     console.error("User creation error:", error);
 
     if (error.code === "P2002") {
+      // Log Prisma duplicate constraint error
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "ADMIN",
+        action: "User creation failed - database constraint",
+        description: `Admin user creation failed due to database constraint violation`,
+        actorId: session?.user?.id,
+        actorType: "user",
+        actorName: session?.user?.name || session?.user?.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session?.user?.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["users", "admin", "create", "database_constraint", "failed"],
+        metadata: {
+          errorCode: error.code,
+          error: error.message,
+          createdBy: session?.user?.email
+        }
+      }, req).catch(console.error);
+
       return new Response(
         JSON.stringify({ message: "User with this email already exists" }),
         {
@@ -181,6 +402,30 @@ export async function POST(req) {
         }
       );
     }
+
+    // Log server error during user creation
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "User creation failed - server error",
+      description: `Server error during admin user creation for: ${session?.user?.email || 'unknown'}`,
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["users", "admin", "create", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        errorCode: error.code,
+        createdBy: session?.user?.email
+      }
+    }, req).catch(console.error);
 
     return new Response(JSON.stringify({ message: "Internal server error" }), {
       status: 500,

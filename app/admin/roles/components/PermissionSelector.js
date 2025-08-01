@@ -1,113 +1,55 @@
 import { useState, useEffect } from "react";
 
-// Permission categories and descriptions
-const PERMISSION_CATEGORIES = {
-  "Jobs Management": {
+// Category metadata (icons and descriptions)
+const CATEGORY_METADATA = {
+  "Jobs": {
     icon: "💼",
-    description: "Control access to job postings and job-related features",
-    permissions: [
-      { resource: "jobs", action: "view", name: "View Jobs", desc: "See job listings and details" },
-      { resource: "jobs", action: "create", name: "Create Jobs", desc: "Post new job openings" },
-      { resource: "jobs", action: "edit", name: "Edit Jobs", desc: "Modify existing job postings" },
-      { resource: "jobs", action: "delete", name: "Delete Jobs", desc: "Remove job postings" },
-      { resource: "jobs", action: "publish", name: "Publish Jobs", desc: "Control job visibility to applicants" },
-      { resource: "jobs", action: "feature", name: "Feature Jobs", desc: "Mark jobs as featured" },
-      { resource: "jobs", action: "export", name: "Export Jobs", desc: "Download job data" },
-    ]
+    description: "Control access to job postings and job-related features"
   },
   "Applications": {
-    icon: "📋",
-    description: "Manage job applications and candidate interactions",
-    permissions: [
-      { resource: "applications", action: "view", name: "View Applications", desc: "See submitted applications" },
-      { resource: "applications", action: "edit", name: "Edit Applications", desc: "Modify application details" },
-      { resource: "applications", action: "delete", name: "Delete Applications", desc: "Remove applications" },
-      { resource: "applications", action: "export", name: "Export Applications", desc: "Download application data" },
-      { resource: "applications", action: "bulk_actions", name: "Bulk Actions", desc: "Perform mass operations on applications" },
-    ]
+    icon: "📋", 
+    description: "Manage job applications and candidate interactions"
   },
-  "User Management": {
+  "Users": {
     icon: "👥",
-    description: "Control user accounts and profile management",
-    permissions: [
-      { resource: "users", action: "view", name: "View Users", desc: "See user profiles and information" },
-      { resource: "users", action: "create", name: "Create Users", desc: "Add new user accounts" },
-      { resource: "users", action: "edit", name: "Edit Users", desc: "Modify user profiles" },
-      { resource: "users", action: "delete", name: "Delete Users", desc: "Remove user accounts" },
-      { resource: "users", action: "export", name: "Export Users", desc: "Download user data" },
-      { resource: "users", action: "bulk_actions", name: "User Bulk Actions", desc: "Perform mass operations on users" },
-    ]
+    description: "Control user accounts and profile management"
   },
   "Interviews": {
     icon: "🎯",
-    description: "Schedule and manage interviews",
-    permissions: [
-      { resource: "interviews", action: "view", name: "View Interviews", desc: "See scheduled interviews" },
-      { resource: "interviews", action: "create", name: "Schedule Interviews", desc: "Create new interview appointments" },
-      { resource: "interviews", action: "edit", name: "Edit Interviews", desc: "Modify interview details" },
-      { resource: "interviews", action: "delete", name: "Cancel Interviews", desc: "Remove scheduled interviews" },
-      { resource: "interviews", action: "export", name: "Export Interviews", desc: "Download interview data" },
-    ]
+    description: "Schedule and manage interviews"
   },
-  "Analytics & Reports": {
+  "Analytics": {
     icon: "📊",
-    description: "Access data insights and generate reports",
-    permissions: [
-      { resource: "analytics", action: "view", name: "View Analytics", desc: "Access dashboard analytics" },
-      { resource: "analytics", action: "export", name: "Export Analytics", desc: "Download analytics reports" },
-      { resource: "reports", action: "view", name: "View Reports", desc: "Access system reports" },
-      { resource: "reports", action: "create", name: "Create Reports", desc: "Generate custom reports" },
-      { resource: "reports", action: "export", name: "Export Reports", desc: "Download report data" },
-    ]
+    description: "Access data insights and generate reports"
   },
   "Settings": {
     icon: "⚙️",
-    description: "Configure system and application settings",
-    permissions: [
-      { resource: "settings", action: "view", name: "View Settings", desc: "See system configuration" },
-      { resource: "settings", action: "edit_branding", name: "Edit Branding", desc: "Modify logos, colors, and appearance" },
-      { resource: "settings", action: "edit_system", name: "Edit System Settings", desc: "Modify critical system configuration" },
-      { resource: "settings", action: "integrations", name: "Manage Integrations", desc: "Configure third-party services" },
-    ]
+    description: "Configure system and application settings"
   },
-  "Email Management": {
+  "Emails": {
     icon: "📧",
-    description: "Control email communications and templates",
-    permissions: [
-      { resource: "emails", action: "view", name: "View Emails", desc: "See email history and templates" },
-      { resource: "emails", action: "send", name: "Send Emails", desc: "Compose and send emails" },
-      { resource: "emails", action: "templates", name: "Manage Templates", desc: "Create and edit email templates" },
-      { resource: "emails", action: "bulk_send", name: "Bulk Email", desc: "Send emails to multiple recipients" },
-    ]
+    description: "Control email communications and templates"
   },
   "Weekly Digest": {
     icon: "📅",
-    description: "Manage weekly summary reports",
-    permissions: [
-      { resource: "weekly_digest", action: "view", name: "View Digest", desc: "See weekly digest reports" },
-      { resource: "weekly_digest", action: "send", name: "Send Digest", desc: "Distribute weekly reports" },
-      { resource: "weekly_digest", action: "configure", name: "Configure Digest", desc: "Set up digest preferences" },
-    ]
+    description: "Manage weekly summary reports"
   },
-  "Security & Auditing": {
+  "Audit Logs": {
     icon: "🔒",
-    description: "Monitor system security and user activity",
-    permissions: [
-      { resource: "audit_logs", action: "view", name: "View Audit Logs", desc: "See system activity logs" },
-      { resource: "audit_logs", action: "export", name: "Export Audit Logs", desc: "Download audit data" },
-      { resource: "security", action: "manage", name: "Manage Security", desc: "Configure security settings" },
-    ]
+    description: "Monitor system security and user activity"
   },
-  "Role Management": {
+  "Roles": {
     icon: "🛡️",
-    description: "Control roles and permissions system",
-    permissions: [
-      { resource: "roles", action: "view", name: "View Roles", desc: "See role configurations" },
-      { resource: "roles", action: "create", name: "Create Roles", desc: "Add new roles" },
-      { resource: "roles", action: "edit", name: "Edit Roles", desc: "Modify role permissions" },
-      { resource: "roles", action: "delete", name: "Delete Roles", desc: "Remove roles (non-system)" },
-      { resource: "roles", action: "assign", name: "Assign Roles", desc: "Change user role assignments" },
-    ]
+    description: "Control roles and permissions system"
+  }
+};
+
+// Fallback data in case API fails
+const FALLBACK_CATEGORIES = {
+  "System": {
+    icon: "⚙️",
+    description: "Loading permissions from database...",
+    permissions: []
   }
 };
 
@@ -115,13 +57,114 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [selectAll, setSelectAll] = useState(false);
+  const [permissionCategories, setPermissionCategories] = useState(FALLBACK_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch permissions from API
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/permissions');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch permissions');
+        }
+        
+        const data = await response.json();
+        
+        // Transform API data into component format
+        const transformedCategories = {};
+        
+        Object.entries(data.grouped).forEach(([categoryName, permissions]) => {
+          // Get metadata for category or use defaults
+          const metadata = CATEGORY_METADATA[categoryName] || {
+            icon: "📋",
+            description: "System permissions"
+          };
+          
+          transformedCategories[categoryName] = {
+            ...metadata,
+            permissions: permissions.map(perm => ({
+              resource: perm.resource,
+              action: perm.action,
+              name: formatPermissionName(perm.resource, perm.action),
+              desc: perm.description,
+              key: perm.key,
+              id: perm.id,
+              isSystemPermission: perm.isSystemPermission
+            }))
+          };
+        });
+        
+        setPermissionCategories(transformedCategories);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching permissions:', err);
+        setError(err.message);
+        // Keep fallback categories on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPermissions();
+  }, []);
+
+  // Helper function to format permission names
+  const formatPermissionName = (resource, action) => {
+    const actionMap = {
+      view: 'View',
+      create: 'Create', 
+      edit: 'Edit',
+      delete: 'Delete',
+      export: 'Export',
+      publish: 'Publish',
+      feature: 'Feature',
+      send: 'Send',
+      templates: 'Manage Templates',
+      automation: 'Manage Automation',
+      bulk_actions: 'Bulk Actions',
+      status_change: 'Change Status',
+      assign: 'Assign',
+      notes: 'Add Notes',
+      impersonate: 'Impersonate',
+      roles: 'Manage Roles',
+      reschedule: 'Reschedule',
+      calendar: 'Manage Calendar',
+      advanced: 'Advanced',
+      edit_system: 'Edit System Settings',
+      edit_branding: 'Edit Branding',
+      edit_notifications: 'Edit Notifications',
+      integrations: 'Manage Integrations'
+    };
+    
+    const resourceMap = {
+      jobs: 'Jobs',
+      applications: 'Applications',
+      users: 'Users',
+      interviews: 'Interviews',
+      analytics: 'Analytics',
+      settings: 'Settings',
+      emails: 'Emails',
+      weekly_digest: 'Weekly Digest',
+      audit_logs: 'Audit Logs',
+      roles: 'Roles'
+    };
+
+    const actionName = actionMap[action] || action.charAt(0).toUpperCase() + action.slice(1);
+    const resourceName = resourceMap[resource] || resource.charAt(0).toUpperCase() + resource.slice(1);
+    
+    return `${actionName} ${resourceName}`;
+  };
 
   // Calculate total permissions
-  const totalPermissions = Object.values(PERMISSION_CATEGORIES)
+  const totalPermissions = Object.values(permissionCategories)
     .reduce((sum, category) => sum + category.permissions.length, 0);
 
   // Filter permissions based on search
-  const filteredCategories = Object.entries(PERMISSION_CATEGORIES).reduce((acc, [categoryName, categoryData]) => {
+  const filteredCategories = Object.entries(permissionCategories).reduce((acc, [categoryName, categoryData]) => {
     if (!searchTerm) return { ...acc, [categoryName]: categoryData };
     
     const filteredPermissions = categoryData.permissions.filter(
@@ -190,7 +233,7 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
       onPermissionChange(new Set());
     } else {
       const allPermissions = new Set();
-      Object.values(PERMISSION_CATEGORIES).forEach(category => {
+      Object.values(permissionCategories).forEach(category => {
         category.permissions.forEach(perm => {
           allPermissions.add(`${perm.resource}:${perm.action}`);
         });
@@ -211,6 +254,39 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
       setExpandedCategories(new Set(Object.keys(filteredCategories)));
     }
   }, [searchTerm, filteredCategories]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading permissions...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+          <div className="flex items-center">
+            <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="ml-3">
+              <h4 className="text-sm font-medium text-red-800">Failed to load permissions</h4>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

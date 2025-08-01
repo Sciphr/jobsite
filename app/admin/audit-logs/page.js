@@ -131,7 +131,15 @@ export default function AuditLogsPage() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for dateString:', dateString);
+      return 'Invalid Date';
+    }
   };
 
   const openDetailsModal = (log) => {

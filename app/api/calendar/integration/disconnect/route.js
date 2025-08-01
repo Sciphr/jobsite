@@ -15,11 +15,11 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       select: {
-        googleAccessToken: true,
-        googleRefreshToken: true,
+        google_access_token: true,
+        google_refresh_token: true,
       },
     });
 
@@ -28,7 +28,7 @@ export async function POST() {
     }
 
     // Try to revoke the Google token if it exists
-    if (user.googleAccessToken) {
+    if (user.google_access_token) {
       try {
         const oauth2Client = new google.auth.OAuth2(
           process.env.GOOGLE_CLIENT_ID,
@@ -36,8 +36,8 @@ export async function POST() {
         );
         
         oauth2Client.setCredentials({
-          access_token: user.googleAccessToken,
-          refresh_token: user.googleRefreshToken,
+          access_token: user.google_access_token,
+          refresh_token: user.google_refresh_token,
         });
 
         await oauth2Client.revokeCredentials();
@@ -48,15 +48,15 @@ export async function POST() {
     }
 
     // Clear calendar integration data from database
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: session.user.id },
       data: {
-        googleAccessToken: null,
-        googleRefreshToken: null,
-        googleTokenExpiresAt: null,
-        googleEmail: null,
-        calendarIntegrationEnabled: false,
-        calendarIntegrationConnectedAt: null,
+        google_access_token: null,
+        google_refresh_token: null,
+        google_token_expires_at: null,
+        google_email: null,
+        calendar_integration_enabled: false,
+        calendar_integration_connected_at: null,
       },
     });
 
