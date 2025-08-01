@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "@/app/lib/permissions";
 import { appPrisma } from "../../lib/prisma";
-import { logAuditEvent, extractRequestContext } from "../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../lib/auditLog";
 
 // GET /api/roles - Fetch all roles
 export async function GET(request) {

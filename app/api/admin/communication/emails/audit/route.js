@@ -150,7 +150,7 @@ export async function GET(request) {
             emailDetails = await prisma.email.findFirst({
               where: emailQuery,
               include: {
-                emailTemplate: {
+                email_templates: {
                   select: {
                     id: true,
                     name: true,
@@ -213,7 +213,7 @@ export async function GET(request) {
                 openedAt: emailDetails.opened_at,
                 clickedAt: emailDetails.clicked_at,
                 sentAt: emailDetails.sent_at,
-                template: emailDetails.emailTemplate,
+                template: emailDetails.email_templates,
               }
             : null,
           // Computed fields for UI
@@ -235,7 +235,7 @@ export async function GET(request) {
             (log.status === "success" ? "sent" : "failed"),
           sentAt: emailDetails?.sent_at || log.createdAt,
           templateInfo:
-            emailDetails?.emailTemplate ||
+            emailDetails?.email_templates ||
             (log.metadata?.templateId
               ? {
                   id: log.metadata.templateId,

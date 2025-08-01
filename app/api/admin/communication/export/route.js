@@ -82,7 +82,7 @@ export async function GET(request) {
 
     // Get unique template IDs from emails
     const templateIds = [...new Set(emails.map(email => email.template_id).filter(Boolean))];
-    const emailTemplates = templateIds.length > 0 ? await prisma.emailTemplate.findMany({
+    const emailTemplates = templateIds.length > 0 ? await prisma.email_templates.findMany({
       where: {
         id: { in: templateIds }
       },
@@ -259,7 +259,7 @@ export async function GET(request) {
     summarySheet.getColumn(2).width = 15;
 
     // Templates Sheet
-    const templates = await prisma.emailTemplate.findMany({
+    const templates = await prisma.email_templates.findMany({
       where: { is_active: true },
       orderBy: { name: 'asc' },
       include: {

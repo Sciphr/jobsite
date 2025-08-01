@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useThemeClasses } from '../../contexts/AdminThemeContext';
 import { 
   FileSearch, 
@@ -16,13 +17,34 @@ import {
   Search,
   RefreshCw,
   X,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
+
+// Audit logs fetcher function
+const fetchAuditLogs = async (filters, page = 1, limit = 200) => {
+  console.log(`🔄 Fetching audit logs: page ${page}, limit ${limit}`, filters);
+  
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
+  });
+  
+  const response = await fetch(`/api/admin/audit-logs?${queryParams}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch audit logs: ${response.status}`);
+  }
+  
+  return response.json();
+};
 
 export default function AuditLogsPage() {
   const { getThemeClasses, getButtonClasses } = useThemeClasses();
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     category: '',
     eventType: '',
@@ -33,7 +55,7 @@ export default function AuditLogsPage() {
     ipAddress: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -53,31 +75,289 @@ export default function AuditLogsPage() {
     };
   });
 
-  const loadAuditLogs = async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams({
-        page: currentPage.toString(),
-        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
-      });
-      
-      const response = await fetch(`/api/admin/audit-logs?${queryParams}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setAuditLogs(data.data);
-        setTotalPages(data.pagination.totalPages);
-      }
-    } catch (error) {
-      console.error('Failed to load audit logs:', error);
-    } finally {
-      setLoading(false);
+  // Create cache key based on filters
+  const cacheKey = useMemo(() => 
+    ['audit-logs', JSON.stringify(filters)], 
+    [filters]
+  );
+
+  // React Query for audit logs with smart caching
+  const {
+    data: auditData,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: cacheKey,
+    queryFn: () => fetchAuditLogs(filters, 1, 500), // Fetch larger chunks (500 items)
+    staleTime: 2 * 60 * 1000, // 2 minutes - audit logs change frequently
+    gcTime: 10 * 60 * 1000, // 10 minutes in cache
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    enabled: true, // Always enabled
+  });
+
+  // Memoized data processing for client-side pagination
+  const { paginatedLogs, totalPages, totalCount } = useMemo(() => {
+    if (!auditData?.success || !auditData?.data) {
+      return { paginatedLogs: [], totalPages: 1, totalCount: 0 };
     }
+
+    const allLogs = auditData.data;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    return {
+      paginatedLogs: allLogs.slice(startIndex, endIndex),
+      totalPages: Math.ceil(allLogs.length / itemsPerPage),
+      totalCount: allLogs.length
+    };
+  }, [auditData, currentPage, itemsPerPage]);
+
+  // Prefetch next batch when approaching the end of current data
+  useEffect(() => {
+    if (auditData?.success && auditData?.data?.length > 0) {
+      const currentDataSize = auditData.data.length;
+      const maxPageWithCurrentData = Math.ceil(currentDataSize / itemsPerPage);
+      
+      // If we're getting close to the end of our cached data, prefetch more
+      if (currentPage >= maxPageWithCurrentData - 2 && currentDataSize >= 500) {
+        const nextPage = Math.ceil(currentDataSize / 500) + 1;
+        queryClient.prefetchQuery({
+          queryKey: ['audit-logs-batch', JSON.stringify(filters), nextPage],
+          queryFn: () => fetchAuditLogs(filters, nextPage, 500),
+          staleTime: 2 * 60 * 1000,
+        });
+      }
+    }
+  }, [currentPage, auditData, filters, itemsPerPage, queryClient]);
+
+  // Pagination component
+  const PaginationComponent = ({ position = "bottom" }) => {
+    // Always show pagination if we have data (even if only 1 page) to show page size selector and record count
+    if (totalCount === 0) return null;
+
+    const getPageNumbers = () => {
+      const delta = 2; // Number of pages to show on each side
+      const range = [];
+      const rangeWithDots = [];
+
+      // Calculate range of pages to show
+      let start = Math.max(1, currentPage - delta);
+      let end = Math.min(totalPages, currentPage + delta);
+
+      // Adjust range if we're near the beginning or end
+      if (currentPage <= delta + 1) {
+        end = Math.min(totalPages, delta * 2 + 3);
+      }
+      if (currentPage >= totalPages - delta) {
+        start = Math.max(1, totalPages - delta * 2 - 2);
+      }
+
+      // Build the range
+      for (let i = start; i <= end; i++) {
+        range.push(i);
+      }
+
+      // Add first page and dots if needed
+      if (start > 1) {
+        rangeWithDots.push(1);
+        if (start > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+
+      // Add main range
+      rangeWithDots.push(...range);
+
+      // Add last page and dots if needed
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          rangeWithDots.push('...');
+        }
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    const pageNumbers = getPageNumbers();
+
+    return (
+      <div className={`bg-white dark:bg-gray-800 px-4 py-3 border-gray-200 dark:border-gray-700 sm:px-6 ${
+        position === "top" ? "border-b rounded-t-lg" : "border-t rounded-b-lg"
+      } min-h-[56px]`}>
+        <div className="flex items-center justify-between">
+          {/* Mobile pagination */}
+          <div className="flex-1 flex justify-between sm:hidden">
+            {totalPages > 1 ? (
+              <>
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </button>
+                <span className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center justify-center w-full min-h-[40px]">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Showing all {totalCount} records
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop pagination */}
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div className="flex items-center space-x-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {totalPages > 1 ? (
+                  <>
+                    Showing page <span className="font-medium">{currentPage}</span> of{' '}
+                    <span className="font-medium">{totalPages}</span>
+                    {totalCount > 0 && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                        ({totalCount} total records loaded)
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    Showing all <span className="font-medium">{totalCount}</span> records
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                      (all records loaded)
+                    </span>
+                  </>
+                )}
+              </p>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-700 dark:text-gray-300">Show:</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1); // Reset to first page when changing page size
+                  }}
+                  className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                </select>
+                <span className="text-sm text-gray-700 dark:text-gray-300">per page</span>
+              </div>
+            </div>
+            <div>
+              {totalPages > 1 ? (
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {/* First page button */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="First page"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </button>
+
+                {/* Previous page button */}
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {/* Page numbers */}
+                {pageNumbers.map((pageNum, index) => {
+                  if (pageNum === '...') {
+                    return (
+                      <span
+                        key={`dots-${index}`}
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+
+                  const isCurrentPage = pageNum === currentPage;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        isCurrentPage
+                          ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-200'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                {/* Next page button */}
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                {/* Last page button */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Last page"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </button>
+                </nav>
+              ) : (
+                /* Maintain layout spacing when no navigation needed */
+                <div className="flex items-center justify-end min-h-[40px]">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    All records on one page
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
+  // Reset to first page when filters change
   useEffect(() => {
-    loadAuditLogs();
-  }, [currentPage, filters]);
+    setCurrentPage(1);
+  }, [filters]);
+
+  // Reset to first page when items per page changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -156,6 +436,7 @@ export default function AuditLogsPage() {
     try {
       const queryParams = new URLSearchParams({
         export: 'true',
+        limit: '1000', // Export more records for export
         ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
       });
       
@@ -243,11 +524,11 @@ export default function AuditLogsPage() {
               <span className="hidden sm:inline">Export</span>
             </button>
             <button
-              onClick={loadAuditLogs}
-              disabled={loading}
+              onClick={() => refetch()}
+              disabled={isLoading}
               className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
@@ -373,9 +654,23 @@ export default function AuditLogsPage() {
 
       {/* Audit Logs Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {loading ? (
+        {/* Top Pagination */}
+        <PaginationComponent position="top" />
+        {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64 text-red-600 dark:text-red-400">
+            <div className="text-center">
+              <p className="mb-2">Failed to load audit logs</p>
+              <button 
+                onClick={() => refetch()}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -421,7 +716,22 @@ export default function AuditLogsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {auditLogs.map((log) => (
+                  {paginatedLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-6 py-12 text-center">
+                        <div className="text-gray-500 dark:text-gray-400">
+                          <FileSearch className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">No audit logs found</p>
+                          <p className="text-sm">
+                            {Object.values(filters).some(v => v) 
+                              ? 'Try adjusting your filters to see more results.' 
+                              : 'No audit logs have been recorded yet.'}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       {visibleColumns.timestamp && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -497,60 +807,14 @@ export default function AuditLogsPage() {
                         </td>
                       )}
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 flex justify-between sm:hidden">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Page <span className="font-medium">{currentPage}</span> of{' '}
-                        <span className="font-medium">{totalPages}</span>
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                        <button
-                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-l-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Previous
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                          disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-r-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Next
-                        </button>
-                      </nav>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Bottom Pagination */}
+            <PaginationComponent position="bottom" />
           </>
         )}
       </div>

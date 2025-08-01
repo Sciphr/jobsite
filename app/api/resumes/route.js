@@ -5,7 +5,8 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
 import { uploadToMinio, deleteFromMinio } from "../../lib/minio-storage";
 import { getSystemSetting } from "../../lib/settings";
-import { logAuditEvent, extractRequestContext } from "../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../lib/auditLog";
 
 //const prisma = new prismaClient();
 

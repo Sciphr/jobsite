@@ -3,13 +3,33 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "@/app/lib/permissions";
 import { appPrisma } from "../../../lib/prisma";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 // GET /api/roles/[roleId] - Fetch specific role
 export async function GET(request, { params }) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
+      // Log unauthorized role details access attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized role details access attempt",
+        description: "Role details access attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["roles", "access", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -22,6 +42,24 @@ export async function GET(request, { params }) {
       "view"
     );
     if (!canViewRoles) {
+      // Log insufficient permissions for role details access
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Insufficient permissions for role details access",
+        description: `User ${session.user.email} attempted to access role details without sufficient permissions`,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "warning",
+        status: "failure",
+        tags: ["roles", "access", "permissions", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -55,8 +93,56 @@ export async function GET(request, { params }) {
     });
 
     if (!role) {
+      // Log role not found
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "DATA",
+        action: "Role not found",
+        description: `User ${session.user.email} attempted to access non-existent role: ${roleId}`,
+        entityType: "role",
+        entityId: roleId,
+        actorId: session.user.id,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: session.user.id,
+        severity: "info",
+        status: "failure",
+        tags: ["roles", "access", "not_found"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
+
+    // Log successful role details access
+    await logAuditEvent({
+      eventType: "VIEW",
+      category: "ADMIN",
+      action: "Role details accessed",
+      description: `User ${session.user.email} accessed details for role '${role.name}'`,
+      entityType: "role",
+      entityId: roleId,
+      entityName: role.name,
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["roles", "access", "view", "admin"],
+      metadata: {
+        roleId: roleId,
+        roleName: role.name,
+        permissionCount: role._count?.role_permissions || 0,
+        userCount: role._count?.users_users_role_idToroles || 0,
+        accessedBy: session.user.email
+      }
+    }, request).catch(console.error);
 
     return NextResponse.json({
       success: true,
@@ -64,6 +150,33 @@ export async function GET(request, { params }) {
     });
   } catch (error) {
     console.error("Error fetching role:", error);
+    
+    // Log server error during role details access
+    await logAuditEvent({
+      eventType: "ERROR",
+      category: "SYSTEM",
+      action: "Role details access failed - server error",
+      description: `Server error during role details access for user: ${session?.user?.email || 'unknown'}`,
+      entityType: "role",
+      entityId: params?.roleId,
+      actorId: session?.user?.id,
+      actorType: "user",
+      actorName: session?.user?.name || session?.user?.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session?.user?.id,
+      severity: "error",
+      status: "failure",
+      tags: ["roles", "access", "server_error", "system"],
+      metadata: {
+        error: error.message,
+        stack: error.stack,
+        roleId: params?.roleId,
+        accessedBy: session?.user?.email
+      }
+    }, request).catch(console.error);
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -73,10 +186,28 @@ export async function GET(request, { params }) {
 
 // PUT /api/roles/[roleId] - Update role
 export async function PUT(request, { params }) {
+  const requestContext = extractRequestContext(request);
+  
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
+      // Log unauthorized role update attempt
+      await logAuditEvent({
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized role update attempt",
+        description: "Role update attempted without valid session",
+        actorType: "user",
+        actorName: "unauthenticated",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["roles", "update", "unauthorized", "security"]
+      }, request).catch(console.error);
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -77,7 +77,7 @@ export async function PUT(request, { params }) {
 
     // Validate template if provided
     if (template_id) {
-      const template = await appPrisma.emailTemplate.findUnique({
+      const template = await appPrisma.email_templates.findUnique({
         where: { id: template_id },
       });
 

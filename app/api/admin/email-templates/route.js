@@ -35,7 +35,7 @@ export async function GET(req) {
       where.type = applicationStatus;
     }
 
-    const templates = await appPrisma.emailTemplate.findMany({
+    const templates = await appPrisma.email_templates.findMany({
       where,
       select: {
         id: true,
@@ -105,7 +105,7 @@ export async function POST(req) {
       );
     }
 
-    const template = await appPrisma.emailTemplate.create({
+    const template = await appPrisma.email_templates.create({
       data: {
         name,
         subject,

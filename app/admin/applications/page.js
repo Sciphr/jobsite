@@ -27,7 +27,6 @@ import {
   Briefcase,
   RefreshCw,
   Trash2,
-  X,
   CheckCircle,
   XCircle,
   Settings,
@@ -61,8 +60,6 @@ function AdminApplicationsContent() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [selectedApplications, setSelectedApplications] = useState([]);
-  const [showApplicationModal, setShowApplicationModal] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState(null);
 
   const { prefetchAll } = usePrefetchAdminData();
   const {
@@ -92,35 +89,6 @@ function AdminApplicationsContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (showApplicationModal) {
-      // Store current scroll position
-      const scrollY = window.scrollY;
-
-      // Scroll to top and prevent body scroll
-      window.scrollTo(0, 0);
-      document.body.style.overflow = "hidden";
-
-      // Store scroll position for restoration
-      document.body.setAttribute("data-scroll-y", scrollY.toString());
-    } else {
-      // Restore body scroll
-      document.body.style.overflow = "unset";
-
-      // Restore previous scroll position
-      const scrollY = document.body.getAttribute("data-scroll-y");
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY));
-        document.body.removeAttribute("data-scroll-y");
-      }
-    }
-
-    // Cleanup function to restore scroll on unmount
-    return () => {
-      document.body.style.overflow = "unset";
-      document.body.removeAttribute("data-scroll-y");
-    };
-  }, [showApplicationModal]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -287,17 +255,8 @@ function AdminApplicationsContent() {
     }
   };
 
-  const viewApplicationDetails = async (applicationId) => {
-    try {
-      const response = await fetch(`/api/admin/applications/${applicationId}`);
-      if (response.ok) {
-        const application = await response.json();
-        setSelectedApplication(application);
-        setShowApplicationModal(true);
-      }
-    } catch (error) {
-      console.error("Error fetching application details:", error);
-    }
+  const viewApplicationDetails = (applicationId) => {
+    router.push(`/admin/applications/${applicationId}`);
   };
 
   const downloadResume = async (storagePath, applicantName) => {
@@ -469,44 +428,43 @@ function AdminApplicationsContent() {
 
       {/* NEW: Applications Manager Promotion Card */}
       <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 lg:px-6 lg:py-8 text-white">
-          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+        <div className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-8 text-white">
+          <div className="flex flex-col space-y-3 sm:space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-white bg-opacity-20 p-2 rounded-lg">
-                  <Target className="h-6 w-6" />
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-4">
+                <div className="bg-white bg-opacity-20 p-1.5 sm:p-2 rounded-lg">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
                 </div>
-                <h3 className="text-lg lg:text-xl font-bold">
+                <h3 className="text-base sm:text-lg lg:text-xl font-bold">
                   Upgrade to Applications Manager
                 </h3>
               </div>
-              <p className="text-blue-100 mb-4 text-sm lg:text-base max-w-2xl">
+              <p className="text-blue-100 mb-2 sm:mb-4 text-xs sm:text-sm lg:text-base max-w-2xl">
                 Get enterprise-level application management with job-specific
-                views, pipeline workflows, advanced analytics, bulk operations,
-                and automated communication tools.
+                views, pipeline workflows, advanced analytics, and automated tools.
               </p>
-              <div className="flex flex-wrap gap-3 lg:gap-6 text-sm text-blue-100">
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
+              <div className="hidden sm:flex flex-wrap gap-3 lg:gap-6 text-xs sm:text-sm text-blue-100">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Advanced Analytics</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Settings className="h-4 w-4" />
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Pipeline Management</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4" />
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Automated Communications</span>
                 </div>
               </div>
             </div>
-            <div className="flex-shrink-0 mt-4 lg:mt-0 lg:ml-6">
+            <div className="flex-shrink-0 mt-2 sm:mt-4 lg:mt-0 lg:ml-6">
               <button
                 onClick={() => router.push("/applications-manager")}
-                className="bg-white text-blue-600 px-4 lg:px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg w-full lg:w-auto justify-center"
+                className="bg-white text-blue-600 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg w-full lg:w-auto justify-center text-sm sm:text-base"
               >
                 <span>Open Manager</span>
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </button>
             </div>
           </div>
@@ -1011,235 +969,6 @@ function AdminApplicationsContent() {
         )}
       </div>
 
-      {/* Application Details Modal */}
-      {showApplicationModal && selectedApplication && (
-        <>
-          <div
-            className="fixed inset-0 bg-gray-200 bg-opacity-30 backdrop-blur-sm z-50"
-            onClick={() => setShowApplicationModal(false)}
-          ></div>
-
-          <div className="fixed inset-0 z-50">
-            <div className="flex items-center justify-center p-4">
-              <div
-                className="admin-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] transform overflow-hidden relative"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header with theme-aware gradient */}
-                <div
-                  className={`px-6 py-5 text-white ${getButtonClasses("primary")}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-white bg-opacity-30 flex items-center justify-center theme-primary-text font-semibold">
-                        {selectedApplication.name?.charAt(0)?.toUpperCase() ||
-                          selectedApplication.email?.charAt(0)?.toUpperCase() ||
-                          "A"}
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold">
-                          Application Details
-                        </h2>
-                        <p className="text-white text-opacity-80 text-sm">
-                          {selectedApplication.job?.title}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowApplicationModal(false)}
-                      className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors duration-200"
-                    >
-                      <X className="h-5 w-5 text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-6 overflow-y-auto max-h-[60vh]">
-                  <div className="space-y-6">
-                    {/* Applicant Info Card */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <User className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold admin-text">
-                          Applicant Information
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="admin-card rounded-lg p-3 border border-blue-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Name
-                          </span>
-                          <p className="admin-text">
-                            {selectedApplication.name || "Not provided"}
-                          </p>
-                        </div>
-                        <div className="admin-card rounded-lg p-3 border border-blue-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Email
-                          </span>
-                          <p className="admin-text">
-                            {selectedApplication.email}
-                          </p>
-                        </div>
-                        <div className="admin-card rounded-lg p-3 border border-blue-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Phone
-                          </span>
-                          <p className="admin-text">
-                            {selectedApplication.phone || "Not provided"}
-                          </p>
-                        </div>
-                        <div className="admin-card rounded-lg p-3 border border-blue-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Applied
-                          </span>
-                          <p className="admin-text">
-                            {new Date(
-                              selectedApplication.appliedAt
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Job Info Card */}
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-100">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <Briefcase className="h-5 w-5 text-green-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold admin-text">
-                          Position Details
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="admin-card rounded-lg p-3 border border-green-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Position
-                          </span>
-                          <p className="admin-text">
-                            {selectedApplication.job?.title}
-                          </p>
-                        </div>
-                        <div className="admin-card rounded-lg p-3 border border-green-100">
-                          <span className="admin-text-light font-medium block mb-1">
-                            Department
-                          </span>
-                          <p className="admin-text">
-                            {selectedApplication.job?.department}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cover Letter */}
-                    {selectedApplication.coverLetter && (
-                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-5 border border-purple-100">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <Mail className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <h3 className="text-lg font-semibold admin-text">
-                            Cover Letter
-                          </h3>
-                        </div>
-                        <div className="admin-card rounded-lg p-4 border border-purple-100">
-                          <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
-                            {selectedApplication.coverLetter}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Internal Notes */}
-                    {selectedApplication.notes && (
-                      <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-5 border border-yellow-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 bg-yellow-100 rounded-lg">
-                            <FileText className="h-5 w-5 text-yellow-600" />
-                          </div>
-                          <h3 className="text-lg font-semibold admin-text">
-                            Internal Notes
-                          </h3>
-                        </div>
-                        <div className="admin-card rounded-lg p-4 border border-yellow-200">
-                          <p className="text-sm admin-text whitespace-pre-wrap leading-relaxed">
-                            {selectedApplication.notes}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Resume */}
-                    {selectedApplication.resumeUrl && (
-                      <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-5 border border-orange-100">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 bg-orange-100 rounded-lg">
-                            <Download className="h-5 w-5 text-orange-600" />
-                          </div>
-                          <h3 className="text-lg font-semibold admin-text">
-                            Resume
-                          </h3>
-                        </div>
-                        <button
-                          onClick={() =>
-                            downloadResume(
-                              selectedApplication.resumeUrl,
-                              selectedApplication.name
-                            )
-                          }
-                          className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span>Download Resume</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-sm admin-text-light font-medium">
-                      Current Status:
-                    </span>
-                    <select
-                      value={selectedApplication.status}
-                      onChange={(e) => {
-                        const newStatus = e.target.value;
-                        updateApplicationStatus(
-                          selectedApplication.id,
-                          newStatus
-                        );
-                        setSelectedApplication((prev) => ({
-                          ...prev,
-                          status: newStatus,
-                        }));
-                      }}
-                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text font-medium"
-                    >
-                      {statusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={() => setShowApplicationModal(false)}
-                    className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

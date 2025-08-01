@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
-import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 export async function GET(request) {
   const requestContext = extractRequestContext(request);

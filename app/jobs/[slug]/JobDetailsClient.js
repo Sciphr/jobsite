@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Copy, Check, Heart, Loader2, UserPlus, Shield } from "lucide-react";
+import { Copy, Check, Heart, Loader2, UserPlus, Shield, Mail } from "lucide-react";
 import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
+import { generateJobShareMailtoUrl } from "../../utils/emailTemplates";
+import { formatDate, formatNumber } from "../../utils/dateFormat";
 
 export default function JobDetailsClient({
   job,
@@ -166,6 +168,16 @@ export default function JobDetailsClient({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
+    }
+  };
+
+  const handleEmailShare = () => {
+    try {
+      const siteUrl = window.location.origin;
+      const mailtoUrl = generateJobShareMailtoUrl(job, siteUrl);
+      window.open(mailtoUrl, '_blank');
+    } catch (err) {
+      console.error("Failed to generate email:", err);
     }
   };
 
@@ -490,7 +502,7 @@ export default function JobDetailsClient({
                     Posted Date
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    {new Date(job.postedAt).toLocaleDateString()}
+                    {formatDate(job.postedAt)}
                   </p>
                 </div>
                 {job.startDate && (
@@ -499,7 +511,7 @@ export default function JobDetailsClient({
                       Start Date
                     </h3>
                     <p className="text-gray-600 dark:text-gray-300">
-                      {new Date(job.startDate).toLocaleDateString()}
+                      {formatDate(job.startDate)}
                     </p>
                   </div>
                 )}
@@ -526,8 +538,8 @@ export default function JobDetailsClient({
                     Salary Range
                   </h3>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-400">
-                    {job.salaryCurrency} ${job.salaryMin.toLocaleString()}-
-                    {job.salaryMax.toLocaleString()}
+                    {job.salaryCurrency} ${formatNumber(job.salaryMin)}-
+                    {formatNumber(job.salaryMax)}
                   </p>
                   {job.salaryPeriod && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -620,7 +632,7 @@ export default function JobDetailsClient({
                     <p className="text-sm text-orange-800 dark:text-orange-200">
                       <span className="font-medium">Application Deadline:</span>
                       <br />
-                      {new Date(job.applicationDeadline).toLocaleDateString()}
+                      {formatDate(job.applicationDeadline)}
                     </p>
                   </div>
                 )}
@@ -732,8 +744,8 @@ export default function JobDetailsClient({
                           Salary:
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {job.salaryCurrency} {job.salaryMin.toLocaleString()}{" "}
-                          - {job.salaryMax.toLocaleString()}
+                          {job.salaryCurrency} {formatNumber(job.salaryMin)}{" "}
+                          - {formatNumber(job.salaryMax)}
                         </span>
                       </div>
                     )}
@@ -743,9 +755,7 @@ export default function JobDetailsClient({
                           Deadline:
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {new Date(
-                            job.applicationDeadline
-                          ).toLocaleDateString()}
+                          {formatDate(job.applicationDeadline)}
                         </span>
                       </div>
                     )}
@@ -767,7 +777,11 @@ export default function JobDetailsClient({
                       {copied ? <Check size={16} /> : <Copy size={16} />}
                       {copied ? "Copied!" : "Copy Link"}
                     </button>
-                    <button className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">
+                    <button 
+                      onClick={handleEmailShare}
+                      className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center justify-center gap-2"
+                    >
+                      <Mail size={16} />
                       Email
                     </button>
                   </div>

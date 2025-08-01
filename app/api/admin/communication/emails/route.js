@@ -91,7 +91,7 @@ export async function GET(request) {
 
     // Get unique template IDs to fetch template data
     const templateIds = [...new Set(emails.map(email => email.template_id).filter(Boolean))];
-    const templates = templateIds.length > 0 ? await prisma.emailTemplate.findMany({
+    const templates = templateIds.length > 0 ? await prisma.email_templates.findMany({
       where: {
         id: { in: templateIds }
       },

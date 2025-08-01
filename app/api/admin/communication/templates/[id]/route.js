@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    const template = await prisma.emailTemplate.findUnique({
+    const template = await prisma.email_templates.findUnique({
       where: { id },
       include: {
         users: {
@@ -67,7 +67,7 @@ export async function PUT(request, { params }) {
     const { name, subject, content, type, category, description, variables, isDefault, isActive } = await request.json();
 
     // Check if template exists
-    const existingTemplate = await prisma.emailTemplate.findUnique({
+    const existingTemplate = await prisma.email_templates.findUnique({
       where: { id },
     });
 
@@ -88,7 +88,7 @@ export async function PUT(request, { params }) {
 
     // If this template is being set as default, remove default flag from other templates of the same category
     if (isDefault && !existingTemplate.is_default) {
-      await prisma.emailTemplate.updateMany({
+      await prisma.email_templates.updateMany({
         where: {
           category: category || existingTemplate.category || 'general',
           is_default: true,
@@ -101,7 +101,7 @@ export async function PUT(request, { params }) {
     }
 
     // Update the template
-    const template = await prisma.emailTemplate.update({
+    const template = await prisma.email_templates.update({
       where: { id },
       data: {
         name,
@@ -166,7 +166,7 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
 
     // Check if template exists
-    const existingTemplate = await prisma.emailTemplate.findUnique({
+    const existingTemplate = await prisma.email_templates.findUnique({
       where: { id },
     });
 
@@ -193,7 +193,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Delete the template
-    await prisma.emailTemplate.delete({
+    await prisma.email_templates.delete({
       where: { id },
     });
 

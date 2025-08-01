@@ -63,6 +63,7 @@ function AdminJobsContent() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [featuredFilter, setFeaturedFilter] = useState("all");
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [featuredError, setFeaturedError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,8 +98,14 @@ function AdminJobsContent() {
       filtered = filtered.filter((job) => job.department === departmentFilter);
     }
 
+    // Featured filter
+    if (featuredFilter !== "all") {
+      const isFeatured = featuredFilter === "featured";
+      filtered = filtered.filter((job) => job.featured === isFeatured);
+    }
+
     return filtered;
-  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter]); // ✅ Depend on actual data, not .length
+  }, [jobs, searchTerm, statusFilter, categoryFilter, departmentFilter, featuredFilter]); // ✅ Depend on actual data, not .length
 
   // CLIENT-SIDE pagination
   const paginatedJobs = useMemo(() => {
@@ -121,7 +128,7 @@ function AdminJobsContent() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, categoryFilter, departmentFilter]);
+  }, [searchTerm, statusFilter, categoryFilter, departmentFilter, featuredFilter]);
 
   const updateJobStatus = async (jobId, newStatus) => {
     try {
@@ -315,7 +322,7 @@ function AdminJobsContent() {
 
   // Get unique departments for filter
   const departments = useMemo(
-    () => [...new Set(jobs.map((job) => job.department))],
+    () => [...new Set(jobs.map((job) => job.department))].sort(),
     [jobs]
   );
   const statusOptions = ["Active", "Draft", "Paused", "Closed"];
@@ -326,7 +333,8 @@ function AdminJobsContent() {
       searchTerm,
       statusFilter: statusFilter === 'all' ? null : statusFilter,
       categoryFilter: categoryFilter === 'all' ? null : categoryFilter,
-      departmentFilter: departmentFilter === 'all' ? null : departmentFilter
+      departmentFilter: departmentFilter === 'all' ? null : departmentFilter,
+      featuredFilter: featuredFilter === 'all' ? null : featuredFilter
     };
 
     if (format === 'excel') {
@@ -514,7 +522,7 @@ function AdminJobsContent() {
 
       {/* Filters */}
       <div className="admin-card p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -567,6 +575,17 @@ function AdminJobsContent() {
                 {category.name}
               </option>
             ))}
+          </select>
+
+          {/* Featured Filter */}
+          <select
+            value={featuredFilter}
+            onChange={(e) => setFeaturedFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
+          >
+            <option value="all">All Jobs</option>
+            <option value="featured">Featured Only</option>
+            <option value="not-featured">Not Featured</option>
           </select>
         </div>
       </div>
@@ -835,14 +854,16 @@ function AdminJobsContent() {
             {searchTerm ||
             statusFilter !== "all" ||
             categoryFilter !== "all" ||
-            departmentFilter !== "all"
+            departmentFilter !== "all" ||
+            featuredFilter !== "all"
               ? "Try adjusting your filters to see more results."
               : "Get started by creating your first job posting."}
           </p>
           {!searchTerm &&
             statusFilter === "all" &&
             categoryFilter === "all" &&
-            departmentFilter === "all" && (
+            departmentFilter === "all" &&
+            featuredFilter === "all" && (
               <Link
                 href="/admin/jobs/create"
                 className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}

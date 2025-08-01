@@ -36,15 +36,19 @@ function AdminLayoutContent({ children }) {
   const { loading: themeLoading } = useAdminTheme();
   const { getThemeClasses, getStatCardClasses, getButtonClasses } =
     useThemeClasses();
-  const { hasPermission, loading: permissionsLoading, permissionsReady } = usePermissions();
-  
+  const {
+    hasPermission,
+    loading: permissionsLoading,
+    permissionsReady,
+  } = usePermissions();
+
   // Add fallback timeout to prevent infinite loading
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoadingTimeout(true);
     }, 10000); // 10 second fallback timeout
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -81,7 +85,7 @@ function AdminLayoutContent({ children }) {
   const hasAnyAdminPermissions = useMemo(() => {
     // Return null when still loading or permissions not ready to prevent premature redirects
     if (!session?.user || permissionsLoading || !permissionsReady) return null;
-    
+
     return (
       hasPermission("applications", "view") ||
       hasPermission("jobs", "view") ||
@@ -106,32 +110,49 @@ function AdminLayoutContent({ children }) {
   // Handle redirects in useEffect to maintain hook order
   useEffect(() => {
     if (status === "loading" || permissionsLoading || !permissionsReady) return;
-    
+
     if (!session) {
       router.push("/auth/signin");
       return;
     }
 
     // Only redirect if we're sure permissions are loaded and user has no admin access
-    if (session && !permissionsLoading && permissionsReady && hasAnyAdminPermissions === false) {
+    if (
+      session &&
+      !permissionsLoading &&
+      permissionsReady &&
+      hasAnyAdminPermissions === false
+    ) {
       router.push("/");
       return;
     }
-  }, [session?.user?.id, hasAnyAdminPermissions, status, permissionsLoading, permissionsReady, router]);
+  }, [
+    session?.user?.id,
+    hasAnyAdminPermissions,
+    status,
+    permissionsLoading,
+    permissionsReady,
+    router,
+  ]);
 
   // Show loading while checking session, theme, or permissions (with timeout fallback)
-  if ((status === "loading" || themeLoading || permissionsLoading || !permissionsReady) && !loadingTimeout) {
+  if (
+    (status === "loading" ||
+      themeLoading ||
+      permissionsLoading ||
+      !permissionsReady) &&
+    !loadingTimeout
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {status === "loading" 
-              ? "Loading..." 
-              : themeLoading 
-                ? "Initializing theme..." 
-                : "Loading permissions..."
-            }
+            {status === "loading"
+              ? "Loading..."
+              : themeLoading
+                ? "Initializing theme..."
+                : "Loading permissions..."}
           </p>
         </div>
       </div>
@@ -139,7 +160,12 @@ function AdminLayoutContent({ children }) {
   }
 
   // Don't render anything if no session or no admin permissions (but only after permissions are loaded)
-  if (!session || (!permissionsLoading && permissionsReady && hasAnyAdminPermissions === false)) {
+  if (
+    !session ||
+    (!permissionsLoading &&
+      permissionsReady &&
+      hasAnyAdminPermissions === false)
+  ) {
     return null; // The useEffect above handles the redirects
   }
 
@@ -218,7 +244,7 @@ function AdminLayoutContent({ children }) {
   const allowedNavItems = navigationItems.filter((item) => {
     // Dashboard is always available to admin users
     if (!item.requiredPermission) return true;
-    
+
     // Check specific permission
     const { resource, action } = item.requiredPermission;
     return hasPermission(resource, action);
@@ -278,7 +304,7 @@ function AdminLayoutContent({ children }) {
         </div>
       )}
 
-      <div className={`flex ${isMobile ? 'h-[calc(100vh-4rem)]' : 'h-full'}`}>
+      <div className={`flex ${isMobile ? "h-[calc(100vh-4rem)]" : "h-full"}`}>
         {/* Sidebar - Desktop: always visible, Mobile: overlay when open */}
         <AnimatePresence>
           {(!isMobile || isMobileMenuOpen) && (
@@ -333,7 +359,9 @@ function AdminLayoutContent({ children }) {
                   </div>
                 )}
 
-                <nav className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2 flex-1 overflow-y-auto`}>
+                <nav
+                  className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2 flex-1 overflow-y-auto`}
+                >
                   {allowedNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -426,7 +454,7 @@ function AdminLayoutContent({ children }) {
                       <Building2 className="h-4 w-4 mr-2" />
                       Back to Site
                     </Link>
-                    
+
                     <Link
                       href="/auth/signout"
                       className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/30"

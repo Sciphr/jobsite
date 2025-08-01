@@ -2,7 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../[...nextauth]/route";
-import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 export async function POST(request) {
   const requestContext = extractRequestContext(request);

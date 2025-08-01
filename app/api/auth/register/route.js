@@ -2,7 +2,8 @@
 import { appPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 //const prisma = new prismaClient();
 

@@ -3,7 +3,8 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
-import { logAuditEvent, extractRequestContext } from "../../../../lib/auditMiddleware";
+import { logAuditEvent } from "../../../../lib/auditMiddleware";
+import { extractRequestContext } from "../../../lib/auditLog";
 
 export async function GET(req) {
   const requestContext = extractRequestContext(req);

@@ -68,7 +68,7 @@ export default function JobsPage() {
     }
 
     if (category) {
-      filtered = filtered.filter((job) => job.category?.name === category);
+      filtered = filtered.filter((job) => job.categories?.name === category);
     }
 
     if (location) {

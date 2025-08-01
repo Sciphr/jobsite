@@ -74,7 +74,7 @@ export async function POST(request) {
 
           // Update template usage count if template was used
           if (templateId) {
-            await prisma.emailTemplate.update({
+            await prisma.email_templates.update({
               where: { id: templateId },
               data: {
                 usage_count: { increment: 1 },

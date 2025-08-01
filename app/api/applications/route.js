@@ -20,6 +20,35 @@ export async function POST(request) {
     const requestContext = extractRequestContext(request);
 
     if (!jobId || !resumeUrl) {
+      // Log validation failure for application submission
+      await logAuditEvent(
+        {
+          eventType: "ERROR",
+          category: "VALIDATION",
+          action: "Application submission failed - missing required fields",
+          description: `Application submission failed due to missing required fields: ${!jobId ? 'jobId' : ''} ${!resumeUrl ? 'resumeUrl' : ''}`,
+          actorId: userId,
+          actorType: userId ? "user" : "anonymous",
+          actorName: userId ? (session.user.name || session.user.email) : "Anonymous",
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent,
+          requestId: requestContext.requestId,
+          relatedUserId: userId,
+          severity: "info",
+          status: "failure",
+          tags: ["application", "validation", "required_fields"],
+          metadata: {
+            missingFields: {
+              jobId: !jobId,
+              resumeUrl: !resumeUrl
+            },
+            userType: userId ? "authenticated" : "anonymous"
+          },
+          ...requestContext
+        },
+        request
+      );
+      
       return Response.json(
         { message: "Job ID and resume are required" },
         { status: 400 }
@@ -38,11 +67,70 @@ export async function POST(request) {
     });
 
     if (!job) {
+      // Log job not found during application
+      await logAuditEvent(
+        {
+          eventType: "ERROR",
+          category: "DATA",
+          action: "Application failed - job not found",
+          description: `Application attempt for non-existent job: ${jobId}`,
+          actorId: userId,
+          actorType: userId ? "user" : "anonymous",
+          actorName: userId ? (session.user.name || session.user.email) : "Anonymous",
+          entityType: "job",
+          entityId: jobId,
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent,
+          requestId: requestContext.requestId,
+          relatedUserId: userId,
+          severity: "info",
+          status: "failure",
+          tags: ["application", "job_not_found"],
+          metadata: {
+            jobId: jobId,
+            userType: userId ? "authenticated" : "anonymous"
+          },
+          ...requestContext
+        },
+        request
+      );
+      
       return Response.json({ message: "Job not found" }, { status: 404 });
     }
 
     // Check if job is still accepting applications
     if (job.status !== "Active") {
+      // Log application attempt to inactive job
+      await logAuditEvent(
+        {
+          eventType: "ERROR",
+          category: "VALIDATION",
+          action: "Application failed - job not active",
+          description: `Application attempt for inactive job '${job.title}' (status: ${job.status})`,
+          actorId: userId,
+          actorType: userId ? "user" : "anonymous",
+          actorName: userId ? (session.user.name || session.user.email) : "Anonymous",
+          entityType: "job",
+          entityId: jobId,
+          entityName: job.title,
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent,
+          requestId: requestContext.requestId,
+          relatedUserId: userId,
+          relatedJobId: jobId,
+          severity: "info",
+          status: "failure",
+          tags: ["application", "job_inactive", "validation"],
+          metadata: {
+            jobTitle: job.title,
+            jobStatus: job.status,
+            userType: userId ? "authenticated" : "anonymous"
+          },
+          ...requestContext
+        },
+        request
+      );
+      
       return Response.json(
         { message: "This job is no longer accepting applications" },
         { status: 400 }
@@ -71,6 +159,36 @@ export async function POST(request) {
       });
 
       if (!user) {
+        // Log user not found during application
+        await logAuditEvent(
+          {
+            eventType: "ERROR",
+            category: "DATA",
+            action: "Application failed - user not found",
+            description: `Application attempt by authenticated user but user profile not found: ${userId}`,
+            actorId: userId,
+            actorType: "user",
+            actorName: "Unknown User",
+            entityType: "user",
+            entityId: userId,
+            ipAddress: requestContext.ipAddress,
+            userAgent: requestContext.userAgent,
+            requestId: requestContext.requestId,
+            relatedUserId: userId,
+            relatedJobId: jobId,
+            severity: "warning",
+            status: "failure",
+            tags: ["application", "user_not_found", "data_integrity"],
+            metadata: {
+              userId: userId,
+              jobId: jobId,
+              userType: "authenticated"
+            },
+            ...requestContext
+          },
+          request
+        );
+        
         return Response.json({ message: "User not found" }, { status: 404 });
       }
 
@@ -85,6 +203,38 @@ export async function POST(request) {
       });
 
       if (existingApplication) {
+        // Log duplicate application attempt
+        await logAuditEvent(
+          {
+            eventType: "ERROR",
+            category: "VALIDATION",
+            action: "Duplicate application attempt blocked",
+            description: `User ${user.email} attempted to apply again for job '${job.title}'`,
+            actorId: userId,
+            actorType: "user",
+            actorName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+            entityType: "application",
+            entityId: existingApplication.id,
+            ipAddress: requestContext.ipAddress,
+            userAgent: requestContext.userAgent,
+            requestId: requestContext.requestId,
+            relatedUserId: userId,
+            relatedJobId: jobId,
+            relatedApplicationId: existingApplication.id,
+            severity: "info",
+            status: "failure",
+            tags: ["application", "duplicate", "validation"],
+            metadata: {
+              jobTitle: job.title,
+              existingApplicationId: existingApplication.id,
+              userEmail: user.email,
+              userType: "authenticated"
+            },
+            ...requestContext
+          },
+          request
+        );
+        
         return Response.json(
           { message: "Already applied to this job" },
           { status: 400 }
@@ -104,6 +254,37 @@ export async function POST(request) {
     } else {
       // Guest user: Require name, email, phone from form
       if (!name || !email || !phone) {
+        // Log validation failure for guest application
+        await logAuditEvent(
+          {
+            eventType: "ERROR",
+            category: "VALIDATION",
+            action: "Guest application failed - missing required fields",
+            description: `Guest application submission failed due to missing required fields: ${!name ? 'name' : ''} ${!email ? 'email' : ''} ${!phone ? 'phone' : ''}`,
+            actorType: "anonymous",
+            actorName: "Anonymous",
+            entityType: "application",
+            ipAddress: requestContext.ipAddress,
+            userAgent: requestContext.userAgent,
+            requestId: requestContext.requestId,
+            relatedJobId: jobId,
+            severity: "info",
+            status: "failure",
+            tags: ["application", "guest", "validation", "required_fields"],
+            metadata: {
+              missingFields: {
+                name: !name,
+                email: !email,
+                phone: !phone
+              },
+              jobTitle: job.title,
+              userType: "guest"
+            },
+            ...requestContext
+          },
+          request
+        );
+        
         return Response.json(
           {
             message:
@@ -284,8 +465,28 @@ export async function POST(request) {
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);
+  const requestContext = extractRequestContext(request);
 
   if (!session) {
+    // Log unauthorized applications list access attempt
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "SECURITY",
+        action: "Unauthorized applications list access attempt",
+        description: "Applications list access attempted without valid session",
+        actorType: "anonymous",
+        actorName: "Anonymous",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        severity: "warning",
+        status: "failure",
+        tags: ["applications", "list", "unauthorized", "security"]
+      },
+      request
+    );
+    
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -310,6 +511,32 @@ export async function GET(request) {
       orderBy: { appliedAt: "desc" },
     });
 
+    // Log successful applications list access
+    await logAuditEvent(
+      {
+        eventType: "VIEW",
+        category: "APPLICATION",
+        action: "Applications list accessed",
+        description: `User ${session.user.email} accessed their applications list (${applications.length} applications)`,
+        actorId: userId,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        entityType: "application",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: userId,
+        severity: "info",
+        status: "success",
+        tags: ["applications", "list", "access", "view"],
+        metadata: {
+          applicationCount: applications.length,
+          userEmail: session.user.email
+        }
+      },
+      request
+    );
+
     // Transform the response to alias 'jobs' as 'job' for frontend compatibility
     const transformedApplications = applications.map(app => ({
       ...app,
@@ -320,6 +547,34 @@ export async function GET(request) {
     return Response.json(transformedApplications, { status: 200 });
   } catch (error) {
     console.error("Applications fetch error:", error);
+    
+    // Log server error during applications list access
+    await logAuditEvent(
+      {
+        eventType: "ERROR",
+        category: "SYSTEM",
+        action: "Applications list access failed - server error",
+        description: `Server error during applications list access for user: ${session.user.email}`,
+        actorId: userId,
+        actorType: "user",
+        actorName: session.user.name || session.user.email,
+        entityType: "application",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        requestId: requestContext.requestId,
+        relatedUserId: userId,
+        severity: "error",
+        status: "failure",
+        tags: ["applications", "list", "server_error", "system"],
+        metadata: {
+          error: error.message,
+          stack: error.stack,
+          userEmail: session.user.email
+        }
+      },
+      request
+    );
+    
     return Response.json({ message: "Internal server error" }, { status: 500 });
   }
 }

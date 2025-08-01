@@ -27,7 +27,7 @@ export async function POST(req) {
     }
 
     // Check if there's already a default template for this category
-    const existingDefault = await appPrisma.emailTemplate.findFirst({
+    const existingDefault = await appPrisma.email_templates.findFirst({
       where: {
         category: category,
         is_default: true,

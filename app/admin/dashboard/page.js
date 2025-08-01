@@ -433,7 +433,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Database Status */}
               <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
                 systemStatus?.database?.healthy 
@@ -497,26 +497,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Email Delivery */}
-              <div className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                systemStatus?.emailDelivery?.healthy 
-                  ? 'bg-purple-50 border-purple-200' 
-                  : 'bg-red-50 border-red-200'
-              }`}>
-                {systemStatus?.emailDelivery?.healthy ? (
-                  <CheckCircle className="h-5 w-5 text-purple-600" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-600" />
-                )}
-                <div>
-                  <div className="text-sm font-medium admin-text">Email Delivery</div>
-                  <div className={`text-xs ${
-                    systemStatus?.emailDelivery?.healthy ? 'text-purple-600' : 'text-red-600'
-                  }`}>
-                    {systemStatus?.emailDelivery?.status || 'Unknown'}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </div>

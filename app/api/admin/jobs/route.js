@@ -12,7 +12,7 @@ export async function GET(req) {
   // Check if user has permission to view jobs
   const authResult = await protectRoute("jobs", "view");
   if (authResult.error) return authResult.error;
-  
+
   const { session } = authResult;
 
   try {
@@ -76,8 +76,9 @@ export async function POST(req) {
     });
   }
 
+  let body; // Declare body outside try block so it's accessible in catch
   try {
-    const body = await req.json();
+    body = await req.json();
     const requestContext = extractRequestContext(req);
 
     // Get relevant settings
@@ -261,20 +262,13 @@ export async function POST(req) {
         postedAt,
         // Add auto-expiration if calculated
         autoExpiresAt: autoExpirationDate,
+        updatedAt: new Date(),
       },
       include: {
-        category: {
+        categories: {
           select: {
             id: true,
             name: true,
-          },
-        },
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
           },
         },
       },

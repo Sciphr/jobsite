@@ -1202,34 +1202,34 @@ export default function ProfileClient({ session }) {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200">
-                            {savedJob.job?.title || "Job Title Not Available"}
+                            {savedJob.jobs?.title || "Job Title Not Available"}
                           </h3>
                           <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
-                            {savedJob.job?.department ||
+                            {savedJob.jobs?.department ||
                               "Department Not Available"}
                           </p>
                           <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
                             <span>
-                              {savedJob.job?.location ||
+                              {savedJob.jobs?.location ||
                                 "Location Not Available"}
                             </span>
                             <span>•</span>
                             <span>
-                              {savedJob.job?.employmentType ||
+                              {savedJob.jobs?.employmentType ||
                                 "Type Not Available"}
                             </span>
                             <span>•</span>
                             <span>
-                              {savedJob.job?.remotePolicy ||
+                              {savedJob.jobs?.remotePolicy ||
                                 "Policy Not Available"}
                             </span>
                           </div>
-                          {savedJob.job?.salaryMin &&
-                            savedJob.job?.salaryMax && (
+                          {savedJob.jobs?.salaryMin &&
+                            savedJob.jobs?.salaryMax && (
                               <p className="text-green-600 dark:text-green-400 text-sm mt-1 transition-colors duration-200">
-                                ${savedJob.job.salaryMin.toLocaleString()} - $
-                                {savedJob.job.salaryMax.toLocaleString()}{" "}
-                                {savedJob.job.salaryCurrency}
+                                ${savedJob.jobs.salaryMin.toLocaleString()} - $
+                                {savedJob.jobs.salaryMax.toLocaleString()}{" "}
+                                {savedJob.jobs.salaryCurrency}
                               </p>
                             )}
                           <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 transition-colors duration-200">
@@ -1239,7 +1239,7 @@ export default function ProfileClient({ session }) {
                         <div className="flex space-x-2">
                           <ThemedButton
                             onClick={() =>
-                              router.push(`/jobs/${savedJob.job?.slug}`)
+                              router.push(`/jobs/${savedJob.jobs?.slug}`)
                             }
                             className="px-3 py-1 rounded text-sm font-medium text-white"
                             variant="primary"

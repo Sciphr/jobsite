@@ -50,10 +50,10 @@ function AdminUsersContent() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState([]);
+  const [roleBooleanOperator, setRoleBooleanOperator] = useState("OR"); // "AND" or "OR"
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleCountFilter, setRoleCountFilter] = useState("all");
-  const [roleComboFilter, setRoleComboFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -100,13 +100,18 @@ function AdminUsersContent() {
       );
     }
 
-    // Role filter - now works with multiple roles
-    if (roleFilter !== "all") {
+    // Enhanced role filter with multiple selection and boolean operations
+    if (roleFilter.length > 0) {
       filtered = filtered.filter((user) => {
-        // Check both old role field and new user_roles
-        if (user.role === roleFilter) return true;
-        if (user.user_roles?.some(ur => ur.roles.name.toLowerCase().replace(' ', '_') === roleFilter)) return true;
-        return false;
+        const userRoleNames = user.user_roles?.map(ur => ur.roles.name.toLowerCase().replace(' ', '_')) || [];
+        
+        if (roleBooleanOperator === "AND") {
+          // ALL selected roles must be present
+          return roleFilter.every(selectedRole => userRoleNames.includes(selectedRole));
+        } else {
+          // ANY of the selected roles must be present (OR)
+          return roleFilter.some(selectedRole => userRoleNames.includes(selectedRole));
+        }
       });
     }
 
@@ -133,30 +138,9 @@ function AdminUsersContent() {
       });
     }
 
-    // Role combination filter
-    if (roleComboFilter !== "all") {
-      filtered = filtered.filter((user) => {
-        const userRoleNames = user.user_roles?.map(ur => ur.roles.name) || [];
-        
-        switch (roleComboFilter) {
-          case "admin_no_hr":
-            return userRoleNames.includes("Admin") && !userRoleNames.includes("HR");
-          case "hr_no_admin":
-            return userRoleNames.includes("HR") && !userRoleNames.includes("Admin");
-          case "user_only":
-            return userRoleNames.length === 1 && userRoleNames.includes("User");
-          case "missing_user":
-            return !userRoleNames.includes("User");
-          case "super_admin_combo":
-            return userRoleNames.includes("Super Admin") && userRoleNames.length > 1;
-          default:
-            return true;
-        }
-      });
-    }
 
     return filtered;
-  }, [users, searchTerm, roleFilter, statusFilter, roleCountFilter, roleComboFilter]);
+  }, [users, searchTerm, roleFilter, roleBooleanOperator, statusFilter, roleCountFilter]);
 
   // ✅ NEW: Client-side pagination
   const paginatedUsers = useMemo(() => {
@@ -180,7 +164,7 @@ function AdminUsersContent() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, roleBooleanOperator, statusFilter]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -196,6 +180,24 @@ function AdminUsersContent() {
   const handleManageRoles = (user) => {
     setSelectedUserForRoles(user);
     setShowRoleModal(true);
+  };
+
+  // Handle role filter selection
+  const handleRoleFilterChange = (roleId) => {
+    setRoleFilter(prev => {
+      if (prev.includes(roleId)) {
+        // Remove role if already selected
+        return prev.filter(id => id !== roleId);
+      } else {
+        // Add role if not selected
+        return [...prev, roleId];
+      }
+    });
+  };
+
+  // Clear all role filters
+  const clearRoleFilters = () => {
+    setRoleFilter([]);
   };
 
   const handleRoleChange = async (userId, roleId, action) => {
@@ -428,7 +430,8 @@ function AdminUsersContent() {
   const handleExport = (format) => {
     const filters = {
       searchTerm,
-      roleFilter: roleFilter === 'all' ? null : roleFilter,
+      roleFilter: roleFilter.length > 0 ? roleFilter : null,
+      roleBooleanOperator,
       statusFilter: statusFilter === 'all' ? null : statusFilter
     };
 
@@ -709,10 +712,10 @@ function AdminUsersContent() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                setRoleFilter('all');
+                setRoleFilter([]);
+                setRoleBooleanOperator('OR');
                 setStatusFilter('all');
                 setRoleCountFilter('all');
-                setRoleComboFilter('all');
               }}
               className="text-xs text-purple-600 hover:text-purple-800 font-medium"
             >
@@ -733,19 +736,69 @@ function AdminUsersContent() {
               />
             </div>
 
-            {/* Role Filter */}
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
-            >
-              <option value="all">All Roles</option>
-              {availableRoles.map((role) => (
-                <option key={role.id} value={role.name.toLowerCase().replace(' ', '_')}>
-                  Has {role.name}
-                </option>
-              ))}
-            </select>
+            {/* Enhanced Role Filter */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium admin-text">Role Filter</label>
+                {roleFilter.length > 0 && (
+                  <button
+                    onClick={clearRoleFilters}
+                    className="text-xs text-red-600 hover:text-red-800 transition-colors duration-200"
+                  >
+                    Clear ({roleFilter.length})
+                  </button>
+                )}
+              </div>
+              
+              {/* Boolean Operator Toggle */}
+              {roleFilter.length > 1 && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="admin-text-light">Match:</span>
+                  <button
+                    onClick={() => setRoleBooleanOperator("OR")}
+                    className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
+                      roleBooleanOperator === "OR" 
+                        ? "bg-blue-100 text-blue-800 border border-blue-300" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    ANY (OR)
+                  </button>
+                  <button
+                    onClick={() => setRoleBooleanOperator("AND")}
+                    className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
+                      roleBooleanOperator === "AND" 
+                        ? "bg-blue-100 text-blue-800 border border-blue-300" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    ALL (AND)
+                  </button>
+                </div>
+              )}
+              
+              {/* Role Checkboxes */}
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                {availableRoles.map((role) => {
+                  const roleId = role.name.toLowerCase().replace(' ', '_');
+                  const isSelected = roleFilter.includes(roleId);
+                  
+                  return (
+                    <label key={role.id} className="flex items-center space-x-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleRoleFilterChange(roleId)}
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className={`${isSelected ? 'text-purple-700 font-medium' : 'admin-text'}`}>
+                        {role.name}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Status Filter */}
             <select
@@ -771,33 +824,16 @@ function AdminUsersContent() {
             </select>
           </div>
 
-          {/* Advanced Filter Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Role Combination Filter */}
-            <select
-              value={roleComboFilter}
-              onChange={(e) => setRoleComboFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
-            >
-              <option value="all">All Role Combinations</option>
-              <option value="admin_no_hr">Admin but not HR</option>
-              <option value="hr_no_admin">HR but not Admin</option>
-              <option value="user_only">User role only</option>
-              <option value="missing_user">Missing User role</option>
-              <option value="super_admin_combo">Super Admin + other roles</option>
-            </select>
-
-            {/* Filter Results Summary */}
-            <div className="flex items-center justify-end text-sm admin-text-light">
-              <span>
-                Showing {filteredUsers.length} of {users.length} users
-                {(searchTerm || roleFilter !== 'all' || statusFilter !== 'all' || roleCountFilter !== 'all' || roleComboFilter !== 'all') && 
-                  <span className="ml-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
-                    Filtered
-                  </span>
-                }
-              </span>
-            </div>
+          {/* Filter Results Summary */}
+          <div className="flex items-center justify-end text-sm admin-text-light">
+            <span>
+              Showing {filteredUsers.length} of {users.length} users
+              {(searchTerm || roleFilter.length > 0 || statusFilter !== 'all' || roleCountFilter !== 'all') && 
+                <span className="ml-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                  Filtered
+                </span>
+              }
+            </span>
           </div>
         </div>
         </div>
@@ -1191,11 +1227,11 @@ function AdminUsersContent() {
             No users found
           </h3>
           <p className="admin-text-light mb-6">
-            {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+            {searchTerm || roleFilter.length > 0 || statusFilter !== "all"
               ? "Try adjusting your filters to see more results."
               : "Get started by adding your first user."}
           </p>
-          {!searchTerm && roleFilter === "all" && statusFilter === "all" && (
+          {!searchTerm && roleFilter.length === 0 && statusFilter === "all" && (
             <Link
               href="/admin/users/create"
               className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("accent")}`}

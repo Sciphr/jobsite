@@ -68,7 +68,7 @@ export async function POST(request) {
     }
 
     // Verify template exists
-    const template = await appPrisma.emailTemplate.findUnique({
+    const template = await appPrisma.email_templates.findUnique({
       where: { id: template_id },
     });
 

@@ -32,7 +32,7 @@ export async function GET(request) {
     }
 
     // Fetch templates
-    const templates = await prisma.emailTemplate.findMany({
+    const templates = await prisma.email_templates.findMany({
       where,
       orderBy: [
         { is_default: "desc" },
@@ -106,7 +106,7 @@ export async function POST(request) {
 
     // If this template is being set as default, remove default flag from other templates of the same category
     if (isDefault) {
-      await prisma.emailTemplate.updateMany({
+      await prisma.email_templates.updateMany({
         where: {
           category: category || 'general',
           is_default: true,
@@ -118,7 +118,7 @@ export async function POST(request) {
     }
 
     // Create the template
-    const template = await prisma.emailTemplate.create({
+    const template = await prisma.email_templates.create({
       data: {
         name,
         subject,
@@ -199,7 +199,7 @@ export async function PUT(request) {
       
       // Update each template type
       const updatePromises = Object.entries(typeMapping).map(([oldType, newType]) => 
-        prisma.emailTemplate.updateMany({
+        prisma.email_templates.updateMany({
           where: { type: oldType },
           data: { type: newType }
         })
@@ -229,7 +229,7 @@ export async function PUT(request) {
 
       // Update existing templates
       for (const update of categoryUpdates) {
-        await prisma.emailTemplate.updateMany({
+        await prisma.email_templates.updateMany({
           where: { name: update.name },
           data: { 
             category: update.category,
@@ -332,7 +332,7 @@ export async function PUT(request) {
       ];
 
       // Create new templates (without created_by since it's nullable)
-      await prisma.emailTemplate.createMany({
+      await prisma.email_templates.createMany({
         data: newTemplates.map(template => ({
           ...template,
           created_by: null,

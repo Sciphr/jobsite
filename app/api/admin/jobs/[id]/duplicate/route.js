@@ -79,7 +79,7 @@ export async function POST(req, { params }) {
         postedAt: null,
       },
       include: {
-        category: {
+        categories: {
           select: {
             id: true,
             name: true,

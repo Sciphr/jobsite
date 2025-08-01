@@ -6,11 +6,11 @@ import { Client } from "minio";
 export async function GET(req) {
   const session = await getServerSession(authOptions);
 
-  // Check if user is super admin (privilege level 3)
+  // Check if user has any admin privileges (privilege level 1 or higher)
   if (
     !session ||
     !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 3
+    session.user.privilegeLevel < 1
   ) {
     return new Response(JSON.stringify({ message: "Unauthorized" }), {
       status: 401,
@@ -39,20 +39,52 @@ export async function GET(req) {
 
     // 2. Email Service Health Check
     try {
-      // Check if email configuration exists
-      const hasEmailConfig = !!(
-        process.env.SMTP_HOST ||
-        process.env.RESEND_API_KEY ||
-        process.env.SENDGRID_API_KEY
-      );
+      // Check for Resend API key (environment variable)
+      const hasResendConfig = !!process.env.RESEND_API_KEY;
+      
+      // Check for SMTP configuration in database settings
+      let hasSMTPConfig = false;
+      let smtpEnabled = false;
+      try {
+        // Check if SMTP is enabled in system settings
+        const smtpEnabledSetting = await appPrisma.settings.findFirst({
+          where: { key: 'smtp_enabled' }
+        });
+        smtpEnabled = smtpEnabledSetting?.value === 'true' || smtpEnabledSetting?.value === true;
 
-      if (hasEmailConfig) {
-        // Count recent email attempts (if you track them)
-        // For now, just check configuration
+        if (smtpEnabled) {
+          // Check for required SMTP settings
+          const smtpSettings = await appPrisma.settings.findMany({
+            where: {
+              key: {
+                in: ['smtp_host', 'smtp_from_email']
+              }
+            }
+          });
+          
+          const hasHost = smtpSettings.some(s => s.key === 'smtp_host' && s.value);
+          const hasFromEmail = smtpSettings.some(s => s.key === 'smtp_from_email' && s.value);
+          
+          hasSMTPConfig = hasHost && hasFromEmail;
+        }
+      } catch (dbError) {
+        console.error('Error checking SMTP settings:', dbError);
+      }
+
+      // Determine which service is configured and set status
+      if (smtpEnabled && hasSMTPConfig) {
         status.emailService = {
-          status: "Configured",
+          status: "SMTP configured",
           healthy: true,
-          details: "Email service configured",
+          details: "Custom SMTP service active",
+          serviceType: 'SMTP',
+        };
+      } else if (hasResendConfig) {
+        status.emailService = {
+          status: "Resend configured",
+          healthy: true,
+          details: "Resend service active",
+          serviceType: 'Resend',
         };
       } else {
         status.emailService = {
@@ -62,10 +94,11 @@ export async function GET(req) {
         };
       }
     } catch (error) {
+      console.error('Email service check error:', error);
       status.emailService = {
         status: "Check Failed",
         healthy: false,
-        details: error.message,
+        details: `Error checking email configuration: ${error.message}`,
       };
     }
 
@@ -123,33 +156,6 @@ export async function GET(req) {
       };
     }
 
-    // 4. Email Delivery Status
-    try {
-      // Check for recent email-related database activity
-      // You might want to create an email_logs table in the future
-      // For now, check application activity as proxy for email activity
-      const recentApplications = await appPrisma.application.count({
-        where: {
-          appliedAt: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-          },
-        },
-      });
-
-      status.emailDelivery = {
-        status: `${recentApplications} emails today`,
-        healthy: true,
-        details: "Email delivery tracking active",
-        recentCount: recentApplications,
-      };
-    } catch (error) {
-      status.emailDelivery = {
-        status: "Check Failed",
-        healthy: false,
-        details: "Could not check email delivery",
-        recentCount: 0,
-      };
-    }
 
     return new Response(JSON.stringify(status), { status: 200 });
   } catch (error) {
