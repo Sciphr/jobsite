@@ -43,7 +43,6 @@ import {
   Move,
 } from "lucide-react";
 import UserRoleManager from "./components/UserRoleManager";
-import UserEditRoleModal from "./components/UserEditRoleModal";
 import SimpleDragDropFallback from "./components/SimpleDragDropFallback";
 
 function AdminUsersContent() {
@@ -57,8 +56,6 @@ function AdminUsersContent() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [selectedUserForRoles, setSelectedUserForRoles] = useState(null);
   const [availableRoles, setAvailableRoles] = useState([]);
   const [viewMode, setViewMode] = useState("list"); // "list" or "interactive"
   const { prefetchAll } = usePrefetchAdminData();
@@ -177,10 +174,6 @@ function AdminUsersContent() {
     }
   };
 
-  const handleManageRoles = (user) => {
-    setSelectedUserForRoles(user);
-    setShowRoleModal(true);
-  };
 
   // Handle role filter selection
   const handleRoleFilterChange = (roleId) => {
@@ -199,6 +192,23 @@ function AdminUsersContent() {
   const clearRoleFilters = () => {
     setRoleFilter([]);
   };
+
+  // Role dropdown state
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.role-dropdown-container')) {
+        setIsRoleDropdownOpen(false);
+      }
+    };
+
+    if (isRoleDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isRoleDropdownOpen]);
 
   const handleRoleChange = async (userId, roleId, action) => {
     try {
@@ -219,10 +229,6 @@ function AdminUsersContent() {
     }
   };
 
-  const handleCloseRoleModal = () => {
-    setShowRoleModal(false);
-    setSelectedUserForRoles(null);
-  };
 
   // Bulk role assignment handler
   const handleBulkRoleAssignment = async (roleId, action) => {
@@ -736,68 +742,112 @@ function AdminUsersContent() {
               />
             </div>
 
-            {/* Enhanced Role Filter */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium admin-text">Role Filter</label>
-                {roleFilter.length > 0 && (
-                  <button
-                    onClick={clearRoleFilters}
-                    className="text-xs text-red-600 hover:text-red-800 transition-colors duration-200"
-                  >
-                    Clear ({roleFilter.length})
-                  </button>
-                )}
-              </div>
-              
-              {/* Boolean Operator Toggle */}
-              {roleFilter.length > 1 && (
-                <div className="flex items-center space-x-2 text-sm">
-                  <span className="admin-text-light">Match:</span>
-                  <button
-                    onClick={() => setRoleBooleanOperator("OR")}
-                    className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
-                      roleBooleanOperator === "OR" 
-                        ? "bg-blue-100 text-blue-800 border border-blue-300" 
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    ANY (OR)
-                  </button>
-                  <button
-                    onClick={() => setRoleBooleanOperator("AND")}
-                    className={`px-2 py-1 rounded text-xs transition-colors duration-200 ${
-                      roleBooleanOperator === "AND" 
-                        ? "bg-blue-100 text-blue-800 border border-blue-300" 
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    ALL (AND)
-                  </button>
+            {/* Custom Multi-Select Role Filter */}
+            <div className="relative role-dropdown-container">
+              <button
+                onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700 text-left flex items-center justify-between"
+              >
+                <span>
+                  {roleFilter.length === 0 
+                    ? "All Roles"
+                    : roleFilter.length === 1
+                    ? availableRoles.find(r => r.name.toLowerCase().replace(' ', '_') === roleFilter[0])?.name || "Unknown Role"
+                    : `${roleFilter.length} roles selected (${roleBooleanOperator})`
+                  }
+                </span>
+                <svg className={`h-4 w-4 transition-transform duration-200 ${isRoleDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isRoleDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  
+                  {/* Clear All Option */}
+                  <div className="p-2 border-b border-gray-200 dark:border-gray-600">
+                    <button
+                      onClick={() => {
+                        setRoleFilter([]);
+                        setIsRoleDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1 text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+                    >
+                      All Roles
+                    </button>
+                  </div>
+
+                  {/* Role Options */}
+                  <div className="p-2">
+                    {availableRoles.map((role) => {
+                      const roleId = role.name.toLowerCase().replace(' ', '_');
+                      const isSelected = roleFilter.includes(roleId);
+                      
+                      return (
+                        <label key={role.id} className="flex items-center px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 rounded">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleRoleFilterChange(roleId)}
+                            className="mr-3 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                          />
+                          <span className={`${isSelected ? 'font-medium text-purple-700' : 'admin-text'}`}>
+                            {role.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Boolean Logic Controls - Only show if multiple selected */}
+                  {roleFilter.length > 1 && (
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-600">
+                      <div className="text-xs admin-text-light mb-2">Match logic:</div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setRoleBooleanOperator("OR")}
+                          className={`flex-1 px-2 py-1 text-xs rounded transition-colors duration-200 ${
+                            roleBooleanOperator === "OR" 
+                              ? "bg-blue-100 text-blue-800 border border-blue-300" 
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          ANY (OR)
+                        </button>
+                        <button
+                          onClick={() => setRoleBooleanOperator("AND")}
+                          className={`flex-1 px-2 py-1 text-xs rounded transition-colors duration-200 ${
+                            roleBooleanOperator === "AND" 
+                              ? "bg-blue-100 text-blue-800 border border-blue-300" 
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          ALL (AND)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Clear/Close Actions */}
+                  <div className="p-2 border-t border-gray-200 dark:border-gray-600 flex justify-between">
+                    {roleFilter.length > 0 && (
+                      <button
+                        onClick={clearRoleFilters}
+                        className="text-xs text-red-600 hover:text-red-800 transition-colors duration-200"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsRoleDropdownOpen(false)}
+                      className="text-xs text-purple-600 hover:text-purple-800 transition-colors duration-200 ml-auto"
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               )}
-              
-              {/* Role Checkboxes */}
-              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                {availableRoles.map((role) => {
-                  const roleId = role.name.toLowerCase().replace(' ', '_');
-                  const isSelected = roleFilter.includes(roleId);
-                  
-                  return (
-                    <label key={role.id} className="flex items-center space-x-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleRoleFilterChange(roleId)}
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className={`${isSelected ? 'text-purple-700 font-medium' : 'admin-text'}`}>
-                        {role.name}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
             </div>
 
             {/* Status Filter */}
@@ -1167,13 +1217,13 @@ function AdminUsersContent() {
 
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-1 sm:space-x-2">
-                        <button
-                          onClick={() => handleManageRoles(user)}
+                        <Link
+                          href={`/admin/users/${user.id}/roles`}
                           className="text-blue-600 hover:text-blue-900 p-2 sm:p-2 hover:bg-blue-50 rounded transition-colors duration-200 touch-action-manipulation"
                           title="Manage roles"
                         >
                           <Settings className="h-4 w-4" />
-                        </button>
+                        </Link>
                         
                         <Link
                           href={`/admin/users/${user.id}/edit`}
@@ -1266,13 +1316,6 @@ function AdminUsersContent() {
         </div>
       )}
 
-      {/* Role Management Modal */}
-      <UserEditRoleModal
-        isOpen={showRoleModal}
-        user={selectedUserForRoles}
-        onClose={handleCloseRoleModal}
-        onUserUpdated={refetch}
-      />
     </div>
   );
 }

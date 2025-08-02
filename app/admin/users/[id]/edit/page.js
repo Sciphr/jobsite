@@ -90,7 +90,7 @@ export default function EditUserPage() {
   // Show loading state while checking session or fetching data
   if (status === "loading" || loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
@@ -109,7 +109,7 @@ export default function EditUserPage() {
   // Show error state
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -125,7 +125,7 @@ export default function EditUserPage() {
           </div>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
           <div className="flex items-center justify-center mb-4">
             <div className="p-3 bg-red-100 rounded-full">
               <AlertCircle className="h-8 w-8 text-red-600" />
@@ -134,7 +134,7 @@ export default function EditUserPage() {
           <h2 className="text-xl font-semibold text-red-900 mb-2">
             Unable to Load User
           </h2>
-          <p className="text-red-700 mb-6 max-w-md mx-auto">{error}</p>
+          <p className="text-red-700 mb-6">{error}</p>
           <div className="flex items-center justify-center space-x-4">
             <button
               onClick={() => router.push("/admin/users")}
@@ -156,127 +156,59 @@ export default function EditUserPage() {
 
   // Render the user form with data
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-gray-600">
-        <button
-          onClick={() => router.push("/admin/dashboard")}
-          className="hover:text-gray-900 transition-colors duration-200"
-        >
-          Dashboard
-        </button>
-        <span>/</span>
-        <button
-          onClick={() => router.push("/admin/users")}
-          className="hover:text-gray-900 transition-colors duration-200"
-        >
-          Users
-        </button>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">
-          Edit {userData?.firstName} {userData?.lastName}
-        </span>
-      </nav>
-
-      {/* User Info Banner */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <div className="p-1 bg-purple-100 rounded-full mt-0.5">
-            <User className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-purple-900 mb-1">
-              Editing User Profile
-            </h3>
-            <div className="text-sm text-purple-700 space-y-1">
-              <div>
-                <strong>Current Roles:</strong>{" "}
-                {userData?.user_roles && userData.user_roles.length > 0 
-                  ? userData.user_roles.map(ur => ur.roles.name).join(", ")
-                  : userData?.role?.replace("_", " ") || "No roles assigned"
-                }
-                {userData?.privilegeLevel !== undefined && (
-                  <span className="ml-1">(Level {userData.privilegeLevel})</span>
-                )}
-              </div>
-              <p>
-                <strong>Status:</strong>{" "}
-                {userData?.isActive ? "Active" : "Inactive"}
-              </p>
-              <p>
-                <strong>Member Since:</strong>{" "}
-                {new Date(userData?.createdAt).toLocaleDateString()}
-              </p>
-            </div>
+    <div className="max-w-full mx-auto space-y-8">
+      {/* Header with Back Button - At the top */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => router.push("/admin/users")}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            title="Back to users"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Edit User Profile
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Update {userData?.firstName} {userData?.lastName}'s account information
+            </p>
           </div>
         </div>
+        
+        {/* Breadcrumb in header */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-500">
+          <button
+            onClick={() => router.push("/admin/dashboard")}
+            className="hover:text-gray-700 transition-colors duration-200"
+          >
+            Dashboard
+          </button>
+          <span>/</span>
+          <button
+            onClick={() => router.push("/admin/users")}
+            className="hover:text-gray-700 transition-colors duration-200"
+          >
+            Users
+          </button>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">Edit</span>
+        </nav>
       </div>
 
-      {/* User Activity Summary */}
-      {userData?._count && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            User Activity
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-2xl font-bold text-blue-600">
-                {userData._count.createdJobs || 0}
-              </div>
-              <div className="text-sm text-blue-700 font-medium">
-                Jobs Created
-              </div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-600">
-                {userData._count.applications || 0}
-              </div>
-              <div className="text-sm text-green-700 font-medium">
-                Applications
-              </div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="text-2xl font-bold text-purple-600">
-                {userData._count.savedJobs || 0}
-              </div>
-              <div className="text-sm text-purple-700 font-medium">
-                Saved Jobs
-              </div>
-            </div>
-          </div>
-
-          {/* Warning for users with activity */}
-          {(userData._count.createdJobs > 0 ||
-            userData._count.applications > 0) && (
-            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div className="text-sm text-yellow-700">
-                  <p className="font-medium mb-1">Important:</p>
-                  <p>
-                    This user has activity in the system. Be careful when
-                    modifying their role or deactivating their account as it may
-                    affect their created jobs and applications.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Self-Edit Warning */}
+      {/* Self-Edit Warning - Full width warning if editing own account */}
       {userData?.id === session?.user?.id && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <div className="p-1 bg-orange-100 rounded-full mt-0.5">
-              <Shield className="h-4 w-4 text-orange-600" />
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+          <div className="flex items-start space-x-4">
+            <div className="p-2 bg-orange-100 rounded-xl">
+              <Shield className="h-6 w-6 text-orange-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-orange-900 mb-1">
+              <h3 className="text-lg font-medium text-orange-900 mb-2">
                 Editing Your Own Account
               </h3>
-              <p className="text-sm text-orange-700">
+              <p className="text-orange-700">
                 You're editing your own user account. Some restrictions apply:
                 you cannot change your own role or deactivate your own account
                 for security reasons.
@@ -286,40 +218,134 @@ export default function EditUserPage() {
         </div>
       )}
 
-      {/* User Form */}
-      <UserForm 
-        userId={userId} 
-        initialData={userData} 
-        refreshTrigger={refreshTrigger}
-        availableRoles={availableRoles}
-        onRoleChange={handleRoleChange}
-      />
+      {/* Main Content - Form on left/center, User info on right */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        {/* User Form - Takes up 3/4 of the width on large screens */}
+        <div className="xl:col-span-3">
+          <UserForm 
+            userId={userId} 
+            initialData={userData} 
+            refreshTrigger={refreshTrigger}
+            availableRoles={availableRoles}
+            onRoleChange={handleRoleChange}
+          />
+        </div>
 
-      {/* Additional Actions */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Danger Zone
-        </h3>
-        <div className="space-y-4">
-          {userData?.id !== session?.user?.id && (
-            <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-medium text-red-900 mb-1">
-                    Delete User Account
-                  </h4>
-                  <p className="text-sm text-red-700">
-                    Permanently delete this user and all associated data. This
-                    action cannot be undone.
-                  </p>
-                  {(userData?._count?.createdJobs > 0 ||
-                    userData?._count?.applications > 0) && (
-                    <p className="text-sm text-red-600 font-medium mt-2">
-                      ⚠️ This user has {userData._count.createdJobs} jobs and{" "}
-                      {userData._count.applications} applications.
-                    </p>
-                  )}
+        {/* User Info Sidebar - Takes up 1/4 of the width on large screens */}
+        <div className="xl:col-span-1 space-y-6">
+          {/* User Profile Card */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-10 w-10 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                {userData?.firstName} {userData?.lastName}
+              </h3>
+              <p className="text-gray-600 mt-1">{userData?.email}</p>
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-3 ${
+                userData?.isActive 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {userData?.isActive ? 'Active' : 'Inactive'}
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Member Since:</span>
+                <span className="font-medium">{new Date(userData?.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Last Updated:</span>
+                <span className="font-medium">{new Date(userData?.updatedAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Privilege Level:</span>
+                <span className="font-medium">Level {userData?.privilegeLevel || 0}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-4 mt-6">
+              <h4 className="font-medium text-gray-900 mb-3">Current Roles</h4>
+              <div className="space-y-2">
+                {userData?.user_roles && userData.user_roles.length > 0 ? (
+                  userData.user_roles.map(ur => (
+                    <span key={ur.roles.id} className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                      {ur.roles.name}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 text-xs italic">No roles assigned</span>
+                )}
+              </div>
+              <button
+                onClick={() => router.push(`/admin/users/${userId}/roles`)}
+                className="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                Manage Roles
+              </button>
+            </div>
+          </div>
+
+          {/* User Activity Stats */}
+          {userData?._count && (
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                Activity Overview
+              </h4>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Jobs Created</p>
+                    <p className="text-2xl font-bold text-blue-600">{userData._count.createdJobs || 0}</p>
+                  </div>
                 </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-green-900">Applications</p>
+                    <p className="text-2xl font-bold text-green-600">{userData._count.applications || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-purple-900">Saved Jobs</p>
+                    <p className="text-2xl font-bold text-purple-600">{userData._count.savedJobs || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning for users with activity */}
+              {(userData._count.createdJobs > 0 || userData._count.applications > 0) && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-yellow-700">
+                      <p className="font-medium mb-1">Caution</p>
+                      <p>User has system activity. Changes may affect their jobs and applications.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Danger Zone */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h4 className="text-lg font-semibold text-red-900 mb-4">
+              Danger Zone
+            </h4>
+            {userData?.id !== session?.user?.id ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Permanently delete this user and all associated data.
+                </p>
+                {(userData?._count?.createdJobs > 0 || userData?._count?.applications > 0) && (
+                  <p className="text-xs text-red-600 font-medium">
+                    ⚠️ Has {userData._count.createdJobs} jobs and {userData._count.applications} applications
+                  </p>
+                )}
                 <button
                   onClick={() => {
                     if (
@@ -330,30 +356,21 @@ export default function EditUserPage() {
                       handleDeleteUser();
                     }
                   }}
-                  className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200"
+                  className="w-full px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors duration-200"
                 >
-                  Delete User
+                  Delete User Account
                 </button>
               </div>
-            </div>
-          )}
-
-          {userData?.id === session?.user?.id && (
-            <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-gray-500" />
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Shield className="h-5 w-5 text-gray-400" />
                 <div>
-                  <h4 className="font-medium text-gray-900">
-                    Account Protection
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    You cannot delete your own account. Contact another super
-                    admin if needed.
-                  </p>
+                  <p className="text-sm font-medium text-gray-700">Protected Account</p>
+                  <p className="text-xs text-gray-500">Cannot delete your own account</p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

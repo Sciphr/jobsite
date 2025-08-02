@@ -52,6 +52,18 @@ export async function GET(request) {
       orderBy: { uploaded_at: "desc" },
     });
 
+    // Convert snake_case database fields to camelCase for frontend
+    const formattedResumes = resumes.map(resume => ({
+      id: resume.id,
+      fileName: resume.file_name,
+      fileSize: resume.file_size,
+      fileType: resume.file_type,
+      storagePath: resume.storage_path,
+      uploadedAt: resume.uploaded_at,
+      isDefault: resume.is_default,
+      userId: resume.user_id
+    }));
+
     // Log successful resume list access
     await logAuditEvent({
       eventType: "VIEW",
@@ -75,7 +87,7 @@ export async function GET(request) {
       }
     }, request).catch(console.error);
 
-    return NextResponse.json(resumes);
+    return NextResponse.json(formattedResumes);
   } catch (error) {
     console.error("Error fetching resumes:", error);
     
@@ -302,9 +314,21 @@ export async function POST(request) {
         }
       }, request).catch(console.error);
 
+      // Format the resume response to match frontend expectations
+      const formattedResume = {
+        id: resume.id,
+        fileName: resume.file_name,
+        fileSize: resume.file_size,
+        fileType: resume.file_type,
+        storagePath: resume.storage_path,
+        uploadedAt: resume.uploadedAt || resume.uploaded_at,
+        isDefault: resume.is_default,
+        userId: resume.user_id
+      };
+
       return NextResponse.json(
         {
-          resume,
+          resume: formattedResume,
           message: existingResume
             ? "Resume updated successfully"
             : "Resume uploaded successfully",
@@ -378,9 +402,9 @@ export async function DELETE(request) {
 
     ("Resume deleted from database successfully");
 
-    // Then delete from  Storage
+    // Then delete from MinIO Storage
     ("Deleting file from storage:", storagePath);
-    const { error: deleteError } = await deleteFromStorage(storagePath);
+    const { error: deleteError } = await deleteFromMinio(storagePath);
 
     if (deleteError) {
       console.error(
