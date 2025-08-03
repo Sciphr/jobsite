@@ -243,9 +243,11 @@ export default function JobSpecificApplications() {
     }
   };
 
+
+
   const handleViewApplication = (application) => {
-    // Navigate to application details or open modal
-    router.push(`/admin/applications/${application.id}`);
+    // Navigate to the dedicated application details page
+    router.push(`/applications-manager/candidate/${application.id}`);
   };
 
   const handleEmailApplication = (application) => {
@@ -718,6 +720,7 @@ export default function JobSpecificApplications() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

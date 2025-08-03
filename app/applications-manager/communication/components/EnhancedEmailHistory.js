@@ -68,17 +68,15 @@ export default function EnhancedEmailHistory({
   setIncludeFailures,
 }) {
   const { getButtonClasses } = useThemeClasses();
-  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [selectedEmailForModal, setSelectedEmailForModal] = useState(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  const toggleRowExpansion = (id) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
+  const openEmailModal = (email) => {
+    setSelectedEmailForModal(email);
+  };
+
+  const closeEmailModal = () => {
+    setSelectedEmailForModal(null);
   };
 
   const currentEmails = useAuditData ? auditEmails : emails;
@@ -403,12 +401,12 @@ export default function EnhancedEmailHistory({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentEmails.map((email) => (
-                  <React.Fragment key={email.id}>
-                    <motion.tr
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="hover:bg-gray-50"
-                    >
+                  <motion.tr
+                    key={email.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="hover:bg-gray-50"
+                  >
                       <td className="px-6 py-4">
                         <div className="flex items-start space-x-3">
                           {useAuditData && getAuditStatusIcon(email.status, email.severity)}
@@ -523,7 +521,7 @@ export default function EnhancedEmailHistory({
                         <div className="flex items-center space-x-2">
                           <motion.button
                             whileHover={{ scale: 1.1 }}
-                            onClick={() => toggleRowExpansion(email.id)}
+                            onClick={() => openEmailModal(email)}
                             className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
                             title="View details"
                           >
@@ -550,79 +548,6 @@ export default function EnhancedEmailHistory({
                         </div>
                       </td>
                     </motion.tr>
-                    
-                    {/* Expanded Row Details */}
-                    <AnimatePresence>
-                      {expandedRows.has(email.id) && (
-                        <motion.tr
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="bg-gray-50"
-                        >
-                          <td colSpan={useAuditData ? 7 : 6} className="px-6 py-4">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                              {/* Email Details */}
-                              <div>
-                                <h4 className="font-semibold text-gray-800 mb-3">
-                                  {useAuditData ? "Event Details" : "Email Details"}
-                                </h4>
-                                <div className="space-y-2">
-                                  {useAuditData ? (
-                                    <>
-                                      <div><span className="font-medium">Description:</span> {email.description}</div>
-                                      <div><span className="font-medium">Event Type:</span> {email.eventType}</div>
-                                      <div><span className="font-medium">Category:</span> {email.category}</div>
-                                      {email.subcategory && (
-                                        <div><span className="font-medium">Subcategory:</span> {email.subcategory}</div>
-                                      )}
-                                      {email.requestId && (
-                                        <div><span className="font-medium">Request ID:</span> {email.requestId}</div>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div><span className="font-medium">Content:</span> {email.content?.substring(0, 200)}...</div>
-                                      {email.messageId && (
-                                        <div><span className="font-medium">Message ID:</span> {email.messageId}</div>
-                                      )}
-                                      {email.failureReason && (
-                                        <div><span className="font-medium">Failure Reason:</span> {email.failureReason}</div>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Metadata/Context */}
-                              <div>
-                                <h4 className="font-semibold text-gray-800 mb-3">
-                                  {useAuditData ? "Context & Metadata" : "Additional Info"}
-                                </h4>
-                                <div className="space-y-2">
-                                  {useAuditData ? (
-                                    formatAuditMetadata(email.metadata)
-                                  ) : (
-                                    <>
-                                      {email.job && (
-                                        <div><span className="font-medium">Job:</span> {email.job.title}</div>
-                                      )}
-                                      {email.application && (
-                                        <div><span className="font-medium">Application:</span> {email.application.name}</div>
-                                      )}
-                                      {email.template && (
-                                        <div><span className="font-medium">Template:</span> {email.template.name}</div>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      )}
-                    </AnimatePresence>
-                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -639,6 +564,218 @@ export default function EnhancedEmailHistory({
           </div>
         )}
       </div>
+
+      {/* Email Details Modal */}
+      <AnimatePresence>
+        {selectedEmailForModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-white bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={closeEmailModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {useAuditData ? "Event Details" : "Email Details"}
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={closeEmailModal}
+                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column - Main Details */}
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-4 text-lg">
+                      {useAuditData ? "Event Information" : "Email Information"}
+                    </h4>
+                    <div className="space-y-4">
+                      {useAuditData ? (
+                        <>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <label className="text-sm font-medium text-gray-600">Description</label>
+                            <p className="text-gray-900 mt-1">{selectedEmailForModal.description}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Event Type</label>
+                              <p className="text-gray-900 mt-1">{selectedEmailForModal.eventType}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Category</label>
+                              <p className="text-gray-900 mt-1">{selectedEmailForModal.category}</p>
+                            </div>
+                          </div>
+                          {selectedEmailForModal.subcategory && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Subcategory</label>
+                              <p className="text-gray-900 mt-1">{selectedEmailForModal.subcategory}</p>
+                            </div>
+                          )}
+                          {selectedEmailForModal.requestId && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Request ID</label>
+                              <p className="text-gray-900 mt-1 font-mono text-sm">{selectedEmailForModal.requestId}</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <label className="text-sm font-medium text-gray-600">Subject</label>
+                            <p className="text-gray-900 mt-1 text-lg">{selectedEmailForModal.subject}</p>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <label className="text-sm font-medium text-gray-600">Content</label>
+                            <div className="text-gray-900 mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded p-3 bg-white">
+                              {selectedEmailForModal.htmlContent ? (
+                                <div dangerouslySetInnerHTML={{ __html: selectedEmailForModal.htmlContent }} />
+                              ) : (
+                                <pre className="whitespace-pre-wrap text-sm">{selectedEmailForModal.content}</pre>
+                              )}
+                            </div>
+                          </div>
+                          {selectedEmailForModal.messageId && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Message ID</label>
+                              <p className="text-gray-900 mt-1 font-mono text-sm">{selectedEmailForModal.messageId}</p>
+                            </div>
+                          )}
+                          {selectedEmailForModal.failureReason && (
+                            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                              <label className="text-sm font-medium text-red-600">Failure Reason</label>
+                              <p className="text-red-900 mt-1">{selectedEmailForModal.failureReason}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column - Context & Metadata */}
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-4 text-lg">
+                      {useAuditData ? "Context & Metadata" : "Additional Information"}
+                    </h4>
+                    <div className="space-y-4">
+                      {useAuditData ? (
+                        <div className="space-y-3">
+                          {formatAuditMetadata(selectedEmailForModal.metadata)?.map((item, index) => (
+                            <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                              {item}
+                            </div>
+                          ))}
+                          {selectedEmailForModal.relatedJob && (
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                              <label className="text-sm font-medium text-blue-600">Related Job</label>
+                              <p className="text-blue-900 mt-1">{selectedEmailForModal.relatedJob.title}</p>
+                            </div>
+                          )}
+                          {selectedEmailForModal.campaignInfo?.isBulk && (
+                            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                              <label className="text-sm font-medium text-purple-600">Bulk Campaign</label>
+                              <p className="text-purple-900 mt-1">{selectedEmailForModal.campaignInfo.recipientCount} recipients</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Status</label>
+                              <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${getEmailStatusColor(selectedEmailForModal.status)}`}>
+                                {selectedEmailForModal.status}
+                              </span>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <label className="text-sm font-medium text-gray-600">Sent Date</label>
+                              <p className="text-gray-900 mt-1">
+                                {selectedEmailForModal.sentAt ? new Date(selectedEmailForModal.sentAt).toLocaleString() : "Not sent"}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Engagement Metrics */}
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <label className="text-sm font-medium text-gray-600 mb-3 block">Engagement</label>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="flex items-center space-x-2">
+                                <Eye className={`h-4 w-4 ${selectedEmailForModal.openedAt ? "text-green-500" : "text-gray-400"}`} />
+                                <span className="text-sm">
+                                  {selectedEmailForModal.openedAt ? 
+                                    `Opened: ${new Date(selectedEmailForModal.openedAt).toLocaleString()}` : 
+                                    "Not opened"
+                                  }
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <ExternalLink className={`h-4 w-4 ${selectedEmailForModal.clickedAt ? "text-blue-500" : "text-gray-400"}`} />
+                                <span className="text-sm">
+                                  {selectedEmailForModal.clickedAt ? 
+                                    `Clicked: ${new Date(selectedEmailForModal.clickedAt).toLocaleString()}` : 
+                                    "No clicks"
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Related Information */}
+                          {(selectedEmailForModal.job || selectedEmailForModal.application || selectedEmailForModal.template) && (
+                            <div className="space-y-3">
+                              {selectedEmailForModal.job && (
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                  <label className="text-sm font-medium text-blue-600">Related Job</label>
+                                  <p className="text-blue-900 mt-1">{selectedEmailForModal.job.title}</p>
+                                  <p className="text-blue-700 text-sm">{selectedEmailForModal.job.department}</p>
+                                </div>
+                              )}
+                              {selectedEmailForModal.application && (
+                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                  <label className="text-sm font-medium text-green-600">Related Application</label>
+                                  <p className="text-green-900 mt-1">{selectedEmailForModal.application.name}</p>
+                                </div>
+                              )}
+                              {selectedEmailForModal.template && (
+                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                                  <label className="text-sm font-medium text-purple-600">Email Template</label>
+                                  <p className="text-purple-900 mt-1">{selectedEmailForModal.template.name}</p>
+                                  <p className="text-purple-700 text-sm">{selectedEmailForModal.template.type}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

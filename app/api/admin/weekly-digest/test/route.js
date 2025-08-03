@@ -21,11 +21,11 @@ export async function POST(req) {
     console.log("🧪 Test weekly digest requested by:", session.user.email);
 
     // Get test recipients from settings
-    const testRecipientsSettings = await appPrisma.setting.findFirst({
+    const testRecipientsSettings = await appPrisma.settings.findFirst({
       where: {
         key: "weekly_digest_test_recipients",
-        userId: null
-      }
+        userId: null,
+      },
     });
 
     let testRecipients = [];
@@ -40,13 +40,20 @@ export async function POST(req) {
     // If no test recipients configured, fall back to the requesting user
     if (!testRecipients || testRecipients.length === 0) {
       testRecipients = [session.user.id];
-      console.log("🧪 No test recipients configured, sending to requester only");
+      console.log(
+        "🧪 No test recipients configured, sending to requester only"
+      );
     }
 
-    console.log(`🧪 Sending test digest to ${testRecipients.length} test recipients`);
+    console.log(
+      `🧪 Sending test digest to ${testRecipients.length} test recipients`
+    );
 
     // Generate and send to test recipients only
-    const result = await weeklyDigestService.generateAndSend(testRecipients, session.user.id);
+    const result = await weeklyDigestService.generateAndSend(
+      testRecipients,
+      session.user.id
+    );
 
     if (result.success) {
       return NextResponse.json({
@@ -54,7 +61,7 @@ export async function POST(req) {
         message: `Test digest sent successfully to ${result.sent} test recipient(s)`,
         sent: result.sent,
         failed: result.failed || 0,
-        testMode: true
+        testMode: true,
       });
     } else {
       return NextResponse.json(
@@ -62,7 +69,7 @@ export async function POST(req) {
           success: false,
           message: result.message || "Failed to send test digest",
           error: result.error,
-          testMode: true
+          testMode: true,
         },
         { status: 500 }
       );
@@ -74,7 +81,7 @@ export async function POST(req) {
         success: false,
         message: "Internal server error",
         error: error.message,
-        testMode: true
+        testMode: true,
       },
       { status: 500 }
     );

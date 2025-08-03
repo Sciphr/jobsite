@@ -115,7 +115,7 @@ export async function POST(request) {
     const filePath = `settings/favicons/${fileName}`;
 
     // Check for existing favicon
-    const existingFaviconSetting = await appPrisma.setting.findFirst({
+    const existingFaviconSetting = await appPrisma.settings.findFirst({
       where: {
         key: "site_favicon_url",
         userId: null,

@@ -178,6 +178,9 @@ function ApplicationsManagerLayoutContent({ children }) {
   const jobId = isJobSpecific
     ? pathname.split("/jobs/")[1]?.split("/")[0]
     : null;
+  const candidateId = isCandidateSpecific
+    ? pathname.split("/candidate/")[1]?.split("/")[0]
+    : null;
   const currentJob = jobId ? jobs.find((job) => job.id === jobId) : null;
 
   const handleJobSelect = (selectedJobId) => {
@@ -284,6 +287,15 @@ function ApplicationsManagerLayoutContent({ children }) {
                       className="text-xs admin-text-light"
                     >
                       {currentJob.title} • {currentJob.department}
+                    </motion.p>
+                  )}
+                  {!isMobile && isCandidateSpecific && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-xs admin-text-light"
+                    >
+                      Candidate Details
                     </motion.p>
                   )}
                 </div>

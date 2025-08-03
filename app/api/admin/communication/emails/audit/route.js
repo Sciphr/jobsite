@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@/app/generated/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "../../../../../lib/prisma";
 
 export async function GET(request) {
   try {
@@ -42,8 +40,8 @@ export async function GET(request) {
     if (search) {
       where.OR = [
         { description: { contains: search, mode: "insensitive" } },
-        { actorName: { contains: search, mode: "insensitive" } },
-        { entityName: { contains: search, mode: "insensitive" } },
+        { actor_name: { contains: search, mode: "insensitive" } },
+        { entity_name: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -60,42 +58,42 @@ export async function GET(request) {
     }
 
     if (actorId) {
-      where.actorId = actorId;
+      where.actor_id = actorId;
     }
 
     if (jobId) {
-      where.relatedJobId = jobId;
+      where.related_job_id = jobId;
     }
 
     if (dateFrom || dateTo) {
-      where.createdAt = {};
+      where.created_at = {};
       if (dateFrom) {
-        where.createdAt.gte = new Date(dateFrom);
+        where.created_at.gte = new Date(dateFrom);
       }
       if (dateTo) {
-        where.createdAt.lte = new Date(dateTo);
+        where.created_at.lte = new Date(dateTo);
       }
     }
 
     // Include both successful and failed email events
-    where.eventType = { in: ["SEND", "ERROR"] };
+    where.event_type = { in: ["SEND", "ERROR"] };
 
     // Calculate skip for pagination
     const skip = (page - 1) * limit;
 
     // Get total count for pagination
-    const totalCount = await prisma.audit_logs.count({ where });
+    const totalCount = await appPrisma.audit_logs.count({ where });
 
     // Fetch audit logs for email events
-    const auditLogs = await prisma.audit_logs.findMany({
+    const auditLogs = await appPrisma.audit_logs.findMany({
       where,
       skip,
       take: limit,
       orderBy: {
-        [sortBy]: sortOrder,
+        [sortBy === "createdAt" ? "created_at" : sortBy]: sortOrder,
       },
       include: {
-        relatedUser: {
+        users_audit_logs_related_user_idTousers: {
           select: {
             id: true,
             firstName: true,
@@ -103,14 +101,14 @@ export async function GET(request) {
             email: true,
           },
         },
-        relatedJob: {
+        jobs: {
           select: {
             id: true,
             title: true,
             department: true,
           },
         },
-        relatedApplication: {
+        applications: {
           select: {
             id: true,
             name: true,
@@ -132,22 +130,22 @@ export async function GET(request) {
             if (log.metadata.subject) {
               emailQuery.subject = log.metadata.subject;
             }
-            if (log.relatedJobId) {
-              emailQuery.job_id = log.relatedJobId;
+            if (log.related_job_id) {
+              emailQuery.job_id = log.related_job_id;
             }
-            if (log.relatedApplicationId) {
-              emailQuery.application_id = log.relatedApplicationId;
+            if (log.related_application_id) {
+              emailQuery.application_id = log.related_application_id;
             }
-            if (log.createdAt) {
+            if (log.created_at) {
               // Look for emails sent within 5 minutes of the audit log
               const timeWindow = 5 * 60 * 1000; // 5 minutes in milliseconds
               emailQuery.sent_at = {
-                gte: new Date(log.createdAt.getTime() - timeWindow),
-                lte: new Date(log.createdAt.getTime() + timeWindow),
+                gte: new Date(log.created_at.getTime() - timeWindow),
+                lte: new Date(log.created_at.getTime() + timeWindow),
               };
             }
 
-            emailDetails = await prisma.email.findFirst({
+            emailDetails = await appPrisma.emails.findFirst({
               where: emailQuery,
               include: {
                 email_templates: {
@@ -169,36 +167,36 @@ export async function GET(request) {
 
         return {
           id: log.id,
-          eventType: log.eventType,
+          eventType: log.event_type,
           category: log.category,
           subcategory: log.subcategory,
-          entityType: log.entityType,
-          entityId: log.entityId,
-          entityName: log.entityName,
-          actorId: log.actorId,
-          actorType: log.actorType,
-          actorName: log.actorName,
+          entityType: log.entity_type,
+          entityId: log.entity_id,
+          entityName: log.entity_name,
+          actorId: log.actor_id,
+          actorType: log.actor_type,
+          actorName: log.actor_name,
           action: log.action,
           description: log.description,
-          oldValues: log.oldValues,
-          newValues: log.newValues,
+          oldValues: log.old_values,
+          newValues: log.new_values,
           changes: log.changes,
-          ipAddress: log.ipAddress,
-          userAgent: log.userAgent,
-          sessionId: log.sessionId,
-          requestId: log.requestId,
-          relatedUserId: log.relatedUserId,
-          relatedJobId: log.relatedJobId,
-          relatedApplicationId: log.relatedApplicationId,
+          ipAddress: log.ip_address,
+          userAgent: log.user_agent,
+          sessionId: log.session_id,
+          requestId: log.request_id,
+          relatedUserId: log.related_user_id,
+          relatedJobId: log.related_job_id,
+          relatedApplicationId: log.related_application_id,
           severity: log.severity,
           status: log.status,
           tags: log.tags,
           metadata: log.metadata,
-          createdAt: log.createdAt,
+          createdAt: log.created_at,
           // Related entities
-          relatedUser: log.relatedUser,
-          relatedJob: log.relatedJob,
-          relatedApplication: log.relatedApplication,
+          relatedUser: log.users_audit_logs_related_user_idTousers,
+          relatedJob: log.jobs,
+          relatedApplication: log.applications,
           // Enhanced email details
           emailDetails: emailDetails
             ? {
@@ -233,7 +231,7 @@ export async function GET(request) {
           emailStatus:
             emailDetails?.status ||
             (log.status === "success" ? "sent" : "failed"),
-          sentAt: emailDetails?.sent_at || log.createdAt,
+          sentAt: emailDetails?.sent_at || log.created_at,
           templateInfo:
             emailDetails?.email_templates ||
             (log.metadata?.templateId
@@ -260,11 +258,11 @@ export async function GET(request) {
     // Get summary statistics from audit logs
     const statsQuery = {
       category: "EMAIL",
-      eventType: { in: ["SEND", "ERROR"] },
+      event_type: { in: ["SEND", "ERROR"] },
     };
 
     if (dateFrom || dateTo) {
-      statsQuery.createdAt = {
+      statsQuery.created_at = {
         ...(dateFrom && { gte: new Date(dateFrom) }),
         ...(dateTo && { lte: new Date(dateTo) }),
       };
@@ -277,20 +275,20 @@ export async function GET(request) {
       bulkCampaigns,
       uniqueSenders,
     ] = await Promise.all([
-      prisma.audit_logs.count({ where: statsQuery }),
-      prisma.audit_logs.count({
-        where: { ...statsQuery, status: "success", eventType: "SEND" },
+      appPrisma.audit_logs.count({ where: statsQuery }),
+      appPrisma.audit_logs.count({
+        where: { ...statsQuery, status: "success", event_type: "SEND" },
       }),
-      prisma.audit_logs.count({
+      appPrisma.audit_logs.count({
         where: { ...statsQuery, status: "failure" },
       }),
-      prisma.audit_logs.count({
+      appPrisma.audit_logs.count({
         where: { ...statsQuery, subcategory: "BULK_SEND" },
       }),
-      prisma.audit_logs.findMany({
+      appPrisma.audit_logs.findMany({
         where: statsQuery,
-        select: { actorId: true },
-        distinct: ["actorId"],
+        select: { actor_id: true },
+        distinct: ["actor_id"],
       }),
     ]);
 
@@ -298,15 +296,15 @@ export async function GET(request) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const activityTrends = await prisma.audit_logs.groupBy({
-      by: ["createdAt"],
+    const activityTrends = await appPrisma.audit_logs.groupBy({
+      by: ["created_at"],
       where: {
         category: "EMAIL",
-        eventType: "SEND",
-        createdAt: { gte: thirtyDaysAgo },
+        event_type: "SEND",
+        created_at: { gte: thirtyDaysAgo },
       },
       _count: { id: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: { created_at: "asc" },
     });
 
     const enhancedStats = {
@@ -320,7 +318,7 @@ export async function GET(request) {
           ? Math.round((successfulSends / totalEmailEvents) * 100)
           : 0,
       activityTrends: activityTrends.map((trend) => ({
-        date: trend.createdAt.toISOString().split("T")[0],
+        date: trend.created_at.toISOString().split("T")[0],
         count: trend._count.id,
       })),
     };

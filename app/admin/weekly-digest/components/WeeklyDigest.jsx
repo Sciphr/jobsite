@@ -974,12 +974,12 @@ const WeeklyDigest = () => {
 
       {/* Preview Modal */}
       {showPreview && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closePreview}></div>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4">
+          {/* Blurred Backdrop */}
+          <div className="fixed inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm" onClick={closePreview}></div>
           
           {/* Modal Content */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden z-10">
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden z-10 border border-gray-200 dark:border-gray-700">
               <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -1002,7 +1002,7 @@ const WeeklyDigest = () => {
 
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
                   {previewLoading ? (
-                    <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-700">
+                    <div className="flex items-center justify-center h-[500px] sm:h-[700px] lg:h-[800px] bg-gray-50 dark:bg-gray-700">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                         <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
@@ -1017,9 +1017,9 @@ const WeeklyDigest = () => {
                       </div>
                       <iframe
                         src={previewBlobUrl || `data:text/html;charset=utf-8,${encodeURIComponent(previewHtml)}`}
-                        className="w-full h-96 sm:h-[600px]"
+                        className="w-full h-[500px] sm:h-[700px] lg:h-[800px]"
                         title="Email Preview"
-                        style={{ minHeight: "600px", border: "1px solid #ccc", background: "white" }}
+                        style={{ minHeight: "700px", border: "1px solid #ccc", background: "white" }}
                         onLoad={(e) => {
                           console.log("🖼️ Iframe loaded successfully");
                           console.log("🔍 Iframe src:", e.target.src?.substring(0, 100));
@@ -1039,30 +1039,35 @@ const WeeklyDigest = () => {
                       />
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-700">
+                    <div className="flex items-center justify-center h-[500px] sm:h-[700px] lg:h-[800px] bg-gray-50 dark:bg-gray-700">
                       <p className="text-gray-500">No preview content available</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    const newWindow = window.open('', '_blank');
-                    newWindow.document.write(previewHtml);
-                    newWindow.document.close();
-                  }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                  Open in New Tab
-                </button>
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Use the preview to review your weekly digest email before sending
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => {
+                      const newWindow = window.open('', '_blank');
+                      newWindow.document.write(previewHtml);
+                      newWindow.document.close();
+                    }}
+                    className="inline-flex items-center justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  >
+                    Open in New Tab
+                  </button>
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>

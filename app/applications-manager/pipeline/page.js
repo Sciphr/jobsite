@@ -7,7 +7,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
-import ApplicationDetailModal from "../components/ApplicationDetailModal";
 import QuickActions from "../components/QuickActions";
 import {
   User,
@@ -46,8 +45,6 @@ export default function PipelineView() {
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [ghostPreview, setGhostPreview] = useState(null);
-  const [selectedApplication, setSelectedApplication] = useState(null);
-  const [showApplicationModal, setShowApplicationModal] = useState(false);
 
   // Pipeline stages configuration with theme-aware colors
   const pipelineStages = [
@@ -243,21 +240,10 @@ export default function PipelineView() {
   };
 
   const handleViewApplication = (application) => {
-    setSelectedApplication(application);
-    setShowApplicationModal(true);
+    // Navigate to candidate detail page instead of opening modal
+    router.push(`/applications-manager/candidate/${application.id}`);
   };
 
-  const handleCloseModal = () => {
-    setShowApplicationModal(false);
-    setSelectedApplication(null);
-  };
-
-  const handleModalStatusUpdate = async (applicationId, newStatus) => {
-    await handleStatusChange(applicationId, newStatus);
-    if (selectedApplication && selectedApplication.id === applicationId) {
-      setSelectedApplication((prev) => ({ ...prev, status: newStatus }));
-    }
-  };
 
   const handleDownloadResume = async (application) => {
     if (!application.resumeUrl) {
@@ -842,17 +828,6 @@ export default function PipelineView() {
         </motion.div>
       )}
 
-      {/* Application Detail Modal */}
-      <AnimatePresence>
-        {showApplicationModal && (
-          <ApplicationDetailModal
-            application={selectedApplication}
-            isOpen={showApplicationModal}
-            onClose={handleCloseModal}
-            onStatusUpdate={handleModalStatusUpdate}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

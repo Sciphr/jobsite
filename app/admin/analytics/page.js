@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import { useAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import { useQueryClient } from "@tanstack/react-query";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
   BarChart3,
@@ -55,11 +56,26 @@ function AdminAnalyticsContent() {
   const {
     data: analytics,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
   } = useAnalytics(timeRange);
   const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Prefetch other time ranges for instant switching
+  useEffect(() => {
+    const timeRangesToPrefetch = ["7d", "30d", "90d", "1y"].filter(range => range !== timeRange);
+    
+    timeRangesToPrefetch.forEach(range => {
+      queryClient.prefetchQuery({
+        queryKey: ["admin", "analytics", range],
+        queryFn: () => fetch(`/api/admin/analytics?range=${range}`).then(res => res.json()),
+        staleTime: 15 * 60 * 1000, // 15 minutes
+      });
+    });
+  }, [timeRange, queryClient]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -97,7 +113,8 @@ function AdminAnalyticsContent() {
     }
   };
 
-  if (isLoading) {
+  // Only show full loading skeleton on initial load without any data
+  if (isLoading && !analytics) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -149,17 +166,25 @@ function AdminAnalyticsContent() {
           </p>
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
-          >
-            {timeRangeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
+            >
+              {timeRangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {/* Show subtle loading indicator when fetching new time range data */}
+            {isFetching && (
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+              </div>
+            )}
+          </div>
           <div className="flex space-x-2">
             <button
               onClick={handleRefresh}
@@ -205,7 +230,9 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
+        isFetching ? 'opacity-75' : 'opacity-100'
+      }`}>
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
@@ -403,7 +430,9 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+      <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
+        isFetching ? 'opacity-75' : 'opacity-100'
+      }`}>
         {/* Trend Chart */}
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-6">
@@ -481,7 +510,9 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Conversion Funnel & Top Jobs */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+      <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
+        isFetching ? 'opacity-75' : 'opacity-100'
+      }`}>
         {/* Conversion Funnel */}
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
@@ -544,7 +575,9 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Application Status Cards */}
-      <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
+      <div className={`chart-card admin-card p-4 sm:p-6 rounded-lg shadow transition-opacity duration-200 ${
+        isFetching ? 'opacity-75' : 'opacity-100'
+      }`}>
         <h2 className="text-lg font-semibold admin-text mb-6">
           Application Status Distribution
         </h2>
@@ -570,7 +603,9 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Additional Insights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 transition-opacity duration-200 ${
+        isFetching ? 'opacity-75' : 'opacity-100'
+      }`}>
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">

@@ -79,12 +79,7 @@ export async function GET(req) {
         _sum: {
           viewCount: true,
         },
-        where: {
-          createdAt: {
-            gte: startDate,
-            lte: now,
-          },
-        },
+        // Remove date filter - count all views regardless of job creation date
       }),
       // Previous period for comparison
       appPrisma.jobs.count({
@@ -451,7 +446,7 @@ export async function GET(req) {
         usersChange: parseFloat(
           calculateChange(totalUsers, previousUsers).toFixed(2)
         ),
-        viewsChange: 0.0, // No previous view data tracking for now
+        viewsChange: 0.0, // Cannot calculate change - views are cumulative across all time
       },
       applicationsByDay: dailyData,
       jobsByDepartment: jobsByDepartment.map((dept) => ({

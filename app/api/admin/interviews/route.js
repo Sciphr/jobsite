@@ -2,9 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "../../../lib/prisma";
 
 export async function GET(request) {
   try {
@@ -24,8 +22,8 @@ export async function GET(request) {
     
     // If myOnly is true, filter by jobs created by the current user
     if (myOnly) {
-      whereClause.application = {
-        job: {
+      whereClause.applications = {
+        jobs: {
           createdBy: session.user.id
         }
       };
@@ -41,18 +39,18 @@ export async function GET(request) {
       whereClause.type = type;
     }
 
-    const interviews = await prisma.interviewToken.findMany({
+    const interviews = await appPrisma.interview_tokens.findMany({
       where: whereClause,
       include: {
-        application: {
+        applications: {
           include: {
-            job: {
+            jobs: {
               select: {
                 id: true,
                 title: true,
                 department: true,
                 createdBy: true,
-                creator: {
+                users: {
                   select: {
                     firstName: true,
                     lastName: true,
@@ -63,55 +61,75 @@ export async function GET(request) {
             }
           }
         },
-        rescheduleRequests: {
+        interview_reschedule_requests: {
           orderBy: {
-            createdAt: 'desc'
+            created_at: 'desc'
           },
           take: 1 // Get the latest reschedule request
         }
       },
       orderBy: {
-        scheduledAt: 'asc'
+        scheduled_at: 'asc'
       }
     });
 
     // Transform the data for the frontend
     const transformedInterviews = interviews.map(interview => ({
       id: interview.id,
-      applicationId: interview.applicationId,
-      candidateName: interview.application.name,
-      candidateEmail: interview.application.email,
-      jobTitle: interview.application.job.title,
-      jobDepartment: interview.application.job.department,
-      jobId: interview.application.job.id,
-      hiringManager: {
-        name: interview.application.job.creator?.firstName && interview.application.job.creator?.lastName 
-          ? `${interview.application.job.creator.firstName} ${interview.application.job.creator.lastName}`
-          : interview.application.job.creator?.email || 'Unknown',
-        email: interview.application.job.creator?.email,
-        isMe: interview.application.job.createdBy === session.user.id
-      },
-      scheduledAt: interview.scheduledAt,
+      applicationId: interview.application_id,
+      candidateName: interview.applications.name,
+      candidateEmail: interview.applications.email,
+      jobTitle: interview.applications.jobs.title,
+      jobDepartment: interview.applications.jobs.department,
+      jobId: interview.applications.jobs.id,
+      hiringManager: (() => {
+        // First try to find the creator in the interviewers array
+        const interviewers = interview.interviewers || [];
+        const creator = interviewers.find(interviewer => interviewer.isCreator === true);
+        
+        if (creator) {
+          return {
+            name: creator.name || 'Unknown User',
+            email: creator.email || null,
+            isMe: creator.userId === session.user.id || creator.email === session.user.email
+          };
+        }
+        
+        // Fallback to job creator if no interview creator is found
+        const job = interview.applications.jobs;
+        const user = job.users;
+        
+        return {
+          name: user?.firstName && user?.lastName 
+            ? `${user.firstName} ${user.lastName}`
+            : user?.email || (job.createdBy ? 'Unknown User' : 'System Created'),
+          email: user?.email || null,
+          isMe: job.createdBy === session.user.id
+        };
+      })(),
+      scheduledAt: interview.scheduled_at,
       duration: interview.duration,
       type: interview.type,
       status: interview.status,
       location: interview.location,
       agenda: interview.agenda,
       notes: interview.notes,
-      calendarEventId: interview.calendarEventId,
-      meetingLink: interview.meetingLink,
-      meetingProvider: interview.meetingProvider,
-      respondedAt: interview.respondedAt,
-      expiresAt: interview.expiresAt,
-      createdAt: interview.createdAt,
+      interviewNotes: interview.interview_notes,
+      interviewRating: interview.interview_rating,
+      calendarEventId: interview.calendar_event_id,
+      meetingLink: interview.meeting_link,
+      meetingProvider: interview.meeting_provider,
+      respondedAt: interview.responded_at,
+      expiresAt: interview.expires_at,
+      createdAt: interview.created_at,
       interviewers: interview.interviewers,
-      hasRescheduleRequest: interview.rescheduleRequests.length > 0,
-      latestRescheduleRequest: interview.rescheduleRequests[0] || null,
+      hasRescheduleRequest: interview.interview_reschedule_requests.length > 0,
+      latestRescheduleRequest: interview.interview_reschedule_requests[0] || null,
       // Helper flags
-      isExpired: new Date() > new Date(interview.expiresAt),
-      isUpcoming: new Date(interview.scheduledAt) > new Date(),
-      isPast: new Date(interview.scheduledAt) < new Date(),
-      daysUntilInterview: Math.ceil((new Date(interview.scheduledAt) - new Date()) / (1000 * 60 * 60 * 24))
+      isExpired: new Date() > new Date(interview.expires_at),
+      isUpcoming: new Date(interview.scheduled_at) > new Date(),
+      isPast: new Date(interview.scheduled_at) < new Date(),
+      daysUntilInterview: Math.ceil((new Date(interview.scheduled_at) - new Date()) / (1000 * 60 * 60 * 24))
     }));
 
     // Calculate summary stats

@@ -32,17 +32,34 @@ export function usePermissions() {
 
   // Load permissions from session when available, fallback to API
   useEffect(() => {
+    let isMounted = true; // Track if component is still mounted
+    let timeoutId; // Add timeout to prevent infinite loading
+    
     async function loadPermissions() {
       if (!session?.user?.id) {
-        setPermissions(new Set());
-        setUserRole(null);
-        setLoading(false);
+        if (isMounted) {
+          setPermissions(new Set());
+          setUserRole(null);
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        setLoading(true);
-        setPermissionsInitialized(false);
+        if (isMounted) {
+          setLoading(true);
+          setPermissionsInitialized(false);
+          
+          // Set a timeout to prevent infinite loading (30 seconds)
+          timeoutId = setTimeout(() => {
+            if (isMounted) {
+              console.warn('Permissions loading timeout - forcing completion');
+              setLoading(false);
+              setPermissions(new Set());
+              setUserRole(null);
+            }
+          }, 30000);
+        }
 
         // Check if permissions are available in session (from NextAuth)
         if (session.user.permissions && session.user.permissions.length > 0) {
@@ -53,9 +70,12 @@ export function usePermissions() {
             ? session.user.roles[0] 
             : null;
           
-          setPermissions(permissionSet);
-          setUserRole(primaryRole);
-          setLoading(false);
+          if (isMounted) {
+            clearTimeout(timeoutId); // Clear timeout since we're done
+            setPermissions(permissionSet);
+            setUserRole(primaryRole);
+            setLoading(false);
+          }
           return;
         }
 
@@ -65,7 +85,7 @@ export function usePermissions() {
           fetch(`/api/permissions/user/${session.user.id}/role`)
         ]);
 
-        if (permissionsResponse.ok) {
+        if (permissionsResponse.ok && isMounted) {
           const permissionsData = await permissionsResponse.json();
           const permissionSet = new Set();
           
@@ -76,20 +96,31 @@ export function usePermissions() {
           setPermissions(permissionSet);
         }
 
-        if (roleResponse.ok) {
+        if (roleResponse.ok && isMounted) {
           const roleData = await roleResponse.json();
           setUserRole(roleData.role);
         }
       } catch (error) {
         console.error("Error loading permissions:", error);
-        setPermissions(new Set());
-        setUserRole(null);
+        if (isMounted) {
+          setPermissions(new Set());
+          setUserRole(null);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          clearTimeout(timeoutId); // Clear timeout
+          setLoading(false);
+        }
       }
     }
 
     loadPermissions();
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId); // Clean up timeout
+    };
   }, [session?.user?.id, session?.user?.permissions, session?.user?.permissionsLastUpdated]);
 
   // Core permission checking function

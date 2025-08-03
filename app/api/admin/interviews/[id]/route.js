@@ -2,10 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
+import { appPrisma } from "../../../../lib/prisma";
 import { google } from 'googleapis';
-
-const prisma = new PrismaClient();
 
 export async function DELETE(request, { params }) {
   try {
@@ -17,12 +15,12 @@ export async function DELETE(request, { params }) {
     }
 
     // First, get the interview to check if it exists and get the calendar event ID
-    const interview = await prisma.interviewToken.findUnique({
+    const interview = await appPrisma.interview_tokens.findUnique({
       where: { id },
       include: {
-        application: {
+        applications: {
           include: {
-            job: {
+            jobs: {
               select: {
                 createdBy: true
               }
@@ -39,20 +37,20 @@ export async function DELETE(request, { params }) {
     // Admin users can delete any interview - no additional permission check needed
 
     // Delete from Google Calendar if calendar event ID exists
-    if (interview.calendarEventId) {
+    if (interview.calendar_event_id) {
       try {
         // The current user (who is deleting) should have the calendar access
         // since they are likely the one who created the interview
-        const currentUser = await prisma.user.findUnique({
+        const currentUser = await appPrisma.users.findUnique({
           where: { id: session.user.id },
           select: {
-            googleAccessToken: true,
-            googleRefreshToken: true,
-            googleTokenExpiresAt: true,
+            google_access_token: true,
+            google_refresh_token: true,
+            google_token_expires_at: true,
           }
         });
 
-        if (currentUser?.googleAccessToken) {
+        if (currentUser?.google_access_token) {
           // Setup Google Calendar client with current user's OAuth tokens
           const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
@@ -60,8 +58,8 @@ export async function DELETE(request, { params }) {
           );
 
           oauth2Client.setCredentials({
-            access_token: currentUser.googleAccessToken,
-            refresh_token: currentUser.googleRefreshToken,
+            access_token: currentUser.google_access_token,
+            refresh_token: currentUser.google_refresh_token,
           });
 
           const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -69,10 +67,10 @@ export async function DELETE(request, { params }) {
           // Delete the calendar event
           await calendar.events.delete({
             calendarId: 'primary',
-            eventId: interview.calendarEventId,
+            eventId: interview.calendar_event_id,
           });
 
-          console.log(`Deleted calendar event ${interview.calendarEventId} for interview ${id}`);
+          console.log(`Deleted calendar event ${interview.calendar_event_id} for interview ${id}`);
         } else {
           console.warn(`Current user doesn't have Google Calendar connected, skipping calendar deletion`);
         }
@@ -84,12 +82,12 @@ export async function DELETE(request, { params }) {
     }
 
     // Delete any associated reschedule requests first (due to foreign key constraints)
-    await prisma.interviewRescheduleRequest.deleteMany({
-      where: { interviewTokenId: id }
+    await appPrisma.interview_reschedule_requests.deleteMany({
+      where: { interview_token_id: id }
     });
 
     // Delete the interview from the database
-    await prisma.interviewToken.delete({
+    await appPrisma.interview_tokens.delete({
       where: { id }
     });
 

@@ -9,9 +9,13 @@ import { extractRequestContext } from "../../../lib/auditLog";
 // GET /api/roles/[roleId] - Fetch specific role
 export async function GET(request, { params }) {
   const requestContext = extractRequestContext(request);
+  let session;
+  let roleId;
   
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
+    const resolvedParams = await params;
+    roleId = resolvedParams.roleId;
 
     if (!session?.user?.id) {
       // Log unauthorized role details access attempt
@@ -32,8 +36,6 @@ export async function GET(request, { params }) {
 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const { roleId } = await params;
 
     // Check if user has permission to view roles
     const canViewRoles = await userHasPermission(
@@ -75,17 +77,28 @@ export async function GET(request, { params }) {
             permissions: true,
           },
         },
-        users_users_role_idToroles: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+        user_roles: {
+          where: {
+            is_active: true
           },
+          include: {
+            users: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
         },
         _count: {
           select: {
-            users_users_role_idToroles: true,
+            user_roles: {
+              where: {
+                is_active: true
+              }
+            },
             role_permissions: true,
           },
         },
@@ -139,7 +152,7 @@ export async function GET(request, { params }) {
         roleId: roleId,
         roleName: role.name,
         permissionCount: role._count?.role_permissions || 0,
-        userCount: role._count?.users_users_role_idToroles || 0,
+        userCount: role._count?.user_roles || 0,
         accessedBy: session.user.email
       }
     }, request).catch(console.error);
@@ -158,7 +171,7 @@ export async function GET(request, { params }) {
       action: "Role details access failed - server error",
       description: `Server error during role details access for user: ${session?.user?.email || 'unknown'}`,
       entityType: "role",
-      entityId: params?.roleId,
+      entityId: roleId,
       actorId: session?.user?.id,
       actorType: "user",
       actorName: session?.user?.name || session?.user?.email,
@@ -172,7 +185,7 @@ export async function GET(request, { params }) {
       metadata: {
         error: error.message,
         stack: error.stack,
-        roleId: params?.roleId,
+        roleId: roleId,
         accessedBy: session?.user?.email
       }
     }, request).catch(console.error);

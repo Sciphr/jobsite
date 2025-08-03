@@ -99,16 +99,16 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center mr-8">
             {logoLoading || logoFetching ? (
-              <div className="h-12 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+              <div className="h-12 w-60 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
             ) : logoDownloadUrl ? (
               <Image
                 src={logoDownloadUrl}
                 alt={siteName || "Site Logo"}
-                width={192} // 48 * 4 for better quality
-                height={48}
-                className="h-auto w-auto max-w-[200px] object-contain"
+                width={240} // Standard logo width
+                height={60} // Standard header height
+                className="h-12 w-auto max-w-[240px] object-contain"
                 onError={(e) => {
                   console.error("Logo failed to load, falling back to text");
                   setLogoDownloadUrl(null);

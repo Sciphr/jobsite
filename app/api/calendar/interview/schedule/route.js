@@ -2,16 +2,14 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
+import { appPrisma } from "@/app/lib/prisma";
 import { google } from "googleapis";
 import { emailService } from "@/app/lib/email";
 import crypto from "crypto";
 
-const prisma = new PrismaClient();
-
 async function refreshTokenIfNeeded(oauth2Client, user) {
   const now = new Date();
-  const tokenExpiresAt = new Date(user.googleTokenExpiresAt);
+  const tokenExpiresAt = new Date(user.google_token_expires_at);
   
   // If token expires within 5 minutes, refresh it
   if (tokenExpiresAt <= new Date(now.getTime() + 5 * 60 * 1000)) {
@@ -27,12 +25,12 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
         expiresAt.setHours(expiresAt.getHours() + 1);
       }
       
-      await prisma.user.update({
+      await appPrisma.users.update({
         where: { id: user.id },
         data: {
-          googleAccessToken: credentials.access_token,
-          googleTokenExpiresAt: expiresAt,
-          ...(credentials.refresh_token && { googleRefreshToken: credentials.refresh_token }),
+          google_access_token: credentials.access_token,
+          google_token_expires_at: expiresAt,
+          ...(credentials.refresh_token && { google_refresh_token: credentials.refresh_token }),
         },
       });
       
@@ -43,7 +41,7 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
     }
   }
   
-  return user.googleAccessToken;
+  return user.google_access_token;
 }
 
 async function createCalendarHoldEvent(calendar, eventData, tokens) {
@@ -287,7 +285,8 @@ export async function POST(request) {
     const {
       applicationId,
       selectedTimeSlot,
-      interviewData
+      interviewData,
+      sendEmailNotification = true
     } = await request.json();
 
     if (!applicationId || !selectedTimeSlot || !interviewData) {
@@ -298,21 +297,21 @@ export async function POST(request) {
     }
 
     // Get user's calendar integration info
-    const user = await prisma.user.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
-        calendarIntegrationEnabled: true,
-        googleAccessToken: true,
-        googleRefreshToken: true,
-        googleTokenExpiresAt: true,
+        calendar_integration_enabled: true,
+        google_access_token: true,
+        google_refresh_token: true,
+        google_token_expires_at: true,
         firstName: true,
         lastName: true,
         email: true,
       },
     });
 
-    if (!user?.calendarIntegrationEnabled || !user.googleAccessToken) {
+    if (!user?.calendar_integration_enabled || !user.google_access_token) {
       return NextResponse.json(
         { error: "Google Calendar not connected. Please connect your calendar in settings." },
         { status: 400 }
@@ -320,10 +319,10 @@ export async function POST(request) {
     }
 
     // Get application details
-    const application = await prisma.application.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: { id: applicationId },
       include: {
-        job: {
+        jobs: {
           select: {
             title: true,
           }
@@ -345,8 +344,8 @@ export async function POST(request) {
     );
 
     oauth2Client.setCredentials({
-      access_token: user.googleAccessToken,
-      refresh_token: user.googleRefreshToken,
+      access_token: user.google_access_token,
+      refresh_token: user.google_refresh_token,
     });
 
     // Refresh token if needed
@@ -358,6 +357,19 @@ export async function POST(request) {
     const startDateTime = new Date(`${selectedTimeSlot.date}T${selectedTimeSlot.time}`);
     const endDateTime = new Date(startDateTime.getTime() + (interviewData.duration * 60 * 1000));
 
+    // Ensure current user is included in interviewers list as the creator
+    const currentUserAsInterviewer = {
+      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+      email: user.email,
+      isCreator: true, // Mark this person as the creator
+      userId: user.id
+    };
+    
+    // Filter out any existing entry for current user and add them as creator
+    const filteredInterviewers = interviewData.interviewers.filter(i => 
+      i.name && i.email && i.email !== user.email
+    );
+    
     // Prepare event data
     const eventData = {
       applicationId,
@@ -369,7 +381,7 @@ export async function POST(request) {
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
       timezone: interviewData.timezone,
-      interviewers: interviewData.interviewers.filter(i => i.name && i.email),
+      interviewers: [currentUserAsInterviewer, ...filteredInterviewers],
       location: interviewData.location,
       agenda: interviewData.agenda,
       notes: interviewData.notes,
@@ -388,35 +400,40 @@ export async function POST(request) {
     const calendarEvent = await createCalendarHoldEvent(calendar, eventData, tokens);
 
     // Create InterviewToken record
-    const interviewToken = await prisma.interviewToken.create({
+    const interviewToken = await appPrisma.interview_tokens.create({
       data: {
-        applicationId: applicationId,
-        rescheduleToken,
-        acceptanceToken,
-        scheduledAt: startDateTime,
+        application_id: applicationId,
+        reschedule_token: rescheduleToken,
+        acceptance_token: acceptanceToken,
+        scheduled_at: startDateTime,
         duration: interviewData.duration,
         type: interviewData.type,
         interviewers: eventData.interviewers,
         location: interviewData.location,
         agenda: interviewData.agenda,
         notes: interviewData.notes,
-        calendarEventId: calendarEvent.id,
-        meetingLink: interviewData.meetingProvider === 'google' 
+        calendar_event_id: calendarEvent.id,
+        meeting_link: interviewData.meetingProvider === 'google' 
           ? calendarEvent.conferenceData?.entryPoints?.[0]?.uri || null
           : interviewData.meetingLink || null,
-        meetingProvider: interviewData.meetingProvider || 'google',
-        expiresAt,
+        meeting_provider: interviewData.meetingProvider || 'google',
+        expires_at: expiresAt,
+        // If no email is being sent, automatically mark as accepted since hiring manager is handling manually
+        status: sendEmailNotification ? 'pending' : 'accepted',
+        responded_at: sendEmailNotification ? null : new Date(),
       },
     });
 
     // Add application note
-    await prisma.applicationNote.create({
+    await appPrisma.application_notes.create({
       data: {
-        applicationId: applicationId,
-        content: `Interview scheduled for ${new Date(startDateTime).toLocaleString()} (${interviewData.type} interview, ${interviewData.duration} minutes)`,
+        application_id: applicationId,
+        content: sendEmailNotification 
+          ? `Interview scheduled for ${new Date(startDateTime).toLocaleString()} (${interviewData.type} interview, ${interviewData.duration} minutes) - Invitation sent to candidate`
+          : `Interview scheduled for ${new Date(startDateTime).toLocaleString()} (${interviewData.type} interview, ${interviewData.duration} minutes) - Manual confirmation (no email sent)`,
         type: "interview_scheduled",
-        authorId: session.user.id,
-        authorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        author_id: session.user.id,
+        author_name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
         metadata: {
           calendarEventId: calendarEvent.id,
           interviewType: interviewData.type,
@@ -426,21 +443,23 @@ export async function POST(request) {
           rescheduleToken,
           acceptanceToken,
         },
-        isSystemGenerated: false,
+        is_system_generated: false,
       },
     });
 
-    // Send interview invitation email to candidate
-    try {
-      await sendInterviewInvitationEmail(eventData, tokens, interviewToken, calendarEvent);
-    } catch (emailError) {
-      console.error("Failed to send interview invitation email:", emailError);
-      // Don't fail the whole process if email fails
+    // Send interview invitation email to candidate (if requested)
+    if (sendEmailNotification) {
+      try {
+        await sendInterviewInvitationEmail(eventData, tokens, interviewToken, calendarEvent);
+      } catch (emailError) {
+        console.error("Failed to send interview invitation email:", emailError);
+        // Don't fail the whole process if email fails
+      }
     }
 
     // Update application status to "Interview" if not already
     if (application.status !== 'Interview') {
-      await prisma.application.update({
+      await appPrisma.applications.update({
         where: { id: applicationId },
         data: { status: 'Interview' }
       });
@@ -448,7 +467,9 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "Interview scheduled successfully",
+      message: sendEmailNotification 
+        ? "Interview scheduled successfully and invitation sent to candidate"
+        : "Interview scheduled successfully (no email sent)",
       calendarEvent: {
         id: calendarEvent.id,
         htmlLink: calendarEvent.htmlLink,

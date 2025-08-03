@@ -423,6 +423,7 @@ export default function AuditLogsPage() {
   };
 
   const openDetailsModal = (log) => {
+    console.log('Opening modal with log:', log);
     setSelectedLog(log);
     setShowDetailsModal(true);
   };
@@ -431,6 +432,20 @@ export default function AuditLogsPage() {
     setSelectedLog(null);
     setShowDetailsModal(false);
   };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showDetailsModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDetailsModal]);
 
   const exportLogs = async () => {
     try {
@@ -820,24 +835,32 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Details Modal */}
-      {showDetailsModal && selectedLog && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full sm:w-11/12 md:w-3/4 lg:w-1/2 max-w-4xl shadow-lg rounded-none sm:rounded-md bg-white dark:bg-gray-800 min-h-screen sm:min-h-0">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Audit Log Details
+      {showDetailsModal && selectedLog && (console.log('Rendering modal:', { showDetailsModal, selectedLog: !!selectedLog }) ||
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 overflow-y-auto">
+          {/* Blurred Backdrop */}
+          <div className="fixed inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm" onClick={closeDetailsModal}></div>
+          
+          {/* Modal Container */}
+          <div className="relative z-10 w-full max-w-6xl mt-8">
+            {/* Modal Content */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Audit Log Details {selectedLog?.id ? `(${selectedLog.id.slice(0, 8)}...)` : ''}
               </h3>
               <button
                 onClick={closeDetailsModal}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-4 max-h-96 sm:max-h-96 overflow-y-auto">
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
               {/* Basic Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Event Type
@@ -921,7 +944,7 @@ export default function AuditLogsPage() {
                     Changes
                   </label>
                   <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.changes, null, 2)}
                     </pre>
                   </div>
@@ -935,7 +958,7 @@ export default function AuditLogsPage() {
                     Previous Values
                   </label>
                   <div className="mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.oldValues, null, 2)}
                     </pre>
                   </div>
@@ -949,7 +972,7 @@ export default function AuditLogsPage() {
                     New Values
                   </label>
                   <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
-                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.newValues, null, 2)}
                     </pre>
                   </div>
@@ -959,7 +982,7 @@ export default function AuditLogsPage() {
               {/* Technical Details */}
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Technical Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   {selectedLog.ipAddress && (
                     <div>
                       <span className="font-medium text-gray-700 dark:text-gray-300">IP Address:</span>
@@ -967,7 +990,7 @@ export default function AuditLogsPage() {
                     </div>
                   )}
                   {selectedLog.userAgent && (
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 lg:col-span-3">
                       <span className="font-medium text-gray-700 dark:text-gray-300">User Agent:</span>
                       <span className="ml-2 text-gray-900 dark:text-white break-all">{selectedLog.userAgent}</span>
                     </div>
@@ -1013,7 +1036,7 @@ export default function AuditLogsPage() {
                     Metadata
                   </label>
                   <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                    <pre className="text-xs text-gray-900 dark:text-white overflow-auto">
+                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.metadata, null, 2)}
                     </pre>
                   </div>
@@ -1054,13 +1077,18 @@ export default function AuditLogsPage() {
               )}
             </div>
 
-            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+            {/* Footer */}
+            <div className="flex justify-between items-center p-6 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Log ID: <span className="font-mono">{selectedLog.id}</span>
+              </div>
               <button
                 onClick={closeDetailsModal}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500"
+                className="px-4 py-2 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-400 transition-colors"
               >
                 Close
               </button>
+            </div>
             </div>
           </div>
         </div>

@@ -63,6 +63,9 @@ export const useAnalytics = (timeRange = "30d") => {
     queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
     ...commonQueryOptions,
     staleTime: 15 * 60 * 1000, // 15 minutes for analytics
+    // Enable background refetching to keep current data visible
+    refetchOnMount: true,
+    keepPreviousData: true, // Keep previous data while fetching new data
   });
 };
 
@@ -838,6 +841,59 @@ export const useDeleteUser = () => {
     },
     onSettled: () => {
       // Always refetch dashboard stats to keep them in sync
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+  });
+};
+
+export const useDeleteInterview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (interviewId) => {
+      const response = await fetch(`/api/admin/interviews/${interviewId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete interview");
+      }
+
+      return response.json();
+    },
+    onMutate: async (interviewId) => {
+      // Cancel any outgoing refetches for interviews
+      await queryClient.cancelQueries({ queryKey: ["admin", "interviews"] });
+      
+      // Snapshot the previous values
+      const previousInterviewsData = queryClient.getQueryData(["admin", "interviews"]);
+      
+      // Optimistically remove the interview from cache
+      queryClient.setQueryData(["admin", "interviews"], (oldData) => {
+        if (!oldData?.interviews) return oldData;
+        return {
+          ...oldData,
+          interviews: oldData.interviews.filter((interview) => interview.id !== interviewId),
+          summary: {
+            ...oldData.summary,
+            total: Math.max(0, (oldData.summary?.total || 0) - 1)
+          }
+        };
+      });
+      
+      return { previousInterviewsData };
+    },
+    onError: (err, interviewId, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousInterviewsData) {
+        queryClient.setQueryData(["admin", "interviews"], context.previousInterviewsData);
+      }
+    },
+    onSettled: () => {
+      // Invalidate related queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["admin", "interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
     },
   });

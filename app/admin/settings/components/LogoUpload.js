@@ -175,7 +175,7 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
         <h3 className={`${compact ? "text-base" : "text-lg"} font-semibold admin-text mb-2`}>Site Logo</h3>
         {!compact && (
           <p className="text-sm admin-text-light">
-            Upload a custom logo to replace the default briefcase icon. Recommended size: 200x200px or smaller. Maximum file size: 5MB.
+            Upload a custom logo to replace the default briefcase icon. Recommended size: 240x60px (4:1 ratio) for horizontal logos. Maximum file size: 5MB.
           </p>
         )}
       </div>
@@ -290,7 +290,7 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
             </p>
             {!compact && (
               <p className="text-xs admin-text-light">
-                JPG, PNG, WebP, or SVG • Max 5MB • Recommended: 200x200px
+                JPG, PNG, WebP, or SVG • Max 5MB • Recommended: 240x60px (4:1 ratio)
               </p>
             )}
           </div>
@@ -315,10 +315,11 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="text-sm font-medium text-blue-900 mb-2">Logo Guidelines</h4>
           <ul className="text-xs text-blue-800 space-y-1">
-            <li>• Keep it square (1:1 aspect ratio) for best results</li>
+            <li>• Recommended size: 240x60px (4:1 aspect ratio) for horizontal logos</li>
             <li>• Use high contrast colors for better visibility</li>
             <li>• SVG format is recommended for crisp scaling</li>
-            <li>• The logo will be automatically resized to fit the header</li>
+            <li>• The logo will be automatically resized to fit the header (60px height)</li>
+            <li>• Square logos are also supported but may appear smaller</li>
           </ul>
         </div>
       )}

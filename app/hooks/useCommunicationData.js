@@ -278,6 +278,67 @@ export function useEmailExport() {
   };
 }
 
+// Hook for analytics export
+export function useEmailAnalyticsExport() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const exportAnalytics = useCallback(async (timeRange = '30d', format = 'xlsx', filters = {}) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.append("timeRange", timeRange);
+      params.append("format", format);
+      
+      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.sortBy) params.append("sortBy", filters.sortBy);
+      if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+
+      const response = await fetch(`/api/admin/communication/analytics/export?${params}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export analytics");
+      }
+
+      // Get filename from response headers
+      const contentDisposition = response.headers.get("content-disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1]?.replace(/"/g, "")
+        : `email-analytics-${timeRange}-${new Date().toISOString().slice(0, 10)}.${format}`;
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      return true;
+    } catch (err) {
+      setError(err.message);
+      console.error("Error exporting analytics:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    exportAnalytics,
+    loading,
+    error,
+  };
+}
+
 // Enhanced hook for audit-based email history
 export function useEmailAuditHistory(filters = {}, pagination = { page: 1, limit: 50 }) {
   const [data, setData] = useState([]);

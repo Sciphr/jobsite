@@ -2,24 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { usePermissions } from "@/app/hooks/usePermissions";
-import { useRoles } from "@/app/hooks/useAdminData";
+import { useRoles, useInvalidateAdminData } from "@/app/hooks/useAdminData";
 import RoleCard from "./components/RoleCard";
-import CreateRoleModal from "./components/CreateRoleModal";
-import EditRoleModal from "./components/EditRoleModal";
 import DeleteRoleModal from "./components/DeleteRoleModal";
-import UserRoleAssignmentModal from "./components/UserRoleAssignmentModal";
 
 export default function RoleManagementPage() {
   const { data: session } = useSession();
   const { can, loading: permissionsLoading } = usePermissions();
   const { data: roles = [], isLoading, isError, error: queryError, refetch } = useRoles();
+  const { invalidateRoles } = useInvalidateAdminData();
+  const router = useRouter();
   
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Modal states (only keep delete modal)
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
 
   // Check if user can manage roles
@@ -33,12 +30,11 @@ export default function RoleManagementPage() {
   const loading = permissionsLoading || isLoading;
 
   const handleCreateRole = () => {
-    setShowCreateModal(true);
+    router.push("/admin/roles/create");
   };
 
   const handleEditRole = (role) => {
-    setSelectedRole(role);
-    setShowEditModal(true);
+    router.push(`/admin/roles/${role.id}/edit`);
   };
 
   const handleDeleteRole = (role) => {
@@ -47,23 +43,12 @@ export default function RoleManagementPage() {
   };
 
   const handleAssignUsers = (role) => {
-    setSelectedRole(role);
-    setShowAssignModal(true);
-  };
-
-  const onRoleCreated = () => {
-    refetch(); // Refetch roles after creation
-    setShowCreateModal(false);
-  };
-
-  const onRoleUpdated = () => {
-    refetch(); // Refetch roles after update
-    setShowEditModal(false);
-    setSelectedRole(null);
+    router.push(`/admin/roles/${role.id}/users`);
   };
 
   const onRoleDeleted = () => {
     refetch(); // Refetch roles after deletion
+    invalidateRoles(); // Also invalidate cache for immediate updates
     setShowDeleteModal(false);
     setSelectedRole(null);
   };
@@ -242,27 +227,7 @@ export default function RoleManagementPage() {
         </div>
       )}
 
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateRoleModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onRoleCreated={onRoleCreated}
-        />
-      )}
-
-      {showEditModal && selectedRole && (
-        <EditRoleModal
-          isOpen={showEditModal}
-          role={selectedRole}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedRole(null);
-          }}
-          onRoleUpdated={onRoleUpdated}
-        />
-      )}
-
+      {/* Delete Modal (only modal we keep) */}
       {showDeleteModal && selectedRole && (
         <DeleteRoleModal
           isOpen={showDeleteModal}
@@ -272,18 +237,6 @@ export default function RoleManagementPage() {
             setSelectedRole(null);
           }}
           onRoleDeleted={onRoleDeleted}
-        />
-      )}
-
-      {showAssignModal && selectedRole && (
-        <UserRoleAssignmentModal
-          isOpen={showAssignModal}
-          role={selectedRole}
-          onClose={() => {
-            setShowAssignModal(false);
-            setSelectedRole(null);
-          }}
-          onUsersUpdated={refetch}
         />
       )}
     </div>

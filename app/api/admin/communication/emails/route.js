@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "../../../../lib/prisma";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // Parse query parameters for filtering
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 50;
@@ -56,10 +54,10 @@ export async function GET(request) {
     const skip = (page - 1) * limit;
 
     // Get total count for pagination
-    const totalCount = await prisma.email.count({ where });
+    const totalCount = await appPrisma.emails.count({ where });
 
     // Fetch emails with related data
-    const emails = await prisma.email.findMany({
+    const emails = await appPrisma.emails.findMany({
       where,
       skip,
       take: limit,
@@ -90,17 +88,22 @@ export async function GET(request) {
     });
 
     // Get unique template IDs to fetch template data
-    const templateIds = [...new Set(emails.map(email => email.template_id).filter(Boolean))];
-    const templates = templateIds.length > 0 ? await prisma.email_templates.findMany({
-      where: {
-        id: { in: templateIds }
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-      }
-    }) : [];
+    const templateIds = [
+      ...new Set(emails.map((email) => email.template_id).filter(Boolean)),
+    ];
+    const templates =
+      templateIds.length > 0
+        ? await appPrisma.email_templates.findMany({
+            where: {
+              id: { in: templateIds },
+            },
+            select: {
+              id: true,
+              name: true,
+              type: true,
+            },
+          })
+        : [];
 
     // Create a map for easy template lookup
     const templateMap = templates.reduce((acc, template) => {
@@ -129,33 +132,45 @@ export async function GET(request) {
       sentBy: email.sent_by,
       sentAt: email.sent_at,
       campaignId: email.campaign_id,
-      template: email.template_id && templateMap[email.template_id] ? {
-        name: templateMap[email.template_id].name,
-        type: templateMap[email.template_id].type,
-      } : null,
-      job: email.jobs ? {
-        title: email.jobs.title,
-        department: email.jobs.department,
-      } : null,
-      application: email.applications ? {
-        id: email.applications.id,
-        name: email.applications.name,
-      } : null,
-      sender: email.users ? {
-        name: `${email.users.firstName || ''} ${email.users.lastName || ''}`.trim(),
-        email: email.users.email,
-      } : null,
+      template:
+        email.template_id && templateMap[email.template_id]
+          ? {
+              name: templateMap[email.template_id].name,
+              type: templateMap[email.template_id].type,
+            }
+          : null,
+      job: email.jobs
+        ? {
+            title: email.jobs.title,
+            department: email.jobs.department,
+          }
+        : null,
+      application: email.applications
+        ? {
+            id: email.applications.id,
+            name: email.applications.name,
+          }
+        : null,
+      sender: email.users
+        ? {
+            name: `${email.users.firstName || ""} ${email.users.lastName || ""}`.trim(),
+            email: email.users.email,
+          }
+        : null,
     }));
 
     // Get summary statistics
-    const stats = await prisma.email.groupBy({
-      by: ['status'],
-      where: dateFrom || dateTo ? {
-        sent_at: {
-          ...(dateFrom && { gte: new Date(dateFrom) }),
-          ...(dateTo && { lte: new Date(dateTo) }),
-        }
-      } : {},
+    const stats = await appPrisma.emails.groupBy({
+      by: ["status"],
+      where:
+        dateFrom || dateTo
+          ? {
+              sent_at: {
+                ...(dateFrom && { gte: new Date(dateFrom) }),
+                ...(dateTo && { lte: new Date(dateTo) }),
+              },
+            }
+          : {},
       _count: {
         id: true,
       },
@@ -186,7 +201,6 @@ export async function GET(request) {
         pending: statusStats.pending || 0,
       },
     });
-
   } catch (error) {
     console.error("Error fetching email history:", error);
     return NextResponse.json(

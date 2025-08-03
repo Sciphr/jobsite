@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "../../../../../lib/prisma";
 
 export async function GET(request, { params }) {
   try {
@@ -24,14 +22,14 @@ export async function GET(request, { params }) {
     const includeSystem = searchParams.get("includeSystem") === "true";
 
     // Verify application exists
-    const application = await prisma.applications.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
         email: true,
         status: true,
-        job: { select: { title: true, department: true } },
+        jobs: { select: { title: true, department: true } },
       },
     });
 
@@ -45,23 +43,23 @@ export async function GET(request, { params }) {
     // Build where clause for audit logs
     const where = {
       OR: [
-        { relatedApplicationId: id },
-        { entityType: "application", entityId: id },
+        { related_application_id: id },
+        { entity_type: "application", entity_id: id },
       ],
     };
 
     // Filter out system-generated logs if requested
     if (!includeSystem) {
-      where.actorType = { not: "system" };
+      where.actor_type = { not: "system" };
     }
 
     // Fetch audit logs related to this application
-    const auditLogs = await prisma.audit_logs.findMany({
+    const auditLogs = await appPrisma.audit_logs.findMany({
       where,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy: { created_at: "desc" },
       include: {
-        actor: {
+        users_audit_logs_actor_idTousers: {
           select: {
             id: true,
             firstName: true,
@@ -69,7 +67,7 @@ export async function GET(request, { params }) {
             email: true,
           },
         },
-        relatedUser: {
+        users_audit_logs_related_user_idTousers: {
           select: {
             id: true,
             firstName: true,
@@ -77,7 +75,7 @@ export async function GET(request, { params }) {
             email: true,
           },
         },
-        relatedJob: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -88,36 +86,36 @@ export async function GET(request, { params }) {
     });
 
     // Transform audit logs for timeline display
-    const transformedLogs = audit_logs.map((log) => {
-      const actorName = log.actor
-        ? `${log.actor.firstName || ""} ${log.actor.lastName || ""}`.trim() ||
-          log.actor.email
-        : log.actorName || "System";
+    const transformedLogs = auditLogs.map((log) => {
+      const actorName = log.users_audit_logs_actor_idTousers
+        ? `${log.users_audit_logs_actor_idTousers.firstName || ""} ${log.users_audit_logs_actor_idTousers.lastName || ""}`.trim() ||
+          log.users_audit_logs_actor_idTousers.email
+        : log.actor_name || "System";
 
       return {
         id: log.id,
-        type: getTimelineType(log.eventType, log.categories, log.subcategory),
+        type: getTimelineType(log.event_type, log.category, log.subcategory),
         content: log.description || log.action,
         action: log.action,
-        timestamp: log.createdAt,
+        timestamp: log.created_at,
         author: actorName,
-        authorId: log.actorId,
-        eventType: log.eventType,
-        categories: log.categories,
+        authorId: log.actor_id,
+        eventType: log.event_type,
+        category: log.category,
         subcategory: log.subcategory,
         severity: log.severity,
         status: log.status,
         tags: log.tags,
         metadata: log.metadata,
         changes: log.changes,
-        oldValues: log.oldValues,
-        newValues: log.newValues,
-        ipAddress: log.ipAddress,
-        userAgent: log.userAgent,
-        isSystemGenerated: log.actorType === "system",
+        oldValues: log.old_values,
+        newValues: log.new_values,
+        ipAddress: log.ip_address,
+        userAgent: log.user_agent,
+        isSystemGenerated: log.actor_type === "system",
         // Additional context
-        relatedUser: log.relatedUser,
-        relatedJob: log.relatedJob,
+        relatedUser: log.users_audit_logs_related_user_idTousers,
+        relatedJob: log.jobs,
       };
     });
 
@@ -129,8 +127,8 @@ export async function GET(request, { params }) {
         name: application.name,
         email: application.email,
         status: application.status,
-        jobTitle: application.job?.title,
-        department: application.job?.department,
+        jobTitle: application.jobs?.title,
+        department: application.jobs?.department,
       },
     });
   } catch (error) {

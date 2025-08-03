@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Download, 
@@ -8,12 +9,49 @@ import {
   Eye, 
   ExternalLink, 
   TrendingUp, 
-  BarChart3 
+  BarChart3,
+  ChevronDown 
 } from "lucide-react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useEmailAnalyticsExport } from "@/app/hooks/useCommunicationData";
 
 export default function EmailAnalytics({ emailAnalytics, emailTemplates }) {
   const { getButtonClasses } = useThemeClasses();
+  const { exportAnalytics, loading: exportLoading, error: exportError } = useEmailAnalyticsExport();
+  
+  // Local state for export functionality
+  const [selectedTimeRange, setSelectedTimeRange] = useState("30d");
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Handle export functionality
+  const handleExport = async (format) => {
+    try {
+      await exportAnalytics(selectedTimeRange, format);
+      setShowExportDropdown(false);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert(`Export failed: ${error.message}`);
+    }
+  };
+
+  const handleTimeRangeChange = (e) => {
+    setSelectedTimeRange(e.target.value);
+  };
 
   const metrics = [
     {
@@ -51,19 +89,66 @@ export default function EmailAnalytics({ emailAnalytics, emailTemplates }) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Email Analytics</h3>
         <div className="flex items-center space-x-2">
-          <select className="px-3 py-1 border border-gray-300 rounded text-sm">
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Last 3 months</option>
-          </select>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")}`}
+          <select 
+            value={selectedTimeRange}
+            onChange={handleTimeRangeChange}
+            className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <Download className="h-4 w-4" />
-            <span>Export Report</span>
-          </motion.button>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 3 months</option>
+            <option value="1y">Last year</option>
+          </select>
+          
+          {/* Export Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              disabled={exportLoading}
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm ${getButtonClasses("secondary")} disabled:opacity-50`}
+            >
+              {exportLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span>{exportLoading ? "Exporting..." : "Export Report"}</span>
+              <ChevronDown className="h-4 w-4" />
+            </motion.button>
+
+            {/* Dropdown Menu */}
+            {showExportDropdown && !exportLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+              >
+                <div className="py-1">
+                  <button
+                    onClick={() => handleExport('xlsx')}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Download className="h-4 w-4" />
+                      <span>Download as Excel (.xlsx)</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Download className="h-4 w-4" />
+                      <span>Download as CSV (.csv)</span>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
 

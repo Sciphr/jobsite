@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
+import { appPrisma } from "../../../../../lib/prisma";
 import { logAuditEvent } from "../../../../../../lib/auditMiddleware";
-
-const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
@@ -21,9 +19,9 @@ export async function GET(request, { params }) {
     const { id } = await params;
 
     // Fetch application notes
-    const notes = await prisma.applicationNote.findMany({
-      where: { applicationId: id },
-      orderBy: { createdAt: "desc" },
+    const notes = await appPrisma.application_notes.findMany({
+      where: { application_id: id },
+      orderBy: { created_at: "desc" },
     });
 
     // Transform data for frontend
@@ -31,11 +29,11 @@ export async function GET(request, { params }) {
       id: note.id,
       type: note.type,
       content: note.content,
-      timestamp: note.createdAt,
-      author: note.authorName || "System",
-      authorId: note.authorId,
+      timestamp: note.created_at,
+      author: note.author_name || "System",
+      authorId: note.author_id,
       metadata: note.metadata,
-      isSystemGenerated: note.isSystemGenerated,
+      isSystemGenerated: note.is_system_generated,
     }));
 
     return NextResponse.json({
@@ -74,13 +72,13 @@ export async function POST(request, { params }) {
     }
 
     // Verify application exists
-    const application = await prisma.application.findUnique({
+    const application = await appPrisma.applications.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
         email: true,
-        job: { select: { title: true } },
+        jobs: { select: { title: true } },
       },
     });
 
@@ -92,17 +90,17 @@ export async function POST(request, { params }) {
     }
 
     // Create the note
-    const note = await prisma.applicationNote.create({
+    const note = await appPrisma.application_notes.create({
       data: {
-        applicationId: id,
+        application_id: id,
         content: content.trim(),
         type,
-        authorId: session.user.id,
-        authorName:
+        author_id: session.user.id,
+        author_name:
           `${session.user.firstName || ""} ${session.user.lastName || ""}`.trim() ||
           session.user.email,
         metadata,
-        isSystemGenerated: false,
+        is_system_generated: false,
       },
     });
 
@@ -128,7 +126,7 @@ export async function POST(request, { params }) {
         metadata: {
           noteId: note.id,
           applicationName: application.name,
-          jobTitle: application.job?.title,
+          jobTitle: application.jobs?.title,
           noteLength: content.length,
           noteType: type,
         },
@@ -141,11 +139,11 @@ export async function POST(request, { params }) {
       id: note.id,
       type: note.type,
       content: note.content,
-      timestamp: note.createdAt,
-      author: note.authorName || "System",
-      authorId: note.authorId,
+      timestamp: note.created_at,
+      author: note.author_name || "System",
+      authorId: note.author_id,
       metadata: note.metadata,
-      isSystemGenerated: note.isSystemGenerated,
+      isSystemGenerated: note.is_system_generated,
     };
 
     return NextResponse.json({

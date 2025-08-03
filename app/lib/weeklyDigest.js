@@ -59,7 +59,7 @@ export class WeeklyDigestService {
   async getDigestConfiguration() {
     try {
       // Get all digest-related settings
-      const digestSettings = await appPrisma.setting.findMany({
+      const digestSettings = await appPrisma.settings.findMany({
         where: {
           key: {
             in: [
@@ -582,7 +582,7 @@ export class WeeklyDigestService {
     let emailPerformance = null;
     if (customizations.emailPerformance || customizations.systemStatus) {
       const [totalEmails, successfulEmails, failedEmails] = await Promise.all([
-        appPrisma.email.count({
+        appPrisma.emails.count({
           where: {
             sent_at: {
               gte: this.weekStart,
@@ -590,7 +590,7 @@ export class WeeklyDigestService {
             },
           },
         }),
-        appPrisma.email.count({
+        appPrisma.emails.count({
           where: {
             sent_at: {
               gte: this.weekStart,
@@ -599,7 +599,7 @@ export class WeeklyDigestService {
             status: "sent",
           },
         }),
-        appPrisma.email.count({
+        appPrisma.emails.count({
           where: {
             sent_at: {
               gte: this.weekStart,
@@ -630,7 +630,7 @@ export class WeeklyDigestService {
         await Promise.all([
           appPrisma.audit_logs.count({
             where: {
-              createdAt: {
+              created_at: {
                 gte: this.weekStart,
                 lte: this.weekEnd,
               },
@@ -638,7 +638,7 @@ export class WeeklyDigestService {
           }),
           appPrisma.audit_logs.count({
             where: {
-              createdAt: {
+              created_at: {
                 gte: this.weekStart,
                 lte: this.weekEnd,
               },
@@ -647,7 +647,7 @@ export class WeeklyDigestService {
           }),
           appPrisma.audit_logs.count({
             where: {
-              createdAt: {
+              created_at: {
                 gte: this.weekStart,
                 lte: this.weekEnd,
               },
@@ -656,7 +656,7 @@ export class WeeklyDigestService {
           }),
           appPrisma.audit_logs.count({
             where: {
-              createdAt: {
+              created_at: {
                 gte: this.weekStart,
                 lte: this.weekEnd,
               },
@@ -669,7 +669,7 @@ export class WeeklyDigestService {
       const recentErrors = customizations.errorSummary
         ? await appPrisma.audit_logs.findMany({
             where: {
-              createdAt: {
+              created_at: {
                 gte: this.weekStart,
                 lte: this.weekEnd,
               },
@@ -681,11 +681,11 @@ export class WeeklyDigestService {
               severity: true,
               action: true,
               description: true,
-              createdAt: true,
-              categories: true,
+              created_at: true,
+              category: true,
             },
             orderBy: {
-              createdAt: "desc",
+              created_at: "desc",
             },
             take: 10,
           })
@@ -704,7 +704,7 @@ export class WeeklyDigestService {
           severity: error.severity,
           action: error.action,
           description: error.description || "No description",
-          date: error.createdAt.toLocaleDateString(),
+          date: error.created_at.toLocaleDateString(),
           category: error.category,
         })),
       };
@@ -1085,7 +1085,7 @@ export class WeeklyDigestService {
       // Record the digest send in the database
       if (sentBy) {
         try {
-          await appPrisma.weeklyDigests.create({
+          await appPrisma.weekly_digests.create({
             data: {
               weekStart: this.weekStart,
               weekEnd: this.weekEnd,
