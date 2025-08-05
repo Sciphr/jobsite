@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
+import { useApplications, useJobsSimple, useArchiveApplications, useAutoArchive, useAutoArchivePreview, useAutoProgress, useAutoProgressPreview } from "@/app/hooks/useAdminData";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
@@ -25,6 +25,10 @@ import {
   Star,
   Plus,
   ExternalLink,
+  Archive,
+  ArchiveRestore,
+  Settings,
+  ArrowUpRight,
 } from "lucide-react";
 
 export default function ApplicationsManagerMain() {
@@ -32,11 +36,23 @@ export default function ApplicationsManagerMain() {
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [selectedApplications, setSelectedApplications] = useState(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   // Data fetching
   const { data: applications = [], isLoading: applicationsLoading } =
-    useApplications();
+    useApplications(showArchived);
   const { data: jobs = [], isLoading: jobsLoading } = useJobsSimple();
+
+  // Archive functionality
+  const { mutate: archiveApplications, isLoading: archiving } = useArchiveApplications();
+  const { mutate: autoArchive, isLoading: autoArchiving } = useAutoArchive();
+  const { data: autoArchivePreview } = useAutoArchivePreview();
+
+  // Auto-progress functionality
+  const { mutate: autoProgress, isLoading: autoProgressing } = useAutoProgress();
+  const { data: autoProgressPreview } = useAutoProgressPreview();
 
   // Add mounted state to prevent hydration issues
   const [isMounted, setIsMounted] = useState(false);
@@ -54,6 +70,98 @@ export default function ApplicationsManagerMain() {
       return () => clearTimeout(timer);
     }
   }, [applicationsLoading, jobsLoading]);
+
+  // Clear selected applications when showArchived changes
+  useEffect(() => {
+    setSelectedApplications(new Set());
+    setShowBulkActions(false);
+  }, [showArchived]);
+
+  // Bulk selection handlers
+  const handleSelectApplication = (applicationId, checked) => {
+    const newSelected = new Set(selectedApplications);
+    if (checked) {
+      newSelected.add(applicationId);
+    } else {
+      newSelected.delete(applicationId);
+    }
+    setSelectedApplications(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = new Set(recentActivity.map(app => app.id));
+      setSelectedApplications(allIds);
+      setShowBulkActions(allIds.size > 0);
+    } else {
+      setSelectedApplications(new Set());
+      setShowBulkActions(false);
+    }
+  };
+
+  const handleBulkArchive = (shouldArchive = true) => {
+    if (selectedApplications.size === 0) return;
+
+    const applicationIds = Array.from(selectedApplications);
+    archiveApplications(
+      {
+        applicationIds,
+        archive: shouldArchive,
+        reason: shouldArchive ? 'manual_bulk' : undefined,
+      },
+      {
+        onSuccess: (data) => {
+          alert(data.message);
+          setSelectedApplications(new Set());
+          setShowBulkActions(false);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      }
+    );
+  };
+
+  const handleAutoArchive = () => {
+    if (!autoArchivePreview?.count || autoArchivePreview.count === 0) {
+      alert('No applications found for auto-archiving');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to auto-archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days?`;
+    
+    if (confirm(confirmMessage)) {
+      autoArchive(undefined, {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      });
+    }
+  };
+
+  const handleAutoProgress = () => {
+    if (!autoProgressPreview?.count || autoProgressPreview.count === 0) {
+      alert('No applications found for auto-progress');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to auto-progress ${autoProgressPreview.count} applications from Applied to Reviewing after ${autoProgressPreview.daysThreshold} days?`;
+    
+    if (confirm(confirmMessage)) {
+      autoProgress(undefined, {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      });
+    }
+  };
 
   // Calculate comprehensive statistics
   const stats = useMemo(() => {
@@ -336,6 +444,21 @@ export default function ApplicationsManagerMain() {
             transition={{ delay: 0.3 }}
             className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3"
           >
+            {/* Show Archived Toggle */}
+            <motion.label
+              whileHover={{ scale: 1.02 }}
+              className="flex items-center space-x-2 px-3 py-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+              />
+              <Archive className="h-4 w-4 admin-text-light" />
+              <span className="text-sm admin-text">Show Archived</span>
+            </motion.label>
+
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -653,9 +776,25 @@ export default function ApplicationsManagerMain() {
           <div className="admin-card rounded-lg shadow overflow-hidden">
             <div className="p-4 lg:p-6 border-b border-gray-200">
               <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                <h3 className="text-base lg:text-lg font-semibold admin-text">
-                  Recent Activity
-                </h3>
+                <div className="flex items-center space-x-4">
+                  <h3 className="text-base lg:text-lg font-semibold admin-text">
+                    Recent Activity
+                  </h3>
+                  {recentActivity.length > 0 && (
+                    <motion.label
+                      whileHover={{ scale: 1.02 }}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedApplications.size === recentActivity.length && recentActivity.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      />
+                      <span className="text-sm admin-text">Select All</span>
+                    </motion.label>
+                  )}
+                </div>
                 <motion.button
                   whileHover={{ scale: 1.05, x: 2 }}
                   whileTap={{ scale: 0.95 }}
@@ -671,6 +810,70 @@ export default function ApplicationsManagerMain() {
                   </motion.div>
                 </motion.button>
               </div>
+              
+              {/* Bulk Actions */}
+              <AnimatePresence>
+                {showBulkActions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm admin-text">
+                        {selectedApplications.size} application{selectedApplications.size !== 1 ? 's' : ''} selected
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleBulkArchive(true)}
+                          disabled={archiving}
+                          className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            archiving 
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          <Archive className="h-4 w-4" />
+                          <span>Archive Selected</span>
+                        </motion.button>
+                        
+                        {showArchived && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleBulkArchive(false)}
+                            disabled={archiving}
+                            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                              archiving 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300'
+                            }`}
+                          >
+                            <ArchiveRestore className="h-4 w-4" />
+                            <span>Unarchive Selected</span>
+                          </motion.button>
+                        )}
+                        
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            setSelectedApplications(new Set());
+                            setShowBulkActions(false);
+                          }}
+                          className="text-sm admin-text-light hover:admin-text"
+                        >
+                          Cancel
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div className="p-4 lg:p-6">
               {recentActivity.length > 0 ? (
@@ -686,11 +889,13 @@ export default function ApplicationsManagerMain() {
                       variants={activityCardVariants}
                       whileHover="hover"
                       className="p-3 lg:p-4 border admin-border rounded-lg transition-all cursor-pointer overflow-hidden relative"
-                      onClick={() =>
+                      onClick={(e) => {
+                        // Don't navigate if clicking on checkbox
+                        if (e.target.type === 'checkbox') return;
                         router.push(
                           `/applications-manager/jobs/${application.jobId}`
-                        )
-                      }
+                        );
+                      }}
                     >
                       {/* Hover background effect */}
                       <motion.div
@@ -701,30 +906,50 @@ export default function ApplicationsManagerMain() {
                       />
 
                       <div className="relative flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium admin-text text-xs lg:text-sm truncate">
-                            {application.name || "Anonymous"}
-                          </h4>
-                          <p className="text-xs admin-text-light mt-1 truncate">
-                            {application.job?.title}
-                          </p>
-                          <div className="flex items-center space-x-2 mt-2">
-                            <motion.span
-                              whileHover={{ scale: 1.05 }}
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                application.status === "Applied"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : application.status === "Reviewing"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : application.status === "Interview"
-                                      ? "bg-green-100 text-green-800"
-                                      : application.status === "Hired"
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {application.status}
-                            </motion.span>
+                        <div className="flex items-start space-x-3 flex-1 min-w-0">
+                          <motion.input
+                            whileHover={{ scale: 1.1 }}
+                            type="checkbox"
+                            checked={selectedApplications.has(application.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleSelectApplication(application.id, e.target.checked);
+                            }}
+                            className="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium admin-text text-xs lg:text-sm truncate">
+                              {application.name || "Anonymous"}
+                            </h4>
+                            <p className="text-xs admin-text-light mt-1 truncate">
+                              {application.job?.title}
+                            </p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <motion.span
+                                whileHover={{ scale: 1.05 }}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  application.status === "Applied"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : application.status === "Reviewing"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : application.status === "Interview"
+                                        ? "bg-green-100 text-green-800"
+                                        : application.status === "Hired"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {application.status}
+                              </motion.span>
+                              {application.is_archived && (
+                                <motion.span
+                                  whileHover={{ scale: 1.05 }}
+                                  className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                                >
+                                  Archived
+                                </motion.span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -824,6 +1049,222 @@ export default function ApplicationsManagerMain() {
             </motion.button>
           ))}
         </motion.div>
+
+        {/* Auto-Archive Admin Section */}
+        {autoArchivePreview && (
+          <motion.div variants={itemVariants}>
+            <div className="admin-card rounded-lg shadow overflow-hidden">
+              <div className="p-4 lg:p-6 border-b admin-border">
+                <h3 className="text-base lg:text-lg font-semibold admin-text flex items-center space-x-2">
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                  >
+                    <Settings className="h-4 w-4 lg:h-5 lg:w-5 text-purple-600" />
+                  </motion.div>
+                  <span>Auto-Archive Management</span>
+                </h3>
+              </div>
+              <div className="p-4 lg:p-6">
+                <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold admin-text">
+                          {autoArchivePreview.count || 0}
+                        </div>
+                        <div className="text-xs admin-text-light">
+                          Applications Ready
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold admin-text text-orange-600">
+                          {autoArchivePreview.daysThreshold || 0}
+                        </div>
+                        <div className="text-xs admin-text-light">
+                          Days Threshold
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm admin-text-light">
+                      {autoArchivePreview.count > 0 
+                        ? `${autoArchivePreview.count} rejected applications are older than ${autoArchivePreview.daysThreshold} days and ready for auto-archiving.`
+                        : `No rejected applications older than ${autoArchivePreview.daysThreshold || 0} days found.`
+                      }
+                    </p>
+                    {autoArchivePreview.count > 0 && autoArchivePreview.applications?.length > 0 && (
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-xs font-medium admin-text mb-2">Preview (showing first 5):</div>
+                        <div className="space-y-1">
+                          {autoArchivePreview.applications.slice(0, 5).map((app) => (
+                            <div key={app.id} className="text-xs admin-text-light flex items-center justify-between">
+                              <span>{app.name} ({app.email})</span>
+                              <span>{app.daysRejected} days ago</span>
+                            </div>
+                          ))}
+                          {autoArchivePreview.applications.length > 5 && (
+                            <div className="text-xs admin-text-light text-center pt-1">
+                              ...and {autoArchivePreview.applications.length - 5} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col space-y-2 lg:ml-6">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleAutoArchive}
+                      disabled={autoArchiving || !autoArchivePreview.count || autoArchivePreview.count === 0}
+                      className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        autoArchiving || !autoArchivePreview.count || autoArchivePreview.count === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                      }`}
+                    >
+                      {autoArchiving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-4 w-4" />
+                          <span>Run Auto-Archive</span>
+                        </>
+                      )}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => router.push("/admin/settings")}
+                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Auto-Progress Admin Section */}
+        {autoProgressPreview && (
+          <motion.div
+            variants={itemVariants}
+            className="admin-card rounded-xl shadow-sm border admin-border overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <ArrowUpRight className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold admin-text">
+                        <span>Auto-Progress Management</span>
+                      </h3>
+                      <p className="text-sm admin-text-light">
+                        Automatically move applications from Applied to Reviewing
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-semibold text-lg admin-text">
+                        {autoProgressPreview.count || 0}
+                      </div>
+                      <div className="admin-text-light">Ready</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-lg admin-text">
+                        {autoProgressPreview.daysThreshold || 0}
+                      </div>
+                      <div className="admin-text-light">Days</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                  <p className="text-sm admin-text-light mb-3">
+                    {autoProgressPreview.count > 0 
+                      ? `${autoProgressPreview.count} applications in "Applied" status are older than ${autoProgressPreview.daysThreshold} days and ready for auto-progression to "Reviewing".`
+                      : `No applications in "Applied" status older than ${autoProgressPreview.daysThreshold || 0} days found.`
+                    }
+                  </p>
+
+                  {autoProgressPreview.count > 0 && autoProgressPreview.applications?.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs admin-text-light font-medium mb-2">Recent applications to be progressed:</p>
+                      <div className="space-y-1">
+                        {autoProgressPreview.applications.slice(0, 5).map((app) => (
+                          <div key={app.id} className="text-xs admin-text-light flex justify-between">
+                            <span>{app.name} - {app.jobTitle}</span>
+                            <span>{app.daysApplied} days ago</span>
+                          </div>
+                        ))}
+                        {autoProgressPreview.applications.length > 5 && (
+                          <div className="text-xs admin-text-light font-medium">
+                            ...and {autoProgressPreview.applications.length - 5} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-xs admin-text-light">
+                    Applications will automatically progress at midnight daily
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleAutoProgress}
+                      disabled={autoProgressing || !autoProgressPreview.count || autoProgressPreview.count === 0}
+                      className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        autoProgressing || !autoProgressPreview.count || autoProgressPreview.count === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                      }`}
+                    >
+                      {autoProgressing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpRight className="h-4 w-4" />
+                          <span>Run Auto-Progress</span>
+                        </>
+                      )}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => router.push("/applications-manager/settings")}
+                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
       </div>
     </motion.div>
   );

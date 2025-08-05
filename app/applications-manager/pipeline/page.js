@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useApplications, useJobsSimple } from "@/app/hooks/useAdminData";
+import { useApplications, useJobsSimple, useArchiveApplications } from "@/app/hooks/useAdminData";
 import QuickActions from "../components/QuickActions";
 import {
   User,
@@ -25,6 +25,9 @@ import {
   ArrowRight,
   Target,
   Zap,
+  Archive,
+  ArchiveRestore,
+  Trash2,
 } from "lucide-react";
 
 export default function PipelineView() {
@@ -33,9 +36,31 @@ export default function PipelineView() {
 
   // Data fetching
   const queryClient = useQueryClient();
+  const [showArchived, setShowArchived] = useState(false);
   const { data: applications = [], isLoading: applicationsLoading } =
-    useApplications();
+    useApplications(showArchived);
   const { data: jobs = [] } = useJobsSimple();
+  
+  // Archive functionality
+  const { mutate: archiveApplications, isLoading: archiving } = useArchiveApplications();
+
+  const handleArchiveApplication = (applicationId, shouldArchive = true) => {
+    archiveApplications(
+      {
+        applicationIds: [applicationId],
+        archive: shouldArchive,
+        reason: shouldArchive ? 'manual' : undefined,
+      },
+      {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      }
+    );
+  };
 
   // Local state with enhanced drag tracking
   const [selectedJob, setSelectedJob] = useState(null);
@@ -364,6 +389,21 @@ export default function PipelineView() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          {/* Show Archived Toggle */}
+          <motion.label
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center space-x-2 px-3 py-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
+            />
+            <Archive className="h-4 w-4 admin-text-light" />
+            <span className="text-sm admin-text">Show Archived</span>
+          </motion.label>
+
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -393,8 +433,8 @@ export default function PipelineView() {
                 onClick={() => setShowJobFilter(!showJobFilter)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${
                   selectedJob !== "all"
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                    : "admin-card border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <Briefcase className="h-4 w-4" />
@@ -420,28 +460,28 @@ export default function PipelineView() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 mt-2 w-72 md:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 md:max-h-80 overflow-y-auto"
+                    className="absolute top-full left-0 mt-2 w-72 md:w-80 admin-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50 max-h-64 md:max-h-80 overflow-y-auto"
                   >
-                    <div className="p-3 border-b border-gray-200">
-                      <h3 className="text-sm font-semibold text-gray-900">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                      <h3 className="text-sm font-semibold admin-text">
                         Filter by Job
                       </h3>
                     </div>
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
                       <motion.button
-                        whileHover={{ backgroundColor: "#f3f4f6" }}
+                        whileHover={{ backgroundColor: "var(--hover-bg)" }}
                         onClick={() => {
                           setSelectedJob("all");
                           setShowJobFilter(false);
                         }}
-                        className={`w-full text-left px-4 py-3 transition-colors ${
+                        className={`w-full text-left px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
                           selectedJob === "all"
-                            ? "bg-blue-50 text-blue-700"
+                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                             : ""
                         }`}
                       >
-                        <div className="text-sm font-medium">All Jobs</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm font-medium admin-text">All Jobs</div>
+                        <div className="text-xs admin-text-light">
                           Show applications from all positions
                         </div>
                       </motion.button>
@@ -451,19 +491,19 @@ export default function PipelineView() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          whileHover={{ backgroundColor: "#f3f4f6" }}
+                          whileHover={{ backgroundColor: "var(--hover-bg)" }}
                           onClick={() => {
                             setSelectedJob(job.id);
                             setShowJobFilter(false);
                           }}
-                          className={`w-full text-left px-4 py-3 transition-colors ${
+                          className={`w-full text-left px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
                             selectedJob === job.id
-                              ? "bg-blue-50 text-blue-700"
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                               : ""
                           }`}
                         >
-                          <div className="text-sm font-medium">{job.title}</div>
-                          <div className="text-xs text-gray-500 flex items-center space-x-2">
+                          <div className="text-sm font-medium admin-text">{job.title}</div>
+                          <div className="text-xs admin-text-light flex items-center space-x-2">
                             <span>{job.department}</span>
                             <span>•</span>
                             <span>{job.applicationCount} applications</span>
@@ -478,14 +518,14 @@ export default function PipelineView() {
 
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
               <motion.input
                 whileFocus={{ scale: 1.02 }}
                 type="text"
                 placeholder="Search applicants..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card"
               />
             </div>
           </div>
@@ -568,7 +608,7 @@ export default function PipelineView() {
                   <h3 className={`font-semibold ${stage.textColor}`}>
                     {stage.title}
                   </h3>
-                  <div className="text-xs text-gray-600 mt-1">
+                  <div className="text-xs admin-text-light mt-1">
                     {stage.count} application{stage.count !== 1 ? "s" : ""}
                   </div>
                 </div>
@@ -613,16 +653,11 @@ export default function PipelineView() {
                         zIndex: 1000,
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                       }}
-                      className={`bg-white border border-gray-200 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
+                      className={`admin-card border border-gray-200 dark:border-gray-700 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
                         draggedApplication?.id === application.id
                           ? "opacity-50"
                           : ""
                       }`}
-                      onClick={() =>
-                        router.push(
-                          `/applications-manager/jobs/${application.jobId}?from=pipeline`
-                        )
-                      }
                     >
                       {/* Applicant Info */}
                       <div className="flex items-start space-x-2 md:space-x-3">
@@ -635,17 +670,17 @@ export default function PipelineView() {
                             "A"}
                         </motion.div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs md:text-sm font-medium text-gray-900 truncate">
+                          <h4 className="text-xs md:text-sm font-medium admin-text truncate">
                             {application.name || "Anonymous"}
                           </h4>
-                          <div className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
+                          <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
                             <Mail className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">
                               {application.email}
                             </span>
                           </div>
                           {application.phone && (
-                            <div className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
+                            <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
                               <Phone className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">{application.phone}</span>
                             </div>
@@ -658,7 +693,7 @@ export default function PipelineView() {
                         <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="mt-3 pt-3 border-t border-gray-100"
+                          className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700"
                         >
                           <div className="text-xs admin-text-light flex items-center space-x-1">
                             <Briefcase className="h-3 w-3 flex-shrink-0" />
@@ -666,15 +701,15 @@ export default function PipelineView() {
                               {application.job.title}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1 truncate">
+                          <div className="text-xs admin-text-light mt-1 truncate">
                             {application.job.department}
                           </div>
                         </motion.div>
                       )}
 
                       {/* Applied Date */}
-                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100">
-                        <div className="text-xs text-gray-500 flex items-center space-x-1">
+                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div className="text-xs admin-text-light flex items-center space-x-1">
                           <Calendar className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">
                             Applied{" "}
@@ -689,7 +724,7 @@ export default function PipelineView() {
                       <motion.div
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
-                        className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
+                        className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <QuickActions
@@ -697,6 +732,7 @@ export default function PipelineView() {
                           onStatusChange={handleStatusChange}
                           onEmail={handleEmailApplication}
                           onView={handleViewApplication}
+                          onArchive={handleArchiveApplication}
                           compact={true}
                           showLabels={false}
                         />
@@ -727,7 +763,7 @@ export default function PipelineView() {
                         <Plus className={`h-5 w-5 ${stage.textColor}`} />
                       )}
                     </motion.div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm admin-text-light">
                       {dragOverColumn === stage.id
                         ? "Drop here to update status"
                         : "No applications"}
@@ -814,7 +850,7 @@ export default function PipelineView() {
               <div className="text-xs md:text-sm font-medium admin-text truncate">
                 {stage.title}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs admin-text-light">
                 {filteredApplications.length > 0
                   ? Math.round(
                       (stage.count / filteredApplications.length) * 100

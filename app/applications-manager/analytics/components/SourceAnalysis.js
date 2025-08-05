@@ -12,7 +12,7 @@ const SourceAnalysis = ({ analytics, selectedMetric }) => {
       <div className="space-y-6">
         {/* Enhanced Source Analysis */}
         <div className="admin-card rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b admin-border">
             <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
               <Globe className="h-5 w-5 text-cyan-600" />
               <span>Recruitment Source Analysis</span>
@@ -27,34 +27,34 @@ const SourceAnalysis = ({ analytics, selectedMetric }) => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
                   whileHover={{ scale: 1.05, y: -4 }}
-                  className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition-all"
+                  className="p-6 border admin-border rounded-lg hover:shadow-lg transition-all admin-card"
                 >
                   <div className="text-center mb-4">
                     <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 ${getStatCardClasses(index % 4).bg}`}>
                       <Globe className={`h-8 w-8 ${getStatCardClasses(index % 4).icon}`} />
                     </div>
-                    <h4 className="font-semibold text-gray-900">{source.source}</h4>
+                    <h4 className="font-semibold admin-text">{source.source}</h4>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-gray-900">{source.applications}</div>
-                      <div className="text-sm text-gray-500">Total Applications</div>
+                      <div className="text-3xl font-bold admin-text">{source.applications}</div>
+                      <div className="text-sm admin-text-light">Total Applications</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm font-medium text-green-800">Hired</span>
-                      <span className="text-lg font-bold text-green-600">{source.hired}</span>
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-green-800 dark:text-green-300">Hired</span>
+                      <span className="text-lg font-bold text-green-600 dark:text-green-400">{source.hired}</span>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-sm font-medium text-blue-800">Success Rate</span>
-                      <span className="text-lg font-bold text-blue-600">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Success Rate</span>
+                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                         {source.applications > 0 ? ((source.hired / source.applications) * 100).toFixed(1) : 0}%
                       </span>
                     </div>
                     
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                       <div 
                         className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full"
                         style={{ 
@@ -64,7 +64,7 @@ const SourceAnalysis = ({ analytics, selectedMetric }) => {
                     </div>
                     
                     <div className="text-center">
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs admin-text-light">
                         {((source.applications / analytics.totalApplications) * 100).toFixed(1)}% of total volume
                       </div>
                     </div>

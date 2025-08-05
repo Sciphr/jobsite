@@ -123,7 +123,7 @@ export default function VariablesHelper({ trigger = "help" }) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", duration: 0.3 }}
-              className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+              className="admin-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
@@ -138,25 +138,25 @@ export default function VariablesHelper({ trigger = "help" }) {
                     e.stopPropagation();
                     setIsOpen(false);
                   }}
-                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:bg-opacity-20 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2">How to use variables:</h4>
-                  <p className="text-blue-800 text-sm">
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">How to use variables:</h4>
+                  <p className="text-blue-800 dark:text-blue-300 text-sm">
                     Variables are automatically replaced with actual values when emails are sent. 
-                    Use the format <code className="bg-blue-100 px-1 rounded">{"{{variableName}}"}</code> in your template content or subject line.
+                    Use the format <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">{"{{variableName}}"}</code> in your template content or subject line.
                   </p>
                 </div>
 
                 <div className="space-y-6">
                   {Object.entries(groupedVariables).map(([category, variables]) => (
                     <div key={category}>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">
+                      <h4 className="text-lg font-semibold admin-text mb-3 pb-2 border-b border-gray-200 dark:border-gray-600">
                         {category} Variables
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -164,23 +164,23 @@ export default function VariablesHelper({ trigger = "help" }) {
                           <motion.div
                             key={variable.name}
                             whileHover={{ scale: 1.02 }}
-                            className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer"
+                            className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all cursor-pointer admin-card"
                             onClick={() => copyVariable(variable.name)}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
-                                  <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded text-blue-600">
+                                  <code className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-blue-600 dark:text-blue-400">
                                     {"{{" + variable.name + "}}"}
                                   </code>
                                   {copiedVariable === variable.name ? (
                                     <Check className="h-4 w-4 text-green-600" />
                                   ) : (
-                                    <Copy className="h-4 w-4 text-gray-400" />
+                                    <Copy className="h-4 w-4 admin-text-light" />
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-700 mb-1">{variable.description}</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-sm admin-text-light mb-1">{variable.description}</p>
+                                <p className="text-xs admin-text-light">
                                   <span className="font-medium">Example:</span> {variable.example}
                                 </p>
                               </div>
@@ -192,9 +192,9 @@ export default function VariablesHelper({ trigger = "help" }) {
                   ))}
                 </div>
 
-                <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2">Usage Examples:</h4>
-                  <div className="space-y-2 text-sm text-gray-700">
+                <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <h4 className="font-semibold admin-text mb-2">Usage Examples:</h4>
+                  <div className="space-y-2 text-sm admin-text-light">
                     <p><strong>Subject:</strong> "Application Update - {"{{jobTitle}}"} Position"</p>
                     <p><strong>Content:</strong> "Dear {"{{candidateName}}"}, thank you for your interest in the {"{{jobTitle}}"} position at {"{{companyName}}"}..."</p>
                   </div>

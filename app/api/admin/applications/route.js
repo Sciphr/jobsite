@@ -9,9 +9,12 @@ export async function GET(req) {
   if (authResult.error) return authResult.error;
 
   const { session } = authResult;
+  const { searchParams } = new URL(req.url);
+  const includeArchived = searchParams.get('includeArchived') === 'true';
 
   try {
     const applications = await appPrisma.applications.findMany({
+      where: includeArchived ? {} : { is_archived: false },
       include: {
         jobs: {
           select: {
@@ -29,6 +32,14 @@ export async function GET(req) {
           },
         },
         users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        users_applications_archived_byTousers: {
           select: {
             id: true,
             firstName: true,
@@ -59,6 +70,16 @@ export async function GET(req) {
       jobId: app.jobId,
       userId: app.userId,
       job: app.jobs, // Alias for frontend compatibility
+      // Archive fields
+      is_archived: app.is_archived,
+      archived_at: app.archived_at,
+      archived_by: app.archived_by,
+      archive_reason: app.archive_reason,
+      archivedBy: app.users_applications_archived_byTousers ? {
+        id: app.users_applications_archived_byTousers.id,
+        name: `${app.users_applications_archived_byTousers.firstName} ${app.users_applications_archived_byTousers.lastName}`.trim(),
+        email: app.users_applications_archived_byTousers.email,
+      } : null,
     }));
 
     return new Response(JSON.stringify(formattedApplications), { status: 200 });

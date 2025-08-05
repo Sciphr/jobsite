@@ -17,14 +17,14 @@ export default function RecipientSelection({
 }) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Select Recipients</h3>
+      <h3 className="text-lg font-semibold admin-text">Select Recipients</h3>
 
       {/* Filters */}
       <div className="space-y-3">
         <select
           value={selectedJob}
           onChange={(e) => setSelectedJob(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm admin-text admin-card"
         >
           <option value="">All Jobs</option>
           {jobs.map((job) => (
@@ -37,7 +37,7 @@ export default function RecipientSelection({
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm admin-text admin-card"
         >
           <option value="">All Statuses</option>
           <option value="Applied">Applied</option>
@@ -48,22 +48,22 @@ export default function RecipientSelection({
         </select>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 admin-text-light" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search candidates..."
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm admin-text admin-card"
           />
         </div>
       </div>
 
       {/* Candidates List */}
-      <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
-        <div className="p-3 border-b border-gray-200 bg-gray-50">
+      <div className="border border-gray-200 dark:border-gray-600 rounded-lg max-h-96 overflow-y-auto admin-card">
+        <div className="p-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">Candidates ({filteredApplications.length})</span>
+            <span className="font-medium admin-text">Candidates ({filteredApplications.length})</span>
             <button
               onClick={() => {
                 if (recipients.length === filteredApplications.length) {
@@ -89,11 +89,11 @@ export default function RecipientSelection({
           </div>
         </div>
 
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200 dark:divide-gray-600">
           {filteredApplications.map((application) => (
             <div
               key={application.id}
-              className="p-3 hover:bg-gray-50 cursor-pointer"
+              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
               onClick={() => onRecipientToggle(application)}
             >
               <div className="flex items-center space-x-3">
@@ -107,14 +107,14 @@ export default function RecipientSelection({
                     e.stopPropagation(); // Prevent row click
                     onRecipientToggle(application);
                   }}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium admin-text truncate">
                     {application.name || "Anonymous"}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{application.email}</p>
-                  <p className="text-xs text-gray-400">{application.job?.title}</p>
+                  <p className="text-xs admin-text-light truncate">{application.email}</p>
+                  <p className="text-xs admin-text-light">{application.job?.title}</p>
                 </div>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium ${

@@ -117,7 +117,7 @@ export default function CandidateDetailsPage() {
       <div className="space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-          <div className="h-32 bg-gray-200 rounded mb-6"></div>
+          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
         </div>
       </div>
     );
@@ -127,10 +127,10 @@ export default function CandidateDetailsPage() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-lg font-medium admin-text mb-2">
           Application Not Found
         </h3>
-        <p className="text-gray-500 mb-4">
+        <p className="admin-text-light mb-4">
           The application you're looking for doesn't exist or has been removed.
         </p>
         <button
@@ -160,7 +160,7 @@ export default function CandidateDetailsPage() {
       Hired: "bg-emerald-100 text-emerald-800 border-emerald-200",
       Rejected: "bg-red-100 text-red-800 border-red-200",
     };
-    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[status] || "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600";
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -235,10 +235,10 @@ export default function CandidateDetailsPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumbs */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
+      <div className="flex items-center space-x-2 text-sm admin-text-light">
         <button
           onClick={() => router.push("/applications-manager")}
-          className="hover:text-gray-900 flex items-center space-x-1"
+          className="hover:admin-text flex items-center space-x-1"
         >
           <Home className="h-4 w-4" />
           <span>Overview</span>
@@ -248,12 +248,12 @@ export default function CandidateDetailsPage() {
           onClick={() =>
             router.push(`/applications-manager/jobs/${application.jobId}`)
           }
-          className="hover:text-gray-900"
+          className="hover:admin-text"
         >
           {application.job?.title}
         </button>
         <ChevronRight className="h-4 w-4" />
-        <span className="text-gray-900 font-medium">
+        <span className="admin-text font-medium">
           {application.name || "Anonymous Applicant"}
         </span>
       </div>
@@ -298,8 +298,8 @@ export default function CandidateDetailsPage() {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">
               Quick Actions
             </h3>
             <div className="space-y-3">
@@ -312,7 +312,7 @@ export default function CandidateDetailsPage() {
               </button>
               <button
                 onClick={() => router.push(`/applications-manager/candidate/${applicationId}/schedule-interview`)}
-                className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/30 transition-colors"
               >
                 <Video className="h-4 w-4" />
                 <span>Schedule Interview</span>
@@ -328,8 +328,8 @@ export default function CandidateDetailsPage() {
                 disabled={!application.phone}
                 className={`w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-colors ${
                   application.phone
-                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                    ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                 }`}
               >
                 <PhoneIcon className="h-4 w-4" />
@@ -339,14 +339,14 @@ export default function CandidateDetailsPage() {
           </div>
 
           {/* Status Update */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">
               Update Status
             </h3>
             <select
               value={application.status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card"
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
@@ -357,8 +357,8 @@ export default function CandidateDetailsPage() {
           </div>
 
           {/* Rating */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating</h3>
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">Rating</h3>
             <div className="flex items-center space-x-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -375,27 +375,27 @@ export default function CandidateDetailsPage() {
                   />
                 </button>
               ))}
-              <span className="ml-2 text-sm text-gray-600">({rating}/5)</span>
+              <span className="ml-2 text-sm admin-text-light">({rating}/5)</span>
             </div>
           </div>
 
           {/* Key Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">
               Key Information
             </h3>
             <div className="space-y-3 text-sm">
-              <div className="flex items-center space-x-2 text-gray-600">
+              <div className="flex items-center space-x-2 admin-text-light">
                 <Calendar className="h-4 w-4" />
                 <span>
                   Applied {new Date(application.appliedAt).toLocaleDateString()}
                 </span>
               </div>
-              <div className="flex items-center space-x-2 text-gray-600">
+              <div className="flex items-center space-x-2 admin-text-light">
                 <MapPin className="h-4 w-4" />
                 <span>{application.job?.location}</span>
               </div>
-              <div className="flex items-center space-x-2 text-gray-600">
+              <div className="flex items-center space-x-2 admin-text-light">
                 <DollarSign className="h-4 w-4" />
                 <span>
                   {formatSalary(
@@ -411,9 +411,9 @@ export default function CandidateDetailsPage() {
 
         {/* Main Content */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="admin-card rounded-lg shadow overflow-hidden">
             {/* Tabs */}
-            <div className="border-b border-gray-200">
+            <div className="border-b admin-border">
               <nav className="flex space-x-8 px-6">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -423,8 +423,8 @@ export default function CandidateDetailsPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                         activeTab === tab.id
-                          ? "border-blue-500 text-blue-600"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                          ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                          : "border-transparent admin-text-light hover:admin-text hover:border-gray-300 dark:hover:border-gray-600"
                       }`}
                     >
                       <div className="flex items-center space-x-2">
@@ -442,24 +442,24 @@ export default function CandidateDetailsPage() {
               {activeTab === "overview" && (
                 <div className="space-y-6">
                   {/* Contact Information */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold admin-text mb-4">
                       Contact Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center space-x-3">
-                        <Mail className="h-5 w-5 text-gray-400" />
+                        <Mail className="h-5 w-5 admin-text-light" />
                         <div>
-                          <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-medium">{application.email}</p>
+                          <p className="text-sm admin-text-light">Email</p>
+                          <p className="font-medium admin-text">{application.email}</p>
                         </div>
                       </div>
                       {application.phone && (
                         <div className="flex items-center space-x-3">
-                          <Phone className="h-5 w-5 text-gray-400" />
+                          <Phone className="h-5 w-5 admin-text-light" />
                           <div>
-                            <p className="text-sm text-gray-600">Phone</p>
-                            <p className="font-medium">{application.phone}</p>
+                            <p className="text-sm admin-text-light">Phone</p>
+                            <p className="font-medium admin-text">{application.phone}</p>
                           </div>
                         </div>
                       )}
@@ -468,12 +468,12 @@ export default function CandidateDetailsPage() {
 
                   {/* Cover Letter */}
                   {application.coverLetter && (
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold mb-4">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold admin-text mb-4">
                         Cover Letter
                       </h3>
                       <div className="prose max-w-none">
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        <p className="admin-text whitespace-pre-wrap leading-relaxed">
                           {application.coverLetter}
                         </p>
                       </div>
@@ -481,34 +481,34 @@ export default function CandidateDetailsPage() {
                   )}
 
                   {/* Job Details */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold admin-text mb-4">
                       Position Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600">Department</p>
-                        <p className="font-medium">
+                        <p className="text-sm admin-text-light">Department</p>
+                        <p className="font-medium admin-text">
                           {application.job?.department}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Employment Type</p>
-                        <p className="font-medium">
+                        <p className="text-sm admin-text-light">Employment Type</p>
+                        <p className="font-medium admin-text">
                           {application.job?.employmentType}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm admin-text-light">
                           Experience Level
                         </p>
-                        <p className="font-medium">
+                        <p className="font-medium admin-text">
                           {application.job?.experienceLevel}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Remote Policy</p>
-                        <p className="font-medium">
+                        <p className="text-sm admin-text-light">Remote Policy</p>
+                        <p className="font-medium admin-text">
                           {application.job?.remotePolicy}
                         </p>
                       </div>
@@ -521,7 +521,7 @@ export default function CandidateDetailsPage() {
                 <div className="space-y-4">
                   {/* Timeline Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">
+                    <h3 className="text-lg font-semibold admin-text">
                       Application Timeline
                     </h3>
                     <div className="flex items-center space-x-3">
@@ -537,18 +537,18 @@ export default function CandidateDetailsPage() {
 
                   {/* Add Note Panel */}
                   {isAddingNote && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
                       <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Add a note about this candidate..."
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        className="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 resize-none admin-text admin-card"
                         rows={3}
                       />
                       <div className="flex items-center justify-end space-x-2 mt-3">
                         <button
                           onClick={() => setIsAddingNote(false)}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 text-sm"
+                          className="px-3 py-1 admin-text-light hover:admin-text text-sm"
                         >
                           Cancel
                         </button>
@@ -567,7 +567,7 @@ export default function CandidateDetailsPage() {
                   {timelineLoading && (
                     <div className="flex items-center justify-center py-8">
                       <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-                      <span className="ml-2 text-gray-600">
+                      <span className="ml-2 admin-text-light">
                         Loading timeline...
                       </span>
                     </div>
@@ -575,14 +575,14 @@ export default function CandidateDetailsPage() {
 
                   {/* Timeline Error State */}
                   {timelineError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
                       <div className="flex items-center space-x-2">
                         <AlertCircle className="h-5 w-5 text-red-600" />
-                        <span className="text-red-700 font-medium">
+                        <span className="text-red-700 dark:text-red-300 font-medium">
                           Error loading timeline
                         </span>
                       </div>
-                      <p className="text-red-600 text-sm mt-1">
+                      <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                         {timelineError}
                       </p>
                     </div>
@@ -592,8 +592,8 @@ export default function CandidateDetailsPage() {
                   {!timelineLoading && !timelineError && (
                     <div className="space-y-4">
                       {timelineItems.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <div className="text-center py-8 admin-text-light">
+                          <Clock className="h-12 w-12 mx-auto mb-4 admin-text-light" />
                           <p>No timeline events yet</p>
                           <p className="text-sm">Add a note to get started</p>
                         </div>
@@ -608,16 +608,16 @@ export default function CandidateDetailsPage() {
                                 <MessageSquare className="h-4 w-4 text-blue-600" />
                               </div>
                             </div>
-                            <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                            <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="font-medium text-sm">
+                                <span className="font-medium text-sm admin-text">
                                   {item.author}
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs admin-text-light">
                                   {new Date(item.timestamp).toLocaleString()}
                                 </span>
                               </div>
-                              <p className="text-gray-700 text-sm">
+                              <p className="admin-text text-sm">
                                 {item.content}
                               </p>
                             </div>
@@ -631,19 +631,19 @@ export default function CandidateDetailsPage() {
 
               {activeTab === "documents" && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">Documents & Files</h3>
+                  <h3 className="text-lg font-semibold admin-text">Documents & Files</h3>
 
                   {/* Resume */}
                   {application.resumeUrl && (
-                    <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="border admin-border rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-red-600" />
+                          <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
                           </div>
                           <div>
-                            <p className="font-medium">Resume</p>
-                            <p className="text-sm text-gray-600">
+                            <p className="font-medium admin-text">Resume</p>
+                            <p className="text-sm admin-text-light">
                               PDF Document
                             </p>
                           </div>
@@ -663,7 +663,7 @@ export default function CandidateDetailsPage() {
                                 console.error("Error viewing resume:", error);
                               }
                             }}
-                            className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                            className="p-2 admin-text-light hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             title="View resume"
                           >
                             <Eye className="h-4 w-4" />
@@ -674,12 +674,12 @@ export default function CandidateDetailsPage() {
                   )}
 
                   {/* Additional Documents Placeholder */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                    <FileText className="h-12 w-12 admin-text-light mx-auto mb-4" />
+                    <p className="admin-text-light mb-2">
                       No additional documents
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm admin-text-light">
                       Cover letters, portfolios, and references will appear here
                     </p>
                   </div>
@@ -689,7 +689,7 @@ export default function CandidateDetailsPage() {
               {activeTab === "interview" && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">
+                    <h3 className="text-lg font-semibold admin-text">
                       Interview Management
                     </h3>
                     <button
@@ -711,16 +711,16 @@ export default function CandidateDetailsPage() {
                       {interviews.map((interview) => (
                         <div
                           key={interview.id}
-                          className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                          className="border admin-border rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
                         >
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center space-x-3">
-                              <Video className="h-5 w-5" />
+                              <Video className="h-5 w-5 admin-text" />
                               <div>
-                                <h4 className="font-medium text-gray-900 capitalize">
+                                <h4 className="font-medium admin-text capitalize">
                                   {interview.type} Interview
                                 </h4>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm admin-text-light">
                                   {new Date(
                                     interview.scheduledAt
                                   ).toLocaleString()}
@@ -731,10 +731,10 @@ export default function CandidateDetailsPage() {
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${
                                   interview.status === "accepted"
-                                    ? "bg-green-100 text-green-800"
+                                    ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
                                     : interview.status === "pending"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-gray-100 text-gray-800"
+                                      ? "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"
+                                      : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
                                 }`}
                               >
                                 {interview.status}
@@ -755,7 +755,7 @@ export default function CandidateDetailsPage() {
                           </div>
                           
                           <div className="space-y-3">
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm admin-text-light">
                               Duration: {interview.duration} minutes
                             </div>
                             
@@ -767,7 +767,7 @@ export default function CandidateDetailsPage() {
                                   href={interview.meetingLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline"
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                                 >
                                   Join Meeting
                                 </a>
@@ -778,7 +778,7 @@ export default function CandidateDetailsPage() {
                             {interview.interviewRating && (
                               <div className="flex items-center space-x-2">
                                 <Star className="h-4 w-4 text-yellow-500" />
-                                <span className="text-sm font-medium text-gray-900">
+                                <span className="text-sm font-medium admin-text">
                                   Rating: {interview.interviewRating}/5
                                 </span>
                                 <div className="flex space-x-1">
@@ -798,14 +798,14 @@ export default function CandidateDetailsPage() {
                             
                             {/* Interview Notes */}
                             {interview.interviewNotes && (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
                                 <div className="flex items-start space-x-2">
-                                  <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1">
-                                    <h5 className="text-sm font-medium text-blue-900 mb-1">
+                                    <h5 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-1">
                                       Interview Notes
                                     </h5>
-                                    <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                                    <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
                                       {interview.interviewNotes}
                                     </p>
                                   </div>
@@ -815,14 +815,14 @@ export default function CandidateDetailsPage() {
                             
                             {/* Agenda if available */}
                             {interview.agenda && (
-                              <div className="bg-gray-100 border border-gray-200 rounded-lg p-3">
+                              <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
                                 <div className="flex items-start space-x-2">
-                                  <FileText className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                                  <FileText className="h-4 w-4 admin-text-light mt-0.5 flex-shrink-0" />
                                   <div className="flex-1">
-                                    <h5 className="text-sm font-medium text-gray-900 mb-1">
+                                    <h5 className="text-sm font-medium admin-text mb-1">
                                       Interview Agenda
                                     </h5>
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                    <p className="text-sm admin-text whitespace-pre-wrap">
                                       {interview.agenda}
                                     </p>
                                   </div>
@@ -834,12 +834,12 @@ export default function CandidateDetailsPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                      <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-2">
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                      <Video className="h-12 w-12 admin-text-light mx-auto mb-4" />
+                      <p className="admin-text-light mb-2">
                         No interviews scheduled
                       </p>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <p className="text-sm admin-text-light mb-4">
                         Schedule phone, video, or in-person interviews
                       </p>
                     </div>

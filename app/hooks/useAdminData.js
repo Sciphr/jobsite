@@ -39,10 +39,18 @@ export const useJobs = () => {
   });
 };
 
-export const useApplications = () => {
+export const useApplications = (includeArchived = false) => {
+  const queryKey = includeArchived 
+    ? ["admin", "applications", "includeArchived"] 
+    : ["admin", "applications"];
+    
+  const url = includeArchived 
+    ? "/api/admin/applications?includeArchived=true"
+    : "/api/admin/applications";
+
   return useQuery({
-    queryKey: ["admin", "applications"],
-    queryFn: () => fetcher("/api/admin/applications"),
+    queryKey,
+    queryFn: () => fetcher(url),
     ...commonQueryOptions,
     staleTime: 10 * 60 * 1000, // 10 minutes for applications (more dynamic)
   });
@@ -136,6 +144,100 @@ export const useAuditLogs = (page = 1, limit = 20, filters = {}) => {
     queryFn: () => fetcher(`/api/admin/audit-logs?${queryParams}`),
     ...commonQueryOptions,
     staleTime: 5 * 60 * 1000, // 5 minutes - logs are frequently updated
+  });
+};
+
+// Archive/Unarchive applications
+export const useArchiveApplications = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ applicationIds, archive, reason }) => {
+      const response = await fetch("/api/admin/applications/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationIds, archive, reason }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Archive operation failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate applications queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+    },
+  });
+};
+
+// Auto-archive rejected applications
+export const useAutoArchive = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/admin/applications/auto-archive", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Auto-archive failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate applications queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+    },
+  });
+};
+
+// Preview what would be auto-archived
+export const useAutoArchivePreview = () => {
+  return useQuery({
+    queryKey: ["admin", "auto-archive-preview"],
+    queryFn: () => fetcher("/api/admin/applications/auto-archive"),
+    ...commonQueryOptions,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Auto-progress applications from Applied to Reviewing
+export const useAutoProgress = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/admin/applications/auto-progress", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Auto-progress failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate applications queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+    },
+  });
+};
+
+// Preview what would be auto-progressed
+export const useAutoProgressPreview = () => {
+  return useQuery({
+    queryKey: ["admin", "auto-progress-preview"],
+    queryFn: () => fetcher("/api/admin/applications/auto-progress"),
+    ...commonQueryOptions,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

@@ -13,6 +13,10 @@ import {
   usePrefetchAdminData,
   useUpdateApplicationStatus,
   useDeleteApplication,
+  useAutoArchive,
+  useAutoArchivePreview,
+  useAutoProgress,
+  useAutoProgressPreview,
 } from "@/app/hooks/useAdminData";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -38,6 +42,8 @@ import {
   ChevronRight,
   FileSpreadsheet,
   FileDown,
+  Archive,
+  ArrowUpRight,
 } from "lucide-react";
 import { exportApplicationsToExcel, exportApplicationsToCSV } from "@/app/utils/applicationsExport";
 
@@ -49,6 +55,12 @@ function AdminApplicationsContent() {
   const queryClient = useQueryClient();
   const updateApplicationMutation = useUpdateApplicationStatus();
   const deleteApplicationMutation = useDeleteApplication();
+  
+  // Auto-archive functionality
+  const { mutate: autoArchive, isLoading: autoArchiving } = useAutoArchive();
+  const { data: autoArchivePreview } = useAutoArchivePreview();
+  const { mutate: autoProgress, isLoading: autoProgressing } = useAutoProgress(); 
+  const { data: autoProgressPreview } = useAutoProgressPreview();
 
   // ✅ FIXED: Remove array-dependent useEffect + Added URL parameter support
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,6 +106,46 @@ function AdminApplicationsContent() {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
+  };
+
+  const handleAutoArchive = () => {
+    if (!autoArchivePreview?.count || autoArchivePreview.count === 0) {
+      alert('No applications found for auto-archiving');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to auto-archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days?`;
+    
+    if (confirm(confirmMessage)) {
+      autoArchive(undefined, {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      });
+    }
+  };
+
+  const handleAutoProgress = () => {
+    if (!autoProgressPreview?.count || autoProgressPreview.count === 0) {
+      alert('No applications found for auto-progress');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to auto-progress ${autoProgressPreview.count} applications from Applied to Reviewing after ${autoProgressPreview.daysThreshold} days?`;
+    
+    if (confirm(confirmMessage)) {
+      autoProgress(undefined, {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      });
+    }
   };
 
   // ✅ FIXED: Use useMemo instead of useEffect to prevent unnecessary calls
@@ -412,6 +464,62 @@ function AdminApplicationsContent() {
               </div>
             </div>
           </div>
+
+          {/* Manual Archive Trigger */}
+          <button
+            onClick={handleAutoArchive}
+            disabled={autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm w-full sm:w-auto ${
+              autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+            }`}
+            title={
+              autoArchivePreview?.count > 0 
+                ? `Archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days`
+                : 'No applications ready for archiving'
+            }
+          >
+            {autoArchiving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                <span className="text-sm">Archiving...</span>
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4" />
+                <span className="text-sm">Auto-Archive ({autoArchivePreview?.count || 0})</span>
+              </>
+            )}
+          </button>
+
+          {/* Manual Progress Trigger */}
+          <button
+            onClick={handleAutoProgress}
+            disabled={autoProgressing || !autoProgressPreview?.count || autoProgressPreview.count === 0}
+            className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm w-full sm:w-auto ${
+              autoProgressing || !autoProgressPreview?.count || autoProgressPreview.count === 0
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+            }`}
+            title={
+              autoProgressPreview?.count > 0 
+                ? `Progress ${autoProgressPreview.count} Applied applications older than ${autoProgressPreview.daysThreshold} days to Reviewing`
+                : 'No applications ready for auto-progress'
+            }
+          >
+            {autoProgressing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm">Progressing...</span>
+              </>
+            ) : (
+              <>
+                <ArrowUpRight className="h-4 w-4" />
+                <span className="text-sm">Auto-Progress ({autoProgressPreview?.count || 0})</span>
+              </>
+            )}
+          </button>
 
           <button
             onClick={handleRefresh}

@@ -304,54 +304,85 @@ export default function ApplicationsManagerSettings() {
 
   const renderSettingField = (setting) => {
     const { id, key, parsedValue, dataType } = setting;
+    
+    // Check if workflow automation is enabled
+    const workflowAutomationSetting = settings.find(s => s.key === 'enable_workflow_automation');
+    const workflowAutomationEnabled = workflowAutomationSetting?.parsedValue === true || workflowAutomationSetting?.parsedValue === 'true';
+    
+    // Define automation settings that should be disabled when workflow automation is off
+    const automationSettings = [
+      'auto_archive_rejected_days',
+      'auto_progress_delay_days', 
+      'auto_reject_after_days'
+    ];
+    
+    const isAutomationSetting = automationSettings.includes(key);
+    const isDisabled = isAutomationSetting && !workflowAutomationEnabled;
 
     switch (dataType) {
       case "boolean":
         return (
-          <div className="flex items-center">
+          <div className={`flex items-center ${isDisabled ? 'opacity-50' : ''}`}>
             <input
               type="checkbox"
               checked={parsedValue === true || parsedValue === "true"}
               onChange={(e) => handleSettingChange(id, e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              disabled={isDisabled}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <span className="ml-2 text-sm text-gray-700">
+            <span className="ml-2 text-sm admin-text">
               Enable this feature
             </span>
+            {isDisabled && (
+              <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                (Enable Workflow Automation to use this feature)
+              </span>
+            )}
           </div>
         );
 
       case "number":
         return (
-          <input
-            type="number"
-            value={parsedValue}
-            onChange={(e) => handleSettingChange(id, parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            min="0"
-          />
+          <div className={isDisabled ? 'opacity-50' : ''}>
+            <input
+              type="number"
+              value={parsedValue}
+              onChange={(e) => handleSettingChange(id, parseInt(e.target.value))}
+              disabled={isDisabled}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
+              min="0"
+            />
+            {isDisabled && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Enable Workflow Automation to use this feature
+              </p>
+            )}
+          </div>
         );
 
       case "json":
         return (
-          <div>
+          <div className={isDisabled ? 'opacity-50' : ''}>
             <textarea
               value={JSON.stringify(parsedValue, null, 2)}
               onChange={(e) => {
-                try {
-                  const jsonValue = JSON.parse(e.target.value);
-                  handleSettingChange(id, jsonValue);
-                } catch (error) {
-                  // Invalid JSON, don't update
+                if (!isDisabled) {
+                  try {
+                    const jsonValue = JSON.parse(e.target.value);
+                    handleSettingChange(id, jsonValue);
+                  } catch (error) {
+                    // Invalid JSON, don't update
+                  }
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
+              disabled={isDisabled}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 resize-none font-mono text-sm admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
               rows={4}
               placeholder="Valid JSON format required"
             />
-            <p className="text-xs text-amber-600 flex items-center space-x-1 mt-1">
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center space-x-1 mt-1">
               <AlertTriangle className="h-3 w-3" />
-              <span>Ensure valid JSON format to prevent errors</span>
+              <span>{isDisabled ? "Enable Workflow Automation to use this feature" : "Ensure valid JSON format to prevent errors"}</span>
             </p>
           </div>
         );
@@ -359,14 +390,22 @@ export default function ApplicationsManagerSettings() {
       default: // string
         if (key.includes("email_signature")) {
           return (
-            <textarea
-              value={parsedValue.replace(/\\n/g, "\n")}
-              onChange={(e) =>
-                handleSettingChange(id, e.target.value.replace(/\n/g, "\\n"))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-              rows={3}
-            />
+            <div className={isDisabled ? 'opacity-50' : ''}>
+              <textarea
+                value={parsedValue.replace(/\\n/g, "\n")}
+                onChange={(e) =>
+                  !isDisabled && handleSettingChange(id, e.target.value.replace(/\n/g, "\\n"))
+                }
+                disabled={isDisabled}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 resize-none admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
+                rows={3}
+              />
+              {isDisabled && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Enable Workflow Automation to use this feature
+                </p>
+              )}
+            </div>
           );
         }
 
@@ -398,28 +437,44 @@ export default function ApplicationsManagerSettings() {
           };
 
           return (
-            <select
-              value={parsedValue}
-              onChange={(e) => handleSettingChange(id, e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {options[key]?.map((option) => (
-                <option key={option} value={option}>
-                  {option.charAt(0).toUpperCase() +
-                    option.slice(1).replace(/[-_]/g, " ")}
-                </option>
-              ))}
-            </select>
+            <div className={isDisabled ? 'opacity-50' : ''}>
+              <select
+                value={parsedValue}
+                onChange={(e) => !isDisabled && handleSettingChange(id, e.target.value)}
+                disabled={isDisabled}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
+              >
+                {options[key]?.map((option) => (
+                  <option key={option} value={option}>
+                    {option.charAt(0).toUpperCase() +
+                      option.slice(1).replace(/[-_]/g, " ")}
+                  </option>
+                ))}
+              </select>
+              {isDisabled && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Enable Workflow Automation to use this feature
+                </p>
+              )}
+            </div>
           );
         }
 
         return (
-          <input
-            type="text"
-            value={parsedValue}
-            onChange={(e) => handleSettingChange(id, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <div className={isDisabled ? 'opacity-50' : ''}>
+            <input
+              type="text"
+              value={parsedValue}
+              onChange={(e) => !isDisabled && handleSettingChange(id, e.target.value)}
+              disabled={isDisabled}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
+            />
+            {isDisabled && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Enable Workflow Automation to use this feature
+              </p>
+            )}
+          </div>
         );
     }
   };
@@ -437,6 +492,33 @@ export default function ApplicationsManagerSettings() {
       );
     }
 
+    // Custom sort to put workflow automation settings in logical order
+    if (activeTab === "hiring_workflow") {
+      const workflowSettingsOrder = [
+        'enable_workflow_automation', // Master toggle first
+        'auto_archive_rejected_days',
+        'auto_progress_delay_days', 
+        'auto_reject_after_days'
+      ];
+      
+      filtered.sort((a, b) => {
+        const aIndex = workflowSettingsOrder.indexOf(a.key);
+        const bIndex = workflowSettingsOrder.indexOf(b.key);
+        
+        // If both settings are in our custom order, sort by that
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // If only one is in custom order, put it first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // Otherwise, sort alphabetically by key
+        return a.key.localeCompare(b.key);
+      });
+    }
+
     return filtered;
   };
 
@@ -444,11 +526,11 @@ export default function ApplicationsManagerSettings() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="h-32 bg-gray-200 rounded mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
+          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="h-96 bg-gray-200 rounded"></div>
-            <div className="lg:col-span-3 h-96 bg-gray-200 rounded"></div>
+            <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="lg:col-span-3 h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
           </div>
         </div>
       </div>
@@ -485,7 +567,7 @@ export default function ApplicationsManagerSettings() {
             <button
               onClick={() => resetCategory(activeTab)}
               disabled={isLoading}
-              className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="flex items-center justify-center space-x-2 px-3 py-2 md:px-4 md:py-2 border border-gray-300 dark:border-gray-600 rounded-lg admin-text hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <RefreshCw className="h-4 w-4" />
               <span>Reset Category</span>
@@ -508,10 +590,10 @@ export default function ApplicationsManagerSettings() {
             exit={{ opacity: 0, y: -10 }}
             className={`p-4 rounded-lg border ${
               saveStatus.type === "success"
-                ? "bg-green-50 border-green-200 text-green-800"
+                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
                 : saveStatus.type === "info"
-                  ? "bg-blue-50 border-blue-200 text-blue-800"
-                  : "bg-red-50 border-red-200 text-red-800"
+                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300"
+                  : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300"
             }`}
           >
             <div className="flex items-center space-x-2">
@@ -533,13 +615,13 @@ export default function ApplicationsManagerSettings() {
           className="admin-card p-4 rounded-lg shadow"
         >
           <div className="relative max-w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 admin-text-light" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search settings..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 text-sm admin-text admin-card"
             />
           </div>
         </motion.div>
@@ -577,22 +659,22 @@ export default function ApplicationsManagerSettings() {
                       onClick={() => setActiveTab(category.id)}
                       className={`w-full text-left px-3 py-3 rounded-lg transition-colors mb-1 ${
                         isActive
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700"
+                          : "admin-text hover:bg-gray-50 dark:hover:bg-gray-700"
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         <Icon
-                          className={`h-5 w-5 ${isActive ? "text-blue-600" : "text-gray-400"}`}
+                          className={`h-5 w-5 ${isActive ? "text-blue-600 dark:text-blue-400" : "admin-text-light"}`}
                         />
                         <div className="flex-1">
                           <div
-                            className={`text-sm font-medium ${isActive ? "text-blue-900" : "text-gray-900"}`}
+                            className={`text-sm font-medium ${isActive ? "text-blue-900 dark:text-blue-200" : "admin-text"}`}
                           >
                             {category.label}
                           </div>
                           <div
-                            className={`text-xs ${isActive ? "text-blue-600" : "text-gray-500"}`}
+                            className={`text-xs ${isActive ? "text-blue-600 dark:text-blue-400" : "admin-text-light"}`}
                           >
                             {categorySettings.length} settings
                           </div>
@@ -604,9 +686,9 @@ export default function ApplicationsManagerSettings() {
               </motion.nav>
 
               {/* Save Actions */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
                 {hasChanges() && (
-                  <div className="mb-3 flex items-center space-x-2 text-amber-700 text-sm">
+                  <div className="mb-3 flex items-center space-x-2 text-amber-700 dark:text-amber-400 text-sm">
                     <AlertCircle className="h-4 w-4" />
                     <span>You have unsaved changes</span>
                   </div>
@@ -617,7 +699,7 @@ export default function ApplicationsManagerSettings() {
                   className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                     hasChanges() && !isSaving
                       ? getButtonClasses("primary")
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   {isSaving ? (
@@ -640,7 +722,7 @@ export default function ApplicationsManagerSettings() {
           <div className="lg:col-span-3">
             <div className="admin-card rounded-lg shadow">
               {/* Tab Header */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b admin-border">
                 <div className="flex items-center space-x-3">
                   {currentCategory && (
                     <currentCategory.icon className="h-6 w-6 text-blue-600" />
@@ -660,13 +742,13 @@ export default function ApplicationsManagerSettings() {
               <div className="p-6">
                 {filteredSettings.length === 0 ? (
                   <div className="text-center py-12">
-                    <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <Settings className="h-12 w-12 admin-text-light mx-auto mb-4" />
+                    <h3 className="text-lg font-medium admin-text mb-2">
                       {searchTerm
                         ? "No settings found"
                         : "No settings configured"}
                     </h3>
-                    <p className="text-gray-500">
+                    <p className="admin-text-light">
                       {searchTerm
                         ? "Try adjusting your search terms"
                         : "Settings for this category will appear here once loaded from the database"}
@@ -682,11 +764,11 @@ export default function ApplicationsManagerSettings() {
                         animate="visible"
                         transition={{ delay: index * 0.05 }}
                         whileHover={{ scale: 1.01, y: -2 }}
-                        className="border border-gray-200 rounded-lg p-6"
+                        className="border admin-border rounded-lg p-6 admin-card"
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                            <h4 className="font-medium admin-text flex items-center space-x-2">
                               <span>
                                 {setting.key
                                   .replace(/_/g, " ")
@@ -705,7 +787,7 @@ export default function ApplicationsManagerSettings() {
                                 />
                               )}
                             </h4>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm admin-text-light mt-1">
                               {setting.description}
                             </p>
                           </div>
@@ -713,12 +795,12 @@ export default function ApplicationsManagerSettings() {
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 setting.dataType === "boolean"
-                                  ? "bg-green-100 text-green-800"
+                                  ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
                                   : setting.dataType === "number"
-                                    ? "bg-blue-100 text-blue-800"
+                                    ? "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"
                                     : setting.dataType === "json"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : "bg-gray-100 text-gray-800"
+                                      ? "bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300"
+                                      : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
                               }`}
                             >
                               {setting.dataType}

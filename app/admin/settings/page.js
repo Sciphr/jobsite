@@ -12,7 +12,7 @@ import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
-import { useSettings, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import { useSettings, usePrefetchAdminData, useAutoArchive, useAutoArchivePreview } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
 } from "@/app/components/WeeklyDigestTester";
@@ -43,6 +43,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
+  Archive,
 } from "lucide-react";
 
 export default function AdminSettings() {
@@ -60,6 +61,10 @@ export default function AdminSettings() {
   const { data: settingsData, isLoading, refetch } = useSettings();
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Auto-archive functionality
+  const { mutate: autoArchive, isLoading: autoArchiving } = useAutoArchive();
+  const { data: autoArchivePreview } = useAutoArchivePreview();
 
   // Function to change tab and update URL
   const handleTabChange = (tabId) => {
@@ -181,6 +186,26 @@ export default function AdminSettings() {
 
       return newSettings;
     });
+  };
+
+  const handleAutoArchive = () => {
+    if (!autoArchivePreview?.count || autoArchivePreview.count === 0) {
+      alert('No applications found for auto-archiving');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to auto-archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days?`;
+    
+    if (confirm(confirmMessage)) {
+      autoArchive(undefined, {
+        onSuccess: (data) => {
+          alert(data.message);
+        },
+        onError: (error) => {
+          alert(`Error: ${error.message}`);
+        },
+      });
+    }
   };
 
   const testEmail = async () => {
@@ -1387,6 +1412,94 @@ export default function AdminSettings() {
                 No settings are available for this category at your privilege
                 level.
               </p>
+            </div>
+          )}
+
+          {/* Auto-Archive Management Section */}
+          {activeTab === "system" && autoArchivePreview && (
+            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+              <div className="setting-card flex items-start space-x-4 p-6 border rounded-lg transition-all duration-200 hover:shadow-sm"
+                style={{
+                  borderColor: "var(--admin-stat-4-border)",
+                }}
+              >
+                <div
+                  className="p-3 rounded-lg"
+                  style={{
+                    backgroundColor: "var(--admin-stat-4-bg)",
+                  }}
+                >
+                  <Archive
+                    className="h-5 w-5"
+                    style={{
+                      color: "var(--admin-stat-4)",
+                    }}
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-lg font-medium admin-text">
+                        Auto-Archive Management
+                      </h3>
+                      <p className="text-sm admin-text-light mt-1">
+                        Manually trigger auto-archiving of rejected applications
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold admin-text">
+                        {autoArchivePreview.count || 0}
+                      </div>
+                      <div className="text-xs admin-text-light">
+                        Applications Ready
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold admin-text text-orange-600">
+                        {autoArchivePreview.daysThreshold || 0}
+                      </div>
+                      <div className="text-xs admin-text-light">
+                        Days Threshold
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={handleAutoArchive}
+                      disabled={autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                      }`}
+                    >
+                      {autoArchiving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-4 w-4" />
+                          <span>Run Auto-Archive Now</span>
+                        </>
+                      )}
+                    </button>
+
+                    <span className="text-sm admin-text-light">
+                      {autoArchivePreview.count > 0 
+                        ? `${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days`
+                        : `No rejected applications older than ${autoArchivePreview.daysThreshold || 0} days found`
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

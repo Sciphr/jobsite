@@ -13,7 +13,9 @@ import {
   Eye,
   Phone,
   Send,
-  ChevronDown
+  ChevronDown,
+  Archive,
+  ArchiveRestore
 } from "lucide-react";
 
 const QUICK_ACTIONS = [
@@ -28,6 +30,7 @@ export default function QuickActions({
   onStatusChange, 
   onEmail, 
   onView,
+  onArchive,
   compact = false,
   showLabels = true 
 }) {
@@ -49,6 +52,12 @@ export default function QuickActions({
     onEmail(application);
   };
 
+  const handleArchive = () => {
+    if (onArchive) {
+      onArchive(application.id, !application.is_archived);
+    }
+  };
+
   const handleView = () => {
     onView(application);
   };
@@ -61,7 +70,7 @@ export default function QuickActions({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={handleView}
-          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          className="p-1.5 admin-text-light hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
           title="View Details"
         >
           <Eye className="h-3.5 w-3.5" />
@@ -71,7 +80,7 @@ export default function QuickActions({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={handleEmail}
-          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+          className="p-1.5 admin-text-light hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
           title="Send Email"
         >
           <Mail className="h-3.5 w-3.5" />
@@ -82,7 +91,7 @@ export default function QuickActions({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowDropdown(!showDropdown)}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
+            className="p-1.5 admin-text-light hover:admin-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
             title="More Actions"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
@@ -95,7 +104,7 @@ export default function QuickActions({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -5 }}
                 transition={{ duration: 0.1 }}
-                className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                className="absolute right-0 top-full mt-1 w-32 admin-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50"
                 onMouseLeave={() => setShowDropdown(false)}
               >
                 <div className="py-1">
@@ -114,15 +123,42 @@ export default function QuickActions({
                         disabled={isCurrentStatus || isLoading}
                         className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center space-x-2 ${
                           isCurrentStatus 
-                            ? 'bg-gray-50 text-gray-400 cursor-not-allowed' 
-                            : 'hover:bg-gray-50 text-gray-700'
+                            ? 'bg-gray-50 dark:bg-gray-700 admin-text-light cursor-not-allowed' 
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700 admin-text'
                         }`}
                       >
-                        <Icon className={`h-3 w-3 ${isCurrentStatus ? 'text-gray-400' : `text-${action.color}-500`}`} />
+                        <Icon className={`h-3 w-3 ${isCurrentStatus ? 'admin-text-light' : `text-${action.color}-500`}`} />
                         <span>{action.label}</span>
                       </motion.button>
                     );
                   })}
+                  
+                  {/* Archive/Unarchive Button */}
+                  {onArchive && (
+                    <>
+                      <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                      <motion.button
+                        whileHover={{ x: 2 }}
+                        onClick={() => {
+                          handleArchive();
+                          setShowDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs transition-colors flex items-center space-x-2 hover:bg-gray-50 dark:hover:bg-gray-700 admin-text"
+                      >
+                        {application.is_archived ? (
+                          <>
+                            <ArchiveRestore className="h-3 w-3 text-blue-500" />
+                            <span>Unarchive</span>
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-3 w-3 text-gray-500" />
+                            <span>Archive</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -182,6 +218,28 @@ export default function QuickActions({
         >
           <Phone className="h-3.5 w-3.5" />
           {showLabels && <span>Call</span>}
+        </motion.button>
+      )}
+
+      {/* Archive/Unarchive Button */}
+      {onArchive && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleArchive}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center space-x-1 ${
+            application.is_archived
+              ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+              : "bg-gray-50 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          }`}
+          title={application.is_archived ? "Unarchive Application" : "Archive Application"}
+        >
+          {application.is_archived ? (
+            <ArchiveRestore className="h-3.5 w-3.5" />
+          ) : (
+            <Archive className="h-3.5 w-3.5" />
+          )}
+          {showLabels && <span>{application.is_archived ? "Unarchive" : "Archive"}</span>}
         </motion.button>
       )}
 

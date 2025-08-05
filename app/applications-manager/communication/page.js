@@ -283,7 +283,7 @@ export default function CommunicationHub() {
       failed: "text-red-600 bg-red-100",
       bounced: "text-red-600 bg-red-100",
     };
-    return colors[status] || "text-gray-600 bg-gray-100";
+    return colors[status] || "admin-text-light bg-gray-100 dark:bg-gray-700";
   };
 
   const handleToggleAuditData = () => {
@@ -779,7 +779,7 @@ export default function CommunicationHub() {
                   className={`py-4 px-4 mr-6 border-b-2 font-medium text-sm transition-colors relative z-10 ${
                     isActive
                       ? "text-white"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      : "border-transparent admin-text-light hover:admin-text hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

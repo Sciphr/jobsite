@@ -1,5 +1,8 @@
 // app/lib/startup.js
 import { weeklyDigestScheduler } from './weeklyDigestScheduler';
+import { autoArchiveScheduler } from './autoArchiveScheduler';
+import { autoProgressScheduler } from './autoProgressScheduler';
+import { autoRejectScheduler } from './autoRejectScheduler';
 
 let isInitialized = false;
 
@@ -14,6 +17,15 @@ export async function initializeApplication() {
   try {
     // Start the weekly digest scheduler
     await weeklyDigestScheduler.start();
+    
+    // Start the auto-archive scheduler
+    await autoArchiveScheduler.start();
+    
+    // Start the auto-progress scheduler
+    await autoProgressScheduler.start();
+    
+    // Start the auto-reject scheduler
+    await autoRejectScheduler.start();
     
     isInitialized = true;
     console.log('✅ Application services initialized successfully');

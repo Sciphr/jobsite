@@ -22,27 +22,34 @@ model application_notes {
 }
 
 model applications {
-  id                            String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status                        String                          @default("Applied")
-  coverLetter                   String?
-  resumeUrl                     String?
-  notes                         String?
-  appliedAt                     DateTime                        @default(now())
-  updatedAt                     DateTime
-  userId                        String?                         @db.Uuid
-  jobId                         String                          @db.Uuid
-  name                          String?
-  email                         String?
-  phone                         String?
-  jobs                          jobs                            @relation(fields: [jobId], references: [id])
-  users                         users?                          @relation(fields: [userId], references: [id])
-  audit_logs                    audit_logs[]
-  emails                        emails[]
-  interview_reschedule_requests interview_reschedule_requests[]
-  interview_tokens              interview_tokens[]
-  interviews                    interviews[]
+  id                                    String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status                                String                          @default("Applied")
+  coverLetter                           String?
+  resumeUrl                             String?
+  notes                                 String?
+  appliedAt                             DateTime                        @default(now())
+  updatedAt                             DateTime
+  userId                                String?                         @db.Uuid
+  jobId                                 String                          @db.Uuid
+  name                                  String?
+  email                                 String?
+  phone                                 String?
+  is_archived                           Boolean?                        @default(false)
+  archived_at                           DateTime?                       @db.Timestamp(6)
+  archived_by                           String?                         @db.Uuid
+  archive_reason                        String?                         @db.VarChar(100)
+  jobs                                  jobs                            @relation(fields: [jobId], references: [id])
+  users                                 users?                          @relation(fields: [userId], references: [id])
+  users_applications_archived_byTousers users?                          @relation("applications_archived_byTousers", fields: [archived_by], references: [id], onUpdate: NoAction, map: "fk_applications_archived_by")
+  audit_logs                            audit_logs[]
+  emails                                emails[]
+  interview_reschedule_requests         interview_reschedule_requests[]
+  interview_tokens                      interview_tokens[]
+  interviews                            interviews[]
 
   @@unique([userId, jobId])
+  @@index([is_archived, status], map: "idx_applications_archived_status")
+  @@index([is_archived], map: "idx_applications_is_archived")
 }
 
 model audit_logs {
@@ -471,6 +478,7 @@ model users {
   microsoft_integration_enabled                Boolean?                        @default(false)
   microsoft_integration_connected_at           DateTime?                       @db.Timestamp(6)
   applications                                 applications[]
+  applications_applications_archived_byTousers applications[]                  @relation("applications_archived_byTousers")
   audit_logs_audit_logs_actor_idTousers        audit_logs[]                    @relation("audit_logs_actor_idTousers")
   audit_logs_audit_logs_related_user_idTousers audit_logs[]                    @relation("audit_logs_related_user_idTousers")
   email_automation_rules                       email_automation_rules[]
