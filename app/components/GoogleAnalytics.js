@@ -6,13 +6,17 @@ import { useSystemSettings } from "@/app/hooks/useSystemSettings";
 
 export default function GoogleAnalytics() {
   const [isClient, setIsClient] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    // Add a small delay to ensure QueryClient is fully initialized
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Don't render anything on server-side or during initial render
-  if (!isClient) {
+  // Don't render anything until we're sure we're client-side and ready
+  if (!isClient || !isReady) {
     return null;
   }
 

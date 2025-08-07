@@ -89,7 +89,6 @@ export default async function RootLayout({ children }) {
     >
       <head>
         <ThemeScript />
-        <GoogleAnalytics />
       </head>
       <body
         suppressHydrationWarning={true}
@@ -97,6 +96,7 @@ export default async function RootLayout({ children }) {
       >
         <DynamicFavicon />
         <QueryProvider>
+          <GoogleAnalytics />
           <ThemeProvider>
             <Providers session={undefined}>
               <Header />
