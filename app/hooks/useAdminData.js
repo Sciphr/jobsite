@@ -77,6 +77,24 @@ export const useAnalytics = (timeRange = "30d") => {
   });
 };
 
+export const useGoogleAnalytics = (timeRange = "30d") => {
+  return useQuery({
+    queryKey: ["admin", "google-analytics", timeRange],
+    queryFn: () => fetcher(`/api/admin/analytics/google?range=${timeRange}`),
+    ...commonQueryOptions,
+    staleTime: 15 * 60 * 1000, // 15 minutes for Google Analytics
+    refetchOnMount: true,
+    keepPreviousData: true,
+    retry: (failureCount, error) => {
+      // Don't retry on credential errors
+      if (error?.message?.includes('credentials') || error?.message?.includes('not configured')) {
+        return false;
+      }
+      return failureCount < 2; // Retry up to 2 times for other errors
+    },
+  });
+};
+
 export const useDashboardStats = (options = {}) => {
   return useQuery({
     queryKey: ["admin", "dashboard-stats"],

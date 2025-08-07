@@ -9,6 +9,7 @@ import { Providers } from "./providers";
 import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 import "./lib/startup"; // Initialize background services
 
 const geistSans = Geist({
@@ -88,6 +89,7 @@ export default async function RootLayout({ children }) {
     >
       <head>
         <ThemeScript />
+        <GoogleAnalytics />
       </head>
       <body
         suppressHydrationWarning={true}

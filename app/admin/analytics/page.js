@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
-import { useAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import { useAnalytics, useGoogleAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
 import { useQueryClient } from "@tanstack/react-query";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
@@ -61,6 +61,12 @@ function AdminAnalyticsContent() {
     error,
     refetch,
   } = useAnalytics(timeRange);
+  
+  const {
+    data: googleAnalytics,
+    isLoading: gaLoading,
+    isFetching: gaFetching,
+  } = useGoogleAnalytics(timeRange);
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -428,6 +434,246 @@ function AdminAnalyticsContent() {
           </div>
         </div>
       </div>
+
+      {/* Google Analytics Section */}
+      {googleAnalytics?.enabled && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold admin-text flex items-center space-x-2">
+              <span className="text-2xl">📊</span>
+              <span>Google Analytics</span>
+            </h2>
+            {googleAnalytics.configured ? (
+              <div className="text-sm admin-text-light">
+                Live data from your website
+              </div>
+            ) : (
+              <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                Setup required
+              </div>
+            )}
+          </div>
+
+          {googleAnalytics.configured ? (
+            <>
+              {/* Google Analytics Metrics Row */}
+              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
+                gaFetching ? 'opacity-75' : 'opacity-100'
+              }`}>
+                <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">Website Visitors</p>
+                      <p className="text-2xl sm:text-3xl font-bold admin-text">
+                        {googleAnalytics.overview?.activeUsers?.toLocaleString() || 0}
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <span className="text-xs sm:text-sm admin-text-light">Unique visitors</span>
+                      </div>
+                    </div>
+                    <div className="metric-icon p-2 sm:p-3 rounded-lg bg-blue-100">
+                      <span className="text-2xl">👥</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">Website Sessions</p>
+                      <p className="text-2xl sm:text-3xl font-bold admin-text">
+                        {googleAnalytics.overview?.sessions?.toLocaleString() || 0}
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <span className="text-xs sm:text-sm admin-text-light">Total sessions</span>
+                      </div>
+                    </div>
+                    <div className="metric-icon p-2 sm:p-3 rounded-lg bg-green-100">
+                      <span className="text-2xl">🔗</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">Page Views</p>
+                      <p className="text-2xl sm:text-3xl font-bold admin-text">
+                        {googleAnalytics.overview?.pageViews?.toLocaleString() || 0}
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <span className="text-xs sm:text-sm admin-text-light">Total page views</span>
+                      </div>
+                    </div>
+                    <div className="metric-icon p-2 sm:p-3 rounded-lg bg-purple-100">
+                      <span className="text-2xl">📄</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">Bounce Rate</p>
+                      <p className="text-2xl sm:text-3xl font-bold admin-text">
+                        {googleAnalytics.overview?.bounceRate?.toFixed(1) || 0}%
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <span className="text-xs sm:text-sm admin-text-light">Average bounce</span>
+                      </div>
+                    </div>
+                    <div className="metric-icon p-2 sm:p-3 rounded-lg bg-yellow-100">
+                      <span className="text-2xl">↩️</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Analytics Charts */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+                {/* Traffic Sources Chart */}
+                <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <h2 className="text-lg font-semibold admin-text mb-6">
+                    Traffic Sources
+                  </h2>
+                  {googleAnalytics.trafficSources?.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                        <Pie
+                          data={googleAnalytics.trafficSources}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          dataKey="sessions"
+                          label={({ source, sessions }) =>
+                            `${source}: ${sessions}`
+                          }
+                        >
+                          {googleAnalytics.trafficSources.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <p className="admin-text-light">No traffic data available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Pages */}
+                <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <h2 className="text-lg font-semibold admin-text mb-6">
+                    Top Website Pages
+                  </h2>
+                  <div className="space-y-3 sm:space-y-4 max-h-64 overflow-y-auto">
+                    {googleAnalytics.topPages?.slice(0, 8).map((page, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium admin-text truncate">
+                            {page.title || page.path}
+                          </div>
+                          <div className="text-sm admin-text-light truncate">
+                            {page.path}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium admin-text">
+                            {page.pageViews.toLocaleString()}
+                          </div>
+                          <div className="text-xs admin-text-light">views</div>
+                        </div>
+                      </div>
+                    )) || (
+                      <div className="flex items-center justify-center py-12">
+                        <p className="admin-text-light">No page data available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Job Pages Analytics */}
+              {googleAnalytics.jobPages?.length > 0 && (
+                <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
+                  <h2 className="text-lg font-semibold admin-text mb-6">
+                    Job Page Performance
+                  </h2>
+                  <div className="space-y-3 sm:space-y-4">
+                    {googleAnalytics.jobPages.slice(0, 5).map((page, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium admin-text truncate">
+                            {page.path.replace('/jobs/', '').replace('-', ' ')}
+                          </div>
+                          <div className="text-sm admin-text-light">
+                            Bounce: {page.bounceRate.toFixed(1)}% • Avg time: {Math.round(page.avgSessionDuration)}s
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium admin-text">
+                            {page.pageViews.toLocaleString()}
+                          </div>
+                          <div className="text-xs admin-text-light">views</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Insights */}
+              {googleAnalytics.insights && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
+                    <div className="text-sm admin-text-light mb-2">Top Traffic Source</div>
+                    <div className="text-lg font-bold admin-text">{googleAnalytics.insights.topTrafficSource}</div>
+                  </div>
+                  <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
+                    <div className="text-sm admin-text-light mb-2">Most Viewed Page</div>
+                    <div className="text-lg font-bold admin-text truncate">{googleAnalytics.insights.mostViewedPage}</div>
+                  </div>
+                  <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
+                    <div className="text-sm admin-text-light mb-2">Job Pages Traffic</div>
+                    <div className="text-lg font-bold admin-text">{googleAnalytics.insights.jobPagesPercentage}%</div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="chart-card admin-card p-6 rounded-lg shadow text-center">
+              <div className="text-yellow-600 dark:text-yellow-400 mb-4">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Google Analytics Setup Required</h3>
+                <p className="text-sm mb-6">
+                  Configure Google Analytics service account to view website analytics here.
+                </p>
+              </div>
+              {googleAnalytics.setupInstructions && (
+                <div className="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Setup Instructions:</h4>
+                  <ol className="text-sm space-y-2">
+                    <li>1. {googleAnalytics.setupInstructions.step1}</li>
+                    <li>2. {googleAnalytics.setupInstructions.step2}</li>
+                    <li>3. {googleAnalytics.setupInstructions.step3}</li>
+                    <li>4. {googleAnalytics.setupInstructions.step4}</li>
+                    <li>5. {googleAnalytics.setupInstructions.step5}</li>
+                    <li>6. {googleAnalytics.setupInstructions.step6}</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Charts Section */}
       <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
