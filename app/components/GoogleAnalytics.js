@@ -1,10 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Script from "next/script";
 import { useSystemSettings } from "@/app/hooks/useSystemSettings";
 
 export default function GoogleAnalytics() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Don't render anything on server-side or during initial render
+  if (!isClient) {
+    return null;
+  }
+
+  return <GoogleAnalyticsClient />;
+}
+
+function GoogleAnalyticsClient() {
   const { data: settingsResponse } = useSystemSettings();
   
   // Check if analytics tracking is enabled
