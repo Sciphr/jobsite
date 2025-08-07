@@ -140,8 +140,29 @@ export const authOptions = {
   // Trust proxy headers from ngrok and other reverse proxies
   trustHost: true,
   
-  // Use secure cookies when using HTTPS (ngrok)
+  // Use secure cookies when using HTTPS (ngrok)  
   useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+
+  // Add debug logging for ngrok issues
+  debug: process.env.NODE_ENV === "development",
+
+  // Add specific cookie configuration for ngrok
+  cookies: {
+    sessionToken: {
+      name: process.env.NEXTAUTH_URL?.startsWith("https://") 
+        ? "__Secure-next-auth.session-token" 
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        domain: process.env.NEXTAUTH_URL?.includes("ngrok") 
+          ? undefined // Let ngrok handle domain automatically
+          : undefined
+      }
+    }
+  },
 
   pages: {
     signIn: "/auth/signin",

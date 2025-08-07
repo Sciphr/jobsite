@@ -18,16 +18,17 @@ export async function GET() {
     }
 
     // Generate download URL for the current logo
-    try {
-      const logoDownloadUrl = await getMinioDownloadUrl(logoSetting.value);
-      return NextResponse.json({ 
-        logoUrl: logoDownloadUrl,
-        logoKey: logoSetting.value 
-      });
-    } catch (storageError) {
-      console.error("Error generating logo download URL:", storageError);
+    const { data, error } = await getMinioDownloadUrl(logoSetting.value, 86400); // 24 hours
+
+    if (error) {
+      console.error("Error generating logo download URL:", error);
       return NextResponse.json({ logoUrl: null });
     }
+
+    return NextResponse.json({
+      logoUrl: data.signedUrl,
+      storagePath: logoSetting.value,
+    });
 
   } catch (error) {
     console.error("Error fetching public logo:", error);
