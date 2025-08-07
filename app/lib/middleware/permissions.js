@@ -1,6 +1,4 @@
 // app/lib/middleware/permissions.js
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission, userHasPermissions } from "@/app/lib/permissions";
 import { NextResponse } from "next/server";
 
@@ -13,6 +11,10 @@ import { NextResponse } from "next/server";
 export function requirePermission(resource, action) {
   return async function permissionMiddleware(request, context, next) {
     try {
+      // Import dynamically to avoid build-time execution
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+      
       const session = await getServerSession(authOptions);
       
       if (!session?.user?.id) {
@@ -61,6 +63,10 @@ export function requirePermission(resource, action) {
 export function requirePermissions(permissionChecks) {
   return async function permissionsMiddleware(request, context, next) {
     try {
+      // Import dynamically to avoid build-time execution
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+      
       const session = await getServerSession(authOptions);
       
       if (!session?.user?.id) {
@@ -115,6 +121,10 @@ export function requirePermissions(permissionChecks) {
 export function requireAnyPermission(permissionChecks) {
   return async function anyPermissionMiddleware(request, context, next) {
     try {
+      // Import dynamically to avoid build-time execution
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+      
       const session = await getServerSession(authOptions);
       
       if (!session?.user?.id) {
@@ -163,6 +173,10 @@ export function requireAnyPermission(permissionChecks) {
 export function withPermission(resource, action, handler) {
   return async function permissionWrappedHandler(request, context) {
     try {
+      // Import getServerSession dynamically to avoid build-time execution
+      const { getServerSession } = await import("next-auth/next");
+      const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+      
       const session = await getServerSession(authOptions);
       
       if (!session?.user?.id) {
@@ -210,6 +224,10 @@ export function withPermission(resource, action, handler) {
  * Utility to check permissions in API route handlers
  */
 export async function checkPermissionInHandler(request, resource, action) {
+  // Import dynamically to avoid build-time execution
+  const { getServerSession } = await import("next-auth/next");
+  const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+  
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
@@ -233,6 +251,10 @@ export async function checkPermissionInHandler(request, resource, action) {
  * Get user's permission set for use in API handlers
  */
 export async function getUserPermissionSetInHandler(request) {
+  // Import dynamically to avoid build-time execution
+  const { getServerSession } = await import("next-auth/next");
+  const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+  
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
