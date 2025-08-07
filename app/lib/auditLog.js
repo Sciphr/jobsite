@@ -589,13 +589,30 @@ export const auditSystem = {
  * Utility function to extract request context for audit logging
  */
 export function extractRequestContext(request) {
-  const headers = request.headers;
-  return {
-    ipAddress:
-      headers.get("x-forwarded-for") || headers.get("x-real-ip") || "unknown",
-    userAgent: headers.get("user-agent") || "unknown",
-    requestId: headers.get("x-request-id") || crypto.randomUUID(),
-  };
+  try {
+    if (!request || !request.headers) {
+      return {
+        ipAddress: "unknown",
+        userAgent: "unknown",
+        requestId: crypto.randomUUID(),
+      };
+    }
+
+    const headers = request.headers;
+    return {
+      ipAddress:
+        headers.get("x-forwarded-for") || headers.get("x-real-ip") || "unknown",
+      userAgent: headers.get("user-agent") || "unknown",
+      requestId: headers.get("x-request-id") || crypto.randomUUID(),
+    };
+  } catch (error) {
+    // Handle case where headers() is called outside request scope
+    return {
+      ipAddress: "unknown",
+      userAgent: "unknown", 
+      requestId: crypto.randomUUID(),
+    };
+  }
 }
 
 /**
