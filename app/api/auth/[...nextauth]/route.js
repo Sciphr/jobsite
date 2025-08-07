@@ -89,27 +89,15 @@ export const authOptions = {
     // Removed temporary short maxAge that was causing loops
   },
 
-  // Trust proxy headers from ngrok and other reverse proxies
+  // Simple configuration for ngrok compatibility  
   trustHost: true,
+  debug: true, // Always enable debug for troubleshooting
   
-  // Add debug for ngrok issues
-  debug: process.env.NODE_ENV === "development",
+  // Minimal secure configuration for ngrok
+  useSecureCookies: false, // Let NextAuth auto-detect
   
-  // Explicitly handle ngrok URLs
-  ...(process.env.NEXTAUTH_URL?.includes("ngrok") && {
-    useSecureCookies: true,
-    cookies: {
-      sessionToken: {
-        name: "__Secure-next-auth.session-token",
-        options: {
-          httpOnly: true,
-          sameSite: "lax", 
-          path: "/",
-          secure: true
-        }
-      }
-    }
-  }),
+  // Add explicit secret (sometimes needed for ngrok)
+  secret: process.env.NEXTAUTH_SECRET,
 
   pages: {
     signIn: "/auth/signin",
@@ -195,5 +183,23 @@ export const authOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+// Add request debugging before NextAuth handles it
+async function debuggedHandler(req, context) {
+  console.log("🌐 NextAuth request:", {
+    method: req.method,
+    url: req.url,
+    headers: {
+      host: req.headers.get('host'),
+      'x-forwarded-proto': req.headers.get('x-forwarded-proto'),
+      'x-forwarded-for': req.headers.get('x-forwarded-for'),
+      origin: req.headers.get('origin'),
+      referer: req.headers.get('referer')
+    },
+    nextAuthUrl: process.env.NEXTAUTH_URL
+  });
+
+  const handler = NextAuth(authOptions);
+  return handler(req, context);
+}
+
+export { debuggedHandler as GET, debuggedHandler as POST };
