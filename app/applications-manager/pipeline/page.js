@@ -6,8 +6,20 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useApplications, useJobsSimple, useArchiveApplications } from "@/app/hooks/useAdminData";
+import {
+  useApplications,
+  useJobsSimple,
+  useArchiveApplications,
+  useStaleApplications,
+} from "@/app/hooks/useAdminData";
+import { useRequireNotesOnRejection } from "@/app/hooks/useRequireNotesOnRejection";
+import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
+import { useSettings } from "@/app/hooks/useAdminData";
 import QuickActions from "../components/QuickActions";
+import RejectionNotesModal from "../components/RejectionNotesModal";
+import HireApprovalStatusModal from "../../components/HireApprovalStatusModal";
+import { HireApprovalBadge, HireApprovalIconIndicator } from "../../components/HireApprovalIndicator";
+import StageDurationBadge, { StageDurationTooltip } from "../components/StageDurationBadge";
 import {
   User,
   Mail,
@@ -39,17 +51,45 @@ export default function PipelineView() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications(showArchived);
+  const [hireApprovalModal, setHireApprovalModal] = useState({
+    isOpen: false,
+    type: null,
+    message: null,
+    hireRequestId: null,
+    existingRequestId: null,
+  });
+
+  // Get hire approval status for all applications
+  const applicationIds = applications.map(app => app.id);
+  const { hireApprovalStatus } = useHireApprovalStatus(applicationIds);
   const { data: jobs = [] } = useJobsSimple();
-  
+  const { data: settingsData } = useSettings();
+  const { data: staleData } = useStaleApplications('full');
+
+  // Check if stage time tracking is enabled
+  const trackTimeInStage = settingsData?.settings?.find(
+    (setting) => setting.key === "track_time_in_stage"
+  )?.parsedValue || false;
+
+  // Notes on rejection functionality
+  const {
+    isNotesModalOpen,
+    pendingStatusChange,
+    handleStatusChangeWithNotesCheck,
+    completeStatusChangeWithNotes,
+    cancelStatusChange,
+  } = useRequireNotesOnRejection();
+
   // Archive functionality
-  const { mutate: archiveApplications, isLoading: archiving } = useArchiveApplications();
+  const { mutate: archiveApplications, isLoading: archiving } =
+    useArchiveApplications();
 
   const handleArchiveApplication = (applicationId, shouldArchive = true) => {
     archiveApplications(
       {
         applicationIds: [applicationId],
         archive: shouldArchive,
-        reason: shouldArchive ? 'manual' : undefined,
+        reason: shouldArchive ? "manual" : undefined,
       },
       {
         onSuccess: (data) => {
@@ -66,6 +106,7 @@ export default function PipelineView() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showJobFilter, setShowJobFilter] = useState(false);
+  const [showStaleOnly, setShowStaleOnly] = useState(false);
   const [draggedApplication, setDraggedApplication] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
@@ -115,7 +156,7 @@ export default function PipelineView() {
     },
     {
       id: "Rejected",
-      title: "Not Selected",
+      title: "Rejected",
       color: getStatCardClasses(4).icon,
       textColor: getStatCardClasses(4).icon,
       bgColor: getStatCardClasses(4).bg,
@@ -142,13 +183,18 @@ export default function PipelineView() {
       );
     }
 
+    if (showStaleOnly) {
+      const staleIds = new Set(staleData?.applications?.map(app => app.id) || []);
+      filtered = filtered.filter((app) => staleIds.has(app.id));
+    }
+
     // If no job is selected, return empty array
     if (!selectedJob) {
       return [];
     }
 
     return filtered;
-  }, [applications, selectedJob, searchTerm]);
+  }, [applications, selectedJob, searchTerm, showStaleOnly, staleData]);
 
   // Group applications by status with counts
   const applicationsByStatus = useMemo(() => {
@@ -169,39 +215,91 @@ export default function PipelineView() {
   }, [filteredApplications]);
 
   const handleStatusChange = async (applicationId, newStatus) => {
-    const currentApplications = queryClient.getQueryData([
-      "admin",
-      "applications",
-    ]);
+    const application = applications.find((app) => app.id === applicationId);
+    if (!application) return;
 
-    queryClient.setQueryData(["admin", "applications"], (oldData) => {
-      if (!oldData) return oldData;
-      return oldData.map((app) =>
-        app.id === applicationId ? { ...app, status: newStatus } : app
-      );
-    });
+    const completed = await handleStatusChangeWithNotesCheck(
+      applicationId,
+      newStatus,
+      application.status,
+      application.notes,
+      async (id, status) => {
+        const currentApplications = queryClient.getQueryData([
+          "admin",
+          "applications",
+        ]);
 
-    try {
-      const response = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+        queryClient.setQueryData(["admin", "applications"], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map((app) =>
+            app.id === id ? { ...app, status } : app
+          );
+        });
 
-      if (!response.ok) {
-        queryClient.setQueryData(
-          ["admin", "applications"],
-          currentApplications
-        );
-        console.error("Failed to update status, reverting changes");
+        try {
+          const response = await fetch(`/api/admin/applications/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+
+          if (response.ok) {
+            const updatedData = await response.json();
+            
+            // Check if this was a hire approval request
+            if (updatedData.requiresApproval) {
+              // Revert optimistic update since status didn't actually change
+              queryClient.setQueryData(["admin", "applications"], currentApplications);
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'success',
+                message: updatedData.message,
+                hireRequestId: updatedData.hireRequestId,
+                existingRequestId: null,
+              });
+              // Invalidate hire approval status to show the new pending request
+              queryClient.invalidateQueries(['hire-approval-status']);
+              return { statusUnchanged: true };
+            }
+            
+            return updatedData;
+          } else {
+            queryClient.setQueryData(
+              ["admin", "applications"],
+              currentApplications
+            );
+            const errorData = await response.json();
+            
+            // Check if it's a hire approval conflict
+            if (response.status === 409 && errorData.alreadyPending) {
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'already-pending',
+                message: errorData.message,
+                hireRequestId: null,
+                existingRequestId: errorData.existingRequestId,
+              });
+              return { statusUnchanged: true };
+            }
+            
+            throw new Error(errorData.message || "Failed to update status");
+          }
+        } catch (error) {
+          queryClient.setQueryData(
+            ["admin", "applications"],
+            currentApplications
+          );
+          console.error(
+            "Error updating application status, reverting changes:",
+            error
+          );
+          throw error;
+        }
       }
-    } catch (error) {
-      queryClient.setQueryData(["admin", "applications"], currentApplications);
-      console.error(
-        "Error updating application status, reverting changes:",
-        error
-      );
-    }
+    );
+
+    // If completed is false, it means the notes modal was opened
+    // If true, the status was changed immediately
   };
 
   // Enhanced Drag and Drop handlers with ghost preview
@@ -269,7 +367,6 @@ export default function PipelineView() {
     router.push(`/applications-manager/candidate/${application.id}`);
   };
 
-
   const handleDownloadResume = async (application) => {
     if (!application.resumeUrl) {
       console.error("No resume URL found for this application");
@@ -278,30 +375,34 @@ export default function PipelineView() {
 
     try {
       // Call the download API to get the signed URL
-      const response = await fetch(`/api/resume-download?path=${encodeURIComponent(application.resumeUrl)}`);
-      
+      const response = await fetch(
+        `/api/resume-download?path=${encodeURIComponent(application.resumeUrl)}`
+      );
+
       if (!response.ok) {
-        throw new Error('Failed to generate download URL');
+        throw new Error("Failed to generate download URL");
       }
 
       const data = await response.json();
-      
+
       if (data.downloadUrl) {
         // Open download in a new tab
-        window.open(data.downloadUrl, '_blank');
+        window.open(data.downloadUrl, "_blank");
       } else {
-        throw new Error('No download URL received');
+        throw new Error("No download URL received");
       }
     } catch (error) {
-      console.error('Error downloading resume:', error);
+      console.error("Error downloading resume:", error);
       // You could add a toast notification here for better UX
-      alert('Failed to download resume. Please try again.');
+      alert("Failed to download resume. Please try again.");
     }
   };
 
   const handleEmailApplication = (application) => {
     // Navigate to communication page with pre-filled recipient
-    router.push(`/applications-manager/communication?recipient=${application.id}`);
+    router.push(
+      `/applications-manager/communication?recipient=${application.id}`
+    );
   };
 
   const selectedJobData = jobs.find((job) => job.id === selectedJob);
@@ -404,6 +505,24 @@ export default function PipelineView() {
             <span className="text-sm admin-text">Show Archived</span>
           </motion.label>
 
+          {/* Show Stale Only Toggle */}
+          <motion.label
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center space-x-2 px-3 py-2 cursor-pointer"
+            title="Show only applications that haven't moved stages in a while"
+          >
+            <input
+              type="checkbox"
+              checked={showStaleOnly}
+              onChange={(e) => setShowStaleOnly(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-orange-600 focus:ring-orange-500 dark:focus:ring-orange-400"
+            />
+            <Clock className="h-4 w-4 admin-text-light" />
+            <span className="text-sm admin-text">
+              Stale Only {staleData?.count ? `(${staleData.count})` : ''}
+            </span>
+          </motion.label>
+
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -480,7 +599,9 @@ export default function PipelineView() {
                             : ""
                         }`}
                       >
-                        <div className="text-sm font-medium admin-text">All Jobs</div>
+                        <div className="text-sm font-medium admin-text">
+                          All Jobs
+                        </div>
                         <div className="text-xs admin-text-light">
                           Show applications from all positions
                         </div>
@@ -502,7 +623,9 @@ export default function PipelineView() {
                               : ""
                           }`}
                         >
-                          <div className="text-sm font-medium admin-text">{job.title}</div>
+                          <div className="text-sm font-medium admin-text">
+                            {job.title}
+                          </div>
                           <div className="text-xs admin-text-light flex items-center space-x-2">
                             <span>{job.department}</span>
                             <span>•</span>
@@ -563,8 +686,9 @@ export default function PipelineView() {
             Choose a Job to View Pipeline
           </h3>
           <p className="admin-text-light mb-6 lg:mb-8 max-w-md mx-auto text-sm lg:text-base">
-            Select a specific job from the dropdown above to see its application pipeline,
-            or choose "All Jobs" to view applications across all positions.
+            Select a specific job from the dropdown above to see its application
+            pipeline, or choose "All Jobs" to view applications across all
+            positions.
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -584,196 +708,276 @@ export default function PipelineView() {
           transition={{ duration: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
         >
-        {applicationsByStatus.stages.map((stage, stageIndex) => (
-          <motion.div
-            key={stage.id}
-            variants={itemVariants}
-            className={`admin-card rounded-lg shadow overflow-hidden transition-all duration-200 ${
-              dragOverColumn === stage.id
-                ? `ring-2 ${stage.borderColor} ${stage.bgColor} bg-opacity-20`
-                : ""
-            }`}
-            onDragOver={handleDragOver}
-            onDragEnter={(e) => handleDragEnter(e, stage.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, stage.id)}
-          >
-            {/* Column Header */}
+          {applicationsByStatus.stages.map((stage, stageIndex) => (
             <motion.div
-              className={`p-4 ${stage.bgColor} ${stage.borderColor} border-b`}
-              whileHover={{ scale: 1.01 }}
+              key={stage.id}
+              variants={itemVariants}
+              className={`admin-card rounded-lg shadow overflow-hidden transition-all duration-200 ${
+                dragOverColumn === stage.id
+                  ? `ring-2 ${stage.borderColor} ${stage.bgColor} bg-opacity-20`
+                  : ""
+              }`}
+              onDragOver={handleDragOver}
+              onDragEnter={(e) => handleDragEnter(e, stage.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, stage.id)}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className={`font-semibold ${stage.textColor}`}>
-                    {stage.title}
-                  </h3>
-                  <div className="text-xs admin-text-light mt-1">
-                    {stage.count} application{stage.count !== 1 ? "s" : ""}
+              {/* Column Header */}
+              <motion.div
+                className={`p-4 ${stage.bgColor} ${stage.borderColor} border-b`}
+                whileHover={{ scale: 1.01 }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className={`font-semibold ${stage.textColor}`}>
+                      {stage.title}
+                    </h3>
+                    <div className="text-xs admin-text-light mt-1">
+                      {stage.count} application{stage.count !== 1 ? "s" : ""}
+                    </div>
                   </div>
+                  <motion.div
+                    className={`w-3 h-3 rounded-full ${stage.color}`}
+                    animate={{
+                      scale: dragOverColumn === stage.id ? 1.3 : 1,
+                      boxShadow:
+                        dragOverColumn === stage.id
+                          ? "0 0 0 3px rgba(59, 130, 246, 0.5)"
+                          : "none",
+                    }}
+                  />
                 </div>
-                <motion.div
-                  className={`w-3 h-3 rounded-full ${stage.color}`}
-                  animate={{
-                    scale: dragOverColumn === stage.id ? 1.3 : 1,
-                    boxShadow:
-                      dragOverColumn === stage.id
-                        ? "0 0 0 3px rgba(59, 130, 246, 0.5)"
-                        : "none",
-                  }}
-                />
-              </div>
-            </motion.div>
+              </motion.div>
 
-            {/* Applications List */}
-            <div className="p-2 md:p-3 space-y-2 md:space-y-3 max-h-[300px] md:max-h-[400px] lg:max-h-[500px] overflow-y-auto overflow-x-hidden">
-              <AnimatePresence mode="popLayout">
-                {applicationsByStatus.grouped[stage.id]?.map(
-                  (application, index) => (
+              {/* Applications List */}
+              <div className="p-2 md:p-3 space-y-2 md:space-y-3 max-h-[300px] md:max-h-[400px] lg:max-h-[500px] overflow-y-auto overflow-x-hidden">
+                <AnimatePresence mode="popLayout">
+                  {applicationsByStatus.grouped[stage.id]?.map(
+                    (application, index) => (
+                      <motion.div
+                        key={application.id}
+                        variants={cardVariants}
+                        initial="hidden"
+                        animate="show"
+                        exit="exit"
+                        layout
+                        layoutId={`application-${application.id}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, application)}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
+                        whileHover={{
+                          scale: 1.02,
+                          y: -2,
+                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+                        }}
+                        whileDrag={{
+                          scale: 1.02,
+                          rotate: 2,
+                          zIndex: 1000,
+                          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
+                        }}
+                        className={`admin-card border border-gray-200 dark:border-gray-700 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
+                          draggedApplication?.id === application.id
+                            ? "opacity-50"
+                            : ""
+                        }`}
+                      >
+                        {/* Applicant Info */}
+                        <div className="flex items-start space-x-2 md:space-x-3">
+                          <div className="relative">
+                            <motion.div
+                              whileHover={{ scale: 1.1 }}
+                              className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getButtonClasses("primary")}`}
+                            >
+                              {application.name?.charAt(0)?.toUpperCase() ||
+                                application.email?.charAt(0)?.toUpperCase() ||
+                                "A"}
+                            </motion.div>
+                            {/* Stale Indicator */}
+                            {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
+                              <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                whileHover={{ scale: 1.1 }}
+                                className="absolute -top-0.5 -right-0.5 bg-orange-500 rounded-full p-0.5 border border-white dark:border-gray-800"
+                                title={`Stale application (${staleData.applications.find(staleApp => staleApp.id === application.id)?.daysSinceStageChange || 0} days in current stage)`}
+                              >
+                                <Clock className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
+                              </motion.div>
+                            )}
+                            {/* Hire Approval Icon Indicator - Only show if no stale indicator */}
+                            {!staleData?.applications?.some(staleApp => staleApp.id === application.id) && (() => {
+                              const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                              return hireStatus.hasPendingRequest && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  whileHover={{ scale: 1.1 }}
+                                  className="absolute -top-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5 border border-white dark:border-gray-800"
+                                  title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ''}`}
+                                >
+                                  <Clock className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
+                                </motion.div>
+                              );
+                            })()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-1">
+                              <h4 className="text-xs md:text-sm font-medium admin-text truncate">
+                                {application.name || "Anonymous"}
+                              </h4>
+                              {/* Stale Badge for better visibility */}
+                              {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
+                                <motion.span 
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 flex-shrink-0"
+                                >
+                                  <Clock className="h-2.5 w-2.5 mr-0.5" />
+                                  Stale
+                                </motion.span>
+                              )}
+                              {/* Hire Approval Badge */}
+                              {(() => {
+                                const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                                return hireStatus.hasPendingRequest && (
+                                  <motion.span
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex-shrink-0"
+                                    title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ''}`}
+                                  >
+                                    <Clock className="h-2.5 w-2.5 mr-0.5" />
+                                    Hire Pending
+                                  </motion.span>
+                                );
+                              })()}
+                            </div>
+                            <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {application.email}
+                              </span>
+                            </div>
+                            {application.phone && (
+                              <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">
+                                  {application.phone}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Job Info */}
+                        {selectedJob === "all" && application.job && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700"
+                          >
+                            <div className="text-xs admin-text-light flex items-center space-x-1">
+                              <Briefcase className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {application.job.title}
+                              </span>
+                            </div>
+                            <div className="text-xs admin-text-light mt-1 truncate">
+                              {application.job.department}
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Applied Date & Stage Duration */}
+                        <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700">
+                          <div className="text-xs admin-text-light flex items-center justify-between">
+                            <div className="flex items-center space-x-1 flex-1 min-w-0">
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                Applied{" "}
+                                {new Date(
+                                  application.appliedAt
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {/* Stage Duration Badge - Only show if tracking is enabled */}
+                            {trackTimeInStage && (
+                              <StageDurationTooltip
+                                applicationId={application.id}
+                                currentStage={application.status}
+                                stageEnteredAt={application.current_stage_entered_at || application.updatedAt}
+                              >
+                                <StageDurationBadge
+                                  applicationId={application.id}
+                                  currentStage={application.status}
+                                  stageEnteredAt={application.current_stage_entered_at || application.updatedAt}
+                                  size="xs"
+                                  showIcon={true}
+                                  className="ml-2 flex-shrink-0"
+                                />
+                              </StageDurationTooltip>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Enhanced Quick Actions - Always visible on mobile */}
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          whileHover={{ opacity: 1 }}
+                          className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <QuickActions
+                            application={application}
+                            onStatusChange={handleStatusChange}
+                            onEmail={handleEmailApplication}
+                            onView={handleViewApplication}
+                            onArchive={handleArchiveApplication}
+                            compact={true}
+                            showLabels={false}
+                          />
+                        </motion.div>
+                      </motion.div>
+                    )
+                  ) || (
                     <motion.div
-                      key={application.id}
-                      variants={cardVariants}
-                      initial="hidden"
-                      animate="show"
-                      exit="exit"
-                      layout
-                      layoutId={`application-${application.id}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, application)}
-                      onDrag={handleDrag}
-                      onDragEnd={handleDragEnd}
-                      whileHover={{
-                        scale: 1.02,
-                        y: -2,
-                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
-                      }}
-                      whileDrag={{
-                        scale: 1.02,
-                        rotate: 2,
-                        zIndex: 1000,
-                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
-                      }}
-                      className={`admin-card border border-gray-200 dark:border-gray-700 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
-                        draggedApplication?.id === application.id
-                          ? "opacity-50"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className={`text-center py-8 transition-all duration-200 ${
+                        dragOverColumn === stage.id
+                          ? "bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg"
                           : ""
                       }`}
                     >
-                      {/* Applicant Info */}
-                      <div className="flex items-start space-x-2 md:space-x-3">
-                        <motion.div
-                          whileHover={{ scale: 1.1 }}
-                          className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getButtonClasses("primary")}`}
-                        >
-                          {application.name?.charAt(0)?.toUpperCase() ||
-                            application.email?.charAt(0)?.toUpperCase() ||
-                            "A"}
-                        </motion.div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs md:text-sm font-medium admin-text truncate">
-                            {application.name || "Anonymous"}
-                          </h4>
-                          <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
-                            <Mail className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">
-                              {application.email}
-                            </span>
-                          </div>
-                          {application.phone && (
-                            <div className="text-xs admin-text-light flex items-center space-x-1 mt-1">
-                              <Phone className="h-3 w-3 flex-shrink-0" />
-                              <span className="truncate">{application.phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Job Info */}
-                      {selectedJob === "all" && application.job && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700"
-                        >
-                          <div className="text-xs admin-text-light flex items-center space-x-1">
-                            <Briefcase className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">
-                              {application.job.title}
-                            </span>
-                          </div>
-                          <div className="text-xs admin-text-light mt-1 truncate">
-                            {application.job.department}
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Applied Date */}
-                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div className="text-xs admin-text-light flex items-center space-x-1">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">
-                            Applied{" "}
-                            {new Date(
-                              application.appliedAt
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Enhanced Quick Actions - Always visible on mobile */}
                       <motion.div
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                        className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
+                        className={`w-12 h-12 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 border-dashed mx-auto mb-3 flex items-center justify-center`}
+                        animate={{
+                          scale: dragOverColumn === stage.id ? 1.1 : 1,
+                          rotate: dragOverColumn === stage.id ? 360 : 0,
+                        }}
+                        transition={{ duration: 0.3 }}
                       >
-                        <QuickActions
-                          application={application}
-                          onStatusChange={handleStatusChange}
-                          onEmail={handleEmailApplication}
-                          onView={handleViewApplication}
-                          onArchive={handleArchiveApplication}
-                          compact={true}
-                          showLabels={false}
-                        />
+                        {dragOverColumn === stage.id ? (
+                          <ArrowRight
+                            className={`h-5 w-5 ${stage.textColor}`}
+                          />
+                        ) : (
+                          <Plus className={`h-5 w-5 ${stage.textColor}`} />
+                        )}
                       </motion.div>
+                      <p className="text-sm admin-text-light">
+                        {dragOverColumn === stage.id
+                          ? "Drop here to update status"
+                          : "No applications"}
+                      </p>
                     </motion.div>
-                  )
-                ) || (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`text-center py-8 transition-all duration-200 ${
-                      dragOverColumn === stage.id
-                        ? "bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg"
-                        : ""
-                    }`}
-                  >
-                    <motion.div
-                      className={`w-12 h-12 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 border-dashed mx-auto mb-3 flex items-center justify-center`}
-                      animate={{
-                        scale: dragOverColumn === stage.id ? 1.1 : 1,
-                        rotate: dragOverColumn === stage.id ? 360 : 0,
-                      }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {dragOverColumn === stage.id ? (
-                        <ArrowRight className={`h-5 w-5 ${stage.textColor}`} />
-                      ) : (
-                        <Plus className={`h-5 w-5 ${stage.textColor}`} />
-                      )}
-                    </motion.div>
-                    <p className="text-sm admin-text-light">
-                      {dragOverColumn === stage.id
-                        ? "Drop here to update status"
-                        : "No applications"}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        ))}
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          ))}
         </motion.div>
       )}
 
@@ -790,9 +994,13 @@ export default function PipelineView() {
               top: dragPosition.y,
             }}
           >
-            <div className={`admin-card border-2 ${getStatCardClasses(0).border} rounded-lg p-3 shadow-2xl max-w-[250px]`}>
+            <div
+              className={`admin-card border-2 ${getStatCardClasses(0).border} rounded-lg p-3 shadow-2xl max-w-[250px]`}
+            >
               <div className="flex items-center space-x-2">
-                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${getStatCardClasses(0).bg} ${getStatCardClasses(0).icon}`}>
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${getStatCardClasses(0).bg} ${getStatCardClasses(0).icon}`}
+                >
                   {ghostPreview.name?.charAt(0)?.toUpperCase() ||
                     ghostPreview.email?.charAt(0)?.toUpperCase() ||
                     "A"}
@@ -820,50 +1028,86 @@ export default function PipelineView() {
           transition={{ delay: 0.3 }}
           className="admin-card p-6 rounded-lg shadow"
         >
-        <h3 className="text-lg font-semibold admin-text mb-4">
-          Pipeline Summary
-        </h3>
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4"
-        >
-          {applicationsByStatus.stages.map((stage, index) => (
-            <motion.div
-              key={stage.id}
-              variants={itemVariants}
-              whileHover={{ scale: 1.05, y: -2 }}
-              className="text-center"
-            >
+          <h3 className="text-lg font-semibold admin-text mb-4">
+            Pipeline Summary
+          </h3>
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4"
+          >
+            {applicationsByStatus.stages.map((stage, index) => (
               <motion.div
-                className={`w-12 h-12 md:w-16 md:h-16 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 mx-auto mb-2 flex items-center justify-center`}
-                whileHover={{
-                  boxShadow: `0 0 0 4px ${stage.bgColor}40`,
-                  scale: 1.1,
-                }}
+                key={stage.id}
+                variants={itemVariants}
+                whileHover={{ scale: 1.05, y: -2 }}
+                className="text-center"
               >
-                <span className={`text-lg md:text-xl font-bold ${stage.textColor}`}>
-                  {stage.count}
-                </span>
+                <motion.div
+                  className={`w-12 h-12 md:w-16 md:h-16 rounded-full ${stage.bgColor} ${stage.borderColor} border-2 mx-auto mb-2 flex items-center justify-center`}
+                  whileHover={{
+                    boxShadow: `0 0 0 4px ${stage.bgColor}40`,
+                    scale: 1.1,
+                  }}
+                >
+                  <span
+                    className={`text-lg md:text-xl font-bold ${stage.textColor}`}
+                  >
+                    {stage.count}
+                  </span>
+                </motion.div>
+                <div className="text-xs md:text-sm font-medium admin-text truncate">
+                  {stage.title}
+                </div>
+                <div className="text-xs admin-text-light">
+                  {filteredApplications.length > 0
+                    ? Math.round(
+                        (stage.count / filteredApplications.length) * 100
+                      )
+                    : 0}
+                  %
+                </div>
               </motion.div>
-              <div className="text-xs md:text-sm font-medium admin-text truncate">
-                {stage.title}
-              </div>
-              <div className="text-xs admin-text-light">
-                {filteredApplications.length > 0
-                  ? Math.round(
-                      (stage.count / filteredApplications.length) * 100
-                    )
-                  : 0}
-                %
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+            ))}
+          </motion.div>
         </motion.div>
       )}
 
+      {/* Rejection Notes Modal */}
+      <RejectionNotesModal
+        isOpen={isNotesModalOpen}
+        onClose={cancelStatusChange}
+        onSubmit={completeStatusChangeWithNotes}
+        applicationName={
+          pendingStatusChange?.applicationId
+            ? applications.find(
+                (app) => app.id === pendingStatusChange.applicationId
+              )?.name ||
+              applications.find(
+                (app) => app.id === pendingStatusChange.applicationId
+              )?.email ||
+              "this application"
+            : "this application"
+        }
+      />
+
+      {/* Hire Approval Status Modal */}
+      <HireApprovalStatusModal
+        isOpen={hireApprovalModal.isOpen}
+        onClose={() => setHireApprovalModal({
+          isOpen: false,
+          type: null,
+          message: null,
+          hireRequestId: null,
+          existingRequestId: null,
+        })}
+        type={hireApprovalModal.type}
+        message={hireApprovalModal.message}
+        applicationName="this application"
+        hireRequestId={hireApprovalModal.hireRequestId}
+        existingRequestId={hireApprovalModal.existingRequestId}
+      />
     </div>
   );
 }

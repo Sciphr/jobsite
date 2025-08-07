@@ -3,10 +3,16 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJob } from "@/app/hooks/useAdminData";
+import { useRequireNotesOnRejection } from "@/app/hooks/useRequireNotesOnRejection";
+import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
 import BulkActionsBar from "../../components/BulkActionsBar";
 import QuickActions from "../../components/QuickActions";
+import RejectionNotesModal from "../../components/RejectionNotesModal";
+import HireApprovalStatusModal from "../../../components/HireApprovalStatusModal";
+import { HireApprovalBadge, HireApprovalIconIndicator } from "../../../components/HireApprovalIndicator";
 import {
   User,
   Mail,
@@ -30,6 +36,7 @@ import {
 export default function JobSpecificApplications() {
   const { id: jobId } = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
@@ -47,6 +54,15 @@ export default function JobSpecificApplications() {
   const { data: allApplications = [], isLoading: applicationsLoading } =
     useApplications();
   const { data: job, isLoading: jobLoading } = useJob(jobId);
+  
+  // Notes on rejection functionality
+  const {
+    isNotesModalOpen,
+    pendingStatusChange,
+    handleStatusChangeWithNotesCheck,
+    completeStatusChangeWithNotes,
+    cancelStatusChange,
+  } = useRequireNotesOnRejection();
 
   // Add these debug lines:
   console.log("🔍 Debug - jobId from URL:", jobId);
@@ -60,6 +76,17 @@ export default function JobSpecificApplications() {
   const [sortBy, setSortBy] = useState("newest");
   const [selectedApplications, setSelectedApplications] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [hireApprovalModal, setHireApprovalModal] = useState({
+    isOpen: false,
+    type: null,
+    message: null,
+    hireRequestId: null,
+    existingRequestId: null,
+  });
+
+  // Get hire approval status for all job applications
+  const applicationIds = jobApplications.map(app => app.id);
+  const { hireApprovalStatus } = useHireApprovalStatus(applicationIds);
 
   // Filter applications for this specific job
   const jobApplications = useMemo(() => {
@@ -230,17 +257,68 @@ export default function JobSpecificApplications() {
   };
 
   const handleStatusChange = async (applicationId, newStatus) => {
-    try {
-      await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      // React Query will handle the UI update
-    } catch (error) {
-      console.error("Error updating application status:", error);
-      alert("Failed to update application status. Please try again.");
-    }
+    const application = allApplications.find(app => app.id === applicationId);
+    if (!application) return;
+
+    const completed = await handleStatusChangeWithNotesCheck(
+      applicationId,
+      newStatus,
+      application.status,
+      application.notes,
+      async (id, status) => {
+        try {
+          const response = await fetch(`/api/admin/applications/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+          
+          if (response.ok) {
+            const updatedData = await response.json();
+            
+            // Check if this was a hire approval request
+            if (updatedData.requiresApproval) {
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'success',
+                message: updatedData.message,
+                hireRequestId: updatedData.hireRequestId,
+                existingRequestId: null,
+              });
+              // Invalidate hire approval status to show the new pending request
+              queryClient.invalidateQueries(['hire-approval-status']);
+              return { statusUnchanged: true };
+            }
+            
+            // React Query will handle the UI update
+            return updatedData;
+          } else {
+            const errorData = await response.json();
+            
+            // Check if it's a hire approval conflict
+            if (response.status === 409 && errorData.alreadyPending) {
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'already-pending',
+                message: errorData.message,
+                hireRequestId: null,
+                existingRequestId: errorData.existingRequestId,
+              });
+              return { statusUnchanged: true };
+            }
+            
+            throw new Error(errorData.message || "Failed to update application");
+          }
+        } catch (error) {
+          console.error("Error updating application status:", error);
+          alert("Failed to update application status. Please try again.");
+          throw error;
+        }
+      }
+    );
+
+    // If completed is false, it means the notes modal was opened
+    // If true, the status was changed immediately
   };
 
 
@@ -636,12 +714,26 @@ export default function JobSpecificApplications() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
-                        >
-                          {application.name?.charAt(0)?.toUpperCase() ||
-                            application.email?.charAt(0)?.toUpperCase() ||
-                            "A"}
+                        <div className="relative">
+                          <div
+                            className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
+                          >
+                            {application.name?.charAt(0)?.toUpperCase() ||
+                              application.email?.charAt(0)?.toUpperCase() ||
+                              "A"}
+                          </div>
+                          {/* Hire approval icon indicator */}
+                          {(() => {
+                            const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                            return (
+                              <HireApprovalIconIndicator
+                                hasPendingRequest={hireStatus.hasPendingRequest}
+                                requestedBy={hireStatus.requestedBy}
+                                requestedAt={hireStatus.requestedAt}
+                                className="absolute -top-1 -right-1 border-2 border-white dark:border-gray-800"
+                              />
+                            );
+                          })()}
                         </div>
                         <div>
                           <div className="text-sm font-medium admin-text">
@@ -661,22 +753,35 @@ export default function JobSpecificApplications() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={application.status}
-                        onChange={(e) =>
-                          updateApplicationStatus(
-                            application.id,
-                            e.target.value
-                          )
-                        }
-                        className={`px-2 py-1 rounded text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 ${getStatusColor(application.status)}`}
-                      >
-                        {statusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={application.status}
+                          onChange={(e) =>
+                            handleStatusChange(
+                              application.id,
+                              e.target.value
+                            )
+                          }
+                          className={`px-2 py-1 rounded text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 ${getStatusColor(application.status)}`}
+                        >
+                          {statusOptions.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                        {/* Hire approval indicator */}
+                        {(() => {
+                          const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                          return (
+                            <HireApprovalBadge
+                              hasPendingRequest={hireStatus.hasPendingRequest}
+                              requestedBy={hireStatus.requestedBy}
+                              requestedAt={hireStatus.requestedAt}
+                            />
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm admin-text flex items-center space-x-1">
@@ -720,6 +825,37 @@ export default function JobSpecificApplications() {
           </div>
         )}
       </div>
+
+      {/* Rejection Notes Modal */}
+      <RejectionNotesModal
+        isOpen={isNotesModalOpen}
+        onClose={cancelStatusChange}
+        onSubmit={completeStatusChangeWithNotes}
+        applicationName={
+          pendingStatusChange?.applicationId
+            ? allApplications.find(app => app.id === pendingStatusChange.applicationId)?.name ||
+              allApplications.find(app => app.id === pendingStatusChange.applicationId)?.email ||
+              "this application"
+            : "this application"
+        }
+      />
+
+      {/* Hire Approval Status Modal */}
+      <HireApprovalStatusModal
+        isOpen={hireApprovalModal.isOpen}
+        onClose={() => setHireApprovalModal({
+          isOpen: false,
+          type: null,
+          message: null,
+          hireRequestId: null,
+          existingRequestId: null,
+        })}
+        type={hireApprovalModal.type}
+        message={hireApprovalModal.message}
+        applicationName="this application"
+        hireRequestId={hireApprovalModal.hireRequestId}
+        existingRequestId={hireApprovalModal.existingRequestId}
+      />
 
     </div>
   );

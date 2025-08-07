@@ -6,6 +6,8 @@ import {
   extractRequestContext,
 } from "../../../../lib/auditLog";
 import { triggerStatusChangeAutomation } from "../../../../lib/emailAutomation";
+import { getSystemSetting } from "../../../../lib/settings";
+import { handleStatusChange } from "../../../../lib/statusChangeHandler";
 
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -64,39 +66,110 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    // Update the application
-    const updatedApplication = await appPrisma.applications.update({
-      where: { id },
-      data: {
-        ...(status && { status }),
-        ...(notes !== undefined && { notes }),
-        updatedAt: new Date(),
-      },
-      include: {
-        jobs: {
-          select: {
-            id: true,
-            title: true,
-            department: true,
-            salaryMin: true,
-            salaryMax: true,
-            benefits: true,
-            startDate: true,
-            applicationDeadline: true,
-          },
-        },
-        users: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    // Check if notes are required when changing to rejected status
+    if (status === "Rejected" && status !== currentApplication.status) {
+      const requireNotesOnRejection = await getSystemSetting(
+        "require_notes_on_rejection",
+        false
+      );
+      
+      if (requireNotesOnRejection) {
+        // Check if new notes are being provided with this request
+        if (notes === undefined || !notes || notes.trim() === "") {
+          return new Response(
+            JSON.stringify({ 
+              message: "A note is required when rejecting an application",
+              code: "NOTES_REQUIRED_FOR_REJECTION" 
+            }),
+            { status: 400 }
+          );
+        }
+      }
+    }
 
-    // Create audit logs for the changes
+    // Handle status change (including hire approval workflow)
+    let result;
+    if (status && status !== currentApplication.status) {
+      const userName = session.user.firstName && session.user.lastName
+        ? `${session.user.firstName} ${session.user.lastName}`.trim()
+        : session.user.email || "System";
+
+      result = await handleStatusChange({
+        applicationId: id,
+        newStatus: status,
+        currentStatus: currentApplication.status,
+        userId: session.user.id,
+        userName,
+        notes,
+      });
+
+      // If hire approval is required, return early
+      if (result.requiresApproval) {
+        return new Response(JSON.stringify({
+          success: true,
+          requiresApproval: true,
+          message: result.message,
+          hireRequestId: result.hireRequestId,
+          status: result.status,
+        }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      // If there's already a pending hire approval request
+      if (result.alreadyPending) {
+        return new Response(JSON.stringify({
+          success: false,
+          alreadyPending: true,
+          message: result.message,
+          existingRequestId: result.existingRequestId,
+          status: result.status,
+        }), {
+          status: 409, // Conflict status code
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+    } else {
+      // For non-status changes (just notes), update normally
+      const updatedApplication = await appPrisma.applications.update({
+        where: { id },
+        data: {
+          ...(notes !== undefined && { notes }),
+          updatedAt: new Date(),
+        },
+        include: {
+          jobs: {
+            select: {
+              id: true,
+              title: true,
+              department: true,
+            },
+          },
+          users: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      result = {
+        success: true,
+        requiresApproval: false,
+        status: updatedApplication.status,
+        application: updatedApplication,
+      };
+    }
+
+    const updatedApplication = result.application;
     const applicantName =
       updatedApplication.name ||
       (updatedApplication.users
@@ -107,8 +180,8 @@ export async function PATCH(req, { params }) {
         ? `${session.user.firstName} ${session.user.lastName}`.trim()
         : session.user.email || "System";
 
-    // Log status change if status was updated
-    if (status && status !== currentApplication.status) {
+    // Legacy audit logging (handleStatusChange already logs status changes)
+    if (status && status !== currentApplication.status && !result.requiresApproval) {
       await auditApplication.statusChange(
         updatedApplication.id,
         applicantName,
@@ -118,6 +191,65 @@ export async function PATCH(req, { params }) {
         actorName,
         updatedApplication.jobId
       );
+
+      // Handle stage time tracking (if enabled)
+      try {
+        const trackTimeInStage = await getSystemSetting("track_time_in_stage", false);
+        
+        if (trackTimeInStage) {
+          console.log(`⏱️ Tracking stage change: ${currentApplication.status} → ${status}`);
+          
+          // Close out the previous stage
+          await appPrisma.$executeRaw`
+            UPDATE application_stage_history 
+            SET 
+              exited_at = NOW(),
+              time_in_stage_seconds = EXTRACT(EPOCH FROM (NOW() - entered_at))::INTEGER,
+              updated_at = NOW()
+            WHERE application_id = ${updatedApplication.id}::uuid
+            AND stage = ${currentApplication.status}
+            AND exited_at IS NULL
+          `;
+
+          // Create new stage history record
+          await appPrisma.$executeRaw`
+            INSERT INTO application_stage_history (
+              application_id, 
+              stage, 
+              previous_stage, 
+              entered_at, 
+              changed_by_user_id, 
+              changed_by_name,
+              created_at,
+              updated_at
+            ) VALUES (
+              ${updatedApplication.id}::uuid,
+              ${status},
+              ${currentApplication.status},
+              NOW(),
+              ${session.user.id}::uuid,
+              ${actorName},
+              NOW(),
+              NOW()
+            )
+          `;
+
+          // Update current stage info on applications table  
+          await appPrisma.$executeRaw`
+            UPDATE applications 
+            SET 
+              current_stage_entered_at = NOW(),
+              time_in_current_stage_seconds = 0,
+              updated_at = NOW()
+            WHERE id = ${updatedApplication.id}::uuid
+          `;
+
+          console.log("✅ Stage time tracking updated successfully");
+        }
+      } catch (stageTrackingError) {
+        console.error("❌ Error in stage time tracking:", stageTrackingError);
+        // Don't fail the status update if stage tracking fails
+      }
 
       // Trigger email automation for status changes
       try {
@@ -223,6 +355,10 @@ export async function GET(req, { params }) {
             slug: true,
             description: true,
             requirements: true,
+            location: true,
+            employmentType: true,
+            experienceLevel: true,
+            remotePolicy: true,
           },
         },
         users: {

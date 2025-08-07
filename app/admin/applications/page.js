@@ -6,7 +6,9 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { usePermissions } from "@/app/hooks/usePermissions";
+import { useRequireNotesOnRejection } from "@/app/hooks/useRequireNotesOnRejection";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
+import RejectionNotesModal from "../../applications-manager/components/RejectionNotesModal";
 import {
   useApplications,
   useJobsSimple,
@@ -17,7 +19,11 @@ import {
   useAutoArchivePreview,
   useAutoProgress,
   useAutoProgressPreview,
+  useSettings,
+  useStaleApplications,
 } from "@/app/hooks/useAdminData";
+import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
+import { HireApprovalBadge, HireApprovalIconIndicator } from "@/app/components/HireApprovalIndicator";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
@@ -44,8 +50,12 @@ import {
   FileDown,
   Archive,
   ArrowUpRight,
+  Clock,
 } from "lucide-react";
-import { exportApplicationsToExcel, exportApplicationsToCSV } from "@/app/utils/applicationsExport";
+import {
+  exportApplicationsToExcel,
+  exportApplicationsToCSV,
+} from "@/app/utils/applicationsExport";
 
 function AdminApplicationsContent() {
   const { data: session } = useSession();
@@ -55,17 +65,28 @@ function AdminApplicationsContent() {
   const queryClient = useQueryClient();
   const updateApplicationMutation = useUpdateApplicationStatus();
   const deleteApplicationMutation = useDeleteApplication();
-  
+
+  // Notes on rejection functionality
+  const {
+    isNotesModalOpen,
+    pendingStatusChange,
+    handleStatusChangeWithNotesCheck,
+    completeStatusChangeWithNotes,
+    cancelStatusChange,
+  } = useRequireNotesOnRejection();
+
   // Auto-archive functionality
   const { mutate: autoArchive, isLoading: autoArchiving } = useAutoArchive();
   const { data: autoArchivePreview } = useAutoArchivePreview();
-  const { mutate: autoProgress, isLoading: autoProgressing } = useAutoProgress(); 
+  const { mutate: autoProgress, isLoading: autoProgressing } =
+    useAutoProgress();
   const { data: autoProgressPreview } = useAutoProgressPreview();
 
   // ✅ FIXED: Remove array-dependent useEffect + Added URL parameter support
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
+  const [staleFilter, setStaleFilter] = useState("all");
 
   // ✅ NEW: Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,14 +103,21 @@ function AdminApplicationsContent() {
     refetch,
   } = useApplications();
   const { data: jobs = [] } = useJobsSimple();
+  const { data: settingsData } = useSettings();
+  const { data: staleData } = useStaleApplications('full');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get hire approval status for all applications
+  const applicationIds = applications.map(app => app.id);
+  const { hireApprovalStatus, isLoading: hireApprovalLoading } = useHireApprovalStatus(applicationIds);
 
   // ✅ NEW: Initialize filters from URL parameters
   useEffect(() => {
-    const jobParam = searchParams.get('job');
-    const statusParam = searchParams.get('status');
-    const searchParam = searchParams.get('search');
-    
+    const jobParam = searchParams.get("job");
+    const statusParam = searchParams.get("status");
+    const searchParam = searchParams.get("search");
+    const filterParam = searchParams.get("filter");
+
     if (jobParam) {
       setJobFilter(jobParam);
     }
@@ -99,8 +127,10 @@ function AdminApplicationsContent() {
     if (searchParam) {
       setSearchTerm(searchParam);
     }
+    if (filterParam === "stale") {
+      setStaleFilter("stale");
+    }
   }, [searchParams]);
-
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -110,12 +140,12 @@ function AdminApplicationsContent() {
 
   const handleAutoArchive = () => {
     if (!autoArchivePreview?.count || autoArchivePreview.count === 0) {
-      alert('No applications found for auto-archiving');
+      alert("No applications found for auto-archiving");
       return;
     }
 
     const confirmMessage = `Are you sure you want to auto-archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days?`;
-    
+
     if (confirm(confirmMessage)) {
       autoArchive(undefined, {
         onSuccess: (data) => {
@@ -130,12 +160,12 @@ function AdminApplicationsContent() {
 
   const handleAutoProgress = () => {
     if (!autoProgressPreview?.count || autoProgressPreview.count === 0) {
-      alert('No applications found for auto-progress');
+      alert("No applications found for auto-progress");
       return;
     }
 
     const confirmMessage = `Are you sure you want to auto-progress ${autoProgressPreview.count} applications from Applied to Reviewing after ${autoProgressPreview.daysThreshold} days?`;
-    
+
     if (confirm(confirmMessage)) {
       autoProgress(undefined, {
         onSuccess: (data) => {
@@ -169,8 +199,16 @@ function AdminApplicationsContent() {
       filtered = filtered.filter((app) => app.jobId === jobFilter);
     }
 
+    if (staleFilter === "stale") {
+      const staleIds = new Set(staleData?.applications?.map(app => app.id) || []);
+      filtered = filtered.filter((app) => staleIds.has(app.id));
+    } else if (staleFilter === "not_stale") {
+      const staleIds = new Set(staleData?.applications?.map(app => app.id) || []);
+      filtered = filtered.filter((app) => !staleIds.has(app.id));
+    }
+
     return filtered;
-  }, [applications, searchTerm, statusFilter, jobFilter]); // ✅ FIXED: Depend on actual data, not .length
+  }, [applications, searchTerm, statusFilter, jobFilter, staleFilter, staleData]); // ✅ FIXED: Depend on actual data, not .length
 
   // ✅ NEW: Pagination calculations
   const paginationData = useMemo(() => {
@@ -213,9 +251,63 @@ function AdminApplicationsContent() {
     resetPagination();
   };
 
-  // ✅ OPTIMIZED: Use React Query mutation for instant UI updates
+  const handleStaleFilterChange = (value) => {
+    setStaleFilter(value);
+    resetPagination();
+  };
+
+  // ✅ OPTIMIZED: Use React Query mutation with notes validation
   const updateApplicationStatus = async (applicationId, newStatus) => {
-    updateApplicationMutation.mutate({ applicationId, status: newStatus });
+    const application = applications.find((app) => app.id === applicationId);
+    if (!application) return;
+
+    const completed = await handleStatusChangeWithNotesCheck(
+      applicationId,
+      newStatus,
+      application.status,
+      application.notes,
+      async (id, status) => {
+        try {
+          const response = await fetch(`/api/admin/applications/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+
+          if (response.ok) {
+            const updatedData = await response.json();
+            
+            // Check if this was a hire approval request
+            if (updatedData.requiresApproval) {
+              // Invalidate hire approval status to show the new pending request
+              queryClient.invalidateQueries(['hire-approval-status']);
+              // React Query will handle the UI update via normal mutation
+            }
+            
+            // Use the normal mutation to update the UI
+            updateApplicationMutation.mutate({ applicationId: id, status });
+          } else {
+            const errorData = await response.json();
+            
+            // Check if it's a hire approval conflict  
+            if (response.status === 409 && errorData.alreadyPending) {
+              // Just show an alert for now in the list view
+              alert(errorData.message);
+              return { statusUnchanged: true };
+            }
+            
+            throw new Error(errorData.message || "Failed to update application");
+          }
+        } catch (error) {
+          console.error("Error updating application status:", error);
+          alert("Failed to update application status. Please try again.");
+          throw error;
+        }
+      }
+    );
+
+    // If completed is false, it means the notes modal was opened
+    // If true, the status was changed immediately
   };
 
   const handleSelectAll = (checked) => {
@@ -256,9 +348,35 @@ function AdminApplicationsContent() {
     deleteApplicationMutation.mutate(applicationId);
   };
 
-  // ✅ OPTIMIZED: Bulk actions with optimistic updates
+  // ✅ OPTIMIZED: Bulk actions with notes validation for rejection
   const handleBulkAction = async (action) => {
     if (selectedApplications.length === 0) return;
+
+    // Special handling for bulk rejection - check if notes are required
+    if (action === "Rejected") {
+      // Get the setting to check if notes are required
+      const requireNotesOnRejection =
+        settingsData?.settings?.find(
+          (setting) => setting.key === "require_notes_on_rejection"
+        )?.parsedValue || false;
+
+      if (requireNotesOnRejection) {
+        // Check if any of the selected applications don't have notes and aren't already rejected
+        const selectedApps = applications.filter(
+          (app) =>
+            selectedApplications.includes(app.id) &&
+            app.status !== "Rejected" &&
+            (!app.notes || app.notes.trim() === "")
+        );
+
+        if (selectedApps.length > 0) {
+          alert(
+            `Cannot bulk reject applications without notes. ${selectedApps.length} selected application(s) require notes before rejection. Please reject them individually or add notes first.`
+          );
+          return;
+        }
+      }
+    }
 
     const confirmMessage =
       action === "delete"
@@ -272,7 +390,9 @@ function AdminApplicationsContent() {
         // Optimistically remove from cache
         queryClient.setQueryData(["admin", "applications"], (oldData) => {
           if (!oldData) return oldData;
-          return oldData.filter((app) => !selectedApplications.includes(app.id));
+          return oldData.filter(
+            (app) => !selectedApplications.includes(app.id)
+          );
         });
 
         await Promise.all(
@@ -285,7 +405,9 @@ function AdminApplicationsContent() {
         queryClient.setQueryData(["admin", "applications"], (oldData) => {
           if (!oldData) return oldData;
           return oldData.map((app) =>
-            selectedApplications.includes(app.id) ? { ...app, status: action } : app
+            selectedApplications.includes(app.id)
+              ? { ...app, status: action }
+              : app
           );
         });
 
@@ -373,13 +495,13 @@ function AdminApplicationsContent() {
   const handleExport = (format) => {
     const filters = {
       searchTerm,
-      statusFilter: statusFilter === 'all' ? null : statusFilter,
-      jobFilter: jobFilter === 'all' ? null : jobFilter
+      statusFilter: statusFilter === "all" ? null : statusFilter,
+      jobFilter: jobFilter === "all" ? null : jobFilter,
     };
 
-    if (format === 'excel') {
+    if (format === "excel") {
       exportApplicationsToExcel(filteredApplications, filters);
-    } else if (format === 'csv') {
+    } else if (format === "csv") {
       exportApplicationsToCSV(filteredApplications, filters);
     }
   };
@@ -421,7 +543,9 @@ function AdminApplicationsContent() {
       {/* Header with Applications Manager CTA */}
       <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold admin-text">Applications</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold admin-text">
+            Applications
+          </h1>
           <p className="admin-text-light mt-2 text-sm lg:text-base">
             Quick overview and basic application management
           </p>
@@ -433,7 +557,9 @@ function AdminApplicationsContent() {
             className={`flex items-center justify-center space-x-2 px-4 lg:px-6 py-3 rounded-lg transition-all duration-200 shadow-md ${getButtonClasses("primary")} hover:shadow-lg transform hover:-translate-y-0.5 w-full sm:w-auto`}
           >
             <Zap className="h-5 w-5" />
-            <span className="font-semibold text-sm lg:text-base">Applications Manager</span>
+            <span className="font-semibold text-sm lg:text-base">
+              Applications Manager
+            </span>
             <ArrowRight className="h-4 w-4" />
           </button>
 
@@ -448,14 +574,14 @@ function AdminApplicationsContent() {
             <div className="absolute right-0 top-10 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
               <div className="p-2">
                 <button
-                  onClick={() => handleExport('excel')}
+                  onClick={() => handleExport("excel")}
                   className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
                   <FileSpreadsheet className="h-4 w-4 text-green-600" />
                   <span>Export to Excel (.xlsx)</span>
                 </button>
                 <button
-                  onClick={() => handleExport('csv')}
+                  onClick={() => handleExport("csv")}
                   className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
                   <FileText className="h-4 w-4 text-blue-600" />
@@ -468,16 +594,22 @@ function AdminApplicationsContent() {
           {/* Manual Archive Trigger */}
           <button
             onClick={handleAutoArchive}
-            disabled={autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0}
+            disabled={
+              autoArchiving ||
+              !autoArchivePreview?.count ||
+              autoArchivePreview.count === 0
+            }
             className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm w-full sm:w-auto ${
-              autoArchiving || !autoArchivePreview?.count || autoArchivePreview.count === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+              autoArchiving ||
+              !autoArchivePreview?.count ||
+              autoArchivePreview.count === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200"
             }`}
             title={
-              autoArchivePreview?.count > 0 
+              autoArchivePreview?.count > 0
                 ? `Archive ${autoArchivePreview.count} rejected applications older than ${autoArchivePreview.daysThreshold} days`
-                : 'No applications ready for archiving'
+                : "No applications ready for archiving"
             }
           >
             {autoArchiving ? (
@@ -488,7 +620,9 @@ function AdminApplicationsContent() {
             ) : (
               <>
                 <Archive className="h-4 w-4" />
-                <span className="text-sm">Auto-Archive ({autoArchivePreview?.count || 0})</span>
+                <span className="text-sm">
+                  Auto-Archive ({autoArchivePreview?.count || 0})
+                </span>
               </>
             )}
           </button>
@@ -496,16 +630,22 @@ function AdminApplicationsContent() {
           {/* Manual Progress Trigger */}
           <button
             onClick={handleAutoProgress}
-            disabled={autoProgressing || !autoProgressPreview?.count || autoProgressPreview.count === 0}
+            disabled={
+              autoProgressing ||
+              !autoProgressPreview?.count ||
+              autoProgressPreview.count === 0
+            }
             className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm w-full sm:w-auto ${
-              autoProgressing || !autoProgressPreview?.count || autoProgressPreview.count === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+              autoProgressing ||
+              !autoProgressPreview?.count ||
+              autoProgressPreview.count === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
             }`}
             title={
-              autoProgressPreview?.count > 0 
+              autoProgressPreview?.count > 0
                 ? `Progress ${autoProgressPreview.count} Applied applications older than ${autoProgressPreview.daysThreshold} days to Reviewing`
-                : 'No applications ready for auto-progress'
+                : "No applications ready for auto-progress"
             }
           >
             {autoProgressing ? (
@@ -516,7 +656,9 @@ function AdminApplicationsContent() {
             ) : (
               <>
                 <ArrowUpRight className="h-4 w-4" />
-                <span className="text-sm">Auto-Progress ({autoProgressPreview?.count || 0})</span>
+                <span className="text-sm">
+                  Auto-Progress ({autoProgressPreview?.count || 0})
+                </span>
               </>
             )}
           </button>
@@ -529,7 +671,9 @@ function AdminApplicationsContent() {
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             />
-            <span className="text-sm lg:text-base">{refreshing ? "Refreshing..." : "Refresh"}</span>
+            <span className="text-sm lg:text-base">
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </span>
           </button>
         </div>
       </div>
@@ -549,7 +693,8 @@ function AdminApplicationsContent() {
               </div>
               <p className="text-blue-100 mb-2 sm:mb-4 text-xs sm:text-sm lg:text-base max-w-2xl">
                 Get enterprise-level application management with job-specific
-                views, pipeline workflows, advanced analytics, and automated tools.
+                views, pipeline workflows, advanced analytics, and automated
+                tools.
               </p>
               <div className="hidden sm:flex flex-wrap gap-3 lg:gap-6 text-xs sm:text-sm text-blue-100">
                 <div className="flex items-center space-x-1 sm:space-x-2">
@@ -628,13 +773,19 @@ function AdminApplicationsContent() {
             >
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xl lg:text-2xl font-bold admin-text">{count}</div>
+                  <div className="text-xl lg:text-2xl font-bold admin-text">
+                    {count}
+                  </div>
                   <div className="text-sm admin-text-light font-medium">
                     {status}
                   </div>
                 </div>
-                <div className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}>
-                  <StatusIcon className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`} />
+                <div
+                  className={`stat-icon p-2 lg:p-3 rounded-lg ${statClasses.bg} flex-shrink-0`}
+                >
+                  <StatusIcon
+                    className={`h-5 w-5 lg:h-6 lg:w-6 ${statClasses.icon}`}
+                  />
                 </div>
               </div>
             </div>
@@ -644,7 +795,7 @@ function AdminApplicationsContent() {
 
       {/* Filters */}
       <div className="admin-card p-4 lg:p-6 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className="relative md:col-span-2 xl:col-span-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -680,6 +831,20 @@ function AdminApplicationsContent() {
                 {job.title}
               </option>
             ))}
+          </select>
+
+          {/* Stale Applications Filter */}
+          <select
+            value={staleFilter}
+            onChange={(e) => handleStaleFilterChange(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none admin-text bg-white dark:bg-gray-700"
+            title="Filter applications by their stale status"
+          >
+            <option value="all">All Applications</option>
+            <option value="stale">
+              Stale Only {staleData?.count ? `(${staleData.count})` : ''}
+            </option>
+            <option value="not_stale">Active Only</option>
           </select>
 
           {/* ✅ NEW: Items per page selector */}
@@ -816,20 +981,63 @@ function AdminApplicationsContent() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
-                        >
-                          {application.name?.charAt(0)?.toUpperCase() ||
-                            application.email?.charAt(0)?.toUpperCase() ||
-                            "A"}
+                        <div className="relative">
+                          <div
+                            className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getButtonClasses("primary")}`}
+                          >
+                            {application.name?.charAt(0)?.toUpperCase() ||
+                              application.email?.charAt(0)?.toUpperCase() ||
+                              "A"}
+                          </div>
+                          {/* Stale Indicator */}
+                          {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
+                            <div 
+                              className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-white dark:border-gray-800"
+                              title={`Application is stale (${staleData.applications.find(staleApp => staleApp.id === application.id)?.daysSinceStageChange || 0} days in current stage)`}
+                            >
+                              <Clock className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                          {/* Hire Approval Indicator - Only show if no stale indicator */}
+                          {!staleData?.applications?.some(staleApp => staleApp.id === application.id) && (() => {
+                            const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                            return (
+                              <HireApprovalIconIndicator
+                                hasPendingRequest={hireStatus.hasPendingRequest}
+                                requestedBy={hireStatus.requestedBy}
+                                requestedAt={hireStatus.requestedAt}
+                                className="absolute -top-1 -right-1 border-2 border-white dark:border-gray-800"
+                              />
+                            );
+                          })()}
                         </div>
-                        <div>
-                          <div className="text-sm font-medium admin-text">
-                            {application.name || "Anonymous"}
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-medium admin-text">
+                              {application.name || "Anonymous"}
+                            </div>
+                            {/* Additional stale indicator text for better visibility */}
+                            {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Stale
+                              </span>
+                            )}
+                            {/* Hire approval indicator */}
+                            {(() => {
+                              const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
+                              return (
+                                <HireApprovalBadge
+                                  hasPendingRequest={hireStatus.hasPendingRequest}
+                                  requestedBy={hireStatus.requestedBy}
+                                  requestedAt={hireStatus.requestedAt}
+                                />
+                              );
+                            })()}
                           </div>
                           <div className="text-sm admin-text-light flex items-center space-x-1">
                             <Mail className="h-3 w-3" />
-                            <a 
+                            <a
                               href={`mailto:${application.email}`}
                               className="hover:text-blue-600 hover:underline transition-colors duration-200"
                               title="Send email"
@@ -840,7 +1048,7 @@ function AdminApplicationsContent() {
                           {application.phone && (
                             <div className="text-sm admin-text-light flex items-center space-x-1">
                               <Phone className="h-3 w-3" />
-                              <a 
+                              <a
                                 href={`tel:${application.phone}`}
                                 className="hover:text-green-600 hover:underline transition-colors duration-200"
                                 title="Call phone"
@@ -1077,14 +1285,31 @@ function AdminApplicationsContent() {
         )}
       </div>
 
+      {/* Rejection Notes Modal */}
+      <RejectionNotesModal
+        isOpen={isNotesModalOpen}
+        onClose={cancelStatusChange}
+        onSubmit={completeStatusChangeWithNotes}
+        applicationName={
+          pendingStatusChange?.applicationId
+            ? applications.find(
+                (app) => app.id === pendingStatusChange.applicationId
+              )?.name ||
+              applications.find(
+                (app) => app.id === pendingStatusChange.applicationId
+              )?.email ||
+              "this application"
+            : "this application"
+        }
+      />
     </div>
   );
 }
 
 export default function AdminApplications() {
   return (
-    <ResourcePermissionGuard 
-      resource="applications" 
+    <ResourcePermissionGuard
+      resource="applications"
       actions={["view"]}
       fallbackPath="/admin/dashboard"
     >

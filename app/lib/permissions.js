@@ -24,7 +24,8 @@ export const ACTIONS = {
   EXPORT: "export",
   ASSIGN: "assign",
   BULK_ACTIONS: "bulk_actions",
-  FEATURE: "feature"
+  FEATURE: "feature",
+  APPROVE_HIRE: "approve_hire"
 };
 
 /**

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
-import { useApplications } from "@/app/hooks/useAdminData";
+import { useApplications, useSettings } from "@/app/hooks/useAdminData";
 import CalendarPicker from "../../../components/CalendarPicker";
 import {
   ArrowLeft,
@@ -36,9 +36,24 @@ export default function ScheduleInterviewPage() {
   const queryClient = useQueryClient();
   const { getButtonClasses } = useThemeClasses();
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // Fetch settings for defaults
+  const { data: settingsData } = useSettings();
+  
+  // Get default values from settings
+  const getDefaultInterviewType = () => {
+    const typeSetting = settingsData?.settings?.find(s => s.key === 'default_interview_type');
+    return typeSetting?.parsedValue || "video";
+  };
+  
+  const getDefaultInterviewDuration = () => {
+    const durationSetting = settingsData?.settings?.find(s => s.key === 'default_interview_duration');
+    return parseInt(durationSetting?.parsedValue) || 45;
+  };
+  
   const [interviewData, setInterviewData] = useState({
-    type: "video", // phone, video, in-person
-    duration: 45, // minutes
+    type: "video", // Will be updated when settings load
+    duration: 45, // Will be updated when settings load
     timeSlots: [], // array of selected time slots
     interviewers: [{ name: "", email: "" }],
     location: "",
@@ -48,6 +63,17 @@ export default function ScheduleInterviewPage() {
     agenda: "",
     timezone: "America/Toronto",
   });
+  
+  // Update defaults when settings are loaded
+  useEffect(() => {
+    if (settingsData?.settings) {
+      setInterviewData(prev => ({
+        ...prev,
+        type: getDefaultInterviewType(),
+        duration: getDefaultInterviewDuration(),
+      }));
+    }
+  }, [settingsData]);
   const [businessAddress, setBusinessAddress] = useState("");
   const [availability, setAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);

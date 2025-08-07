@@ -61,6 +61,14 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Validate props
+  useEffect(() => {
+    if (typeof onPermissionChange !== 'function') {
+      console.error('PermissionSelector: onPermissionChange prop must be a function, received:', typeof onPermissionChange, onPermissionChange);
+      setError('Invalid onPermissionChange prop - component may not work correctly');
+    }
+  }, [onPermissionChange]);
+
   // Fetch permissions from API
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -137,7 +145,8 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
       edit_system: 'Edit System Settings',
       edit_branding: 'Edit Branding',
       edit_notifications: 'Edit Notifications',
-      integrations: 'Manage Integrations'
+      integrations: 'Manage Integrations',
+      approve_hire: 'Approve Hire'
     };
     
     const resourceMap = {
@@ -196,6 +205,11 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
 
   // Handle individual permission toggle
   const togglePermission = (resource, action) => {
+    if (typeof onPermissionChange !== 'function') {
+      console.error('onPermissionChange is not a function:', onPermissionChange);
+      return;
+    }
+    
     const permissionKey = `${resource}:${action}`;
     const newSelected = new Set(selectedPermissions);
     
@@ -210,6 +224,11 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
 
   // Handle category select all
   const toggleCategoryPermissions = (categoryData) => {
+    if (typeof onPermissionChange !== 'function') {
+      console.error('onPermissionChange is not a function:', onPermissionChange);
+      return;
+    }
+    
     const newSelected = new Set(selectedPermissions);
     const categoryPermissions = categoryData.permissions.map(p => `${p.resource}:${p.action}`);
     
@@ -229,6 +248,11 @@ export default function PermissionSelector({ selectedPermissions, onPermissionCh
 
   // Handle select all toggle
   const toggleSelectAll = () => {
+    if (typeof onPermissionChange !== 'function') {
+      console.error('onPermissionChange is not a function:', onPermissionChange);
+      return;
+    }
+    
     if (selectAll) {
       onPermissionChange(new Set());
     } else {

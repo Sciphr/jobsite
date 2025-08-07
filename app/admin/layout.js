@@ -19,6 +19,8 @@ import {
   FileSearch,
   Menu,
   X,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
 import {
   AdminThemeProvider,
@@ -26,7 +28,7 @@ import {
   useAdminTheme,
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
-import { usePrefetchAdminData } from "../hooks/useAdminData";
+import { usePrefetchAdminData, useStaleApplications, useHireApprovalRequests } from "../hooks/useAdminData";
 import { usePermissions } from "../hooks/usePermissions";
 
 function AdminLayoutContent({ children }) {
@@ -64,6 +66,12 @@ function AdminLayoutContent({ children }) {
     prefetchUsers,
     prefetchAnalytics,
   } = usePrefetchAdminData();
+
+  // Get stale applications count for notification badge
+  const { data: staleData } = useStaleApplications('count');
+  
+  // Get pending hire approvals count for notification badge
+  const { data: hireApprovalsData } = useHireApprovalRequests('count');
 
   // Mobile detection effect
   useEffect(() => {
@@ -189,6 +197,14 @@ function AdminLayoutContent({ children }) {
       description: "View job applications",
     },
     {
+      name: "Hire Approvals",
+      href: "/admin/hire-approvals",
+      icon: CheckCircle,
+      requiredPermission: { resource: "applications", action: "approve_hire" },
+      description: "Approve hiring decisions",
+      badge: hireApprovalsData?.count > 0 ? hireApprovalsData.count : null,
+    },
+    {
       name: "Jobs",
       href: "/admin/jobs",
       icon: Briefcase,
@@ -290,6 +306,19 @@ function AdminLayoutContent({ children }) {
             <h1 className="text-lg font-semibold admin-text dark:text-white">
               Admin Panel
             </h1>
+            {/* Stale Applications Badge */}
+            {staleData?.count > 0 && (
+              <Link
+                href="/admin/applications?filter=stale"
+                className="relative inline-flex items-center p-2 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 transition-colors duration-200"
+                title={`${staleData.count} stale applications`}
+              >
+                <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  {staleData.count > 99 ? '99+' : staleData.count}
+                </span>
+              </Link>
+            )}
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -342,7 +371,7 @@ function AdminLayoutContent({ children }) {
                         >
                           <Shield className="h-6 w-6" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h2
                             className={`text-lg font-semibold admin-text dark:text-white`}
                           >
@@ -354,6 +383,19 @@ function AdminLayoutContent({ children }) {
                             {badge.text}
                           </span>
                         </div>
+                        {/* Stale Applications Badge */}
+                        {staleData?.count > 0 && (
+                          <Link
+                            href="/admin/applications?filter=stale"
+                            className="relative inline-flex items-center p-2 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 transition-colors duration-200"
+                            title={`${staleData.count} stale applications need attention`}
+                          >
+                            <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                              {staleData.count > 99 ? '99+' : staleData.count}
+                            </span>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -405,8 +447,16 @@ function AdminLayoutContent({ children }) {
                             }`}
                           />
                           <div className="flex-1">
-                            <div className="text-sm font-medium">
-                              {item.name}
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-medium">
+                                {item.name}
+                              </div>
+                              {/* Badge for notification count */}
+                              {item.badge && (
+                                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-xs font-medium">
+                                  {item.badge > 99 ? '99+' : item.badge}
+                                </span>
+                              )}
                             </div>
                             <div
                               className={`text-xs mt-0.5 transition-colors duration-200 ${

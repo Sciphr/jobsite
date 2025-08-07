@@ -335,28 +335,227 @@ export async function POST(request) {
       },
     });
 
-    // Send confirmation email to applicant (if enabled)
-    const confirmationEmailEnabled = await getSystemSetting(
-      "application_confirmation_email",
-      true
+    // Initialize stage time tracking for new application (if enabled)
+    try {
+      const trackTimeInStage = await getSystemSetting("track_time_in_stage", false);
+      
+      if (trackTimeInStage) {
+        console.log("⏱️ Initializing stage time tracking for new application");
+        
+        // Create initial stage history record
+        await appPrisma.$executeRaw`
+          INSERT INTO application_stage_history (
+            application_id, 
+            stage, 
+            previous_stage, 
+            entered_at,
+            changed_by_user_id,
+            changed_by_name,
+            created_at,
+            updated_at
+          ) VALUES (
+            ${application.id}::uuid,
+            'Applied',
+            NULL,
+            NOW(),
+            ${userId ? `${userId}::uuid` : null},
+            ${applicantName || 'System'},
+            NOW(),
+            NOW()
+          )
+        `;
+
+        // Update current stage info on applications table
+        await appPrisma.$executeRaw`
+          UPDATE applications 
+          SET 
+            current_stage_entered_at = NOW(),
+            time_in_current_stage_seconds = 0
+          WHERE id = ${application.id}::uuid
+        `;
+
+        console.log("✅ Stage time tracking initialized for new application");
+      }
+    } catch (stageTrackingError) {
+      console.error("❌ Error initializing stage time tracking:", stageTrackingError);
+      // Don't fail the application creation if stage tracking fails
+    }
+
+    // Send application received confirmation email (if enabled)
+    const autoSendApplicationReceived = await getSystemSetting(
+      "auto_send_application_received",
+      false
     );
-    if (confirmationEmailEnabled && applicantEmail) {
-      console.log("📧 Sending application confirmation email...");
+    
+    if (autoSendApplicationReceived && applicantEmail) {
+      console.log("📧 Sending application received confirmation email...");
 
-      const emailResult = await sendApplicationConfirmation({
-        applicantEmail,
-        applicantName,
-        jobTitle: job.title,
-        companyName: await getSystemSetting("site_name", "Our Company"),
-      });
+      try {
+        // Import email service
+        const { sendEmail } = await import("../../lib/email");
+        
+        // Get company settings
+        const companyName = await getSystemSetting("site_name", "Our Company");
+        const contactEmail = await getSystemSetting("notification_email", "hiring@company.com");
+        const contactPhone = await getSystemSetting("contact_phone", "(555) 123-4567");
+        
+        // Create professional email content
+        const subject = `Application Received - ${job.title} Position at ${companyName}`;
+        
+        const html = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
+            <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+              <!-- Header -->
+              <div style="text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e2e8f0;">
+                <h1 style="color: #1a202c; font-size: 28px; font-weight: 700; margin: 0;">${companyName}</h1>
+                <p style="color: #64748b; font-size: 16px; margin: 8px 0 0 0;">Hiring Team</p>
+              </div>
 
-      if (emailResult.success) {
-        console.log("✅ Application confirmation email sent successfully");
-      } else {
-        console.error(
-          "❌ Failed to send application confirmation email:",
-          emailResult.error
-        );
+              <!-- Main Content -->
+              <div style="margin-bottom: 32px;">
+                <h2 style="color: #059669; font-size: 24px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">
+                  ✅ Application Received!
+                </h2>
+                
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                  Dear <strong>${applicantName || 'there'}</strong>,
+                </p>
+
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                  Thank you for your application! We have successfully received your application for the <strong>${job.title}</strong> position${job.department ? ` in our ${job.department} department` : ''}.
+                </p>
+
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 28px 0;">
+                  We appreciate you taking the time to apply and share your qualifications with us.
+                </p>
+              </div>
+
+              <!-- What's Next Section -->
+              <div style="background: #f1f5f9; border-radius: 8px; padding: 24px; margin-bottom: 28px;">
+                <h3 style="color: #1e293b; font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">
+                  🔄 What happens next?
+                </h3>
+                
+                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
+                  Our hiring team will carefully review your application along with your resume and cover letter. Here's what you can expect:
+                </p>
+
+                <div style="margin: 0;">
+                  <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                    <span style="color: #059669; font-weight: 600; margin-right: 8px; min-width: 20px;">•</span>
+                    <span style="color: #475569; font-size: 15px; line-height: 1.5;"><strong>Initial Review:</strong> 3-5 business days</span>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                    <span style="color: #059669; font-weight: 600; margin-right: 8px; min-width: 20px;">•</span>
+                    <span style="color: #475569; font-size: 15px; line-height: 1.5;"><strong>Team Assessment:</strong> 1-2 weeks</span>
+                  </div>
+                  <div style="display: flex; align-items: flex-start;">
+                    <span style="color: #059669; font-weight: 600; margin-right: 8px; min-width: 20px;">•</span>
+                    <span style="color: #475569; font-size: 15px; line-height: 1.5;"><strong>Next Steps Communication:</strong> Within 2 weeks</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Application Details -->
+              <div style="background: #fefefe; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+                <h3 style="color: #1e293b; font-size: 16px; font-weight: 600; margin: 0 0 12px 0;">
+                  📋 Application Details
+                </h3>
+                
+                <div style="color: #64748b; font-size: 14px; line-height: 1.8;">
+                  <div><strong style="color: #374151;">Position:</strong> ${job.title}</div>
+                  ${job.department ? `<div><strong style="color: #374151;">Department:</strong> ${job.department}</div>` : ''}
+                  <div><strong style="color: #374151;">Application Date:</strong> ${new Date().toLocaleDateString()}</div>
+                  <div><strong style="color: #374151;">Application ID:</strong> ${application.id}</div>
+                </div>
+              </div>
+
+              <!-- Contact Section -->
+              <div style="text-align: center; margin-bottom: 28px;">
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                  <strong>Questions?</strong> If you have any questions about your application or the position, please don't hesitate to reach out:
+                </p>
+                
+                <div style="margin: 16px 0;">
+                  <a href="mailto:${contactEmail}" style="color: #0369a1; text-decoration: none; font-weight: 500;">${contactEmail}</a>
+                  ${contactPhone !== "(555) 123-4567" ? ` • <span style="color: #64748b;">${contactPhone}</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Closing -->
+              <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                  Thank you again for your interest in joining our team. We look forward to learning more about your background and experience.
+                </p>
+
+                <p style="color: #374151; font-size: 16px; font-weight: 600; margin: 0;">
+                  Best regards,<br>
+                  <span style="color: #059669;">HR Team</span><br>
+                  ${companyName}
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 24px; padding: 16px;">
+              <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin: 0;">
+                This email was sent automatically when you submitted your application.<br>
+                Please save this email for your records. If you need to make any changes to your application, please contact us directly.
+              </p>
+            </div>
+          </div>
+        `;
+
+        const text = `
+Application Received - ${job.title} Position at ${companyName}
+
+Dear ${applicantName || 'there'},
+
+Thank you for your application! We have successfully received your application for the ${job.title} position${job.department ? ` in our ${job.department} department` : ''}.
+
+We appreciate you taking the time to apply and share your qualifications with us.
+
+What happens next?
+
+Our hiring team will carefully review your application along with your resume and cover letter. Here's what you can expect:
+
+• Initial Review: 3-5 business days
+• Team Assessment: 1-2 weeks  
+• Next Steps Communication: Within 2 weeks
+
+Application Details:
+• Position: ${job.title}
+${job.department ? `• Department: ${job.department}\n` : ''}• Application Date: ${new Date().toLocaleDateString()}
+• Application ID: ${application.id}
+
+Questions? 
+If you have any questions about your application or the position, please don't hesitate to reach out to our hiring team at ${contactEmail}${contactPhone !== "(555) 123-4567" ? ` or ${contactPhone}` : ''}.
+
+Thank you again for your interest in joining our team. We look forward to learning more about your background and experience.
+
+Best regards,
+HR Team
+${companyName}
+
+---
+This email was sent automatically when you submitted your application. Please save this email for your records.
+        `;
+
+        // Send the email
+        const emailResult = await sendEmail({
+          to: applicantEmail,
+          subject,
+          html,
+          text,
+        });
+
+        if (emailResult.success) {
+          console.log("✅ Application received confirmation email sent successfully");
+        } else {
+          console.error("❌ Failed to send application confirmation email:", emailResult.error);
+        }
+      } catch (emailError) {
+        console.error("❌ Failed to send application confirmation email:", emailError);
         // Don't fail the application if email fails - just log it
       }
     }

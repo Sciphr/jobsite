@@ -362,7 +362,7 @@ export default function EditRolePage() {
 
           <PermissionSelector
             selectedPermissions={formData.permissions}
-            onPermissionsChange={handlePermissionsChange}
+            onPermissionChange={handlePermissionsChange}
             disabled={role?.is_system_role}
           />
         </div>

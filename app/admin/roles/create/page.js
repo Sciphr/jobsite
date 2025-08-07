@@ -274,7 +274,7 @@ export default function CreateRolePage() {
 
           <PermissionSelector
             selectedPermissions={formData.permissions}
-            onPermissionsChange={handlePermissionsChange}
+            onPermissionChange={handlePermissionsChange}
           />
         </div>
 

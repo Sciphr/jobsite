@@ -271,6 +271,42 @@ export const useWeeklyDigestRecent = () => {
   });
 };
 
+export const useStaleApplications = (type = 'full') => {
+  const queryKey = type === 'full' 
+    ? ["admin", "stale-applications"]
+    : ["admin", "stale-applications", type];
+    
+  const url = type === 'full'
+    ? "/api/admin/stale-applications"
+    : `/api/admin/stale-applications?type=${type}`;
+
+  return useQuery({
+    queryKey,
+    queryFn: () => fetcher(url),
+    ...commonQueryOptions,
+    staleTime: 5 * 60 * 1000, // 5 minutes - stale data changes frequently
+    refetchInterval: type === 'count' ? 5 * 60 * 1000 : false, // Auto-refresh count every 5 minutes
+  });
+};
+
+export const useHireApprovalRequests = (type = 'pending') => {
+  const queryKey = type === 'pending'
+    ? ["admin", "hire-approvals"]
+    : ["admin", "hire-approvals", type];
+    
+  const url = type === 'pending'
+    ? "/api/admin/hire-approvals"
+    : `/api/admin/hire-approvals?type=${type}`;
+
+  return useQuery({
+    queryKey,
+    queryFn: () => fetcher(url),
+    ...commonQueryOptions,
+    staleTime: 2 * 60 * 1000, // 2 minutes - approval requests are time-sensitive
+    refetchInterval: type === 'count' ? 2 * 60 * 1000 : false, // Auto-refresh count every 2 minutes
+  });
+};
+
 // Specific item hooks with conditional fetching
 export const useJob = (jobId) => {
   return useQuery({
@@ -657,6 +693,12 @@ export const useInvalidateAdminData = () => {
     invalidateSystemStatus: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "system-status"] });
     },
+    invalidateStaleApplications: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+    },
+    invalidateHireApprovalRequests: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
+    },
   };
 };
 
@@ -793,8 +835,10 @@ export const useUpdateApplicationStatus = () => {
       }
     },
     onSettled: () => {
-      // Always refetch dashboard stats to keep them in sync
+      // Always refetch dashboard stats and stale applications to keep them in sync
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
     },
   });
 };
@@ -840,8 +884,10 @@ export const useDeleteApplication = () => {
       }
     },
     onSettled: () => {
-      // Always refetch dashboard stats to keep them in sync
+      // Always refetch dashboard stats and stale applications to keep them in sync
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
     },
   });
 };
@@ -895,8 +941,10 @@ export const useUpdateUser = () => {
       }
     },
     onSettled: () => {
-      // Always refetch dashboard stats to keep them in sync
+      // Always refetch dashboard stats and stale applications to keep them in sync
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
     },
   });
 };
@@ -942,8 +990,10 @@ export const useDeleteUser = () => {
       }
     },
     onSettled: () => {
-      // Always refetch dashboard stats to keep them in sync
+      // Always refetch dashboard stats and stale applications to keep them in sync
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
     },
   });
 };
@@ -997,6 +1047,35 @@ export const useDeleteInterview = () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "interviews"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+  });
+};
+
+// Hire Approval Mutation Hooks
+export const useProcessHireApproval = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ action, requestId, notes, changeApplicationStatus }) => {
+      const response = await fetch("/api/admin/hire-approvals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, requestId, notes, changeApplicationStatus }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to process hire approval");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["admin", "hire-approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
     },
   });
 };

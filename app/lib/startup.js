@@ -3,6 +3,7 @@ import { weeklyDigestScheduler } from './weeklyDigestScheduler';
 import { autoArchiveScheduler } from './autoArchiveScheduler';
 import { autoProgressScheduler } from './autoProgressScheduler';
 import { autoRejectScheduler } from './autoRejectScheduler';
+import { staleApplicationScheduler } from './staleApplicationScheduler';
 
 let isInitialized = false;
 
@@ -26,6 +27,9 @@ export async function initializeApplication() {
     
     // Start the auto-reject scheduler
     await autoRejectScheduler.start();
+    
+    // Start the stale application scheduler
+    await staleApplicationScheduler.start();
     
     isInitialized = true;
     console.log('✅ Application services initialized successfully');

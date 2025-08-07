@@ -3,8 +3,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
+import { useRequireNotesOnRejection } from "@/app/hooks/useRequireNotesOnRejection";
+import { useRequireInterviewFeedback } from "@/app/hooks/useRequireInterviewFeedback";
+import RejectionNotesModal from "../../../applications-manager/components/RejectionNotesModal";
+import InterviewFeedbackModal from "../../../applications-manager/components/InterviewFeedbackModal";
+import HireApprovalStatusModal from "../../../components/HireApprovalStatusModal";
+import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
+import HireApprovalIndicator from "../../../components/HireApprovalIndicator";
 import {
   FileText,
   Download,
@@ -19,20 +27,23 @@ import {
   ExternalLink,
   MessageSquare,
   X,
-  FileCheck
+  FileCheck,
+  Star,
+  Clock,
 } from "lucide-react";
 import {
   generateInterviewInvitationEmail,
   generateRejectionEmail,
   generateDocumentRequestEmail,
   getApplicantDisplayName,
-  getJobTitle
+  getJobTitle,
 } from "../../../utils/quickActionEmailTemplates";
 
 function ApplicationDetailsContent() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { getButtonClasses } = useThemeClasses();
   const applicationId = params.id;
 
@@ -40,13 +51,46 @@ function ApplicationDetailsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [interviewFeedback, setInterviewFeedback] = useState([]);
+  const [hireApprovalModal, setHireApprovalModal] = useState({
+    isOpen: false,
+    type: null,
+    message: null,
+    hireRequestId: null,
+    existingRequestId: null,
+  });
+
+  // Get hire approval status for this application
+  const { hireApprovalStatus } = useHireApprovalStatus(application ? [application.id] : []);
+  const currentHireStatus = application ? getHireApprovalForApplication(hireApprovalStatus, application.id) : null;
+
+  // Notes on rejection functionality
+  const {
+    isNotesModalOpen,
+    pendingStatusChange,
+    handleStatusChangeWithNotesCheck,
+    completeStatusChangeWithNotes,
+    cancelStatusChange,
+  } = useRequireNotesOnRejection();
+
+  // Interview feedback functionality
+  const {
+    isFeedbackModalOpen,
+    pendingStatusChange: pendingFeedbackChange,
+    interviewsWithoutFeedback,
+    handleStatusChangeWithFeedbackCheck,
+    completeStatusChangeWithFeedback,
+    cancelStatusChange: cancelFeedbackChange,
+  } = useRequireInterviewFeedback();
 
   useEffect(() => {
     const fetchApplicationDetails = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/admin/applications/${applicationId}`);
-        
+        const response = await fetch(
+          `/api/admin/applications/${applicationId}`
+        );
+
         if (!response.ok) {
           if (response.status === 404) {
             setError("Application not found");
@@ -59,6 +103,18 @@ function ApplicationDetailsContent() {
 
         const data = await response.json();
         setApplication(data);
+
+        // Fetch interview feedback
+        try {
+          const feedbackResponse = await fetch(`/api/admin/interview-feedback?applicationId=${applicationId}`);
+          if (feedbackResponse.ok) {
+            const feedbackData = await feedbackResponse.json();
+            setInterviewFeedback(feedbackData.feedback || []);
+          }
+        } catch (feedbackError) {
+          console.error("Error fetching interview feedback:", feedbackError);
+          // Don't fail the whole page if feedback fetch fails
+        }
       } catch (err) {
         console.error("Error fetching application:", err);
         setError("An error occurred while loading the application");
@@ -73,25 +129,117 @@ function ApplicationDetailsContent() {
   }, [applicationId]);
 
   const updateApplicationStatus = async (newStatus) => {
-    try {
-      setUpdating(true);
-      const response = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+    if (!application) return;
 
-      if (response.ok) {
-        setApplication(prev => ({ ...prev, status: newStatus }));
-      } else {
-        const errorData = await response.json();
-        alert(`Error updating status: ${errorData.message}`);
+    // First check for interview feedback requirements
+    const feedbackResult = await handleStatusChangeWithFeedbackCheck(
+      applicationId,
+      newStatus,
+      application.status,
+      async (id, status) => {
+        try {
+          setUpdating(true);
+          const response = await fetch(`/api/admin/applications/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+
+          if (response.ok) {
+            const updatedData = await response.json();
+            
+            // Check if this was a hire approval request
+            if (updatedData.requiresApproval) {
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'success',
+                message: updatedData.message,
+                hireRequestId: updatedData.hireRequestId,
+                existingRequestId: null,
+              });
+              // Invalidate hire approval status to show the new pending request
+              queryClient.invalidateQueries(['hire-approval-status']);
+              // Don't update application state since status didn't actually change
+              return { statusUnchanged: true };
+            }
+            
+            setApplication(updatedData);
+            return updatedData;
+          } else {
+            const errorData = await response.json();
+            
+            // Check if it's an interview feedback requirement
+            if (errorData.requiresInterviewFeedback) {
+              return errorData; // Let the feedback hook handle this
+            }
+            
+            // Check if it's a hire approval conflict
+            if (response.status === 409 && errorData.alreadyPending) {
+              setHireApprovalModal({
+                isOpen: true,
+                type: 'already-pending',
+                message: errorData.message,
+                hireRequestId: null,
+                existingRequestId: errorData.existingRequestId,
+              });
+              return { statusUnchanged: true };
+            }
+            
+            alert(`Error updating status: ${errorData.message}`);
+            throw new Error(errorData.message);
+          }
+        } catch (error) {
+          console.error("Error updating status:", error);
+          alert("An error occurred while updating the application status");
+          throw error;
+        } finally {
+          setUpdating(false);
+        }
       }
-    } catch (error) {
-      console.error("Error updating status:", error);
-      alert("An error occurred while updating the application status");
-    } finally {
-      setUpdating(false);
+    );
+
+    // If feedback was blocked, don't proceed to rejection notes check
+    if (feedbackResult === false) {
+      return; // Interview feedback modal will handle this
+    }
+
+    // Then check for rejection notes requirements
+    const result = await handleStatusChangeWithNotesCheck(
+      applicationId,
+      newStatus,
+      application.status,
+      application.notes,
+      async (id, status) => {
+        try {
+          setUpdating(true);
+          const response = await fetch(`/api/admin/applications/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+
+          if (response.ok) {
+            const updatedData = await response.json();
+            setApplication(updatedData);
+            return updatedData;
+          } else {
+            const errorData = await response.json();
+            alert(`Error updating status: ${errorData.message}`);
+            throw new Error(errorData.message);
+          }
+        } catch (error) {
+          console.error("Error updating status:", error);
+          alert("An error occurred while updating the application status");
+          throw error;
+        } finally {
+          setUpdating(false);
+        }
+      }
+    );
+
+    // If result contains updated application data, update the local state
+    if (result && typeof result === 'object' && result.id) {
+      setApplication(result);
     }
   };
 
@@ -100,37 +248,49 @@ function ApplicationDetailsContent() {
 
     const applicantName = getApplicantDisplayName(application);
     const jobTitle = getJobTitle(application);
-    
+
     // Fetch company name from settings
     let companyName = "your company"; // fallback
     try {
-      const response = await fetch('/api/settings/public?key=site_name');
+      const response = await fetch("/api/settings/public?key=site_name");
       if (response.ok) {
         const data = await response.json();
         companyName = data.value || companyName;
       }
     } catch (error) {
-      console.warn('Could not fetch company name, using fallback:', error);
+      console.warn("Could not fetch company name, using fallback:", error);
     }
-    
+
     let emailData;
-    
+
     switch (emailType) {
-      case 'interview':
-        emailData = generateInterviewInvitationEmail(applicantName, jobTitle, companyName);
+      case "interview":
+        emailData = generateInterviewInvitationEmail(
+          applicantName,
+          jobTitle,
+          companyName
+        );
         break;
-      case 'rejection':
-        emailData = generateRejectionEmail(applicantName, jobTitle, companyName);
+      case "rejection":
+        emailData = generateRejectionEmail(
+          applicantName,
+          jobTitle,
+          companyName
+        );
         break;
-      case 'documents':
-        emailData = generateDocumentRequestEmail(applicantName, jobTitle, companyName);
+      case "documents":
+        emailData = generateDocumentRequestEmail(
+          applicantName,
+          jobTitle,
+          companyName
+        );
         break;
       default:
         return;
     }
 
     // Open mailto link in new tab/window
-    window.open(emailData.mailtoUrl, '_blank');
+    window.open(emailData.mailtoUrl, "_blank");
   };
 
   const downloadResume = async (storagePath, applicantName) => {
@@ -167,15 +327,27 @@ function ApplicationDetailsContent() {
   const getStatusColor = (status) => {
     const colors = {
       Applied: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      Reviewing: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      Interview: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      Hired: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+      Reviewing:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+      Interview:
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      Hired:
+        "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
       Rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     };
-    return colors[status] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    return (
+      colors[status] ||
+      "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+    );
   };
 
-  const statusOptions = ["Applied", "Reviewing", "Interview", "Hired", "Rejected"];
+  const statusOptions = [
+    "Applied",
+    "Reviewing",
+    "Interview",
+    "Hired",
+    "Rejected",
+  ];
 
   if (loading) {
     return (
@@ -284,7 +456,8 @@ function ApplicationDetailsContent() {
               Application Details
             </h1>
             <p className="admin-text-light mt-1">
-              {application?.job?.title} • Applied {new Date(application?.appliedAt).toLocaleDateString()}
+              {application?.job?.title} • Applied{" "}
+              {new Date(application?.appliedAt).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -311,8 +484,8 @@ function ApplicationDetailsContent() {
             <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
               <span className="text-blue-600 text-lg font-semibold">
                 {application?.name?.charAt(0)?.toUpperCase() ||
-                 application?.email?.charAt(0)?.toUpperCase() ||
-                 "A"}
+                  application?.email?.charAt(0)?.toUpperCase() ||
+                  "A"}
               </span>
             </div>
             <div>
@@ -324,18 +497,33 @@ function ApplicationDetailsContent() {
           </div>
           <div className="flex items-center space-x-4">
             <span className="admin-text-light font-medium">Status:</span>
-            <select
-              value={application?.status}
-              onChange={(e) => updateApplicationStatus(e.target.value)}
-              disabled={updating}
-              className={`px-3 py-2 rounded-lg text-sm font-medium border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${getStatusColor(application?.status)} ${updating ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                  {status}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <select
+                value={application?.status}
+                onChange={(e) => updateApplicationStatus(e.target.value)}
+                disabled={updating}
+                className={`px-3 py-2 rounded-lg text-sm font-medium border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${getStatusColor(application?.status)} ${updating ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {statusOptions.map((status) => (
+                  <option
+                    key={status}
+                    value={status}
+                    className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    {status}
+                  </option>
+                ))}
+              </select>
+              {/* Show hire approval indicator */}
+              {currentHireStatus?.hasPendingRequest && (
+                <HireApprovalIndicator
+                  hasPendingRequest={currentHireStatus.hasPendingRequest}
+                  requestedBy={currentHireStatus.requestedBy}
+                  requestedAt={currentHireStatus.requestedAt}
+                  size="md"
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -355,14 +543,20 @@ function ApplicationDetailsContent() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block admin-text-light font-medium mb-1">Name</label>
-                <p className="admin-text">{application?.name || "Not provided"}</p>
+                <label className="block admin-text-light font-medium mb-1">
+                  Name
+                </label>
+                <p className="admin-text">
+                  {application?.name || "Not provided"}
+                </p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Email</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Email
+                </label>
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 admin-text-light" />
-                  <a 
+                  <a
                     href={`mailto:${application?.email}`}
                     className="admin-text hover:text-blue-600 hover:underline transition-colors duration-200"
                   >
@@ -371,11 +565,13 @@ function ApplicationDetailsContent() {
                 </div>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Phone</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Phone
+                </label>
                 {application?.phone ? (
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 admin-text-light" />
-                    <a 
+                    <a
                       href={`tel:${application.phone}`}
                       className="admin-text hover:text-green-600 hover:underline transition-colors duration-200"
                     >
@@ -387,7 +583,9 @@ function ApplicationDetailsContent() {
                 )}
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Applied Date</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Applied Date
+                </label>
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 admin-text-light" />
                   <p className="admin-text">
@@ -404,31 +602,49 @@ function ApplicationDetailsContent() {
               <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <Briefcase className="h-5 w-5 text-green-600" />
               </div>
-              <h3 className="text-lg font-semibold admin-text">Position Details</h3>
+              <h3 className="text-lg font-semibold admin-text">
+                Position Details
+              </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block admin-text-light font-medium mb-1">Position</label>
-                <p className="admin-text font-semibold">{application?.job?.title}</p>
+                <label className="block admin-text-light font-medium mb-1">
+                  Position
+                </label>
+                <p className="admin-text font-semibold">
+                  {application?.job?.title}
+                </p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Department</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Department
+                </label>
                 <p className="admin-text">{application?.job?.department}</p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Location</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Location
+                </label>
                 <p className="admin-text">{application?.job?.location}</p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Employment Type</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Employment Type
+                </label>
                 <p className="admin-text">{application?.job?.employmentType}</p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Experience Level</label>
-                <p className="admin-text">{application?.job?.experienceLevel}</p>
+                <label className="block admin-text-light font-medium mb-1">
+                  Experience Level
+                </label>
+                <p className="admin-text">
+                  {application?.job?.experienceLevel}
+                </p>
               </div>
               <div>
-                <label className="block admin-text-light font-medium mb-1">Remote Policy</label>
+                <label className="block admin-text-light font-medium mb-1">
+                  Remote Policy
+                </label>
                 <p className="admin-text">{application?.job?.remotePolicy}</p>
               </div>
             </div>
@@ -446,7 +662,9 @@ function ApplicationDetailsContent() {
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                       <Mail className="h-5 w-5 text-purple-600" />
                     </div>
-                    <h3 className="text-lg font-semibold admin-text">Cover Letter</h3>
+                    <h3 className="text-lg font-semibold admin-text">
+                      Cover Letter
+                    </h3>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 h-96 overflow-y-auto">
                     <p className="admin-text whitespace-pre-wrap leading-relaxed">
@@ -455,7 +673,7 @@ function ApplicationDetailsContent() {
                   </div>
                 </div>
               )}
-              
+
               {/* Show internal notes here if no cover letter */}
               {!application?.coverLetter && application?.notes && (
                 <div className="admin-card rounded-lg shadow p-6 h-full">
@@ -463,7 +681,9 @@ function ApplicationDetailsContent() {
                     <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                       <FileText className="h-5 w-5 text-yellow-600" />
                     </div>
-                    <h3 className="text-lg font-semibold admin-text">Internal Notes</h3>
+                    <h3 className="text-lg font-semibold admin-text">
+                      Internal Notes
+                    </h3>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 h-96 overflow-y-auto">
                     <p className="admin-text whitespace-pre-wrap leading-relaxed">
@@ -486,7 +706,9 @@ function ApplicationDetailsContent() {
                     <h3 className="text-lg font-semibold admin-text">Resume</h3>
                   </div>
                   <button
-                    onClick={() => downloadResume(application.resumeUrl, application.name)}
+                    onClick={() =>
+                      downloadResume(application.resumeUrl, application.name)
+                    }
                     className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
                   >
                     <Download className="h-4 w-4" />
@@ -501,25 +723,27 @@ function ApplicationDetailsContent() {
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                     <MessageSquare className="h-5 w-5 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-semibold admin-text">Quick Email Actions</h3>
+                  <h3 className="text-lg font-semibold admin-text">
+                    Quick Email Actions
+                  </h3>
                 </div>
                 <div className="space-y-3">
                   <button
-                    onClick={() => handleEmailAction('interview')}
+                    onClick={() => handleEmailAction("interview")}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-100 text-green-800 hover:bg-green-200 rounded-lg transition-colors duration-200"
                   >
                     <Mail className="h-4 w-4" />
                     <span>Email Interview Invitation</span>
                   </button>
                   <button
-                    onClick={() => handleEmailAction('rejection')}
+                    onClick={() => handleEmailAction("rejection")}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-800 hover:bg-red-200 rounded-lg transition-colors duration-200"
                   >
                     <X className="h-4 w-4" />
                     <span>Send Rejection Email</span>
                   </button>
                   <button
-                    onClick={() => handleEmailAction('documents')}
+                    onClick={() => handleEmailAction("documents")}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-lg transition-colors duration-200"
                   >
                     <FileCheck className="h-4 w-4" />
@@ -535,12 +759,62 @@ function ApplicationDetailsContent() {
                     <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                       <FileText className="h-5 w-5 text-yellow-600" />
                     </div>
-                    <h3 className="text-lg font-semibold admin-text">Internal Notes</h3>
+                    <h3 className="text-lg font-semibold admin-text">
+                      Internal Notes
+                    </h3>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-40 overflow-y-auto">
                     <p className="admin-text whitespace-pre-wrap leading-relaxed text-sm">
                       {application.notes}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Interview Feedback - Show if there's any feedback */}
+              {interviewFeedback.length > 0 && (
+                <div className="admin-card rounded-lg shadow p-6">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                      <MessageSquare className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold admin-text">
+                      Interview Feedback ({interviewFeedback.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-4 max-h-60 overflow-y-auto">
+                    {interviewFeedback.map((feedback) => (
+                      <div key={feedback.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span className="font-medium text-sm admin-text">
+                              {feedback.metadata?.interviewer_name || feedback.author_name}
+                            </span>
+                            {feedback.metadata?.rating && (
+                              <div className="flex items-center space-x-1 ml-3">
+                                <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                  {feedback.metadata.rating}/5
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {feedback.metadata?.interview_date
+                                ? new Date(feedback.metadata.interview_date).toLocaleDateString()
+                                : new Date(feedback.created_at).toLocaleDateString()
+                              }
+                            </span>
+                          </div>
+                        </div>
+                        <p className="admin-text text-sm whitespace-pre-wrap leading-relaxed">
+                          {feedback.content}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -561,7 +835,9 @@ function ApplicationDetailsContent() {
                   <h3 className="text-lg font-semibold admin-text">Resume</h3>
                 </div>
                 <button
-                  onClick={() => downloadResume(application.resumeUrl, application.name)}
+                  onClick={() =>
+                    downloadResume(application.resumeUrl, application.name)
+                  }
                   className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
                 >
                   <Download className="h-4 w-4" />
@@ -583,25 +859,27 @@ function ApplicationDetailsContent() {
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                   <MessageSquare className="h-5 w-5 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-semibold admin-text">Quick Email Actions</h3>
+                <h3 className="text-lg font-semibold admin-text">
+                  Quick Email Actions
+                </h3>
               </div>
               <div className="space-y-3">
                 <button
-                  onClick={() => handleEmailAction('interview')}
+                  onClick={() => handleEmailAction("interview")}
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-100 text-green-800 hover:bg-green-200 rounded-lg transition-colors duration-200"
                 >
                   <Mail className="h-4 w-4" />
                   <span>Email Interview Invitation</span>
                 </button>
                 <button
-                  onClick={() => handleEmailAction('rejection')}
+                  onClick={() => handleEmailAction("rejection")}
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-800 hover:bg-red-200 rounded-lg transition-colors duration-200"
                 >
                   <X className="h-4 w-4" />
                   <span>Send Rejection Email</span>
                 </button>
                 <button
-                  onClick={() => handleEmailAction('documents')}
+                  onClick={() => handleEmailAction("documents")}
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-lg transition-colors duration-200"
                 >
                   <FileCheck className="h-4 w-4" />
@@ -611,6 +889,66 @@ function ApplicationDetailsContent() {
             </div>
           </div>
         )}
+
+        {/* Rejection Notes Modal */}
+        <RejectionNotesModal
+          isOpen={isNotesModalOpen}
+          onClose={cancelStatusChange}
+          onSubmit={async (notes) => {
+            try {
+              const updatedApplication = await completeStatusChangeWithNotes(notes);
+              // Update local state with the returned data
+              if (updatedApplication && updatedApplication.id) {
+                setApplication(updatedApplication);
+              }
+            } catch (error) {
+              console.error("Failed to complete rejection with notes:", error);
+              // Error is already handled in the hook, just log here
+            }
+          }}
+          applicationName={
+            application?.name || application?.email || "this application"
+          }
+        />
+
+        {/* Interview Feedback Modal */}
+        <InterviewFeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={cancelFeedbackChange}
+          onSubmit={async (feedbackData) => {
+            try {
+              const updatedApplication = await completeStatusChangeWithFeedback(feedbackData);
+              // Update local state with the returned data
+              if (updatedApplication && updatedApplication.id) {
+                setApplication(updatedApplication);
+              }
+            } catch (error) {
+              console.error("Failed to complete status change with feedback:", error);
+              // Error is already handled in the hook, just log here
+            }
+          }}
+          interviewsWithoutFeedback={interviewsWithoutFeedback}
+          applicationName={
+            application?.name || application?.email || "this application"
+          }
+        />
+
+        {/* Hire Approval Status Modal */}
+        <HireApprovalStatusModal
+          isOpen={hireApprovalModal.isOpen}
+          onClose={() => setHireApprovalModal({
+            isOpen: false,
+            type: null,
+            message: null,
+            hireRequestId: null,
+            existingRequestId: null,
+          })}
+          type={hireApprovalModal.type}
+          message={hireApprovalModal.message}
+          applicationName={application?.name || application?.email || "this application"}
+          hireRequestId={hireApprovalModal.hireRequestId}
+          existingRequestId={hireApprovalModal.existingRequestId}
+        />
       </div>
     </div>
   );
@@ -618,8 +956,8 @@ function ApplicationDetailsContent() {
 
 export default function ApplicationDetailsPage() {
   return (
-    <ResourcePermissionGuard 
-      resource="applications" 
+    <ResourcePermissionGuard
+      resource="applications"
       actions={["view"]}
       fallbackPath="/admin/dashboard"
     >
