@@ -16,7 +16,15 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("🔐 NextAuth authorize called with:", {
+          hasEmail: !!credentials?.email,
+          hasPassword: !!credentials?.password,
+          environment: process.env.NODE_ENV,
+          nextAuthUrl: process.env.NEXTAUTH_URL
+        });
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Missing credentials");
           return null;
         }
 
@@ -66,10 +74,10 @@ export const authOptions = {
             privilegeLevel: user.privilegeLevel,
           };
           // TODO: Re-enable audit logging after fixing import issues
-          console.log("Successful login:", credentials.email);
+          console.log("✅ Successful login:", credentials.email, "User ID:", user.id);
           return returnUser;
         } catch (error) {
-          console.error("❌ Auth error:", error);
+          console.error("❌ Auth error in authorize function:", error);
           return null;
         }
       },
@@ -83,6 +91,25 @@ export const authOptions = {
 
   // Trust proxy headers from ngrok and other reverse proxies
   trustHost: true,
+  
+  // Add debug for ngrok issues
+  debug: process.env.NODE_ENV === "development",
+  
+  // Explicitly handle ngrok URLs
+  ...(process.env.NEXTAUTH_URL?.includes("ngrok") && {
+    useSecureCookies: true,
+    cookies: {
+      sessionToken: {
+        name: "__Secure-next-auth.session-token",
+        options: {
+          httpOnly: true,
+          sameSite: "lax", 
+          path: "/",
+          secure: true
+        }
+      }
+    }
+  }),
 
   pages: {
     signIn: "/auth/signin",
