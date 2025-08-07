@@ -35,7 +35,8 @@ export default function Header() {
       if (logoUrl && !logoLoading) {
         setLogoFetching(true);
         try {
-          const response = await fetch("/api/admin/logo");
+          // Use public API for logo since it should be visible to everyone
+          const response = await fetch("/api/logo/public");
           if (response.ok) {
             const data = await response.json();
             if (data.logoUrl) {

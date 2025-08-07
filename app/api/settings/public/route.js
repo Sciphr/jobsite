@@ -16,6 +16,7 @@ export async function GET(request) {
       "allow_guest_applications",
       "default_currency",
       "site_description",
+      "analytics_tracking", // Allow Google Analytics tracking setting to be public
     ];
 
     if (!key || !allowedPublicSettings.includes(key)) {

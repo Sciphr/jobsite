@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
-import { useSystemSettings } from "@/app/hooks/useSystemSettings";
+import { useSetting } from "@/app/hooks/useSettings";
 
 export default function GoogleAnalytics() {
   const [isClient, setIsClient] = useState(false);
@@ -24,15 +24,10 @@ export default function GoogleAnalytics() {
 }
 
 function GoogleAnalyticsClient() {
-  const { data: settingsResponse } = useSystemSettings();
+  const { value: analyticsEnabled, loading } = useSetting("analytics_tracking", false);
   
-  // Check if analytics tracking is enabled
-  const analyticsEnabled = settingsResponse?.settings?.find(
-    s => s.key === "analytics_tracking" && (s.value === "true" || s.parsedValue === true)
-  );
-
-  // Only render GA scripts if analytics tracking is enabled
-  if (!analyticsEnabled) {
+  // Don't render anything while loading or if analytics is disabled
+  if (loading || !analyticsEnabled) {
     return null;
   }
 
