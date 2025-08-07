@@ -1,7 +1,5 @@
 // app/lib/middleware/apiProtection.js
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { userHasPermission } from "../permissions";
 
 /**
@@ -19,7 +17,9 @@ export async function protectRoute(resource, action, options = {}) {
   } = options;
 
   try {
-    // Get session
+    // Get session - import dynamically to avoid build-time execution
+    const { getServerSession } = await import("next-auth/next");
+    const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -118,6 +118,8 @@ export function canAccessUserData(session, targetUserId, requiredPermission = nu
  * Quick admin route protection (requires privilege level 1+)
  */
 export async function protectAdminRoute(minLevel = 1) {
+  const { getServerSession } = await import("next-auth/next");
+  const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
