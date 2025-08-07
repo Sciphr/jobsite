@@ -1,8 +1,7 @@
 // app/api/admin/logo/route.js
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 import {
   uploadToMinio,
   deleteFromMinio,
@@ -29,10 +28,9 @@ function getFileExtension(filename) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.privilegeLevel < 2) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Use protectRoute for consistent authentication
+    const authResult = await protectRoute("settings", "view", { minPrivilegeLevel: 2 });
+    if (authResult.error) return authResult.error;
 
     // Get current logo setting
     const logoSetting = await appPrisma.settings.findFirst({

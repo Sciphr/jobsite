@@ -137,6 +137,12 @@ export const authOptions = {
     // Removed temporary short maxAge that was causing loops
   },
 
+  // Trust proxy headers from ngrok and other reverse proxies
+  trustHost: true,
+  
+  // Use secure cookies when using HTTPS (ngrok)
+  useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+
   pages: {
     signIn: "/auth/signin",
     signUp: "/auth/signup",

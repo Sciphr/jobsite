@@ -22,6 +22,15 @@ export async function protectRoute(resource, action, options = {}) {
     const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
     const session = await getServerSession(authOptions);
     
+    // Debug logging for ngrok issues
+    if (process.env.NODE_ENV === "development") {
+      console.log("protectRoute debug:", {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        userAgent: process.env.NEXTAUTH_URL?.includes("ngrok") ? "ngrok" : "local"
+      });
+    }
+    
     if (!session?.user?.id) {
       return {
         error: NextResponse.json(
