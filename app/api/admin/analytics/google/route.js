@@ -4,8 +4,7 @@ import {
   getTrafficSources, 
   getTopPages,
   getDailyAnalytics,
-  getJobPageAnalytics,
-  isAnalyticsTrackingEnabled 
+  getJobPageAnalytics
 } from "../../../../lib/googleAnalytics";
 
 export async function GET(req) {
@@ -15,7 +14,9 @@ export async function GET(req) {
 
   try {
     // Check if analytics tracking is enabled
-    const trackingEnabled = await isAnalyticsTrackingEnabled();
+    const { getSystemSetting } = await import("../../../../lib/settings");
+    const trackingEnabled = await getSystemSetting("analytics_tracking", false);
+    
     if (!trackingEnabled) {
       return new Response(JSON.stringify({ 
         enabled: false,

@@ -249,15 +249,3 @@ export async function getJobPageAnalytics(startDate, endDate) {
   }
 }
 
-/**
- * Check if Google Analytics tracking is enabled
- */
-export async function isAnalyticsTrackingEnabled() {
-  try {
-    const { getSystemSetting } = await import("./settings");
-    return await getSystemSetting("analytics_tracking", false);
-  } catch (error) {
-    console.error('Error checking analytics tracking setting:', error);
-    return false;
-  }
-}
