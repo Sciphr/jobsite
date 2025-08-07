@@ -163,6 +163,95 @@ export async function userHasPermission(userId, resource, action) {
 }
 
 /**
+ * Check if a user has multiple specific permissions (bulk check)
+ * @param {string} userId - The user's ID
+ * @param {Array} permissionChecks - Array of {resource, action} objects
+ * @returns {Promise<Object>} Object with permission keys and boolean values
+ */
+export async function userHasPermissions(userId, permissionChecks) {
+  try {
+    // First check if user is super admin (privilege level 3 or higher)
+    const user = await appPrisma.users.findUnique({
+      where: { id: userId },
+      select: { privilegeLevel: true },
+    });
+
+    // Super admins have all permissions
+    if (user && user.privilegeLevel >= 3) {
+      const results = {};
+      permissionChecks.forEach(check => {
+        const key = `${check.resource}:${check.action}`;
+        results[key] = true;
+      });
+      return results;
+    }
+
+    // Build the query to check all permissions at once
+    const permissionQueries = permissionChecks.map(check => ({
+      roles: {
+        user_roles: {
+          some: {
+            user_id: userId,
+            is_active: true,
+          },
+        },
+      },
+      permissions: {
+        resource: check.resource,
+        action: check.action,
+      },
+    }));
+
+    // Execute all permission checks in parallel
+    const permissionResults = await Promise.all(
+      permissionQueries.map(query => 
+        appPrisma.role_permissions.count({ where: query })
+      )
+    );
+
+    // Build result object
+    const results = {};
+    permissionChecks.forEach((check, index) => {
+      const key = `${check.resource}:${check.action}`;
+      results[key] = permissionResults[index] > 0;
+    });
+
+    return results;
+  } catch (error) {
+    console.error("Error checking user permissions:", error);
+    // Return false for all permissions on error
+    const results = {};
+    permissionChecks.forEach(check => {
+      const key = `${check.resource}:${check.action}`;
+      results[key] = false;
+    });
+    return results;
+  }
+}
+
+/**
+ * Get a user's permission set as a convenient object for checking
+ * @param {string} userId - The user's ID
+ * @returns {Promise<Object>} Object with resource:action keys and boolean values
+ */
+export async function getUserPermissionSet(userId) {
+  try {
+    const permissions = await getUserPermissions(userId);
+    const permissionSet = {};
+    
+    permissions.forEach(permission => {
+      const key = `${permission.resource}:${permission.action}`;
+      permissionSet[key] = true;
+    });
+    
+    return permissionSet;
+  } catch (error) {
+    console.error("Error getting user permission set:", error);
+    return {};
+  }
+}
+
+/**
  * Get detailed permission information for a user (for debugging/admin purposes)
  * @param {string} userId - The user's ID
  * @returns {Promise<Object>} Detailed permission info
