@@ -4,7 +4,14 @@ import {
   getTrafficSources, 
   getTopPages,
   getDailyAnalytics,
-  getJobPageAnalytics
+  getJobPageAnalytics,
+  getRealTimeAnalytics,
+  getGeographicAnalytics,
+  getDeviceAnalytics,
+  getUserJourneyAnalytics,
+  getJobPerformanceAnalytics,
+  getTimeAnalytics,
+  getTechnologyAnalytics
 } from "../../../../lib/googleAnalytics";
 
 export async function GET(req) {
@@ -26,6 +33,7 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const range = searchParams.get("range") || "30d";
+    const includeRealtime = searchParams.get("realtime") === "true";
 
     // Calculate date range
     const now = new Date();
@@ -84,19 +92,41 @@ export async function GET(req) {
     }
 
     // Fetch all Google Analytics data in parallel
+    const dataPromises = [
+      getWebsiteMetrics(startDate, now),
+      getTrafficSources(startDate, now),
+      getTopPages(startDate, now, 10),
+      getDailyAnalytics(startDate, now),
+      getJobPageAnalytics(startDate, now),
+      getGeographicAnalytics(startDate, now),
+      getDeviceAnalytics(startDate, now),
+      getUserJourneyAnalytics(startDate, now),
+      getJobPerformanceAnalytics(startDate, now),
+      getTimeAnalytics(startDate, now),
+      getTechnologyAnalytics(startDate, now)
+    ];
+
+    // Add real-time data if requested
+    if (includeRealtime) {
+      dataPromises.push(getRealTimeAnalytics());
+    }
+
+    const results = await Promise.all(dataPromises);
+
     const [
       websiteMetrics,
       trafficSources,
       topPages,
       dailyAnalytics,
-      jobPageAnalytics
-    ] = await Promise.all([
-      getWebsiteMetrics(startDate, now),
-      getTrafficSources(startDate, now),
-      getTopPages(startDate, now, 10),
-      getDailyAnalytics(startDate, now),
-      getJobPageAnalytics(startDate, now)
-    ]);
+      jobPageAnalytics,
+      geographicAnalytics,
+      deviceAnalytics,
+      userJourneyAnalytics,
+      jobPerformanceAnalytics,
+      timeAnalytics,
+      technologyAnalytics,
+      realTimeAnalytics = null
+    ] = results;
 
     // Calculate additional insights
     const totalJobPageViews = jobPageAnalytics.reduce((sum, page) => sum + page.pageViews, 0);
@@ -126,12 +156,24 @@ export async function GET(req) {
       topPages,
       dailyAnalytics,
       jobPages: jobPageAnalytics,
+      realTime: realTimeAnalytics,
+      geographic: geographicAnalytics,
+      devices: deviceAnalytics,
+      userJourney: userJourneyAnalytics,
+      jobPerformance: jobPerformanceAnalytics,
+      timePatterns: timeAnalytics,
+      technology: technologyAnalytics,
       insights: {
         topTrafficSource: trafficSources[0]?.source || 'N/A',
         mostViewedPage: topPages[0]?.path || 'N/A',
         jobPagesPercentage: websiteMetrics.pageViews > 0 
           ? ((totalJobPageViews / websiteMetrics.pageViews) * 100).toFixed(2)
-          : '0'
+          : '0',
+        topJobPage: jobPerformanceAnalytics[0]?.title || 'N/A',
+        topCountry: geographicAnalytics[0]?.country || 'N/A',
+        topDevice: deviceAnalytics[0]?.deviceCategory || 'N/A',
+        peakHour: timeAnalytics.reduce((peak, current) => 
+          current.sessions > (peak.sessions || 0) ? current : peak, {}).hour || 'N/A'
       }
     };
 
