@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useThemeClasses } from '../../contexts/AdminThemeContext';
-import { 
-  FileSearch, 
-  Filter, 
-  Download, 
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useThemeClasses } from "../../contexts/AdminThemeContext";
+import {
+  FileSearch,
+  Filter,
+  Download,
   Calendar,
   User,
   Activity,
@@ -21,24 +21,24 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
-} from 'lucide-react';
+  ChevronsRight,
+} from "lucide-react";
 
 // Audit logs fetcher function
 const fetchAuditLogs = async (filters, page = 1, limit = 200) => {
   console.log(`🔄 Fetching audit logs: page ${page}, limit ${limit}`, filters);
-  
+
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
-    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
+    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v)),
   });
-  
+
   const response = await fetch(`/api/admin/audit-logs?${queryParams}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch audit logs: ${response.status}`);
   }
-  
+
   return response.json();
 };
 
@@ -46,13 +46,13 @@ export default function AuditLogsPage() {
   const { getThemeClasses, getButtonClasses } = useThemeClasses();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
-    category: '',
-    eventType: '',
-    severity: '',
-    dateFrom: '',
-    dateTo: '',
-    search: '',
-    ipAddress: ''
+    category: "",
+    eventType: "",
+    severity: "",
+    dateFrom: "",
+    dateTo: "",
+    search: "",
+    ipAddress: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -60,24 +60,26 @@ export default function AuditLogsPage() {
   const [selectedLog, setSelectedLog] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
-  
+
   // Column configuration
   const [visibleColumns, setVisibleColumns] = useState(() => {
-    const saved = localStorage.getItem('auditlog-columns');
-    return saved ? JSON.parse(saved) : {
-      timestamp: true,
-      event: true,
-      actor: true,
-      action: true,
-      severity: true,
-      ipAddress: false,
-      details: true
-    };
+    const saved = localStorage.getItem("auditlog-columns");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          timestamp: true,
+          event: true,
+          actor: true,
+          action: true,
+          severity: true,
+          ipAddress: false,
+          details: true,
+        };
   });
 
   // Create cache key based on filters
-  const cacheKey = useMemo(() => 
-    ['audit-logs', JSON.stringify(filters)], 
+  const cacheKey = useMemo(
+    () => ["audit-logs", JSON.stringify(filters)],
     [filters]
   );
 
@@ -86,7 +88,7 @@ export default function AuditLogsPage() {
     data: auditData,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: cacheKey,
     queryFn: () => fetchAuditLogs(filters, 1, 500), // Fetch larger chunks (500 items)
@@ -106,11 +108,11 @@ export default function AuditLogsPage() {
     const allLogs = auditData.data;
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    
+
     return {
       paginatedLogs: allLogs.slice(startIndex, endIndex),
       totalPages: Math.ceil(allLogs.length / itemsPerPage),
-      totalCount: allLogs.length
+      totalCount: allLogs.length,
     };
   }, [auditData, currentPage, itemsPerPage]);
 
@@ -119,12 +121,12 @@ export default function AuditLogsPage() {
     if (auditData?.success && auditData?.data?.length > 0) {
       const currentDataSize = auditData.data.length;
       const maxPageWithCurrentData = Math.ceil(currentDataSize / itemsPerPage);
-      
+
       // If we're getting close to the end of our cached data, prefetch more
       if (currentPage >= maxPageWithCurrentData - 2 && currentDataSize >= 500) {
         const nextPage = Math.ceil(currentDataSize / 500) + 1;
         queryClient.prefetchQuery({
-          queryKey: ['audit-logs-batch', JSON.stringify(filters), nextPage],
+          queryKey: ["audit-logs-batch", JSON.stringify(filters), nextPage],
           queryFn: () => fetchAuditLogs(filters, nextPage, 500),
           staleTime: 2 * 60 * 1000,
         });
@@ -163,7 +165,7 @@ export default function AuditLogsPage() {
       if (start > 1) {
         rangeWithDots.push(1);
         if (start > 2) {
-          rangeWithDots.push('...');
+          rangeWithDots.push("...");
         }
       }
 
@@ -173,7 +175,7 @@ export default function AuditLogsPage() {
       // Add last page and dots if needed
       if (end < totalPages) {
         if (end < totalPages - 1) {
-          rangeWithDots.push('...');
+          rangeWithDots.push("...");
         }
         rangeWithDots.push(totalPages);
       }
@@ -184,9 +186,11 @@ export default function AuditLogsPage() {
     const pageNumbers = getPageNumbers();
 
     return (
-      <div className={`bg-white dark:bg-gray-800 px-4 py-3 border-gray-200 dark:border-gray-700 sm:px-6 ${
-        position === "top" ? "border-b rounded-t-lg" : "border-t rounded-b-lg"
-      } min-h-[56px]`}>
+      <div
+        className={`bg-white dark:bg-gray-800 px-4 py-3 border-gray-200 dark:border-gray-700 sm:px-6 ${
+          position === "top" ? "border-b rounded-t-lg" : "border-t rounded-b-lg"
+        } min-h-[56px]`}
+      >
         <div className="flex items-center justify-between">
           {/* Mobile pagination */}
           <div className="flex-1 flex justify-between sm:hidden">
@@ -204,7 +208,9 @@ export default function AuditLogsPage() {
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -227,7 +233,8 @@ export default function AuditLogsPage() {
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 {totalPages > 1 ? (
                   <>
-                    Showing page <span className="font-medium">{currentPage}</span> of{' '}
+                    Showing page{" "}
+                    <span className="font-medium">{currentPage}</span> of{" "}
                     <span className="font-medium">{totalPages}</span>
                     {totalCount > 0 && (
                       <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
@@ -237,7 +244,8 @@ export default function AuditLogsPage() {
                   </>
                 ) : (
                   <>
-                    Showing all <span className="font-medium">{totalCount}</span> records
+                    Showing all{" "}
+                    <span className="font-medium">{totalCount}</span> records
                     <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                       (all records loaded)
                     </span>
@@ -245,7 +253,9 @@ export default function AuditLogsPage() {
                 )}
               </p>
               <div className="flex items-center space-x-2">
-                <label className="text-sm text-gray-700 dark:text-gray-300">Show:</label>
+                <label className="text-sm text-gray-700 dark:text-gray-300">
+                  Show:
+                </label>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
@@ -259,80 +269,87 @@ export default function AuditLogsPage() {
                   <option value={100}>100</option>
                   <option value={200}>200</option>
                 </select>
-                <span className="text-sm text-gray-700 dark:text-gray-300">per page</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  per page
+                </span>
               </div>
             </div>
             <div>
               {totalPages > 1 ? (
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                {/* First page button */}
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="First page"
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
                 >
-                  <ChevronsLeft className="h-4 w-4" />
-                </button>
+                  {/* First page button */}
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="First page"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </button>
 
-                {/* Previous page button */}
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Previous page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
+                  {/* Previous page button */}
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
 
-                {/* Page numbers */}
-                {pageNumbers.map((pageNum, index) => {
-                  if (pageNum === '...') {
+                  {/* Page numbers */}
+                  {pageNumbers.map((pageNum, index) => {
+                    if (pageNum === "...") {
+                      return (
+                        <span
+                          key={`dots-${index}`}
+                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isCurrentPage = pageNum === currentPage;
                     return (
-                      <span
-                        key={`dots-${index}`}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          isCurrentPage
+                            ? "z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-200"
+                            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        }`}
                       >
-                        ...
-                      </span>
+                        {pageNum}
+                      </button>
                     );
-                  }
+                  })}
 
-                  const isCurrentPage = pageNum === currentPage;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        isCurrentPage
-                          ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-200'
-                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                  {/* Next page button */}
+                  <button
+                    onClick={() =>
+                      setCurrentPage(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Next page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
 
-                {/* Next page button */}
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Next page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-
-                {/* Last page button */}
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Last page"
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </button>
+                  {/* Last page button */}
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Last page"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </button>
                 </nav>
               ) : (
                 /* Maintain layout spacing when no navigation needed */
@@ -362,32 +379,35 @@ export default function AuditLogsPage() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showColumnSettings && !event.target.closest('.relative')) {
+      if (showColumnSettings && !event.target.closest(".relative")) {
         setShowColumnSettings(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showColumnSettings]);
 
   // Save column preferences to localStorage
   const toggleColumn = (columnKey) => {
-    const newColumns = { ...visibleColumns, [columnKey]: !visibleColumns[columnKey] };
+    const newColumns = {
+      ...visibleColumns,
+      [columnKey]: !visibleColumns[columnKey],
+    };
     setVisibleColumns(newColumns);
-    localStorage.setItem('auditlog-columns', JSON.stringify(newColumns));
+    localStorage.setItem("auditlog-columns", JSON.stringify(newColumns));
   };
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
-      case 'error':
-      case 'critical':
+      case "error":
+      case "critical":
         return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'warning':
+      case "warning":
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'info':
+      case "info":
         return <CheckCircle className="h-4 w-4 text-blue-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
@@ -395,15 +415,16 @@ export default function AuditLogsPage() {
   };
 
   const getSeverityBadge = (severity) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+    const baseClasses =
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
     switch (severity) {
-      case 'critical':
+      case "critical":
         return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100`;
-      case 'error':
+      case "error":
         return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100`;
-      case 'warning':
+      case "warning":
         return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100`;
-      case 'info':
+      case "info":
         return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100`;
@@ -411,19 +432,24 @@ export default function AuditLogsPage() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Invalid Date';
+      if (isNaN(date.getTime())) return "Invalid Date";
       return date.toLocaleString();
     } catch (error) {
-      console.error('Date formatting error:', error, 'for dateString:', dateString);
-      return 'Invalid Date';
+      console.error(
+        "Date formatting error:",
+        error,
+        "for dateString:",
+        dateString
+      );
+      return "Invalid Date";
     }
   };
 
   const openDetailsModal = (log) => {
-    console.log('Opening modal with log:', log);
+    console.log("Opening modal with log:", log);
     setSelectedLog(log);
     setShowDetailsModal(true);
   };
@@ -436,38 +462,38 @@ export default function AuditLogsPage() {
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (showDetailsModal) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
-    
+
     // Cleanup on unmount
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
   }, [showDetailsModal]);
 
   const exportLogs = async () => {
     try {
       const queryParams = new URLSearchParams({
-        export: 'true',
-        limit: '1000', // Export more records for export
-        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
+        export: "true",
+        limit: "1000", // Export more records for export
+        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v)),
       });
-      
+
       const response = await fetch(`/api/admin/audit-logs?${queryParams}`);
       const blob = await response.blob();
-      
+
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `audit-logs-${new Date().toISOString().split("T")[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('Failed to export logs:', error);
+      console.error("Failed to export logs:", error);
     }
   };
 
@@ -499,21 +525,23 @@ export default function AuditLogsPage() {
               <Eye className="h-4 w-4 mr-2" />
               <span>Columns</span>
             </button>
-            
+
             {/* Column Settings Dropdown */}
             {showColumnSettings && (
               <div className="absolute right-0 mt-2 w-64 sm:w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10 max-w-[90vw]">
                 <div className="p-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Show/Hide Columns</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                    Show/Hide Columns
+                  </h3>
                   <div className="space-y-2">
                     {Object.entries({
-                      timestamp: 'Timestamp',
-                      event: 'Event',
-                      actor: 'Actor',
-                      action: 'Action',
-                      severity: 'Severity',
-                      ipAddress: 'IP Address',
-                      details: 'Details'
+                      timestamp: "Timestamp",
+                      event: "Event",
+                      actor: "Actor",
+                      action: "Action",
+                      severity: "Severity",
+                      ipAddress: "IP Address",
+                      details: "Details",
                     }).map(([key, label]) => (
                       <label key={key} className="flex items-center">
                         <input
@@ -522,7 +550,9 @@ export default function AuditLogsPage() {
                           onChange={() => toggleColumn(key)}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          {label}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -543,7 +573,9 @@ export default function AuditLogsPage() {
               disabled={isLoading}
               className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+              />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
@@ -563,20 +595,24 @@ export default function AuditLogsPage() {
                 <input
                   type="text"
                   value={filters.search}
-                  onChange={(e) => setFilters({...filters, search: e.target.value})}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
                   placeholder="Search logs..."
                   className="pl-10 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Category
               </label>
               <select
                 value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, category: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">All Categories</option>
@@ -596,7 +632,9 @@ export default function AuditLogsPage() {
               </label>
               <select
                 value={filters.eventType}
-                onChange={(e) => setFilters({...filters, eventType: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, eventType: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">All Events</option>
@@ -616,7 +654,9 @@ export default function AuditLogsPage() {
               </label>
               <select
                 value={filters.severity}
-                onChange={(e) => setFilters({...filters, severity: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, severity: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">All Severities</option>
@@ -634,7 +674,9 @@ export default function AuditLogsPage() {
               <input
                 type="date"
                 value={filters.dateFrom}
-                onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, dateFrom: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
@@ -646,7 +688,9 @@ export default function AuditLogsPage() {
               <input
                 type="date"
                 value={filters.dateTo}
-                onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, dateTo: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
@@ -658,7 +702,9 @@ export default function AuditLogsPage() {
               <input
                 type="text"
                 value={filters.ipAddress}
-                onChange={(e) => setFilters({...filters, ipAddress: e.target.value})}
+                onChange={(e) =>
+                  setFilters({ ...filters, ipAddress: e.target.value })
+                }
                 placeholder="192.168.1.1"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
@@ -679,7 +725,7 @@ export default function AuditLogsPage() {
           <div className="flex items-center justify-center h-64 text-red-600 dark:text-red-400">
             <div className="text-center">
               <p className="mb-2">Failed to load audit logs</p>
-              <button 
+              <button
                 onClick={() => refetch()}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
@@ -733,95 +779,105 @@ export default function AuditLogsPage() {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {paginatedLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-6 py-12 text-center">
+                      <td
+                        colSpan={
+                          Object.values(visibleColumns).filter(Boolean).length
+                        }
+                        className="px-6 py-12 text-center"
+                      >
                         <div className="text-gray-500 dark:text-gray-400">
                           <FileSearch className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                          <p className="text-lg font-medium mb-2">No audit logs found</p>
+                          <p className="text-lg font-medium mb-2">
+                            No audit logs found
+                          </p>
                           <p className="text-sm">
-                            {Object.values(filters).some(v => v) 
-                              ? 'Try adjusting your filters to see more results.' 
-                              : 'No audit logs have been recorded yet.'}
+                            {Object.values(filters).some((v) => v)
+                              ? "Try adjusting your filters to see more results."
+                              : "No audit logs have been recorded yet."}
                           </p>
                         </div>
                       </td>
                     </tr>
                   ) : (
                     paginatedLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      {visibleColumns.timestamp && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <span>{formatDate(log.createdAt)}</span>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.event && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              {log.category}
+                      <tr
+                        key={log.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        {visibleColumns.timestamp && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <div className="flex items-center space-x-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span>{formatDate(log.createdAt)}</span>
                             </div>
-                            <div className="text-gray-500 dark:text-gray-400">
-                              {log.eventType}
-                            </div>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.actor && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex items-center space-x-2">
-                            <User className="h-4 w-4 text-gray-400" />
+                          </td>
+                        )}
+                        {visibleColumns.event && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div>
                               <div className="font-medium text-gray-900 dark:text-white">
-                                {log.actorName || 'System'}
+                                {log.category}
                               </div>
                               <div className="text-gray-500 dark:text-gray-400">
-                                {log.actorType}
+                                {log.eventType}
                               </div>
                             </div>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.action && (
-                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                          <div className="max-w-xs truncate">
-                            {log.action}
-                          </div>
-                          {log.description && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                              {log.description}
+                          </td>
+                        )}
+                        {visibleColumns.actor && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-400" />
+                              <div>
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {log.actorName || "System"}
+                                </div>
+                                <div className="text-gray-500 dark:text-gray-400">
+                                  {log.actorType}
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </td>
-                      )}
-                      {visibleColumns.severity && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex items-center space-x-2">
-                            {getSeverityIcon(log.severity)}
-                            <span className={getSeverityBadge(log.severity)}>
-                              {log.severity}
-                            </span>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.ipAddress && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          <span>{log.ipAddress || '-'}</span>
-                        </td>
-                      )}
-                      {visibleColumns.details && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button 
-                            onClick={() => openDetailsModal(log)}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            title="View details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
+                          </td>
+                        )}
+                        {visibleColumns.action && (
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            <div className="max-w-xs truncate">
+                              {log.action}
+                            </div>
+                            {log.description && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                                {log.description}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                        {visibleColumns.severity && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex items-center space-x-2">
+                              {getSeverityIcon(log.severity)}
+                              <span className={getSeverityBadge(log.severity)}>
+                                {log.severity}
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.ipAddress && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <span>{log.ipAddress || "-"}</span>
+                          </td>
+                        )}
+                        {visibleColumns.details && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => openDetailsModal(log)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              title="View details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -835,264 +891,326 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Details Modal */}
-      {showDetailsModal && selectedLog && (console.log('Rendering modal:', { showDetailsModal, selectedLog: !!selectedLog }) ||
-        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 overflow-y-auto">
-          {/* Blurred Backdrop */}
-          <div className="fixed inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm" onClick={closeDetailsModal}></div>
-          
-          {/* Modal Container */}
-          <div className="relative z-10 w-full max-w-6xl mt-8">
-            {/* Modal Content */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Audit Log Details {selectedLog?.id ? `(${selectedLog.id.slice(0, 8)}...)` : ''}
-              </h3>
-              <button
-                onClick={closeDetailsModal}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {showDetailsModal &&
+        selectedLog &&
+        (console.log("Rendering modal:", {
+          showDetailsModal,
+          selectedLog: !!selectedLog,
+        }) || (
+          <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 overflow-y-auto">
+            {/* Blurred Backdrop */}
+            <div
+              className="fixed inset-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm"
+              onClick={closeDetailsModal}
+            ></div>
 
-            {/* Content */}
-            <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Event Type
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.eventType}</p>
+            {/* Modal Container */}
+            <div className="relative z-10 w-full max-w-6xl mt-8">
+              {/* Modal Content */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-h-[100vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Audit Log Details{" "}
+                    {selectedLog?.id
+                      ? `(${selectedLog.id.slice(0, 8)}...)`
+                      : ""}
+                  </h3>
+                  <button
+                    onClick={closeDetailsModal}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Category
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.category}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Severity
-                  </label>
-                  <div className="mt-1">
-                    <span className={getSeverityBadge(selectedLog.severity)}>
-                      {selectedLog.severity}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Status
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.status}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Timestamp
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{formatDate(selectedLog.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Actor
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedLog.actorName || 'System'} ({selectedLog.actorType})
-                  </p>
-                </div>
-              </div>
 
-              {/* Action & Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Action
-                </label>
-                <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.action}</p>
-              </div>
-
-              {selectedLog.description && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedLog.description}</p>
-                </div>
-              )}
-
-              {/* Entity Information */}
-              {(selectedLog.entityType || selectedLog.entityName) && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Entity
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedLog.entityName} {selectedLog.entityType && `(${selectedLog.entityType})`}
-                  </p>
-                  {selectedLog.entityId && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">ID: {selectedLog.entityId}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Changes */}
-              {selectedLog.changes && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Changes
-                  </label>
-                  <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
-                      {JSON.stringify(selectedLog.changes, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Old Values */}
-              {selectedLog.oldValues && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Previous Values
-                  </label>
-                  <div className="mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
-                      {JSON.stringify(selectedLog.oldValues, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* New Values */}
-              {selectedLog.newValues && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    New Values
-                  </label>
-                  <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
-                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
-                      {JSON.stringify(selectedLog.newValues, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Technical Details */}
-              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Technical Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  {selectedLog.ipAddress && (
+                {/* Content */}
+                <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+                  {/* Basic Information */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">IP Address:</span>
-                      <span className="ml-2 text-gray-900 dark:text-white">{selectedLog.ipAddress}</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Event Type
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.eventType}
+                      </p>
                     </div>
-                  )}
-                  {selectedLog.userAgent && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">User Agent:</span>
-                      <span className="ml-2 text-gray-900 dark:text-white break-all">{selectedLog.userAgent}</span>
-                    </div>
-                  )}
-                  {selectedLog.sessionId && (
                     <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Session ID:</span>
-                      <span className="ml-2 text-gray-900 dark:text-white font-mono">{selectedLog.sessionId}</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Category
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.category}
+                      </p>
                     </div>
-                  )}
-                  {selectedLog.requestId && (
                     <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Request ID:</span>
-                      <span className="ml-2 text-gray-900 dark:text-white font-mono">{selectedLog.requestId}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Tags */}
-              {selectedLog.tags && selectedLog.tags.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Tags
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedLog.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Metadata */}
-              {selectedLog.metadata && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Metadata
-                  </label>
-                  <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                    <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
-                      {JSON.stringify(selectedLog.metadata, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Related Entities */}
-              {(selectedLog.relatedUser || selectedLog.relatedJob || selectedLog.relatedApplication) && (
-                <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Related Entities</h4>
-                  <div className="space-y-2 text-sm">
-                    {selectedLog.relatedUser && (
-                      <div>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">User:</span>
-                        <span className="ml-2 text-gray-900 dark:text-white">
-                          {selectedLog.relatedUser.name} ({selectedLog.relatedUser.email})
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Severity
+                      </label>
+                      <div className="mt-1">
+                        <span
+                          className={getSeverityBadge(selectedLog.severity)}
+                        >
+                          {selectedLog.severity}
                         </span>
                       </div>
-                    )}
-                    {selectedLog.relatedJob && (
-                      <div>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">Job:</span>
-                        <span className="ml-2 text-gray-900 dark:text-white">
-                          {selectedLog.relatedJob.title} - {selectedLog.relatedJob.department}
-                        </span>
-                      </div>
-                    )}
-                    {selectedLog.relatedApplication && (
-                      <div>
-                        <span className="font-medium text-gray-700 dark:text-gray-300">Application:</span>
-                        <span className="ml-2 text-gray-900 dark:text-white">
-                          {selectedLog.relatedApplication.name} ({selectedLog.relatedApplication.email}) - {selectedLog.relatedApplication.status}
-                        </span>
-                      </div>
-                    )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Status
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.status}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Timestamp
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {formatDate(selectedLog.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Actor
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.actorName || "System"} (
+                        {selectedLog.actorType})
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Footer */}
-            <div className="flex justify-between items-center p-6 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Log ID: <span className="font-mono">{selectedLog.id}</span>
+                  {/* Action & Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Action
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                      {selectedLog.action}
+                    </p>
+                  </div>
+
+                  {selectedLog.description && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Description
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Entity Information */}
+                  {(selectedLog.entityType || selectedLog.entityName) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Entity
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                        {selectedLog.entityName}{" "}
+                        {selectedLog.entityType &&
+                          `(${selectedLog.entityType})`}
+                      </p>
+                      {selectedLog.entityId && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          ID: {selectedLog.entityId}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Changes */}
+                  {selectedLog.changes && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Changes
+                      </label>
+                      <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                        <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
+                          {JSON.stringify(selectedLog.changes, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Old Values */}
+                  {selectedLog.oldValues && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Previous Values
+                      </label>
+                      <div className="mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
+                        <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
+                          {JSON.stringify(selectedLog.oldValues, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Values */}
+                  {selectedLog.newValues && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        New Values
+                      </label>
+                      <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
+                        <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
+                          {JSON.stringify(selectedLog.newValues, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Technical Details */}
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Technical Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                      {selectedLog.ipAddress && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            IP Address:
+                          </span>
+                          <span className="ml-2 text-gray-900 dark:text-white">
+                            {selectedLog.ipAddress}
+                          </span>
+                        </div>
+                      )}
+                      {selectedLog.userAgent && (
+                        <div className="md:col-span-2 lg:col-span-3">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            User Agent:
+                          </span>
+                          <span className="ml-2 text-gray-900 dark:text-white break-all">
+                            {selectedLog.userAgent}
+                          </span>
+                        </div>
+                      )}
+                      {selectedLog.sessionId && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            Session ID:
+                          </span>
+                          <span className="ml-2 text-gray-900 dark:text-white font-mono">
+                            {selectedLog.sessionId}
+                          </span>
+                        </div>
+                      )}
+                      {selectedLog.requestId && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            Request ID:
+                          </span>
+                          <span className="ml-2 text-gray-900 dark:text-white font-mono">
+                            {selectedLog.requestId}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  {selectedLog.tags && selectedLog.tags.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tags
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedLog.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metadata */}
+                  {selectedLog.metadata && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Metadata
+                      </label>
+                      <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                        <pre className="text-sm text-gray-900 dark:text-white overflow-auto max-h-60 whitespace-pre-wrap">
+                          {JSON.stringify(selectedLog.metadata, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Related Entities */}
+                  {(selectedLog.relatedUser ||
+                    selectedLog.relatedJob ||
+                    selectedLog.relatedApplication) && (
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        Related Entities
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        {selectedLog.relatedUser && (
+                          <div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              User:
+                            </span>
+                            <span className="ml-2 text-gray-900 dark:text-white">
+                              {selectedLog.relatedUser.name} (
+                              {selectedLog.relatedUser.email})
+                            </span>
+                          </div>
+                        )}
+                        {selectedLog.relatedJob && (
+                          <div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              Job:
+                            </span>
+                            <span className="ml-2 text-gray-900 dark:text-white">
+                              {selectedLog.relatedJob.title} -{" "}
+                              {selectedLog.relatedJob.department}
+                            </span>
+                          </div>
+                        )}
+                        {selectedLog.relatedApplication && (
+                          <div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              Application:
+                            </span>
+                            <span className="ml-2 text-gray-900 dark:text-white">
+                              {selectedLog.relatedApplication.name} (
+                              {selectedLog.relatedApplication.email}) -{" "}
+                              {selectedLog.relatedApplication.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-between items-center p-6 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Log ID: <span className="font-mono">{selectedLog.id}</span>
+                  </div>
+                  <button
+                    onClick={closeDetailsModal}
+                    className="px-4 py-2 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-400 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={closeDetailsModal}
-                className="px-4 py-2 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-400 transition-colors"
-              >
-                Close
-              </button>
-            </div>
             </div>
           </div>
-        </div>
-      )}
+        ))}
     </div>
   );
 }

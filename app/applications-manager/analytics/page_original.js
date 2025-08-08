@@ -290,10 +290,14 @@ export default function AnalyticsPage() {
   // Handle export
   const handleExportReport = async () => {
     try {
-      const filename = await exportAnalyticsWithEmbeddedCharts(analytics, timeRange, selectedDepartment);
+      const filename = await exportAnalyticsWithEmbeddedCharts(
+        analytics,
+        timeRange,
+        selectedDepartment
+      );
       console.log(`Report exported successfully: ${filename}`);
     } catch (error) {
-      console.error('Error exporting report:', error);
+      console.error("Error exporting report:", error);
     }
   };
 
@@ -540,245 +544,250 @@ export default function AnalyticsPage() {
         {/* Main Analytics Grid */}
         {selectedMetric === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Conversion Funnel */}
-          <motion.div variants={chartVariants} className="lg:col-span-2">
-            <div className="admin-card rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                  <span>Hiring Funnel</span>
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-6">
-                  {/* Funnel Stages */}
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Applications Received
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        {analytics.totalApplications}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-blue-600 h-3 rounded-full"
-                        style={{ width: "100%" }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Under Review
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        {analytics.statusCounts.Reviewing || 0} (
-                        {analytics.conversionRates.applicationToReview.toFixed(
-                          1
-                        )}
-                        %)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${analytics.conversionRates.applicationToReview}%`,
-                        }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className="bg-yellow-500 h-3 rounded-full"
-                        style={{
-                          width: `${analytics.conversionRates.applicationToReview}%`,
-                        }}
-                      ></motion.div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Interview Stage
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        {analytics.statusCounts.Interview || 0} (
-                        {analytics.conversionRates.reviewToInterview.toFixed(1)}
-                        %)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${analytics.conversionRates.reviewToInterview}%`,
-                        }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                        className="bg-green-500 h-3 rounded-full"
-                      ></motion.div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Hired
-                      </span>
-                      <span className="text-sm font-bold text-gray-900">
-                        {analytics.statusCounts.Hired || 0} (
-                        {analytics.conversionRates.interviewToHire.toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${analytics.conversionRates.interviewToHire}%`,
-                        }}
-                        transition={{ duration: 0.8, delay: 0.6 }}
-                        className="bg-emerald-600 h-3 rounded-full"
-                      ></motion.div>
-                    </div>
-                  </div>
+            {/* Conversion Funnel */}
+            <motion.div variants={chartVariants} className="lg:col-span-2">
+              <div className="admin-card rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    <span>Hiring Funnel</span>
+                  </h3>
                 </div>
-
-                {/* Funnel Insights */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">
-                    Funnel Insights
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-blue-700">Biggest drop-off:</span>
-                      <span className="font-medium text-blue-900">
-                        {analytics.conversionRates.applicationToReview <
-                        analytics.conversionRates.reviewToInterview
-                          ? "Application → Review"
-                          : "Review → Interview"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-blue-700">
-                        Strongest conversion:
-                      </span>
-                      <span className="font-medium text-blue-900">
-                        Interview → Hire
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Quick Actions & Status */}
-          <div className="space-y-6">
-            {/* Status Distribution */}
-            <div className="admin-card rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
-                  <PieChart className="h-5 w-5 text-green-600" />
-                  <span>Application Status</span>
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {Object.entries(analytics.statusCounts).map(
-                    ([status, count]) => {
-                      const percentage =
-                        analytics.totalApplications > 0
-                          ? (count / analytics.totalApplications) * 100
-                          : 0;
-
-                      const colors = {
-                        Applied: "bg-blue-500",
-                        Reviewing: "bg-yellow-500",
-                        Interview: "bg-green-500",
-                        Hired: "bg-emerald-600",
-                        Rejected: "bg-red-500",
-                      };
-
-                      return (
+                <div className="p-6">
+                  <div className="space-y-6">
+                    {/* Funnel Stages */}
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Applications Received
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {analytics.totalApplications}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          key={status}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className={`w-3 h-3 rounded-full ${colors[status]}`}
-                            ></div>
-                            <span className="text-sm font-medium text-gray-700">
-                              {status}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-gray-900">
-                              {count}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {percentage.toFixed(1)}%
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
+                          className="bg-blue-600 h-3 rounded-full"
+                          style={{ width: "100%" }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Under Review
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {analytics.statusCounts.Reviewing || 0} (
+                          {analytics.conversionRates.applicationToReview.toFixed(
+                            1
+                          )}
+                          %)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.min(100, analytics.conversionRates.applicationToReview)}%`,
+                          }}
+                          transition={{ duration: 0.8, delay: 0.2 }}
+                          className="bg-yellow-500 h-3 rounded-full"
+                          style={{
+                            width: `${Math.min(100, analytics.conversionRates.applicationToReview)}%`,
+                          }}
+                        ></motion.div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Interview Stage
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {analytics.statusCounts.Interview || 0} (
+                          {analytics.conversionRates.reviewToInterview.toFixed(
+                            1
+                          )}
+                          %)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.min(100, analytics.conversionRates.reviewToInterview)}%`,
+                          }}
+                          transition={{ duration: 0.8, delay: 0.4 }}
+                          className="bg-green-500 h-3 rounded-full"
+                        ></motion.div>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Hired
+                        </span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {analytics.statusCounts.Hired || 0} (
+                          {analytics.conversionRates.interviewToHire.toFixed(1)}
+                          %)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.min(100, analytics.conversionRates.interviewToHire)}%`,
+                          }}
+                          transition={{ duration: 0.8, delay: 0.6 }}
+                          className="bg-emerald-600 h-3 rounded-full"
+                        ></motion.div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Funnel Insights */}
+                  <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">
+                      Funnel Insights
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-blue-700">Biggest drop-off:</span>
+                        <span className="font-medium text-blue-900">
+                          {analytics.conversionRates.applicationToReview <
+                          analytics.conversionRates.reviewToInterview
+                            ? "Application → Review"
+                            : "Review → Interview"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-blue-700">
+                          Strongest conversion:
+                        </span>
+                        <span className="font-medium text-blue-900">
+                          Interview → Hire
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Quick Actions */}
-            <div className="admin-card rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold admin-text">
-                  Quick Actions
-                </h3>
+            {/* Quick Actions & Status */}
+            <div className="space-y-6">
+              {/* Status Distribution */}
+              <div className="admin-card rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold admin-text flex items-center space-x-2">
+                    <PieChart className="h-5 w-5 text-green-600" />
+                    <span>Application Status</span>
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {Object.entries(analytics.statusCounts).map(
+                      ([status, count]) => {
+                        const percentage =
+                          analytics.totalApplications > 0
+                            ? (count / analytics.totalApplications) * 100
+                            : 0;
+
+                        const colors = {
+                          Applied: "bg-blue-500",
+                          Reviewing: "bg-yellow-500",
+                          Interview: "bg-green-500",
+                          Hired: "bg-emerald-600",
+                          Rejected: "bg-red-500",
+                        };
+
+                        return (
+                          <div
+                            key={status}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div
+                                className={`w-3 h-3 rounded-full ${colors[status]}`}
+                              ></div>
+                              <span className="text-sm font-medium text-gray-700">
+                                {status}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-gray-900">
+                                {count}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {percentage.toFixed(1)}%
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="p-6 space-y-3">
-                <motion.button
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => router.push("/applications-manager/pipeline")}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Layers className="h-5 w-5 text-blue-600" />
-                    <span className="font-medium">View Pipeline</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() =>
-                    router.push("/applications-manager/communication")
-                  }
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-green-600" />
-                    <span className="font-medium">Send Emails</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </motion.button>
+              {/* Quick Actions */}
+              <div className="admin-card rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold admin-text">
+                    Quick Actions
+                  </h3>
+                </div>
+                <div className="p-6 space-y-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() =>
+                      router.push("/applications-manager/pipeline")
+                    }
+                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Layers className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium">View Pipeline</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                  </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-5 w-5 text-purple-600" />
-                    <span className="font-medium">Export Data</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() =>
+                      router.push("/applications-manager/communication")
+                    }
+                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-5 w-5 text-green-600" />
+                      <span className="font-medium">Send Emails</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <FileText className="h-5 w-5 text-purple-600" />
+                      <span className="font-medium">Export Data</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                  </motion.button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* Conversion Focus View */}
@@ -797,104 +806,169 @@ export default function AnalyticsPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Funnel Stages */}
                     <div className="space-y-6">
-                      <h4 className="font-medium text-gray-900 mb-4">Conversion Stages</h4>
+                      <h4 className="font-medium text-gray-900 mb-4">
+                        Conversion Stages
+                      </h4>
                       <div className="relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Applications Received</span>
-                          <span className="text-sm font-bold text-gray-900">{analytics.totalApplications}</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Applications Received
+                          </span>
+                          <span className="text-sm font-bold text-gray-900">
+                            {analytics.totalApplications}
+                          </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-4">
-                          <div className="bg-blue-600 h-4 rounded-full" style={{ width: "100%" }}></div>
+                          <div
+                            className="bg-blue-600 h-4 rounded-full"
+                            style={{ width: "100%" }}
+                          ></div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">100% of total volume</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          100% of total volume
+                        </div>
                       </div>
 
                       <div className="relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Under Review</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Under Review
+                          </span>
                           <span className="text-sm font-bold text-gray-900">
-                            {analytics.statusCounts.Reviewing || 0} ({analytics.conversionRates.applicationToReview.toFixed(1)}%)
+                            {analytics.statusCounts.Reviewing || 0} (
+                            {analytics.conversionRates.applicationToReview.toFixed(
+                              1
+                            )}
+                            %)
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-4">
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${analytics.conversionRates.applicationToReview}%` }}
+                            animate={{
+                              width: `${Math.min(100, analytics.conversionRates.applicationToReview)}%`,
+                            }}
                             transition={{ duration: 0.8, delay: 0.2 }}
                             className="bg-yellow-500 h-4 rounded-full"
                           ></motion.div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Drop-off: {(100 - analytics.conversionRates.applicationToReview).toFixed(1)}%
+                          Drop-off:{" "}
+                          {(
+                            100 - analytics.conversionRates.applicationToReview
+                          ).toFixed(1)}
+                          %
                         </div>
                       </div>
 
                       <div className="relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Interview Stage</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Interview Stage
+                          </span>
                           <span className="text-sm font-bold text-gray-900">
-                            {analytics.statusCounts.Interview || 0} ({analytics.conversionRates.reviewToInterview.toFixed(1)}%)
+                            {analytics.statusCounts.Interview || 0} (
+                            {analytics.conversionRates.reviewToInterview.toFixed(
+                              1
+                            )}
+                            %)
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-4">
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${analytics.conversionRates.reviewToInterview}%` }}
+                            animate={{
+                              width: `${Math.min(100, analytics.conversionRates.reviewToInterview)}%`,
+                            }}
                             transition={{ duration: 0.8, delay: 0.4 }}
                             className="bg-green-500 h-4 rounded-full"
                           ></motion.div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          From previous stage: {analytics.conversionRates.reviewToInterview.toFixed(1)}%
+                          From previous stage:{" "}
+                          {analytics.conversionRates.reviewToInterview.toFixed(
+                            1
+                          )}
+                          %
                         </div>
                       </div>
 
                       <div className="relative">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Hired</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Hired
+                          </span>
                           <span className="text-sm font-bold text-gray-900">
-                            {analytics.statusCounts.Hired || 0} ({analytics.conversionRates.interviewToHire.toFixed(1)}%)
+                            {analytics.statusCounts.Hired || 0} (
+                            {analytics.conversionRates.interviewToHire.toFixed(
+                              1
+                            )}
+                            %)
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-4">
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${analytics.conversionRates.interviewToHire}%` }}
+                            animate={{
+                              width: `${Math.min(100, analytics.conversionRates.interviewToHire)}%`,
+                            }}
                             transition={{ duration: 0.8, delay: 0.6 }}
                             className="bg-emerald-600 h-4 rounded-full"
                           ></motion.div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Final conversion: {analytics.conversionRates.overallConversion.toFixed(1)}% overall
+                          Final conversion:{" "}
+                          {analytics.conversionRates.overallConversion.toFixed(
+                            1
+                          )}
+                          % overall
                         </div>
                       </div>
                     </div>
 
                     {/* Conversion Insights */}
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-4">Conversion Insights</h4>
+                      <h4 className="font-medium text-gray-900 mb-4">
+                        Conversion Insights
+                      </h4>
                       <div className="space-y-4">
                         <div className="p-4 bg-blue-50 rounded-lg">
-                          <h5 className="font-medium text-blue-900 mb-2">Overall Performance</h5>
+                          <h5 className="font-medium text-blue-900 mb-2">
+                            Overall Performance
+                          </h5>
                           <div className="text-2xl font-bold text-blue-600 mb-1">
-                            {analytics.conversionRates.overallConversion.toFixed(1)}%
+                            {analytics.conversionRates.overallConversion.toFixed(
+                              1
+                            )}
+                            %
                           </div>
-                          <div className="text-sm text-blue-700">End-to-end conversion rate</div>
+                          <div className="text-sm text-blue-700">
+                            End-to-end conversion rate
+                          </div>
                         </div>
 
                         <div className="p-4 bg-yellow-50 rounded-lg">
-                          <h5 className="font-medium text-yellow-900 mb-2">Biggest Bottleneck</h5>
+                          <h5 className="font-medium text-yellow-900 mb-2">
+                            Biggest Bottleneck
+                          </h5>
                           <div className="text-sm text-yellow-700">
-                            {analytics.conversionRates.applicationToReview < analytics.conversionRates.reviewToInterview
+                            {analytics.conversionRates.applicationToReview <
+                            analytics.conversionRates.reviewToInterview
                               ? "Application screening - many applications not progressing to review"
                               : "Interview process - review stage has good throughput but interview conversion is low"}
                           </div>
                         </div>
 
                         <div className="p-4 bg-green-50 rounded-lg">
-                          <h5 className="font-medium text-green-900 mb-2">Strongest Stage</h5>
+                          <h5 className="font-medium text-green-900 mb-2">
+                            Strongest Stage
+                          </h5>
                           <div className="text-sm text-green-700">
-                            Interview to hire conversion is performing well at {analytics.conversionRates.interviewToHire.toFixed(1)}%
+                            Interview to hire conversion is performing well at{" "}
+                            {analytics.conversionRates.interviewToHire.toFixed(
+                              1
+                            )}
+                            %
                           </div>
                         </div>
                       </div>
@@ -915,70 +989,97 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="p-6">
                   <div className="space-y-4">
-                    {Object.entries(analytics.statusCounts).map(([status, count]) => {
-                      const percentage = analytics.totalApplications > 0 ? (count / analytics.totalApplications) * 100 : 0;
-                      const colors = {
-                        Applied: "bg-blue-500",
-                        Reviewing: "bg-yellow-500", 
-                        Interview: "bg-green-500",
-                        Hired: "bg-emerald-600",
-                        Rejected: "bg-red-500",
-                      };
+                    {Object.entries(analytics.statusCounts).map(
+                      ([status, count]) => {
+                        const percentage =
+                          analytics.totalApplications > 0
+                            ? (count / analytics.totalApplications) * 100
+                            : 0;
+                        const colors = {
+                          Applied: "bg-blue-500",
+                          Reviewing: "bg-yellow-500",
+                          Interview: "bg-green-500",
+                          Hired: "bg-emerald-600",
+                          Rejected: "bg-red-500",
+                        };
 
-                      return (
-                        <div key={status} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-4 h-4 rounded-full ${colors[status]}`}></div>
-                              <span className="text-sm font-medium text-gray-700">{status}</span>
+                        return (
+                          <div key={status} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className={`w-4 h-4 rounded-full ${colors[status]}`}
+                                ></div>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {status}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-gray-900">
+                                  {count}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {percentage.toFixed(1)}%
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">{count}</div>
-                              <div className="text-xs text-gray-500">{percentage.toFixed(1)}%</div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${colors[status]}`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
                             </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${colors[status]}`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="admin-card rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold admin-text">Conversion Recommendations</h3>
+                  <h3 className="text-lg font-semibold admin-text">
+                    Conversion Recommendations
+                  </h3>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
                     <div>
-                      <p className="font-medium text-red-800">Priority Action</p>
+                      <p className="font-medium text-red-800">
+                        Priority Action
+                      </p>
                       <p className="text-sm text-red-700">
-                        Focus on improving {analytics.conversionRates.applicationToReview < 50 ? "initial screening process" : "interview scheduling"}
+                        Focus on improving{" "}
+                        {analytics.conversionRates.applicationToReview < 50
+                          ? "initial screening process"
+                          : "interview scheduling"}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
                     <Timer className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div>
-                      <p className="font-medium text-yellow-800">Time Optimization</p>
+                      <p className="font-medium text-yellow-800">
+                        Time Optimization
+                      </p>
                       <p className="text-sm text-yellow-700">
-                        Reduce time between application and first review to improve candidate experience
+                        Reduce time between application and first review to
+                        improve candidate experience
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                     <div>
-                      <p className="font-medium text-green-800">Success Pattern</p>
+                      <p className="font-medium text-green-800">
+                        Success Pattern
+                      </p>
                       <p className="text-sm text-green-700">
-                        Candidates who reach interview stage have a {analytics.conversionRates.interviewToHire.toFixed(1)}% hire rate
+                        Candidates who reach interview stage have a{" "}
+                        {analytics.conversionRates.interviewToHire.toFixed(1)}%
+                        hire rate
                       </p>
                     </div>
                   </div>
@@ -1009,31 +1110,51 @@ export default function AnalyticsPage() {
                       transition={{ delay: index * 0.1 }}
                       whileHover={{ scale: 1.02, y: -4 }}
                       className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition-all cursor-pointer"
-                      onClick={() => router.push(`/applications-manager/jobs/${job.id}`)}
+                      onClick={() =>
+                        router.push(`/applications-manager/jobs/${job.id}`)
+                      }
                     >
                       <div className="flex items-center justify-between mb-4">
                         <div className="w-10 h-10 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-lg font-bold">
                           {index + 1}
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-gray-900">{job.applicationsCount}</div>
-                          <div className="text-xs text-gray-500">applications</div>
+                          <div className="text-2xl font-bold text-gray-900">
+                            {job.applicationsCount}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            applications
+                          </div>
                         </div>
                       </div>
-                      <h4 className="font-semibold text-gray-900 mb-2">{job.title}</h4>
-                      <p className="text-sm text-gray-500 mb-4">{job.department}</p>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        {job.title}
+                      </h4>
+                      <p className="text-sm text-gray-500 mb-4">
+                        {job.department}
+                      </p>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Hire Rate</span>
-                          <span className="font-medium text-green-600">{job.conversionRate.toFixed(1)}%</span>
+                          <span className="text-sm text-gray-600">
+                            Hire Rate
+                          </span>
+                          <span className="font-medium text-green-600">
+                            {job.conversionRate.toFixed(1)}%
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">Hired</span>
-                          <span className="font-medium text-gray-900">{job.hiredCount}</span>
+                          <span className="font-medium text-gray-900">
+                            {job.hiredCount}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Avg. Time</span>
-                          <span className="font-medium text-gray-900">{job.avgTimeToHire} days</span>
+                          <span className="text-sm text-gray-600">
+                            Avg. Time
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            {job.avgTimeToHire} days
+                          </span>
                         </div>
                       </div>
                     </motion.div>
@@ -1053,70 +1174,107 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="p-6">
                   <div className="space-y-6">
-                    {Object.entries(analytics.departmentStats).map(([dept, stats], index) => (
-                      <motion.div
-                        key={dept}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="p-4 border border-gray-200 rounded-lg"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium text-gray-900">{dept}</h4>
-                          <span className="text-sm bg-gray-100 px-2 py-1 rounded">{stats.jobs} jobs</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 text-center mb-3">
-                          <div>
-                            <div className="text-xl font-bold text-blue-600">{stats.applications}</div>
-                            <div className="text-xs text-gray-500">Applications</div>
+                    {Object.entries(analytics.departmentStats).map(
+                      ([dept, stats], index) => (
+                        <motion.div
+                          key={dept}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="p-4 border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900">
+                              {dept}
+                            </h4>
+                            <span className="text-sm bg-gray-100 px-2 py-1 rounded">
+                              {stats.jobs} jobs
+                            </span>
                           </div>
-                          <div>
-                            <div className="text-xl font-bold text-green-600">{stats.hired}</div>
-                            <div className="text-xs text-gray-500">Hired</div>
-                          </div>
-                          <div>
-                            <div className="text-xl font-bold text-purple-600">
-                              {stats.applications > 0 ? ((stats.hired / stats.applications) * 100).toFixed(1) : 0}%
+                          <div className="grid grid-cols-3 gap-4 text-center mb-3">
+                            <div>
+                              <div className="text-xl font-bold text-blue-600">
+                                {stats.applications}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Applications
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">Success Rate</div>
+                            <div>
+                              <div className="text-xl font-bold text-green-600">
+                                {stats.hired}
+                              </div>
+                              <div className="text-xs text-gray-500">Hired</div>
+                            </div>
+                            <div>
+                              <div className="text-xl font-bold text-purple-600">
+                                {stats.applications > 0
+                                  ? (
+                                      (stats.hired / stats.applications) *
+                                      100
+                                    ).toFixed(1)
+                                  : 0}
+                                %
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Success Rate
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full"
-                            style={{ 
-                              width: `${stats.applications > 0 ? ((stats.hired / stats.applications) * 100) : 0}%` 
-                            }}
-                          ></div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full"
+                              style={{
+                                width: `${stats.applications > 0 ? (stats.hired / stats.applications) * 100 : 0}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </motion.div>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="admin-card rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold admin-text">Performance Insights</h3>
+                  <h3 className="text-lg font-semibold admin-text">
+                    Performance Insights
+                  </h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-4">
                     <div className="p-4 bg-green-50 rounded-lg">
-                      <h5 className="font-medium text-green-900 mb-2">Top Performer</h5>
+                      <h5 className="font-medium text-green-900 mb-2">
+                        Top Performer
+                      </h5>
                       <p className="text-sm text-green-700">
-                        {analytics.jobPerformance[0]?.title || "N/A"} leads with {analytics.jobPerformance[0]?.applicationsCount || 0} applications
+                        {analytics.jobPerformance[0]?.title || "N/A"} leads with{" "}
+                        {analytics.jobPerformance[0]?.applicationsCount || 0}{" "}
+                        applications
                       </p>
                     </div>
                     <div className="p-4 bg-blue-50 rounded-lg">
-                      <h5 className="font-medium text-blue-900 mb-2">Best Conversion</h5>
+                      <h5 className="font-medium text-blue-900 mb-2">
+                        Best Conversion
+                      </h5>
                       <p className="text-sm text-blue-700">
-                        Highest hire rate: {Math.max(...analytics.jobPerformance.map(j => j.conversionRate)).toFixed(1)}%
+                        Highest hire rate:{" "}
+                        {Math.max(
+                          ...analytics.jobPerformance.map(
+                            (j) => j.conversionRate
+                          )
+                        ).toFixed(1)}
+                        %
                       </p>
                     </div>
                     <div className="p-4 bg-yellow-50 rounded-lg">
-                      <h5 className="font-medium text-yellow-900 mb-2">Opportunity</h5>
+                      <h5 className="font-medium text-yellow-900 mb-2">
+                        Opportunity
+                      </h5>
                       <p className="text-sm text-yellow-700">
-                        Focus recruitment efforts on departments with high success rates
+                        Focus recruitment efforts on departments with high
+                        success rates
                       </p>
                     </div>
                   </div>
@@ -1149,42 +1307,69 @@ export default function AnalyticsPage() {
                       className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition-all"
                     >
                       <div className="text-center mb-4">
-                        <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 ${getStatCardClasses(index % 4).bg}`}>
-                          <Globe className={`h-8 w-8 ${getStatCardClasses(index % 4).icon}`} />
+                        <div
+                          className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 ${getStatCardClasses(index % 4).bg}`}
+                        >
+                          <Globe
+                            className={`h-8 w-8 ${getStatCardClasses(index % 4).icon}`}
+                          />
                         </div>
-                        <h4 className="font-semibold text-gray-900">{source.source}</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          {source.source}
+                        </h4>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div className="text-center">
-                          <div className="text-3xl font-bold text-gray-900">{source.applications}</div>
-                          <div className="text-sm text-gray-500">Total Applications</div>
+                          <div className="text-3xl font-bold text-gray-900">
+                            {source.applications}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Total Applications
+                          </div>
                         </div>
-                        
+
                         <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                          <span className="text-sm font-medium text-green-800">Hired</span>
-                          <span className="text-lg font-bold text-green-600">{source.hired}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                          <span className="text-sm font-medium text-blue-800">Success Rate</span>
-                          <span className="text-lg font-bold text-blue-600">
-                            {source.applications > 0 ? ((source.hired / source.applications) * 100).toFixed(1) : 0}%
+                          <span className="text-sm font-medium text-green-800">
+                            Hired
+                          </span>
+                          <span className="text-lg font-bold text-green-600">
+                            {source.hired}
                           </span>
                         </div>
-                        
+
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                          <span className="text-sm font-medium text-blue-800">
+                            Success Rate
+                          </span>
+                          <span className="text-lg font-bold text-blue-600">
+                            {source.applications > 0
+                              ? (
+                                  (source.hired / source.applications) *
+                                  100
+                                ).toFixed(1)
+                              : 0}
+                            %
+                          </span>
+                        </div>
+
                         <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div 
+                          <div
                             className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full"
-                            style={{ 
-                              width: `${source.applications > 0 ? ((source.hired / source.applications) * 100) : 0}%` 
+                            style={{
+                              width: `${source.applications > 0 ? (source.hired / source.applications) * 100 : 0}%`,
                             }}
                           ></div>
                         </div>
-                        
+
                         <div className="text-center">
                           <div className="text-xs text-gray-500">
-                            {((source.applications / analytics.totalApplications) * 100).toFixed(1)}% of total volume
+                            {(
+                              (source.applications /
+                                analytics.totalApplications) *
+                              100
+                            ).toFixed(1)}
+                            % of total volume
                           </div>
                         </div>
                       </div>
@@ -1198,33 +1383,57 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="admin-card rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold admin-text">Source Performance Ranking</h3>
+                  <h3 className="text-lg font-semibold admin-text">
+                    Source Performance Ranking
+                  </h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-4">
                     {analytics.sourceAnalysis
-                      .sort((a, b) => (b.hired / b.applications) - (a.hired / a.applications))
+                      .sort(
+                        (a, b) =>
+                          b.hired / b.applications - a.hired / a.applications
+                      )
                       .map((source, index) => {
-                        const successRate = source.applications > 0 ? (source.hired / source.applications) * 100 : 0;
+                        const successRate =
+                          source.applications > 0
+                            ? (source.hired / source.applications) * 100
+                            : 0;
                         return (
-                          <div key={source.source} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div
+                            key={source.source}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                                index === 1 ? 'bg-gray-100 text-gray-800' :
-                                index === 2 ? 'bg-orange-100 text-orange-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                  index === 0
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : index === 1
+                                      ? "bg-gray-100 text-gray-800"
+                                      : index === 2
+                                        ? "bg-orange-100 text-orange-800"
+                                        : "bg-blue-100 text-blue-800"
+                                }`}
+                              >
                                 {index + 1}
                               </div>
                               <div>
-                                <div className="font-medium text-gray-900">{source.source}</div>
-                                <div className="text-sm text-gray-500">{source.applications} applications</div>
+                                <div className="font-medium text-gray-900">
+                                  {source.source}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {source.applications} applications
+                                </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold text-green-600">{successRate.toFixed(1)}%</div>
-                              <div className="text-sm text-gray-500">{source.hired} hired</div>
+                              <div className="text-lg font-bold text-green-600">
+                                {successRate.toFixed(1)}%
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {source.hired} hired
+                              </div>
                             </div>
                           </div>
                         );
@@ -1235,31 +1444,45 @@ export default function AnalyticsPage() {
 
               <div className="admin-card rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold admin-text">Source Optimization</h3>
+                  <h3 className="text-lg font-semibold admin-text">
+                    Source Optimization
+                  </h3>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <h5 className="font-medium text-green-900 mb-2">High Performer</h5>
+                    <h5 className="font-medium text-green-900 mb-2">
+                      High Performer
+                    </h5>
                     <p className="text-sm text-green-700">
-                      LinkedIn shows the best conversion rate - consider increasing investment here
+                      LinkedIn shows the best conversion rate - consider
+                      increasing investment here
                     </p>
                   </div>
                   <div className="p-4 bg-blue-50 rounded-lg">
-                    <h5 className="font-medium text-blue-900 mb-2">Volume Leader</h5>
+                    <h5 className="font-medium text-blue-900 mb-2">
+                      Volume Leader
+                    </h5>
                     <p className="text-sm text-blue-700">
-                      Company Website generates the most applications - optimize the career page
+                      Company Website generates the most applications - optimize
+                      the career page
                     </p>
                   </div>
                   <div className="p-4 bg-yellow-50 rounded-lg">
-                    <h5 className="font-medium text-yellow-900 mb-2">Underutilized</h5>
+                    <h5 className="font-medium text-yellow-900 mb-2">
+                      Underutilized
+                    </h5>
                     <p className="text-sm text-yellow-700">
-                      Referrals have good conversion but low volume - expand referral program
+                      Referrals have good conversion but low volume - expand
+                      referral program
                     </p>
                   </div>
                   <div className="p-4 bg-purple-50 rounded-lg">
-                    <h5 className="font-medium text-purple-900 mb-2">Cost Analysis</h5>
+                    <h5 className="font-medium text-purple-900 mb-2">
+                      Cost Analysis
+                    </h5>
                     <p className="text-sm text-purple-700">
-                      Focus budget on high-conversion, low-cost channels for better ROI
+                      Focus budget on high-conversion, low-cost channels for
+                      better ROI
                     </p>
                   </div>
                 </div>

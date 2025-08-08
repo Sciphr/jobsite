@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
-import { useAnalytics, useGoogleAnalytics, usePrefetchAdminData } from "@/app/hooks/useAdminData";
+import {
+  useAnalytics,
+  useGoogleAnalytics,
+  usePrefetchAdminData,
+} from "@/app/hooks/useAdminData";
 import { useQueryClient } from "@tanstack/react-query";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
 import {
@@ -45,7 +49,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { exportAnalyticsToExcel, exportAnalyticsToCSV } from "@/app/utils/analyticsExport";
+import {
+  exportAnalyticsToExcel,
+  exportAnalyticsToCSV,
+} from "@/app/utils/analyticsExport";
 
 function AdminAnalyticsContent() {
   const { data: session } = useSession();
@@ -61,7 +68,7 @@ function AdminAnalyticsContent() {
     error,
     refetch,
   } = useAnalytics(timeRange);
-  
+
   const {
     data: googleAnalytics,
     isLoading: gaLoading,
@@ -72,12 +79,17 @@ function AdminAnalyticsContent() {
 
   // Prefetch other time ranges for instant switching
   useEffect(() => {
-    const timeRangesToPrefetch = ["7d", "30d", "90d", "1y"].filter(range => range !== timeRange);
-    
-    timeRangesToPrefetch.forEach(range => {
+    const timeRangesToPrefetch = ["7d", "30d", "90d", "1y"].filter(
+      (range) => range !== timeRange
+    );
+
+    timeRangesToPrefetch.forEach((range) => {
       queryClient.prefetchQuery({
         queryKey: ["admin", "analytics", range],
-        queryFn: () => fetch(`/api/admin/analytics?range=${range}`).then(res => res.json()),
+        queryFn: () =>
+          fetch(`/api/admin/analytics?range=${range}`).then((res) =>
+            res.json()
+          ),
         staleTime: 15 * 60 * 1000, // 15 minutes
       });
     });
@@ -112,9 +124,9 @@ function AdminAnalyticsContent() {
   const handleExport = (format) => {
     if (!analytics) return;
 
-    if (format === 'excel') {
+    if (format === "excel") {
       exportAnalyticsToExcel(analytics, timeRange);
-    } else if (format === 'csv') {
+    } else if (format === "csv") {
       exportAnalyticsToCSV(analytics, timeRange);
     }
   };
@@ -166,7 +178,9 @@ function AdminAnalyticsContent() {
       {/* Header */}
       <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold admin-text">Analytics Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold admin-text">
+            Analytics Dashboard
+          </h1>
           <p className="admin-text-light mt-2 text-sm sm:text-base">
             Track performance metrics and insights across your job board
           </p>
@@ -200,7 +214,9 @@ function AdminAnalyticsContent() {
               <RefreshCw
                 className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
               />
-              <span className="hidden sm:inline">{refreshing ? "Refreshing..." : "Refresh"}</span>
+              <span className="hidden sm:inline">
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </span>
             </button>
             {/* ✅ NEW: Export Dropdown */}
             <div className="relative group">
@@ -215,14 +231,14 @@ function AdminAnalyticsContent() {
               <div className="absolute right-0 top-12 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
                 <div className="p-2">
                   <button
-                    onClick={() => handleExport('excel')}
+                    onClick={() => handleExport("excel")}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                   >
                     <span className="text-green-600">📊</span>
                     <span>Export to Excel (.xlsx)</span>
                   </button>
                   <button
-                    onClick={() => handleExport('csv')}
+                    onClick={() => handleExport("csv")}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                   >
                     <span className="text-blue-600">📄</span>
@@ -236,13 +252,17 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Key Metrics */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
-        isFetching ? 'opacity-75' : 'opacity-100'
-      }`}>
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Total Jobs</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Total Jobs
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalJobs}
               </p>
@@ -263,7 +283,9 @@ function AdminAnalyticsContent() {
             <div
               className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(0).bg}`}
             >
-              <Briefcase className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(0).icon}`} />
+              <Briefcase
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(0).icon}`}
+              />
             </div>
           </div>
         </div>
@@ -294,7 +316,9 @@ function AdminAnalyticsContent() {
             <div
               className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(1).bg}`}
             >
-              <FileText className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(1).icon}`} />
+              <FileText
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(1).icon}`}
+              />
             </div>
           </div>
         </div>
@@ -325,7 +349,9 @@ function AdminAnalyticsContent() {
             <div
               className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(2).bg}`}
             >
-              <Users className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(2).icon}`} />
+              <Users
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(2).icon}`}
+              />
             </div>
           </div>
         </div>
@@ -333,7 +359,9 @@ function AdminAnalyticsContent() {
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Job Views</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Job Views
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalViews.toLocaleString()}
               </p>
@@ -354,7 +382,9 @@ function AdminAnalyticsContent() {
             <div
               className={`metric-icon p-2 sm:p-3 rounded-lg ${getStatCardClasses(3).bg}`}
             >
-              <Eye className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(3).icon}`} />
+              <Eye
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${getStatCardClasses(3).icon}`}
+              />
             </div>
           </div>
         </div>
@@ -365,12 +395,16 @@ function AdminAnalyticsContent() {
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Emails Sent</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Emails Sent
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalEmails?.toLocaleString() || 0}
               </p>
               <div className="flex items-center mt-2">
-                <span className="text-xs sm:text-sm admin-text-light">Email communications</span>
+                <span className="text-xs sm:text-sm admin-text-light">
+                  Email communications
+                </span>
               </div>
             </div>
             <div className="metric-icon p-2 sm:p-3 rounded-lg bg-blue-100">
@@ -382,13 +416,16 @@ function AdminAnalyticsContent() {
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Interviews Scheduled</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Interviews Scheduled
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalInterviews || 0}
               </p>
               <div className="flex items-center mt-2">
                 <span className="text-xs sm:text-sm text-blue-600">
-                  {analytics.additionalMetrics.interviewRate.toFixed(2)}% of applications
+                  {analytics.additionalMetrics.interviewRate.toFixed(2)}% of
+                  applications
                 </span>
               </div>
             </div>
@@ -401,7 +438,9 @@ function AdminAnalyticsContent() {
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Jobs Saved</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Jobs Saved
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalSavedJobs || 0}
               </p>
@@ -420,12 +459,16 @@ function AdminAnalyticsContent() {
         <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow cursor-pointer transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium admin-text-light">Resumes Uploaded</p>
+              <p className="text-xs sm:text-sm font-medium admin-text-light">
+                Resumes Uploaded
+              </p>
               <p className="text-2xl sm:text-3xl font-bold admin-text">
                 {analytics.overview.totalResumes || 0}
               </p>
               <div className="flex items-center mt-2">
-                <span className="text-xs sm:text-sm admin-text-light">User submissions</span>
+                <span className="text-xs sm:text-sm admin-text-light">
+                  User submissions
+                </span>
               </div>
             </div>
             <div className="metric-icon p-2 sm:p-3 rounded-lg bg-yellow-100">
@@ -457,18 +500,25 @@ function AdminAnalyticsContent() {
           {googleAnalytics.configured ? (
             <>
               {/* Google Analytics Metrics Row */}
-              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
-                gaFetching ? 'opacity-75' : 'opacity-100'
-              }`}>
+              <div
+                className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 transition-opacity duration-200 ${
+                  gaFetching ? "opacity-75" : "opacity-100"
+                }`}
+              >
                 <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium admin-text-light">Website Visitors</p>
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">
+                        Website Visitors
+                      </p>
                       <p className="text-2xl sm:text-3xl font-bold admin-text">
-                        {googleAnalytics.overview?.activeUsers?.toLocaleString() || 0}
+                        {googleAnalytics.overview?.activeUsers?.toLocaleString() ||
+                          0}
                       </p>
                       <div className="flex items-center mt-2">
-                        <span className="text-xs sm:text-sm admin-text-light">Unique visitors</span>
+                        <span className="text-xs sm:text-sm admin-text-light">
+                          Unique visitors
+                        </span>
                       </div>
                     </div>
                     <div className="metric-icon p-2 sm:p-3 rounded-lg bg-blue-100">
@@ -480,12 +530,17 @@ function AdminAnalyticsContent() {
                 <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium admin-text-light">Website Sessions</p>
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">
+                        Website Sessions
+                      </p>
                       <p className="text-2xl sm:text-3xl font-bold admin-text">
-                        {googleAnalytics.overview?.sessions?.toLocaleString() || 0}
+                        {googleAnalytics.overview?.sessions?.toLocaleString() ||
+                          0}
                       </p>
                       <div className="flex items-center mt-2">
-                        <span className="text-xs sm:text-sm admin-text-light">Total sessions</span>
+                        <span className="text-xs sm:text-sm admin-text-light">
+                          Total sessions
+                        </span>
                       </div>
                     </div>
                     <div className="metric-icon p-2 sm:p-3 rounded-lg bg-green-100">
@@ -497,12 +552,17 @@ function AdminAnalyticsContent() {
                 <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium admin-text-light">Page Views</p>
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">
+                        Page Views
+                      </p>
                       <p className="text-2xl sm:text-3xl font-bold admin-text">
-                        {googleAnalytics.overview?.pageViews?.toLocaleString() || 0}
+                        {googleAnalytics.overview?.pageViews?.toLocaleString() ||
+                          0}
                       </p>
                       <div className="flex items-center mt-2">
-                        <span className="text-xs sm:text-sm admin-text-light">Total page views</span>
+                        <span className="text-xs sm:text-sm admin-text-light">
+                          Total page views
+                        </span>
                       </div>
                     </div>
                     <div className="metric-icon p-2 sm:p-3 rounded-lg bg-purple-100">
@@ -514,12 +574,16 @@ function AdminAnalyticsContent() {
                 <div className="metric-card admin-card p-4 sm:p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm font-medium admin-text-light">Bounce Rate</p>
+                      <p className="text-xs sm:text-sm font-medium admin-text-light">
+                        Bounce Rate
+                      </p>
                       <p className="text-2xl sm:text-3xl font-bold admin-text">
                         {googleAnalytics.overview?.bounceRate?.toFixed(1) || 0}%
                       </p>
                       <div className="flex items-center mt-2">
-                        <span className="text-xs sm:text-sm admin-text-light">Average bounce</span>
+                        <span className="text-xs sm:text-sm admin-text-light">
+                          Average bounce
+                        </span>
                       </div>
                     </div>
                     <div className="metric-icon p-2 sm:p-3 rounded-lg bg-yellow-100">
@@ -538,7 +602,9 @@ function AdminAnalyticsContent() {
                   </h2>
                   {googleAnalytics.trafficSources?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
-                      <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <PieChart
+                        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                      >
                         <Pie
                           data={googleAnalytics.trafficSources}
                           cx="50%"
@@ -549,16 +615,20 @@ function AdminAnalyticsContent() {
                             `${source}: ${sessions}`
                           }
                         >
-                          {googleAnalytics.trafficSources.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
+                          {googleAnalytics.trafficSources.map(
+                            (entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            )
+                          )}
                         </Pie>
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-64">
-                      <p className="admin-text-light">No traffic data available</p>
+                      <p className="admin-text-light">
+                        No traffic data available
+                      </p>
                     </div>
                   )}
                 </div>
@@ -569,29 +639,35 @@ function AdminAnalyticsContent() {
                     Top Website Pages
                   </h2>
                   <div className="space-y-3 sm:space-y-4 max-h-64 overflow-y-auto">
-                    {googleAnalytics.topPages?.slice(0, 8).map((page, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium admin-text truncate">
-                            {page.title || page.path}
+                    {googleAnalytics.topPages
+                      ?.slice(0, 8)
+                      .map((page, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium admin-text truncate">
+                              {page.title || page.path}
+                            </div>
+                            <div className="text-sm admin-text-light truncate">
+                              {page.path}
+                            </div>
                           </div>
-                          <div className="text-sm admin-text-light truncate">
-                            {page.path}
+                          <div className="text-right">
+                            <div className="text-sm font-medium admin-text">
+                              {page.pageViews.toLocaleString()}
+                            </div>
+                            <div className="text-xs admin-text-light">
+                              views
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium admin-text">
-                            {page.pageViews.toLocaleString()}
-                          </div>
-                          <div className="text-xs admin-text-light">views</div>
-                        </div>
-                      </div>
-                    )) || (
+                      )) || (
                       <div className="flex items-center justify-center py-12">
-                        <p className="admin-text-light">No page data available</p>
+                        <p className="admin-text-light">
+                          No page data available
+                        </p>
                       </div>
                     )}
                   </div>
@@ -612,10 +688,11 @@ function AdminAnalyticsContent() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="font-medium admin-text truncate">
-                            {page.path.replace('/jobs/', '').replace('-', ' ')}
+                            {page.path.replace("/jobs/", "").replace("-", " ")}
                           </div>
                           <div className="text-sm admin-text-light">
-                            Bounce: {page.bounceRate.toFixed(1)}% • Avg time: {Math.round(page.avgSessionDuration)}s
+                            Bounce: {page.bounceRate.toFixed(1)}% • Avg time:{" "}
+                            {Math.round(page.avgSessionDuration)}s
                           </div>
                         </div>
                         <div className="text-right">
@@ -634,16 +711,28 @@ function AdminAnalyticsContent() {
               {googleAnalytics.insights && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
-                    <div className="text-sm admin-text-light mb-2">Top Traffic Source</div>
-                    <div className="text-lg font-bold admin-text">{googleAnalytics.insights.topTrafficSource}</div>
+                    <div className="text-sm admin-text-light mb-2">
+                      Top Traffic Source
+                    </div>
+                    <div className="text-lg font-bold admin-text">
+                      {googleAnalytics.insights.topTrafficSource}
+                    </div>
                   </div>
                   <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
-                    <div className="text-sm admin-text-light mb-2">Most Viewed Page</div>
-                    <div className="text-lg font-bold admin-text truncate">{googleAnalytics.insights.mostViewedPage}</div>
+                    <div className="text-sm admin-text-light mb-2">
+                      Most Viewed Page
+                    </div>
+                    <div className="text-lg font-bold admin-text truncate">
+                      {googleAnalytics.insights.mostViewedPage}
+                    </div>
                   </div>
                   <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow text-center">
-                    <div className="text-sm admin-text-light mb-2">Job Pages Traffic</div>
-                    <div className="text-lg font-bold admin-text">{googleAnalytics.insights.jobPagesPercentage}%</div>
+                    <div className="text-sm admin-text-light mb-2">
+                      Job Pages Traffic
+                    </div>
+                    <div className="text-lg font-bold admin-text">
+                      {googleAnalytics.insights.jobPagesPercentage}%
+                    </div>
                   </div>
                 </div>
               )}
@@ -652,9 +741,12 @@ function AdminAnalyticsContent() {
             <div className="chart-card admin-card p-6 rounded-lg shadow text-center">
               <div className="text-yellow-600 dark:text-yellow-400 mb-4">
                 <BarChart3 className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Google Analytics Setup Required</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  Google Analytics Setup Required
+                </h3>
                 <p className="text-sm mb-6">
-                  Configure Google Analytics service account to view website analytics here.
+                  Configure Google Analytics service account to view website
+                  analytics here.
                 </p>
               </div>
               {googleAnalytics.setupInstructions && (
@@ -676,9 +768,11 @@ function AdminAnalyticsContent() {
       )}
 
       {/* Main Charts Section */}
-      <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
-        isFetching ? 'opacity-75' : 'opacity-100'
-      }`}>
+      <div
+        className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
         {/* Trend Chart */}
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-6">
@@ -756,9 +850,11 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Conversion Funnel & Top Jobs */}
-      <div className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
-        isFetching ? 'opacity-75' : 'opacity-100'
-      }`}>
+      <div
+        className={`grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 transition-opacity duration-200 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
         {/* Conversion Funnel */}
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold admin-text mb-6">
@@ -783,7 +879,9 @@ function AdminAnalyticsContent() {
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                   <div
                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${stage.percentage.toFixed(2)}%` }}
+                    style={{
+                      width: `${Math.min(100, stage.percentage.toFixed(2))}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -821,27 +919,34 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Application Status Cards */}
-      <div className={`chart-card admin-card p-4 sm:p-6 rounded-lg shadow transition-opacity duration-200 ${
-        isFetching ? 'opacity-75' : 'opacity-100'
-      }`}>
+      <div
+        className={`chart-card admin-card p-4 sm:p-6 rounded-lg shadow transition-opacity duration-200 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
         <h2 className="text-lg font-semibold admin-text mb-6">
           Application Status Distribution
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {analytics.applicationStatus.map((status, index) => (
-            <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <div 
+            <div
+              key={index}
+              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center"
+            >
+              <div
                 className="w-4 h-4 rounded-full mx-auto mb-2"
                 style={{ backgroundColor: status.color }}
               ></div>
               <div className="text-2xl font-bold admin-text mb-1">
                 {status.value}
               </div>
-              <div className="text-sm admin-text-light mb-1">
-                {status.name}
-              </div>
+              <div className="text-sm admin-text-light mb-1">{status.name}</div>
               <div className="text-xs admin-text-light">
-                {((status.value / analytics.overview.totalApplications) * 100).toFixed(1)}%
+                {(
+                  (status.value / analytics.overview.totalApplications) *
+                  100
+                ).toFixed(1)}
+                %
               </div>
             </div>
           ))}
@@ -849,9 +954,11 @@ function AdminAnalyticsContent() {
       </div>
 
       {/* Additional Insights */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 transition-opacity duration-200 ${
-        isFetching ? 'opacity-75' : 'opacity-100'
-      }`}>
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 transition-opacity duration-200 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
         <div className="chart-card admin-card p-4 sm:p-6 rounded-lg shadow">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-green-100">
@@ -866,8 +973,8 @@ function AdminAnalyticsContent() {
           </div>
           <div className="flex items-center">
             <span className="text-xs sm:text-sm admin-text-light">
-              {analytics.additionalMetrics.avgTimeToHire > 0 
-                ? "Average hiring timeline" 
+              {analytics.additionalMetrics.avgTimeToHire > 0
+                ? "Average hiring timeline"
                 : "No hires in period"}
             </span>
           </div>
@@ -878,7 +985,9 @@ function AdminAnalyticsContent() {
             <div className="p-2 rounded-lg bg-blue-100">
               <Award className="h-5 w-5 text-blue-600" />
             </div>
-            <h3 className="text-base sm:text-lg font-semibold admin-text">Success Rate</h3>
+            <h3 className="text-base sm:text-lg font-semibold admin-text">
+              Success Rate
+            </h3>
           </div>
           <div className="text-2xl sm:text-3xl font-bold admin-text mb-2">
             {analytics.additionalMetrics.successRate.toFixed(2)}%
@@ -915,8 +1024,8 @@ function AdminAnalyticsContent() {
 
 export default function AdminAnalytics() {
   return (
-    <ResourcePermissionGuard 
-      resource="analytics" 
+    <ResourcePermissionGuard
+      resource="analytics"
       actions={["view"]}
       fallbackPath="/admin/dashboard"
     >
