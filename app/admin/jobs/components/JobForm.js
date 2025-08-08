@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useSetting } from "../../../hooks/useSettings";
+import { useThemeClasses } from "../../../contexts/AdminThemeContext";
 
 export default function JobForm({
   initialData = null,
@@ -10,6 +11,9 @@ export default function JobForm({
   onCancel,
   submitting = false,
 }) {
+  // Get theme classes
+  const { getButtonClasses } = useThemeClasses();
+  
   // Get settings that affect form validation and defaults
   const { value: requireSalaryRange } = useSetting(
     "require_salary_range",
@@ -189,7 +193,7 @@ export default function JobForm({
       {/* Basic Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Job Title *
           </label>
           <input
@@ -198,17 +202,17 @@ export default function JobForm({
             value={formData.title}
             onChange={handleChange}
             disabled={submitting}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.title ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.title ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.title && (
-            <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+            <p className="theme-danger text-sm mt-1">{errors.title}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Slug *
           </label>
           <input
@@ -217,12 +221,12 @@ export default function JobForm({
             value={formData.slug}
             onChange={handleChange}
             disabled={submitting}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.slug ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.slug ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.slug && (
-            <p className="text-red-500 text-sm mt-1">{errors.slug}</p>
+            <p className="theme-danger text-sm mt-1">{errors.slug}</p>
           )}
         </div>
       </div>
@@ -230,7 +234,7 @@ export default function JobForm({
       {/* Department and Location */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Department *
           </label>
           <input
@@ -240,17 +244,17 @@ export default function JobForm({
             onChange={handleChange}
             disabled={submitting}
             placeholder="e.g., Engineering, Marketing, Sales"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.department ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.department ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.department && (
-            <p className="text-red-500 text-sm mt-1">{errors.department}</p>
+            <p className="theme-danger text-sm mt-1">{errors.department}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Location *
           </label>
           <input
@@ -260,19 +264,19 @@ export default function JobForm({
             onChange={handleChange}
             disabled={submitting}
             placeholder="e.g., San Francisco, CA or Remote"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.location ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.location ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.location && (
-            <p className="text-red-500 text-sm mt-1">{errors.location}</p>
+            <p className="theme-danger text-sm mt-1">{errors.location}</p>
           )}
         </div>
       </div>
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium admin-text mb-2">
           Category *
         </label>
         <select
@@ -280,9 +284,9 @@ export default function JobForm({
           value={formData.categoryId}
           onChange={handleChange}
           disabled={submitting}
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-            errors.categoryId ? "border-red-500" : "border-gray-300"
-          } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+            errors.categoryId ? "border-red-500" : "admin-border"
+          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
         >
           <option value="">Select a category</option>
           {categories.map((category) => (
@@ -292,14 +296,14 @@ export default function JobForm({
           ))}
         </select>
         {errors.categoryId && (
-          <p className="text-red-500 text-sm mt-1">{errors.categoryId}</p>
+          <p className="theme-danger text-sm mt-1">{errors.categoryId}</p>
         )}
       </div>
 
       {/* Job Type and Experience */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Employment Type
           </label>
           <select
@@ -307,7 +311,7 @@ export default function JobForm({
             value={formData.employmentType}
             onChange={handleChange}
             disabled={submitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
             <option value="Full-time">Full-time</option>
             <option value="Part-time">Part-time</option>
@@ -317,7 +321,7 @@ export default function JobForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Experience Level
           </label>
           <select
@@ -325,7 +329,7 @@ export default function JobForm({
             value={formData.experienceLevel}
             onChange={handleChange}
             disabled={submitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
             <option value="Entry">Entry</option>
             <option value="Mid">Mid</option>
@@ -335,7 +339,7 @@ export default function JobForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Remote Policy
           </label>
           <select
@@ -343,7 +347,7 @@ export default function JobForm({
             value={formData.remotePolicy}
             onChange={handleChange}
             disabled={submitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
             <option value="On-site">On-site</option>
             <option value="Remote">Remote</option>
@@ -354,7 +358,7 @@ export default function JobForm({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium admin-text mb-2">
           Job Description *
         </label>
         <textarea
@@ -364,18 +368,18 @@ export default function JobForm({
           disabled={submitting}
           rows={6}
           placeholder="Provide a detailed description of the role..."
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-            errors.description ? "border-red-500" : "border-gray-300"
-          } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+            errors.description ? "border-red-500" : "admin-border"
+          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
         />
         {errors.description && (
-          <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+          <p className="theme-danger text-sm mt-1">{errors.description}</p>
         )}
       </div>
 
       {/* Requirements */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium admin-text mb-2">
           Requirements *
         </label>
         <textarea
@@ -385,19 +389,19 @@ export default function JobForm({
           disabled={submitting}
           rows={4}
           placeholder="List the key requirements for this position..."
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-            errors.requirements ? "border-red-500" : "border-gray-300"
-          } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+            errors.requirements ? "border-red-500" : "admin-border"
+          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
         />
         {errors.requirements && (
-          <p className="text-red-500 text-sm mt-1">{errors.requirements}</p>
+          <p className="theme-danger text-sm mt-1">{errors.requirements}</p>
         )}
       </div>
 
       {/* Salary Section - with conditional required indicators */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Minimum Salary {requireSalaryRange && "*"}
           </label>
           <input
@@ -406,17 +410,17 @@ export default function JobForm({
             value={formData.salaryMin}
             onChange={handleChange}
             disabled={submitting}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.salaryMin ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.salaryMin ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.salaryMin && (
-            <p className="text-red-500 text-sm mt-1">{errors.salaryMin}</p>
+            <p className="theme-danger text-sm mt-1">{errors.salaryMin}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Maximum Salary {requireSalaryRange && "*"}
           </label>
           <input
@@ -425,17 +429,17 @@ export default function JobForm({
             value={formData.salaryMax}
             onChange={handleChange}
             disabled={submitting}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
-              errors.salaryMax ? "border-red-500" : "border-gray-300"
-            } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
+              errors.salaryMax ? "border-red-500" : "admin-border"
+            } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
           />
           {errors.salaryMax && (
-            <p className="text-red-500 text-sm mt-1">{errors.salaryMax}</p>
+            <p className="theme-danger text-sm mt-1">{errors.salaryMax}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium admin-text mb-2">
             Currency
           </label>
           <select
@@ -443,7 +447,7 @@ export default function JobForm({
             value={formData.salaryCurrency}
             onChange={handleChange}
             disabled={submitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
             <option value="USD">USD - US Dollar</option>
             <option value="EUR">EUR - Euro</option>
@@ -456,7 +460,7 @@ export default function JobForm({
       </div>
 
       {/* Show Salary Option */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="admin-card border admin-border rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <input
             type="checkbox"
@@ -465,21 +469,21 @@ export default function JobForm({
             checked={formData.showSalary}
             onChange={handleChange}
             disabled={submitting}
-            className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="mt-1 rounded admin-border theme-primary-text focus:ring-2 theme-primary"
           />
           <div className="flex-1">
             <label
               htmlFor="showSalary"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium admin-text mb-1"
             >
               Display Salary Information
             </label>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm admin-text-light">
               Show salary information on job listings and job detail pages.
               Uncheck this if you prefer to discuss compensation during the
               application process.
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs admin-text-light mt-1">
               Default setting for new jobs:{" "}
               {showSalaryByDefault ? "Show salary" : "Hide salary"}
             </p>
@@ -489,10 +493,10 @@ export default function JobForm({
 
       {/* Application Deadline - with conditional required indicator */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium admin-text mb-2">
           Application Deadline{" "}
           {applicationDeadlineRequired && (
-            <span className="text-red-500">*</span>
+            <span className="theme-danger">*</span>
           )}
         </label>
         <input
@@ -502,19 +506,19 @@ export default function JobForm({
           onChange={handleChange}
           disabled={submitting}
           min={new Date().toISOString().split("T")[0]}
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 ${
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
             errors.applicationDeadline
-              ? "border-red-500 bg-red-50"
-              : "border-gray-300"
-          } ${submitting ? "bg-gray-100 cursor-not-allowed" : ""}`}
+              ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+              : "admin-border"
+          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
         />
         {errors.applicationDeadline && (
-          <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm theme-danger">
             <strong>⚠️ {errors.applicationDeadline}</strong>
           </div>
         )}
         {applicationDeadlineRequired && !errors.applicationDeadline && (
-          <p className="text-sm text-blue-600 mt-1 flex items-center">
+          <p className="text-sm theme-primary-text mt-1 flex items-center">
             <svg
               className="h-4 w-4 mr-1"
               fill="none"
@@ -535,7 +539,7 @@ export default function JobForm({
 
       {/* Status field with auto-publish indicator */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium admin-text mb-2">
           Status
         </label>
         <select
@@ -543,7 +547,7 @@ export default function JobForm({
           value={formData.status}
           onChange={handleChange}
           disabled={submitting}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+          className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
         >
           <option value="Draft">Draft</option>
           <option value="Active">Active</option>
@@ -551,7 +555,7 @@ export default function JobForm({
           <option value="Closed">Closed</option>
         </select>
         {autoPublishJobs && (
-          <p className="text-sm text-blue-600 mt-1">
+          <p className="text-sm theme-primary-text mt-1">
             ✨ Auto-publish is enabled - new jobs will be published
             automatically
           </p>
@@ -559,11 +563,11 @@ export default function JobForm({
       </div>
 
       {/* Settings Information Panel */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-900 mb-2">
+      <div className="admin-card border admin-border rounded-lg p-4">
+        <h4 className="text-sm font-semibold admin-text mb-2">
           System Settings Applied:
         </h4>
-        <ul className="text-sm text-blue-800 space-y-1">
+        <ul className="text-sm admin-text-light space-y-1">
           {requireSalaryRange && <li>• Salary range is required</li>}
           {applicationDeadlineRequired && (
             <li>• Application deadline is required</li>
@@ -579,19 +583,19 @@ export default function JobForm({
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+      <div className="flex justify-end space-x-4 pt-6 border-t admin-border">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`px-6 py-2 border admin-border rounded-lg admin-text hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          className={`px-6 py-2 ${getButtonClasses("primary")} rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
         >
           {submitting && (
             <svg

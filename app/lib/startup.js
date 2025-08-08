@@ -4,6 +4,7 @@ import { autoArchiveScheduler } from './autoArchiveScheduler';
 import { autoProgressScheduler } from './autoProgressScheduler';
 import { autoRejectScheduler } from './autoRejectScheduler';
 import { staleApplicationScheduler } from './staleApplicationScheduler';
+import { dataRetentionScheduler } from './dataRetentionScheduler';
 
 let isInitialized = false;
 
@@ -30,6 +31,9 @@ export async function initializeApplication() {
     
     // Start the stale application scheduler
     await staleApplicationScheduler.start();
+    
+    // Start the data retention scheduler
+    await dataRetentionScheduler.start();
     
     isInitialized = true;
     console.log('✅ Application services initialized successfully');

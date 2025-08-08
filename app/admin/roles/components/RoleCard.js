@@ -1,47 +1,50 @@
 import { useState } from "react";
+import { useThemeClasses } from "../../../contexts/AdminThemeContext";
 
 export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
+  const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   const [showDetails, setShowDetails] = useState(false);
 
   const getRoleColorClass = (color) => {
+    // Use theme stat classes based on color
     const colorMap = {
-      blue: "bg-blue-100 text-blue-800 border-blue-200",
-      green: "bg-green-100 text-green-800 border-green-200",
-      purple: "bg-purple-100 text-purple-800 border-purple-200",
-      red: "bg-red-100 text-red-800 border-red-200",
-      yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      indigo: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      pink: "bg-pink-100 text-pink-800 border-pink-200",
-      gray: "bg-gray-100 text-gray-800 border-gray-200",
+      blue: "theme-stat-1-bg bg-opacity-20 theme-stat-1 theme-stat-1-border",
+      green: "theme-stat-3-bg bg-opacity-20 theme-stat-3 theme-stat-3-border",
+      purple: "theme-stat-2-bg bg-opacity-20 theme-stat-2 theme-stat-2-border",
+      red: "theme-danger-bg bg-opacity-20 theme-danger theme-danger-border",
+      yellow: "theme-warning-bg bg-opacity-20 theme-warning theme-warning-border", 
+      indigo: "theme-stat-5-bg bg-opacity-20 theme-stat-5 theme-stat-5-border",
+      pink: "theme-stat-4-bg bg-opacity-20 theme-stat-4 theme-stat-4-border",
+      gray: "admin-card admin-text admin-border",
     };
     return colorMap[color] || colorMap.gray;
   };
 
   const getBadgeColorClass = (color) => {
     const colorMap = {
-      blue: "bg-blue-500",
-      green: "bg-green-500",
-      purple: "bg-purple-500",
-      red: "bg-red-500",
-      yellow: "bg-yellow-500",
-      indigo: "bg-indigo-500",
-      pink: "bg-pink-500",
-      gray: "bg-gray-500",
+      blue: "theme-stat-1-bg",
+      green: "theme-stat-3-bg",
+      purple: "theme-stat-2-bg",
+      red: "theme-danger-bg",
+      yellow: "theme-warning-bg",
+      indigo: "theme-stat-5-bg",
+      pink: "theme-stat-4-bg",
+      gray: "admin-text-light",
     };
     return colorMap[color] || colorMap.gray;
   };
 
   return (
-    <div className={`bg-white shadow rounded-lg border-l-4 ${getRoleColorClass(role.color)} hover:shadow-lg transition-shadow duration-200`}>
+    <div className={`admin-card shadow rounded-lg border-l-4 ${getRoleColorClass(role.color)} hover:shadow-lg transition-shadow duration-200`}>
       <div className="p-6">
         {/* Role Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className={`w-3 h-3 rounded-full ${getBadgeColorClass(role.color)}`}></div>
             <div>
-              <h3 className="text-lg font-medium text-gray-900">{role.name}</h3>
+              <h3 className="text-lg font-medium admin-text">{role.name}</h3>
               {role.is_system_role && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium admin-card admin-text">
                   System Role
                 </span>
               )}
@@ -50,11 +53,11 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
           
           <div className="flex items-center space-x-2">
             {role.is_active ? (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium theme-success-bg bg-opacity-20 theme-success">
                 Active
               </span>
             ) : (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium theme-danger-bg bg-opacity-20 theme-danger">
                 Inactive
               </span>
             )}
@@ -62,38 +65,38 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
         </div>
 
         {/* Role Description */}
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+        <p className="text-sm admin-text-light mb-4 line-clamp-2">
           {role.description || "No description provided"}
         </p>
 
         {/* Role Stats */}
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
+          <div className="text-center p-3 admin-card bg-opacity-50 rounded-lg">
+            <div className="text-lg font-semibold admin-text">
               {role._count?.role_permissions || 0}
             </div>
-            <div className="text-xs text-gray-500">Permissions</div>
+            <div className="text-xs admin-text-light">Permissions</div>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
+          <div className="text-center p-3 admin-card bg-opacity-50 rounded-lg">
+            <div className="text-lg font-semibold admin-text">
               {role._count?.user_roles || 0}
             </div>
-            <div className="text-xs text-gray-500">Users</div>
+            <div className="text-xs admin-text-light">Users</div>
           </div>
         </div>
 
         {/* Permission Preview */}
         {showDetails && role.role_permissions && role.role_permissions.length > 0 && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Permissions:</h4>
+          <div className="mb-4 p-3 admin-card bg-opacity-50 rounded-lg">
+            <h4 className="text-sm font-medium admin-text mb-2">Permissions:</h4>
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {role.role_permissions.slice(0, 5).map((perm, index) => (
-                <div key={index} className="text-xs text-gray-600">
+                <div key={index} className="text-xs admin-text-light">
                   • {perm.permissions.resource}:{perm.permissions.action}
                 </div>
               ))}
               {role.role_permissions.length > 5 && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs admin-text-light">
                   + {role.role_permissions.length - 5} more permissions
                 </div>
               )}
@@ -102,10 +105,10 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between pt-4 border-t admin-border">
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm theme-primary hover:opacity-80 font-medium"
           >
             {showDetails ? "Hide Details" : "View Details"}
           </button>
@@ -113,7 +116,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => onAssignUsers(role)}
-              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('primary')} opacity-70 hover:opacity-100`}
             >
               <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -123,7 +126,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
 
             <button
               onClick={() => onEdit(role)}
-              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('primary')} opacity-70 hover:opacity-100`}
             >
               <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -134,7 +137,7 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
             {!role.is_system_role && (
               <button
                 onClick={() => onDelete(role)}
-                className="inline-flex items-center px-3 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('danger')} opacity-70 hover:opacity-100`}
               >
                 <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clipRule="evenodd" />
@@ -148,15 +151,15 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
 
         {/* System Role Warning */}
         {role.is_system_role && (
-          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="mt-3 p-2 theme-warning-bg bg-opacity-20 border theme-warning-border rounded-md">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-4 w-4 theme-warning" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-2">
-                <p className="text-xs text-yellow-700">
+                <p className="text-xs theme-warning">
                   System roles cannot be deleted and have restricted editing capabilities.
                 </p>
               </div>

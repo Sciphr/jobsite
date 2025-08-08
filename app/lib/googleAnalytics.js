@@ -1,29 +1,127 @@
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
+import crypto from 'crypto';
 
-// Google Analytics property ID (without the G- prefix) - read from environment variables
-const GA_PROPERTY_ID = process.env.GOOGLE_ANALYTICS_PROPERTY_ID;
+// Database configuration cache
+let configCache = null;
+let cacheExpiry = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Decryption functions
+const ENCRYPTION_KEY = process.env.ENCRYPTION_SECRET || 'your-fallback-key-change-this';
+const ALGORITHM = 'aes-256-cbc';
+
+function decrypt(encryptedData) {
+  try {
+    const parts = encryptedData.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+    // Create the same key from the encryption secret
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw new Error('Failed to decrypt analytics configuration');
+  }
+}
 
 /**
- * Initialize Google Analytics client with service account credentials
+ * Get analytics configuration from database
  */
-function getAnalyticsClient() {
-  if (!process.env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL || 
-      !process.env.GOOGLE_ANALYTICS_PRIVATE_KEY) {
-    throw new Error('Google Analytics service account credentials not configured');
+async function getAnalyticsConfig() {
+  // Return cached config if still valid
+  if (configCache && Date.now() < cacheExpiry) {
+    return configCache;
   }
 
-  if (!GA_PROPERTY_ID) {
-    throw new Error('GOOGLE_ANALYTICS_PROPERTY_ID environment variable not configured');
+  try {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    let config;
+    try {
+      const result = await pool.query(`
+        SELECT 
+          property_id,
+          measurement_id,
+          service_account_email,
+          service_account_private_key,
+          connection_status
+        FROM analytics_configurations 
+        WHERE connection_status = 'connected'
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `);
+
+      if (result.rows.length === 0) {
+        throw new Error('No active Google Analytics configuration found');
+      }
+
+      config = result.rows[0];
+    } finally {
+      await pool.end();
+    }
+
+    // Decrypt the private key
+    const decryptedPrivateKey = decrypt(config.service_account_private_key);
+
+    // Cache the configuration
+    configCache = {
+      propertyId: config.property_id,
+      measurementId: config.measurement_id,
+      serviceAccountEmail: config.service_account_email,
+      privateKey: decryptedPrivateKey
+    };
+    cacheExpiry = Date.now() + CACHE_DURATION;
+
+    return configCache;
+  } catch (error) {
+    console.error('Error fetching analytics configuration:', error);
+    throw new Error('Failed to load Google Analytics configuration');
   }
+}
+
+/**
+ * Initialize Google Analytics client with database credentials
+ */
+async function getAnalyticsClient() {
+  const config = await getAnalyticsConfig();
+  
+  // Clean and format the private key
+  let formattedPrivateKey = config.privateKey;
+  
+  // Handle different private key formats
+  if (!formattedPrivateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    // If it's just the key content, wrap it
+    formattedPrivateKey = `-----BEGIN PRIVATE KEY-----\n${formattedPrivateKey}\n-----END PRIVATE KEY-----`;
+  }
+  
+  // Replace literal \n with actual newlines
+  formattedPrivateKey = formattedPrivateKey.replace(/\\n/g, '\n');
 
   const auth = new JWT({
-    email: process.env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_ANALYTICS_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    email: config.serviceAccountEmail,
+    key: formattedPrivateKey,
     scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
   });
 
-  return google.analyticsdata({ version: 'v1beta', auth });
+  return {
+    client: google.analyticsdata({ version: 'v1beta', auth }),
+    propertyId: config.propertyId
+  };
+}
+
+/**
+ * Clear the configuration cache (useful when config is updated)
+ */
+export function clearAnalyticsCache() {
+  configCache = null;
+  cacheExpiry = 0;
 }
 
 /**
@@ -31,10 +129,10 @@ function getAnalyticsClient() {
  */
 export async function getWebsiteMetrics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [
           {
@@ -87,10 +185,10 @@ export async function getWebsiteMetrics(startDate, endDate) {
  */
 export async function getTrafficSources(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [
           {
@@ -123,10 +221,10 @@ export async function getTrafficSources(startDate, endDate) {
  */
 export async function getTopPages(startDate, endDate, limit = 10) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [
           {
@@ -162,10 +260,10 @@ export async function getTopPages(startDate, endDate, limit = 10) {
  */
 export async function getDailyAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [
           {
@@ -204,10 +302,10 @@ export async function getDailyAnalytics(startDate, endDate) {
  */
 export async function getJobPageAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [
           {
@@ -258,10 +356,10 @@ export async function getJobPageAnalytics(startDate, endDate) {
  */
 export async function getRealTimeAnalytics() {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runRealtimeReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dimensions: [
           { name: 'country' },
@@ -297,10 +395,10 @@ export async function getRealTimeAnalytics() {
  */
 export async function getGeographicAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -338,10 +436,10 @@ export async function getGeographicAnalytics(startDate, endDate) {
  */
 export async function getDeviceAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -381,11 +479,11 @@ export async function getDeviceAnalytics(startDate, endDate) {
  */
 export async function getTechnologyAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     // Get browser breakdown
     const browserResponse = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -407,7 +505,7 @@ export async function getTechnologyAnalytics(startDate, endDate) {
 
     // Get operating system breakdown
     const osResponse = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -429,7 +527,7 @@ export async function getTechnologyAnalytics(startDate, endDate) {
 
     // Get screen resolution breakdown
     const screenResponse = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -485,11 +583,11 @@ export async function getTechnologyAnalytics(startDate, endDate) {
  */
 export async function getUserJourneyAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     // Get landing pages
     const landingPagesResponse = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -508,7 +606,7 @@ export async function getUserJourneyAnalytics(startDate, endDate) {
 
     // Get user engagement
     const engagementResponse = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -550,11 +648,11 @@ export async function getUserJourneyAnalytics(startDate, endDate) {
  */
 export async function getJobPerformanceAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     // Get detailed job page analytics with more metrics
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],
@@ -607,10 +705,10 @@ export async function getJobPerformanceAnalytics(startDate, endDate) {
  */
 export async function getTimeAnalytics(startDate, endDate) {
   try {
-    const analyticsDataClient = getAnalyticsClient();
+    const { client: analyticsDataClient, propertyId } = await getAnalyticsClient();
 
     const response = await analyticsDataClient.properties.runReport({
-      property: `properties/${GA_PROPERTY_ID}`,
+      property: `properties/${propertyId}`,
       requestBody: {
         dateRanges: [{
           startDate: startDate.toISOString().split('T')[0],

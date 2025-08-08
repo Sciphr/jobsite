@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useThemeClasses } from "../../../contexts/AdminThemeContext";
 import {
   Save,
   ArrowLeft,
@@ -22,6 +23,7 @@ import UserRoleManager from "./UserRoleManager";
 export default function UserForm({ userId = null, initialData = null, refreshTrigger = 0, availableRoles = [], onRoleChange = null }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { getButtonClasses, getStatCardClasses } = useThemeClasses();
   const isEdit = !!userId;
 
   const [formData, setFormData] = useState({
@@ -278,12 +280,12 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
   if (!canEdit) {
     return (
       <div className="max-w-7xl mx-auto space-y-10">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-          <Shield className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-red-900 mb-2">
+        <div className="admin-card border admin-border rounded-lg p-8 text-center">
+          <Shield className="h-12 w-12 theme-danger mx-auto mb-4" />
+          <h2 className="text-xl font-semibold admin-text mb-2">
             Access Denied
           </h2>
-          <p className="text-red-700">
+          <p className="admin-text-light">
             You don't have permission to edit users.
           </p>
         </div>
@@ -298,16 +300,16 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
         <div className="flex items-center space-x-4">
           <button
             onClick={() => router.push("/admin/users")}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            className="p-2 admin-text-light hover:admin-text transition-colors duration-200"
             title="Back to users"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold admin-text">
               {isEdit ? "Edit User" : "Create New User"}
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="admin-text-light mt-2">
               {isEdit
                 ? "Update user details and permissions"
                 : "Add a new user to the system"}
@@ -319,19 +321,19 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
       {/* Form */}
       <form id="user-form" onSubmit={handleSubmit} className="space-y-12">
         {/* Basic Information - Full Width */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10">
+        <div className="admin-card rounded-xl shadow-sm border p-10">
           <div className="flex items-center space-x-4 mb-8">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <User className="h-6 w-6 text-purple-600" />
+            <div className="p-3 theme-stat-1-bg rounded-xl">
+              <User className="h-6 w-6 theme-stat-1" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900">
+            <h2 className="text-2xl font-semibold admin-text">
               Basic Information
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10">
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 First Name *
               </label>
               <input
@@ -340,13 +342,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 value={formData.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 onBlur={() => handleBlur("firstName")}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
-                  errors.firstName ? "border-red-500" : "border-gray-300"
+                className={`w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                  errors.firstName ? "theme-danger-bg border-opacity-50" : "admin-border"
                 }`}
                 placeholder="Enter first name"
               />
               {errors.firstName && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.firstName}</span>
                 </p>
@@ -354,7 +356,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
 
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 Last Name *
               </label>
               <input
@@ -363,13 +365,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 value={formData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 onBlur={() => handleBlur("lastName")}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
-                  errors.lastName ? "border-red-500" : "border-gray-300"
+                className={`w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                  errors.lastName ? "theme-danger-bg border-opacity-50" : "admin-border"
                 }`}
                 placeholder="Enter last name"
               />
               {errors.lastName && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.lastName}</span>
                 </p>
@@ -377,7 +379,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
 
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 Email Address *
               </label>
               <div className="relative">
@@ -387,15 +389,15 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   onBlur={() => handleBlur("email")}
-                  className={`w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
-                    errors.email ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-4 py-3 pl-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                    errors.email ? "theme-danger-bg border-opacity-50" : "admin-border"
                   }`}
                   placeholder="Enter email address"
                 />
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 admin-text-light" />
               </div>
               {errors.email && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.email}</span>
                 </p>
@@ -403,7 +405,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
 
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 Phone Number
               </label>
               <div className="relative">
@@ -413,15 +415,15 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   onBlur={() => handleBlur("phone")}
-                  className={`w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
-                    errors.phone ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-4 py-3 pl-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                    errors.phone ? "theme-danger-bg border-opacity-50" : "admin-border"
                   }`}
                   placeholder="Enter phone number"
                 />
-                <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 admin-text-light" />
               </div>
               {errors.phone && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.phone}</span>
                 </p>
@@ -431,19 +433,19 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
         </div>
 
         {/* Password Section - Full Width */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10">
+        <div className="admin-card rounded-xl shadow-sm border p-10">
           <div className="flex items-center space-x-4 mb-8">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Shield className="h-6 w-6 text-blue-600" />
+            <div className="p-3 theme-stat-2-bg rounded-xl">
+              <Shield className="h-6 w-6 theme-stat-2" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900">
+            <h2 className="text-2xl font-semibold admin-text">
               {isEdit ? "Password Management" : "Set User Password"}
             </h2>
           </div>
 
           {isEdit && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-10">
-              <p className="text-lg text-blue-700">
+            <div className="theme-stat-2-bg bg-opacity-20 border theme-stat-2-border rounded-xl p-6 mb-10">
+              <p className="text-lg theme-stat-2">
                 Leave password fields empty to keep the current password unchanged.
               </p>
             </div>
@@ -451,7 +453,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 Password {!isEdit && "*"}
               </label>
               <div className="relative">
@@ -463,8 +465,8 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("password", e.target.value)
                   }
                   onBlur={() => handleBlur("password")}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
-                    errors.password ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-4 py-3 pr-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                    errors.password ? "theme-danger-bg border-opacity-50" : "admin-border"
                   }`}
                   placeholder={isEdit ? "Enter new password" : "Enter password"}
                 />
@@ -474,14 +476,14 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   className="absolute inset-y-0 right-0 pr-4 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 admin-text-light" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 admin-text-light" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.password}</span>
                 </p>
@@ -489,7 +491,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
 
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-3">
+              <label className="block text-lg font-medium admin-text mb-3">
                 Confirm Password {formData.password && "*"}
               </label>
               <div className="relative">
@@ -501,10 +503,10 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("confirmPassword", e.target.value)
                   }
                   onBlur={() => handleBlur("confirmPassword")}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400 text-gray-700 text-lg ${
+                  className={`w-full px-4 py-3 pr-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
                     errors.confirmPassword
-                      ? "border-red-500"
-                      : "border-gray-300"
+                      ? "theme-danger-bg border-opacity-50"
+                      : "admin-border"
                   }`}
                   placeholder="Confirm password"
                   disabled={!formData.password}
@@ -516,14 +518,14 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   disabled={!formData.password}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 admin-text-light" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 admin-text-light" />
                   )}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-2 text-base text-red-600 flex items-center space-x-2">
+                <p className="mt-2 text-base theme-danger flex items-center space-x-2">
                   <AlertCircle className="h-5 w-5" />
                   <span>{errors.confirmPassword}</span>
                 </p>
@@ -531,9 +533,9 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
 
             <div className="flex items-center justify-center">
-              <div className="bg-gray-50 rounded-xl p-6 text-center">
-                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-base text-gray-600">
+              <div className="admin-card bg-opacity-50 rounded-xl p-6 text-center">
+                <Shield className="h-12 w-12 admin-text-light mx-auto mb-3" />
+                <p className="text-base admin-text-light">
                   Password must be at least 6 characters long
                 </p>
               </div>
@@ -543,62 +545,62 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
 
         {/* Role Assignment Section - Only for new users */}
         {!isEdit && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10">
+          <div className="admin-card rounded-xl shadow-sm border p-10">
             <div className="flex items-center space-x-4 mb-8">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <Settings className="h-6 w-6 text-green-600" />
+              <div className="p-3 theme-stat-3-bg rounded-xl">
+                <Settings className="h-6 w-6 theme-stat-3" />
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900">
+              <h2 className="text-2xl font-semibold admin-text">
                 Initial Role Assignment
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div>
-                <label className="block text-lg font-medium text-gray-700 mb-3">
+                <label className="block text-lg font-medium admin-text mb-3">
                   Initial User Role
                 </label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={(e) => handleInputChange("role", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-700 bg-white text-lg"
+                  className="w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text admin-card text-lg"
                 >
                   {roleOptions.map((role) => (
                     <option
                       key={role.value}
                       value={role.value}
-                      className="text-gray-700"
+                      className="admin-text"
                     >
                       {role.label}
                     </option>
                   ))}
                 </select>
-                <p className="mt-3 text-base text-gray-600">
+                <p className="mt-3 text-base admin-text-light">
                   {
                     roleOptions.find((r) => r.value === formData.role)
                       ?.description
                   }
                 </p>
-                <p className="mt-4 text-base text-blue-600">
+                <p className="mt-4 text-base theme-primary">
                   Additional roles can be assigned after creation.
                 </p>
               </div>
               
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Role Information</h3>
+              <div className="admin-card bg-opacity-50 rounded-xl p-6">
+                <h3 className="text-lg font-medium admin-text mb-4">Role Information</h3>
                 <div className="space-y-3">
                   {roleOptions.map((role) => (
                     <div key={role.value} className={`p-3 rounded-lg border ${
                       formData.role === role.value 
-                        ? 'border-purple-300 bg-purple-50' 
-                        : 'border-gray-200 bg-white'
+                        ? 'theme-primary-text theme-primary-bg bg-opacity-10 border-opacity-50' 
+                        : 'admin-border admin-card'
                     }`}>
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">{role.label}</span>
-                        <span className="text-sm text-gray-500">Level {role.privilegeLevel}</span>
+                        <span className="font-medium admin-text">{role.label}</span>
+                        <span className="text-sm admin-text-light">Level {role.privilegeLevel}</span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{role.description}</p>
+                      <p className="text-sm admin-text-light mt-1">{role.description}</p>
                     </div>
                   ))}
                 </div>
@@ -608,12 +610,12 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
         )}
 
         {/* Account Status Section - Full Width */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10">
+        <div className="admin-card rounded-xl shadow-sm border p-10">
           <div className="flex items-center space-x-4 mb-8">
-            <div className="p-3 bg-orange-100 rounded-xl">
-              <Shield className="h-6 w-6 text-orange-600" />
+            <div className="p-3 theme-stat-4-bg rounded-xl">
+              <Shield className="h-6 w-6 theme-stat-4" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900">
+            <h2 className="text-2xl font-semibold admin-text">
               Account Status & Information
             </h2>
           </div>
@@ -629,33 +631,33 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("isActive", e.target.checked)
                   }
                   disabled={isSelfEdit}
-                  className={`w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 ${
+                  className={`w-5 h-5 rounded admin-border theme-primary focus:ring-2 theme-primary-bg focus:ring-opacity-50 ${
                     isSelfEdit ? "cursor-not-allowed" : ""
                   }`}
                 />
                 <label
                   htmlFor="isActive"
-                  className="text-lg font-medium text-gray-700"
+                  className="text-lg font-medium admin-text"
                 >
                   Active User Account
                 </label>
               </div>
               
               {isSelfEdit && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                  <p className="text-base text-orange-700">
+                <div className="theme-warning-bg bg-opacity-20 border theme-warning-bg border-opacity-50 rounded-xl p-4">
+                  <p className="text-base theme-warning">
                     You cannot deactivate your own account for security reasons.
                   </p>
                 </div>
               )}
               
-              <div className={`p-4 rounded-xl ${
+              <div className={`p-4 rounded-xl border ${
                 formData.isActive 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-red-50 border border-red-200'
+                  ? 'theme-success-bg bg-opacity-20 theme-success-border' 
+                  : 'theme-danger-bg bg-opacity-20 theme-danger-border'
               }`}>
                 <p className={`text-base font-medium ${
-                  formData.isActive ? 'text-green-700' : 'text-red-700'
+                  formData.isActive ? 'theme-success' : 'theme-danger'
                 }`}>
                   {formData.isActive 
                     ? "✓ User can log in and access the system"
@@ -667,23 +669,23 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
 
             {isEdit && initialData && (
               <>
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <div className="admin-card bg-opacity-50 rounded-xl p-6">
+                  <h3 className="text-lg font-medium admin-text mb-4">
                     Account Timeline
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
-                      <Calendar className="h-5 w-5 text-gray-400" />
+                      <Calendar className="h-5 w-5 admin-text-light" />
                       <div>
-                        <p className="text-base font-medium text-gray-700">Member Since</p>
-                        <p className="text-sm text-gray-600">{new Date(initialData.createdAt).toLocaleDateString()}</p>
+                        <p className="text-base font-medium admin-text">Member Since</p>
+                        <p className="text-sm admin-text-light">{new Date(initialData.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-gray-400" />
+                      <CheckCircle className="h-5 w-5 admin-text-light" />
                       <div>
-                        <p className="text-base font-medium text-gray-700">Last Updated</p>
-                        <p className="text-sm text-gray-600">{new Date(initialData.updatedAt).toLocaleDateString()}</p>
+                        <p className="text-base font-medium admin-text">Last Updated</p>
+                        <p className="text-sm admin-text-light">{new Date(initialData.updatedAt).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
@@ -696,23 +698,23 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
 
         {/* Error Display - Spans both columns */}
         {errors.submit && (
-          <div className="xl:col-span-2 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="xl:col-span-2 theme-danger-bg bg-opacity-20 border theme-danger-border rounded-lg p-4">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <p className="text-sm text-red-600">{errors.submit}</p>
+              <AlertCircle className="h-5 w-5 theme-danger" />
+              <p className="text-sm theme-danger">{errors.submit}</p>
             </div>
           </div>
         )}
       </form>
 
       {/* Form Actions - Outside form to span full width */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10">
+      <div className="admin-card rounded-xl shadow-sm border p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold admin-text mb-2">
               {isEdit ? "Save Changes" : "Create User Account"}
             </h3>
-            <p className="text-gray-600">
+            <p className="admin-text-light">
               {isEdit 
                 ? "Review your changes and save the updated user information."
                 : "Complete the user creation process by saving the new account."
@@ -724,7 +726,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             <button
               type="button"
               onClick={handleCancel}
-              className="px-8 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-lg"
+              className="px-8 py-3 admin-border border rounded-xl admin-text hover:admin-card hover:bg-opacity-50 transition-colors duration-200 font-medium text-lg"
             >
               Cancel
             </button>
@@ -732,7 +734,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
               type="submit"
               form="user-form"
               disabled={saving}
-              className="flex items-center space-x-3 px-10 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-purple-400 transition-colors duration-200 font-medium text-lg shadow-lg"
+              className={`flex items-center space-x-3 px-10 py-3 rounded-xl transition-colors duration-200 font-medium text-lg shadow-lg ${getButtonClasses('primary')} disabled:opacity-50`}
             >
               {saving ? (
                 <>

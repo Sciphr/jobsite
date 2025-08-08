@@ -15,6 +15,7 @@ export function usePermissions() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permissionsInitialized, setPermissionsInitialized] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Monitor when permissions are actually updated
   useEffect(() => {
@@ -121,7 +122,7 @@ export function usePermissions() {
       isMounted = false;
       clearTimeout(timeoutId); // Clean up timeout
     };
-  }, [session?.user?.id, session?.user?.permissions, session?.user?.permissionsLastUpdated]);
+  }, [session?.user?.id, session?.user?.permissions, session?.user?.permissionsLastUpdated, refreshTrigger]);
 
   // Core permission checking function
   const hasPermission = useMemo(() => {
@@ -129,10 +130,19 @@ export function usePermissions() {
       const permissionKey = createPermissionKey(resource, action);
       const hasAccess = permissions.has(permissionKey);
       
+      // Debug logging for jobs:approve specifically
+      if (resource === "jobs" && action === "approve") {
+        console.log(`DEBUG: Checking jobs:approve permission`);
+        console.log(`User privilege level:`, session?.user?.privilegeLevel);
+        console.log(`Permission key:`, permissionKey);
+        console.log(`Permissions set size:`, permissions.size);
+        console.log(`Has permission in set:`, hasAccess);
+        console.log(`All permissions:`, Array.from(permissions));
+      }
       
       return hasAccess;
     };
-  }, [permissions]);
+  }, [permissions, session?.user?.privilegeLevel]);
 
   // Convenience functions for common actions
   const can = useMemo(() => ({
@@ -228,6 +238,11 @@ export function usePermissions() {
     isSystemRole: userRole?.isSystemRole || false
   }), [userRole]);
 
+  // Refresh permissions function
+  const refreshPermissions = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return {
     // Core functions
     hasPermission,
@@ -245,6 +260,7 @@ export function usePermissions() {
     permissions: Array.from(permissions),
     loading,
     permissionsReady: permissionsInitialized, // Ready when permissions state matches session
+    refreshPermissions, // Function to manually refresh permissions
     
     // Raw data
     permissionSet: permissions,

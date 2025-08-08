@@ -135,11 +135,8 @@ export default function GA4ConfigurationWizard({ onClose, onSuccess }) {
       const result = await response.json();
       setTestResult(result);
       
-      if (result.success) {
-        setTimeout(() => {
-          onSuccess?.(formData);
-        }, 2000);
-      }
+      // Don't auto-close on successful test - let user click "Complete Setup"
+      // The onSuccess will be called from saveConfiguration instead
     } catch (error) {
       setTestResult({ 
         success: false, 
@@ -151,20 +148,37 @@ export default function GA4ConfigurationWizard({ onClose, onSuccess }) {
   };
 
   const saveConfiguration = async () => {
+    console.log('Complete Setup button clicked!');
     setIsLoading(true);
     
     try {
+      console.log('Saving configuration...', { formData: { ...formData, serviceAccountPrivateKey: '[HIDDEN]' } });
+      
       const response = await fetch('/api/admin/analytics/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       
-      if (response.ok) {
+      const result = await response.json();
+      console.log('Save response:', result);
+      
+      if (response.ok && result.success) {
+        console.log('Configuration saved successfully');
         onSuccess?.(formData);
+      } else {
+        console.error('Failed to save configuration:', result);
+        setTestResult({
+          success: false,
+          error: result.error || 'Failed to save configuration'
+        });
       }
     } catch (error) {
       console.error('Failed to save configuration:', error);
+      setTestResult({
+        success: false,
+        error: 'Network error while saving configuration'
+      });
     } finally {
       setIsLoading(false);
     }

@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Info,
 } from "lucide-react";
+import AnalyticsConfigurationCard from "./components/AnalyticsConfigurationCard";
 
 export default function ApplicationsManagerSettings() {
   const router = useRouter();
@@ -184,7 +185,11 @@ export default function ApplicationsManagerSettings() {
     setSettings((prevSettings) =>
       prevSettings.map((setting) =>
         setting.id === settingId
-          ? { ...setting, parsedValue: newValue, value: newValue.toString() }
+          ? { 
+              ...setting, 
+              parsedValue: newValue, 
+              value: newValue === "" ? "" : newValue.toString() 
+            }
           : setting
       )
     );
@@ -346,15 +351,25 @@ export default function ApplicationsManagerSettings() {
           <div className={isDisabled ? 'opacity-50' : ''}>
             <input
               type="number"
-              value={parsedValue}
-              onChange={(e) => handleSettingChange(id, parseInt(e.target.value))}
+              value={isNaN(parsedValue) ? "" : parsedValue}
+              onChange={(e) => {
+                if (!isDisabled) {
+                  const numValue = parseInt(e.target.value);
+                  handleSettingChange(id, isNaN(numValue) ? "" : numValue);
+                }
+              }}
               disabled={isDisabled}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800"
-              min="0"
+              min={key === "candidate_data_retention_years" ? "3" : "0"}
             />
             {isDisabled && (
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                 Enable Workflow Automation to use this feature
+              </p>
+            )}
+            {key === "candidate_data_retention_years" && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Minimum 3 years required for legal compliance
               </p>
             )}
           </div>
@@ -756,63 +771,81 @@ export default function ApplicationsManagerSettings() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {filteredSettings.map((setting, index) => (
-                      <motion.div
-                        key={setting.id}
-                        variants={settingCardVariants}
-                        initial="hidden"
-                        animate="visible"
-                        transition={{ delay: index * 0.05 }}
-                        whileHover={{ scale: 1.01, y: -2 }}
-                        className="border admin-border rounded-lg p-6 admin-card"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <h4 className="font-medium admin-text flex items-center space-x-2">
-                              <span>
-                                {setting.key
-                                  .replace(/_/g, " ")
-                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
-                              </span>
-                              {setting.privilegeLevel >= 3 && (
-                                <Lock
-                                  className="h-4 w-4 text-red-500"
-                                  title="Requires super admin privileges"
-                                />
-                              )}
-                              {setting.privilegeLevel === 2 && (
-                                <Shield
-                                  className="h-4 w-4 text-orange-500"
-                                  title="Requires admin privileges"
-                                />
-                              )}
-                            </h4>
-                            <p className="text-sm admin-text-light mt-1">
-                              {setting.description}
-                            </p>
-                          </div>
-                          <div className="ml-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                setting.dataType === "boolean"
-                                  ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
-                                  : setting.dataType === "number"
-                                    ? "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"
-                                    : setting.dataType === "json"
-                                      ? "bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300"
-                                      : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
-                              }`}
-                            >
-                              {setting.dataType}
-                            </span>
-                          </div>
-                        </div>
+                    {filteredSettings.map((setting, index) => {
+                      // Special handling for analytics_tracking setting
+                      if (setting.key === 'analytics_tracking') {
+                        return (
+                          <motion.div
+                            key={setting.id}
+                            variants={settingCardVariants}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: index * 0.05 }}
+                          >
+                            <AnalyticsConfigurationCard />
+                          </motion.div>
+                        );
+                      }
 
-                        <div className="space-y-2">
-                          {renderSettingField(setting)}
-                        </div>
-                      </motion.div>
-                    ))}
+                      // Regular setting rendering
+                      return (
+                        <motion.div
+                          key={setting.id}
+                          variants={settingCardVariants}
+                          initial="hidden"
+                          animate="visible"
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ scale: 1.01, y: -2 }}
+                          className="border admin-border rounded-lg p-6 admin-card"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <h4 className="font-medium admin-text flex items-center space-x-2">
+                                <span>
+                                  {setting.key
+                                    .replace(/_/g, " ")
+                                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                                </span>
+                                {setting.privilegeLevel >= 3 && (
+                                  <Lock
+                                    className="h-4 w-4 text-red-500"
+                                    title="Requires super admin privileges"
+                                  />
+                                )}
+                                {setting.privilegeLevel === 2 && (
+                                  <Shield
+                                    className="h-4 w-4 text-orange-500"
+                                    title="Requires admin privileges"
+                                  />
+                                )}
+                              </h4>
+                              <p className="text-sm admin-text-light mt-1">
+                                {setting.description}
+                              </p>
+                            </div>
+                            <div className="ml-4">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  setting.dataType === "boolean"
+                                    ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
+                                    : setting.dataType === "number"
+                                      ? "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"
+                                      : setting.dataType === "json"
+                                        ? "bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300"
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
+                                }`}
+                              >
+                                {setting.dataType}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {renderSettingField(setting)}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

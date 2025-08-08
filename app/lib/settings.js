@@ -174,6 +174,74 @@ export async function getCachedSystemSetting(key, defaultValue = null) {
 }
 
 /**
+ * Validate setting value based on key-specific rules
+ */
+function validateSettingValue(key, value) {
+  switch (key) {
+    case 'candidate_data_retention_years':
+      const years = parseInt(value);
+      if (isNaN(years) || years < 3) {
+        throw new Error('Data retention period must be at least 3 years for legal compliance');
+      }
+      return years.toString();
+    default:
+      return String(value);
+  }
+}
+
+/**
+ * Update a system setting value
+ */
+export async function updateSystemSetting(key, value, dataType = 'boolean') {
+  try {
+    // Validate the value based on key-specific rules
+    const validatedValue = validateSettingValue(key, value);
+    
+    // First try to find existing system setting
+    const existingSetting = await appPrisma.settings.findFirst({
+      where: {
+        key,
+        userId: null
+      }
+    });
+
+    if (existingSetting) {
+      // Update existing setting
+      await appPrisma.settings.update({
+        where: {
+          id: existingSetting.id
+        },
+        data: {
+          value: validatedValue,
+          dataType,
+          updatedAt: new Date()
+        }
+      });
+    } else {
+      // Create new setting
+      await appPrisma.settings.create({
+        data: {
+          key,
+          value: validatedValue,
+          dataType,
+          userId: null,
+          category: 'system'
+        }
+      });
+    }
+
+    // Clear cache for this setting
+    const cacheKey = `system:${key}`;
+    settingsCache.delete(cacheKey);
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating system setting ${key}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Clear settings cache (call when settings are updated)
  */
 export function clearSettingsCache() {

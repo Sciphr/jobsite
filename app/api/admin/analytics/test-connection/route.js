@@ -21,14 +21,33 @@ export async function POST(req) {
     const { google } = require('googleapis');
     
     try {
-      // Create JWT client with provided credentials
-      const jwtClient = new google.auth.JWT(
-        serviceAccountEmail,
-        null,
-        serviceAccountPrivateKey.replace(/\\n/g, '\n'),
-        ['https://www.googleapis.com/auth/analytics.readonly'],
-        null
-      );
+      // Clean and format the private key
+      let formattedPrivateKey = serviceAccountPrivateKey;
+      
+      // Handle different private key formats
+      if (!formattedPrivateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        // If it's just the key content, wrap it
+        formattedPrivateKey = `-----BEGIN PRIVATE KEY-----\n${formattedPrivateKey}\n-----END PRIVATE KEY-----`;
+      }
+      
+      // Replace literal \n with actual newlines
+      formattedPrivateKey = formattedPrivateKey.replace(/\\n/g, '\n');
+      
+      // Create service account credentials object
+      const credentials = {
+        type: 'service_account',
+        client_email: serviceAccountEmail,
+        private_key: formattedPrivateKey,
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+      };
+
+      // Create JWT client with credentials object
+      const jwtClient = new google.auth.JWT({
+        email: serviceAccountEmail,
+        key: formattedPrivateKey,
+        scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+      });
 
       // Test authentication
       await jwtClient.authorize();

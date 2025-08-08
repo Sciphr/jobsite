@@ -197,11 +197,11 @@ function AdminLayoutContent({ children }) {
       description: "View job applications",
     },
     {
-      name: "Hire Approvals",
-      href: "/admin/hire-approvals",
+      name: "Approvals",
+      href: "/admin/approvals",
       icon: CheckCircle,
       requiredPermission: { resource: "applications", action: "approve_hire" },
-      description: "Approve hiring decisions",
+      description: "Approve hiring & job requests",
       badge: hireApprovalsData?.count > 0 ? hireApprovalsData.count : null,
     },
     {
@@ -260,6 +260,11 @@ function AdminLayoutContent({ children }) {
   const allowedNavItems = navigationItems.filter((item) => {
     // Dashboard is always available to admin users
     if (!item.requiredPermission) return true;
+
+    // Special case for Approvals - check for either hire approval or job approval permissions
+    if (item.name === "Approvals") {
+      return hasPermission("applications", "approve_hire") || hasPermission("jobs", "approve");
+    }
 
     // Check specific permission
     const { resource, action } = item.requiredPermission;

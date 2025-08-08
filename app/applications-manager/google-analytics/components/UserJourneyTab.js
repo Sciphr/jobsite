@@ -3,9 +3,8 @@
 import { motion } from "framer-motion";
 import {
   Users,
-  MousePointer,
+  Briefcase,
   Clock,
-  ArrowRight,
   TrendingUp,
   Heart,
   Eye,

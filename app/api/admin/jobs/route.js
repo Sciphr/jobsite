@@ -7,6 +7,7 @@ import { sendJobPublishedNotification } from "../../../lib/email";
 import { logAuditEvent } from "../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../lib/auditLog";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
+import { needsJobApproval, createJobApprovalRequest } from "../../../lib/jobApprovalService";
 
 export async function GET(req) {
   // Check if user has permission to view jobs
@@ -204,26 +205,36 @@ export async function POST(req) {
       autoExpirationDate.setDate(autoExpirationDate.getDate() + autoExpireDays);
     }
 
-    // Determine job status based on settings
+    // Determine job status based on settings and approval workflow
     let jobStatus = status || "Draft";
     let postedAt = null;
+    let needsApproval = false;
 
     // Auto-publish overrides the form status when enabled
     if (autoPublishJobs && (!status || status === "Draft")) {
       jobStatus = "Active";
     }
 
-    // Set postedAt if job is being published
+    // Check if job needs approval before publishing
     if (jobStatus === "Active") {
-      postedAt = new Date();
+      needsApproval = await needsJobApproval(session.user.id, jobStatus);
+      
+      if (needsApproval) {
+        // Keep as Draft and create approval request after job creation
+        jobStatus = "Draft";
+        postedAt = null;
+      } else {
+        // User can publish directly
+        postedAt = new Date();
 
-      // If we have auto-expiration enabled and no specific expiration date set,
-      // calculate it from the posting date
-      if (autoExpireDays > 0 && !autoExpirationDate) {
-        autoExpirationDate = new Date(postedAt);
-        autoExpirationDate.setDate(
-          autoExpirationDate.getDate() + autoExpireDays
-        );
+        // If we have auto-expiration enabled and no specific expiration date set,
+        // calculate it from the posting date
+        if (autoExpireDays > 0 && !autoExpirationDate) {
+          autoExpirationDate = new Date(postedAt);
+          autoExpirationDate.setDate(
+            autoExpirationDate.getDate() + autoExpireDays
+          );
+        }
       }
     }
 
@@ -274,6 +285,21 @@ export async function POST(req) {
       },
     });
 
+    // Create approval request if needed
+    let approvalRequest = null;
+    if (needsApproval) {
+      try {
+        approvalRequest = await createJobApprovalRequest(
+          newJob.id, 
+          session.user.id,
+          `Job created and submitted for approval: ${newJob.title}`
+        );
+      } catch (approvalError) {
+        console.error('Error creating approval request:', approvalError);
+        // Don't fail the job creation if approval request fails
+      }
+    }
+
     // Log successful job creation
     await logAuditEvent(
       {
@@ -313,7 +339,18 @@ export async function POST(req) {
       req
     );
 
-    return new Response(JSON.stringify(newJob), { status: 201 });
+    // Include approval information in response
+    const responseData = {
+      ...newJob,
+      needsApproval,
+      approvalRequest: approvalRequest ? {
+        id: approvalRequest.id,
+        status: approvalRequest.status,
+        requested_at: approvalRequest.requested_at
+      } : null
+    };
+
+    return new Response(JSON.stringify(responseData), { status: 201 });
   } catch (error) {
     console.error("Job creation error:", error);
 

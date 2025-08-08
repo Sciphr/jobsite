@@ -28,6 +28,19 @@ export async function PATCH(request, { params }) {
       userEmail: session.user.email,
     });
 
+    // Validate specific setting values
+    if (key === "candidate_data_retention_years") {
+      const years = parseInt(value);
+      if (isNaN(years) || years < 3) {
+        return new Response(
+          JSON.stringify({
+            error: "Data retention period must be at least 3 years for legal compliance",
+          }),
+          { status: 400 }
+        );
+      }
+    }
+
     // Special handling for admin_dashboard_theme - always treat as personal
     const shouldBePersonal = isPersonal || key === "admin_dashboard_theme";
     const targetUserId = shouldBePersonal ? session.user.id : null;

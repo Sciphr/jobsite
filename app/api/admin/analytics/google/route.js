@@ -56,37 +56,35 @@ export async function GET(req) {
         startDate.setDate(now.getDate() - 30);
     }
 
-    // Check if service account credentials are configured
-    if (!process.env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL || 
-        !process.env.GOOGLE_ANALYTICS_PRIVATE_KEY) {
-      return new Response(JSON.stringify({
-        enabled: true,
-        configured: false,
-        message: "Google Analytics service account credentials not configured",
-        setupInstructions: {
-          step1: "Go to Google Cloud Console",
-          step2: "Enable Google Analytics Reporting API",
-          step3: "Create a service account",
-          step4: "Download service account JSON key",
-          step5: "Add GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL and GOOGLE_ANALYTICS_PRIVATE_KEY to environment variables",
-          step6: "Add GOOGLE_ANALYTICS_PROPERTY_ID to environment variables",
-          step7: "Add service account email to Google Analytics property users with 'Viewer' role"
-        }
-      }), { status: 200 });
+    // Check if database configuration exists
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    let hasConfiguration = false;
+    try {
+      const result = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM analytics_configurations 
+        WHERE connection_status = 'connected'
+      `);
+      hasConfiguration = parseInt(result.rows[0].count) > 0;
+    } finally {
+      await pool.end();
     }
 
-    // Check if GA Property ID is configured
-    if (!process.env.GOOGLE_ANALYTICS_PROPERTY_ID) {
+    if (!hasConfiguration) {
       return new Response(JSON.stringify({
         enabled: true,
         configured: false,
-        message: "Google Analytics Property ID not configured",
+        message: "Google Analytics not configured. Please use the configuration wizard.",
         setupInstructions: {
-          step1: "Go to Google Analytics Admin panel",
-          step2: "Select your property",
-          step3: "Go to Property Settings",
-          step4: "Copy the Property ID (format: 123456789)",
-          step5: "Add GOOGLE_ANALYTICS_PROPERTY_ID to environment variables"
+          step1: "Go to Applications Manager > Settings",
+          step2: "Find the Google Analytics 4 Integration section",
+          step3: "Click 'Configure GA4 Integration'",
+          step4: "Follow the setup wizard to connect your GA4 property",
+          note: "You'll need your GA4 Property ID, Measurement ID, and Service Account credentials"
         }
       }), { status: 200 });
     }
@@ -196,7 +194,7 @@ export async function GET(req) {
       setupInstructions = {
         step1: "Go to Google Analytics Admin panel",
         step2: "Navigate to Property > Property Access Management",
-        step3: `Add service account email: ${process.env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL}`,
+        step3: "Add your service account email from the GA4 configuration",
         step4: "Grant 'Viewer' role to the service account",
         step5: "Wait 5-10 minutes for permissions to propagate",
         step6: "Refresh this page to try again",
@@ -205,19 +203,18 @@ export async function GET(req) {
     } else if (error.message.includes('credentials') || error.message.includes('authentication')) {
       errorMessage = 'Google Analytics credentials not properly configured';
       setupInstructions = {
-        step1: "Verify GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL in environment variables",
-        step2: "Verify GOOGLE_ANALYTICS_PRIVATE_KEY contains the full private key with line breaks",
-        step3: "Verify GOOGLE_ANALYTICS_PROPERTY_ID is the numeric property ID (not measurement ID)",
-        step4: "Restart the application after changing environment variables"
+        step1: "Go to Applications Manager > Settings > Google Analytics 4 Integration",
+        step2: "Verify your service account credentials are correct",
+        step3: "Test the connection to ensure your configuration works",
+        step4: "Re-configure if necessary using the configuration wizard"
       };
     } else if (error.message.includes('Property ID')) {
       errorMessage = 'Invalid Google Analytics Property ID';
       setupInstructions = {
-        step1: "Go to Google Analytics Admin panel",
-        step2: "Select your GA4 property (not Universal Analytics)",
-        step3: "Go to Property Settings",
-        step4: "Copy the Property ID (numeric, like 123456789)",
-        step5: "Update GOOGLE_ANALYTICS_PROPERTY_ID in environment variables",
+        step1: "Go to Applications Manager > Settings > Google Analytics 4 Integration",
+        step2: "Verify your Property ID is correct (numeric, like 123456789)",
+        step3: "Make sure you're using a GA4 property, not Universal Analytics",
+        step4: "Re-configure using the setup wizard if needed",
         note: "Use the Property ID, not the Measurement ID (G-XXXXXXXXXX)"
       };
     }

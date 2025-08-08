@@ -4,6 +4,8 @@ Ensure to look at the prisma schema when referring to anything database related 
 
 All added code, ensure dark mode styling is applied, and mobile responsiveness
 
+This application uses a theme for the app/admin routes, as well as the app/applications-manager. This theme is chosen in app/admin/settings, and it is a setting customly selected by each admin user. You can see a lot of the app/admin code using these themes, and the themes are set in app/globals.css. Please ensure all components and pages within app/admin, and app/applications-manager uses these themes correctly
+
 Make sure to double check the imports since you seem to not go back enough steps to the proper folder
 
 Unless i specify to add a setting to the settings table, assume the setting is already in there

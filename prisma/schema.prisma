@@ -310,9 +310,9 @@ model interviews {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model jobs {
-  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                   String
-  slug                    String            @unique
+  slug                    String                  @unique
   description             String
   summary                 String?
   department              String
@@ -322,8 +322,8 @@ model jobs {
   remotePolicy            String
   salaryMin               Int?
   salaryMax               Int?
-  salaryCurrency          String            @default("USD")
-  salaryType              String            @default("Annual")
+  salaryCurrency          String                  @default("USD")
+  salaryType              String                  @default("Annual")
   benefits                String?
   requirements            String
   preferredQualifications String?
@@ -332,28 +332,29 @@ model jobs {
   applicationDeadline     DateTime?
   startDate               DateTime?
   applicationInstructions String?
-  status                  String            @default("Draft")
-  featured                Boolean           @default(false)
-  priority                Int               @default(0)
-  viewCount               Int               @default(0)
-  createdAt               DateTime          @default(now())
+  status                  String                  @default("Draft")
+  featured                Boolean                 @default(false)
+  priority                Int                     @default(0)
+  viewCount               Int                     @default(0)
+  createdAt               DateTime                @default(now())
   updatedAt               DateTime
   postedAt                DateTime?
-  categoryId              String            @db.Uuid
-  createdBy               String?           @db.Uuid
+  categoryId              String                  @db.Uuid
+  createdBy               String?                 @db.Uuid
   autoExpiresAt           DateTime?
   lastExpiredCheck        DateTime?
-  showSalary              Boolean           @default(true)
-  auto_expires_at         DateTime?         @db.Timestamp(6)
-  last_expired_check      DateTime?         @db.Timestamp(6)
-  applicationCount        Int?              @default(0)
+  showSalary              Boolean                 @default(true)
+  auto_expires_at         DateTime?               @db.Timestamp(6)
+  last_expired_check      DateTime?               @db.Timestamp(6)
+  applicationCount        Int?                    @default(0)
   applications            applications[]
   audit_logs              audit_logs[]
   email_campaigns         email_campaigns[]
   emails                  emails[]
   interviews              interviews[]
-  categories              categories        @relation(fields: [categoryId], references: [id])
-  users                   users?            @relation(fields: [createdBy], references: [id])
+  job_approval_requests   job_approval_requests[]
+  categories              categories              @relation(fields: [categoryId], references: [id])
+  users                   users?                  @relation(fields: [createdBy], references: [id])
   saved_jobs              saved_jobs[]
 }
 
@@ -496,6 +497,8 @@ model users {
   interview_reschedule_requests                interview_reschedule_requests[]
   interviews_interviews_created_byTousers      interviews[]                    @relation("interviews_created_byTousers")
   interviews_interviews_interviewer_idTousers  interviews[]                    @relation("interviews_interviewer_idTousers")
+  job_approval_requests_requested              job_approval_requests[]         @relation("job_requests_requested")
+  job_approval_requests_reviewed               job_approval_requests[]         @relation("job_requests_reviewed")
   jobs                                         jobs[]
   role_permissions                             role_permissions[]
   roles_roles_created_byTousers                roles[]                         @relation("roles_created_byTousers")
@@ -591,4 +594,42 @@ model application_stage_history {
   @@index([application_id], map: "idx_application_stage_history_application_id")
   @@index([entered_at], map: "idx_application_stage_history_entered_at")
   @@index([stage], map: "idx_application_stage_history_stage")
+}
+
+model analytics_configurations {
+  id                          Int       @id @default(autoincrement())
+  property_id                 String    @db.VarChar(255)
+  measurement_id              String    @db.VarChar(255)
+  service_account_email       String    @db.VarChar(255)
+  service_account_private_key String
+  connection_status           String?   @default("pending") @db.VarChar(50)
+  last_test_at                DateTime? @db.Timestamp(6)
+  test_error_message          String?
+  created_at                  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([connection_status], map: "idx_analytics_config_status")
+}
+
+model job_approval_requests {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_id            String    @db.Uuid
+  requested_by      String    @db.Uuid
+  requested_at      DateTime? @default(now()) @db.Timestamp(6)
+  status            String?   @default("pending") @db.VarChar(20)
+  reviewed_by       String?   @db.Uuid
+  reviewed_at       DateTime? @db.Timestamp(6)
+  rejection_reason  String?
+  notes             String?
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+  job               jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_job_approval_job")
+  requested_by_user users     @relation("job_requests_requested", fields: [requested_by], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_job_approval_requested_by")
+  reviewed_by_user  users?    @relation("job_requests_reviewed", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_job_approval_reviewed_by")
+
+  @@index([job_id], map: "idx_job_approval_requests_job_id")
+  @@index([requested_by], map: "idx_job_approval_requests_requested_by")
+  @@index([reviewed_by], map: "idx_job_approval_requests_reviewed_by")
+  @@index([status], map: "idx_job_approval_requests_status")
+  @@index([requested_at], map: "idx_job_approval_requests_requested_at")
 }

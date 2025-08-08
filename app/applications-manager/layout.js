@@ -41,7 +41,7 @@ function ApplicationsManagerLayoutContent({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Analytics tracking setting
+  // Analytics tracking setting and configuration
   const [analyticsTrackingEnabled, setAnalyticsTrackingEnabled] = useState(false);
 
   // Mobile detection effect
@@ -60,21 +60,45 @@ function ApplicationsManagerLayoutContent({ children }) {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Fetch analytics tracking setting
+  // Fetch analytics tracking setting and configuration status
   useEffect(() => {
-    const fetchAnalyticsTrackingSetting = async () => {
+    const fetchAnalyticsStatus = async () => {
       try {
-        const response = await fetch("/api/settings/public?key=analytics_tracking");
-        const data = await response.json();
-        if (response.ok && !data.error) {
-          setAnalyticsTrackingEnabled(data.parsedValue === true || data.parsedValue === "true");
+        // Check if analytics tracking is enabled
+        const settingsResponse = await fetch("/api/settings/public?key=analytics_tracking");
+        const settingsData = await settingsResponse.json();
+        const trackingEnabled = settingsResponse.ok && !settingsData.error && 
+          (settingsData.parsedValue === true || settingsData.parsedValue === "true");
+
+        if (trackingEnabled) {
+          // If tracking is enabled, check if configuration exists
+          const configResponse = await fetch("/api/admin/analytics/configure");
+          const configData = await configResponse.json();
+          const hasValidConfig = configResponse.ok && configData.success && configData.configured;
+          
+          // Only enable analytics navigation if both tracking is enabled AND configured
+          setAnalyticsTrackingEnabled(hasValidConfig);
+        } else {
+          setAnalyticsTrackingEnabled(false);
         }
       } catch (error) {
-        console.error("Error fetching analytics tracking setting:", error);
+        console.error("Error fetching analytics status:", error);
+        setAnalyticsTrackingEnabled(false);
       }
     };
 
-    fetchAnalyticsTrackingSetting();
+    fetchAnalyticsStatus();
+    
+    // Listen for analytics configuration changes
+    const handleConfigurationChange = () => {
+      fetchAnalyticsStatus();
+    };
+    
+    window.addEventListener('analyticsConfigurationChanged', handleConfigurationChange);
+    
+    return () => {
+      window.removeEventListener('analyticsConfigurationChanged', handleConfigurationChange);
+    };
   }, []);
 
   // Show loading state while session is being fetched
