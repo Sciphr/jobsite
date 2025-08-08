@@ -26,6 +26,7 @@ import {
   Calendar,
   Menu,
   X,
+  Globe,
 } from "lucide-react";
 
 function ApplicationsManagerLayoutContent({ children }) {
@@ -39,6 +40,9 @@ function ApplicationsManagerLayoutContent({ children }) {
   // Mobile state management
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Analytics tracking setting
+  const [analyticsTrackingEnabled, setAnalyticsTrackingEnabled] = useState(false);
 
   // Mobile detection effect
   useEffect(() => {
@@ -55,6 +59,23 @@ function ApplicationsManagerLayoutContent({ children }) {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  // Fetch analytics tracking setting
+  useEffect(() => {
+    const fetchAnalyticsTrackingSetting = async () => {
+      try {
+        const response = await fetch("/api/settings/public?key=analytics_tracking");
+        const data = await response.json();
+        if (response.ok && !data.error) {
+          setAnalyticsTrackingEnabled(data.parsedValue === true || data.parsedValue === "true");
+        }
+      } catch (error) {
+        console.error("Error fetching analytics tracking setting:", error);
+      }
+    };
+
+    fetchAnalyticsTrackingSetting();
+  }, []);
 
   // Show loading state while session is being fetched
   if (status === "loading") {
@@ -104,7 +125,7 @@ function ApplicationsManagerLayoutContent({ children }) {
   }
 
   // Navigation structure with enhanced metadata for animations
-  const navigationItems = [
+  const baseNavigationItems = [
     {
       id: "overview",
       label: "Overview",
@@ -171,6 +192,23 @@ function ApplicationsManagerLayoutContent({ children }) {
       color: "gray",
     },
   ];
+
+  // Conditionally add Google Analytics tab if tracking is enabled
+  const navigationItems = analyticsTrackingEnabled 
+    ? [
+        ...baseNavigationItems.slice(0, 3), // Overview, Pipeline, Analytics
+        {
+          id: "google-analytics",
+          label: "Website Analytics",
+          icon: Globe,
+          path: "/applications-manager/google-analytics",
+          active: pathname === "/applications-manager/google-analytics",
+          description: "Google Analytics insights",
+          color: "emerald",
+        },
+        ...baseNavigationItems.slice(3), // Rest of the items
+      ]
+    : baseNavigationItems;
 
   // Determine current context
   const isJobSpecific = pathname.includes("/jobs/");

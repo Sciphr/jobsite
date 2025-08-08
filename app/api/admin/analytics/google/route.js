@@ -61,7 +61,24 @@ export async function GET(req) {
           step3: "Create a service account",
           step4: "Download service account JSON key",
           step5: "Add GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL and GOOGLE_ANALYTICS_PRIVATE_KEY to environment variables",
-          step6: "Add service account email to Google Analytics property users"
+          step6: "Add GOOGLE_ANALYTICS_PROPERTY_ID to environment variables",
+          step7: "Add service account email to Google Analytics property users with 'Viewer' role"
+        }
+      }), { status: 200 });
+    }
+
+    // Check if GA Property ID is configured
+    if (!process.env.GOOGLE_ANALYTICS_PROPERTY_ID) {
+      return new Response(JSON.stringify({
+        enabled: true,
+        configured: false,
+        message: "Google Analytics Property ID not configured",
+        setupInstructions: {
+          step1: "Go to Google Analytics Admin panel",
+          step2: "Select your property",
+          step3: "Go to Property Settings",
+          step4: "Copy the Property ID (format: 123456789)",
+          step5: "Add GOOGLE_ANALYTICS_PROPERTY_ID to environment variables"
         }
       }), { status: 200 });
     }
@@ -128,14 +145,48 @@ export async function GET(req) {
   } catch (error) {
     console.error("Google Analytics fetch error:", error);
     
+    // Check for specific error types and provide helpful messages
+    let errorMessage = 'Failed to fetch Google Analytics data';
+    let setupInstructions = null;
+    
+    if (error.message.includes('insufficient permissions') || error.message.includes('User does not have sufficient permissions')) {
+      errorMessage = 'Service account does not have access to Google Analytics property';
+      setupInstructions = {
+        step1: "Go to Google Analytics Admin panel",
+        step2: "Navigate to Property > Property Access Management",
+        step3: `Add service account email: ${process.env.GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL}`,
+        step4: "Grant 'Viewer' role to the service account",
+        step5: "Wait 5-10 minutes for permissions to propagate",
+        step6: "Refresh this page to try again",
+        note: "Make sure you're using the correct Property ID and the service account email is added as a user to the GA4 property, not the account level."
+      };
+    } else if (error.message.includes('credentials') || error.message.includes('authentication')) {
+      errorMessage = 'Google Analytics credentials not properly configured';
+      setupInstructions = {
+        step1: "Verify GOOGLE_ANALYTICS_SERVICE_ACCOUNT_EMAIL in environment variables",
+        step2: "Verify GOOGLE_ANALYTICS_PRIVATE_KEY contains the full private key with line breaks",
+        step3: "Verify GOOGLE_ANALYTICS_PROPERTY_ID is the numeric property ID (not measurement ID)",
+        step4: "Restart the application after changing environment variables"
+      };
+    } else if (error.message.includes('Property ID')) {
+      errorMessage = 'Invalid Google Analytics Property ID';
+      setupInstructions = {
+        step1: "Go to Google Analytics Admin panel",
+        step2: "Select your GA4 property (not Universal Analytics)",
+        step3: "Go to Property Settings",
+        step4: "Copy the Property ID (numeric, like 123456789)",
+        step5: "Update GOOGLE_ANALYTICS_PROPERTY_ID in environment variables",
+        note: "Use the Property ID, not the Measurement ID (G-XXXXXXXXXX)"
+      };
+    }
+    
     // Return a structured error response
     return new Response(JSON.stringify({
       enabled: true,
       configured: true,
       error: true,
-      message: error.message.includes('credentials') 
-        ? 'Google Analytics credentials not properly configured'
-        : 'Failed to fetch Google Analytics data',
+      message: errorMessage,
+      setupInstructions,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     }), { status: 200 }); // Return 200 to avoid breaking the dashboard
   }
