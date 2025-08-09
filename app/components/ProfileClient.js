@@ -1096,11 +1096,11 @@ export default function ProfileClient({ session }) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex-shrink-0 flex flex-col space-y-2">
-                      <div className="flex space-x-2">
+                    <div className="flex-shrink-0 flex flex-col space-y-2 sm:space-y-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <button
                           onClick={() => handleDownloadResume(resume.fileName)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white"
+                          className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white w-full sm:w-auto"
                           style={{
                             backgroundColor: 'var(--site-primary)',
                             borderColor: 'var(--site-primary)'
@@ -1125,7 +1125,7 @@ export default function ProfileClient({ session }) {
                         </button>
                         <button
                           onClick={handleDeleteResume}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200"
+                          className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200 w-full sm:w-auto"
                         >
                           <svg
                             className="w-4 h-4 mr-1"
@@ -1158,7 +1158,7 @@ export default function ProfileClient({ session }) {
                         />
                         <label
                           htmlFor="resume-replace"
-                          className={`inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer transition-colors duration-200 ${
+                          className={`inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer transition-colors duration-200 w-full ${
                             uploading ? "opacity-50 cursor-not-allowed" : ""
                           }`}
                         >

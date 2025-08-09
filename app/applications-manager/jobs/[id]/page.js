@@ -34,7 +34,8 @@ import {
 } from "lucide-react";
 
 export default function JobSpecificApplications() {
-  const { id: jobId } = useParams();
+  const params = useParams();
+  const jobId = params.id;
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();

@@ -615,9 +615,13 @@ export default function ApplicationsManagerMain() {
                         variants={jobCardVariants}
                         whileHover="hover"
                         className={`flex items-center justify-between p-3 lg:p-4 rounded-lg transition-colors cursor-pointer overflow-hidden relative ${getStatCardClasses(index).bg}`}
-                        onClick={() =>
-                          router.push(`/applications-manager/jobs/${job.id}`)
-                        }
+                        onClick={() => {
+                          if (!job.id) {
+                            console.error('No id found for job:', job);
+                            return;
+                          }
+                          router.push(`/applications-manager/jobs/${job.id}`);
+                        }}
                       >
                         {/* Hover background effect */}
                         <motion.div
@@ -720,9 +724,13 @@ export default function ApplicationsManagerMain() {
                           boxShadow: "0 8px 25px -5px rgba(251, 146, 60, 0.3)",
                         }}
                         className="p-3 lg:p-4 border border-orange-200 bg-orange-50 rounded-lg cursor-pointer transition-colors overflow-hidden relative"
-                        onClick={() =>
-                          router.push(`/applications-manager/jobs/${job.id}`)
-                        }
+                        onClick={() => {
+                          if (!job.id) {
+                            console.error('No id found for job:', job);
+                            return;
+                          }
+                          router.push(`/applications-manager/jobs/${job.id}`);
+                        }}
                       >
                         <motion.div
                           className="absolute inset-0 bg-gradient-to-r from-orange-100 to-red-50"
@@ -892,6 +900,10 @@ export default function ApplicationsManagerMain() {
                       onClick={(e) => {
                         // Don't navigate if clicking on checkbox
                         if (e.target.type === 'checkbox') return;
+                        if (!application.jobId) {
+                          console.error('No jobId found for application:', application);
+                          return;
+                        }
                         router.push(
                           `/applications-manager/jobs/${application.jobId}`
                         );

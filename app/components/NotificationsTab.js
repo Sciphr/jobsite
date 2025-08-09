@@ -106,8 +106,8 @@ export default function NotificationsTab() {
   }
 
   return (
-    <div className="px-6 py-4">
-      <div className="space-y-8">
+    <div className="px-4 sm:px-6 py-4">
+      <div className="space-y-6 sm:space-y-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-200">
             Notification Preferences
@@ -118,7 +118,7 @@ export default function NotificationsTab() {
         </div>
 
         {/* General Notification Settings */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-6 transition-colors duration-200">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 sm:p-6 transition-colors duration-200">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-200">
             General Settings
           </h3>
@@ -151,7 +151,7 @@ export default function NotificationsTab() {
             {/* Show additional options only if email notifications are enabled */}
             {notifications.emailNotificationsEnabled && (
               <>
-                <div className="border-l-4 border-blue-200 dark:border-blue-700 pl-4 ml-2 space-y-4">
+                <div className="border-l-4 border-blue-200 dark:border-blue-700 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-200">
@@ -199,7 +199,7 @@ export default function NotificationsTab() {
                   </div>
 
                   {/* Rate Limiting Controls */}
-                  <div className="border-l-4 border-orange-200 dark:border-orange-700 pl-4 ml-2 space-y-4 mt-4">
+                  <div className="border-l-4 border-orange-200 dark:border-orange-700 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-4 mt-4">
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 transition-colors duration-200">
                         📊 Rate Limiting Settings
@@ -209,7 +209,7 @@ export default function NotificationsTab() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Max Daily Notifications */}
                       <div>
                         <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2 transition-colors duration-200">
@@ -278,7 +278,7 @@ export default function NotificationsTab() {
 
         {/* Job Alert Subscriptions - Only show when email notifications are enabled */}
         {notifications.emailNotificationsEnabled && (
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-6 transition-colors duration-200">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 sm:p-6 transition-colors duration-200">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
@@ -306,7 +306,7 @@ export default function NotificationsTab() {
           {/* Add New Alert Form */}
           {showAddAlert && (
             <div className="mb-6 p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 transition-colors duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-200">
                     Alert Type
