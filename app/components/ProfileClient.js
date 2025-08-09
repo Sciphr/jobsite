@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ThemedButton } from "./ThemedButton";
+import NotificationsTab from "./NotificationsTab";
 
 export default function ProfileClient({ session }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
   const [profile, setProfile] = useState(null);
   const [savedJobs, setSavedJobs] = useState([]);
@@ -194,7 +197,7 @@ export default function ProfileClient({ session }) {
       console.log("🔍 Starting to fetch profile data...");
 
       // Fetch all data with individual error handling
-      const [profileRes, savedJobsRes, applicationsRes, resumeRes] =
+      const [profileRes, savedJobsRes, applicationsRes, resumeRes, notificationPrefsRes, jobAlertsRes, departmentsRes] =
         await Promise.all([
           fetch("/api/profile").catch((err) => {
             console.error("❌ Profile fetch failed:", err);
@@ -212,6 +215,19 @@ export default function ProfileClient({ session }) {
             console.error("❌ Resumes fetch failed:", err);
             return { ok: false, error: "Resumes fetch failed" };
           }),
+          // Preload notifications data
+          fetch("/api/user/notifications/preferences").catch((err) => {
+            console.error("❌ Notification preferences fetch failed:", err);
+            return { ok: false, error: "Notification preferences fetch failed" };
+          }),
+          fetch("/api/user/notifications/job-alerts").catch((err) => {
+            console.error("❌ Job alerts fetch failed:", err);
+            return { ok: false, error: "Job alerts fetch failed" };
+          }),
+          fetch("/api/jobs/departments").catch((err) => {
+            console.error("❌ Departments fetch failed:", err);
+            return { ok: false, error: "Departments fetch failed" };
+          }),
         ]);
 
       console.log("📡 API Response statuses:", {
@@ -219,6 +235,9 @@ export default function ProfileClient({ session }) {
         savedJobs: savedJobsRes.ok ? savedJobsRes.status : "FAILED",
         applications: applicationsRes.ok ? applicationsRes.status : "FAILED",
         resumes: resumeRes.ok ? resumeRes.status : "FAILED",
+        notificationPrefs: notificationPrefsRes.ok ? notificationPrefsRes.status : "FAILED",
+        jobAlerts: jobAlertsRes.ok ? jobAlertsRes.status : "FAILED",
+        departments: departmentsRes.ok ? departmentsRes.status : "FAILED",
       });
 
       // Parse responses with individual error handling
@@ -250,12 +269,15 @@ export default function ProfileClient({ session }) {
         }
       };
 
-      const [profileData, savedJobsData, applicationsData, resumeData] =
+      const [profileData, savedJobsData, applicationsData, resumeData, notificationPrefsData, jobAlertsData, departmentsData] =
         await Promise.all([
           parseResponse(profileRes, "Profile"),
           parseResponse(savedJobsRes, "Saved Jobs"),
           parseResponse(applicationsRes, "Applications"),
           parseResponse(resumeRes, "Resumes"),
+          parseResponse(notificationPrefsRes, "Notification Preferences"),
+          parseResponse(jobAlertsRes, "Job Alerts"),
+          parseResponse(departmentsRes, "Departments"),
         ]);
 
       console.log("📊 Parsed data:", {
@@ -267,6 +289,9 @@ export default function ProfileClient({ session }) {
           ? applicationsData.length
           : "Not array",
         resumes: Array.isArray(resumeData) ? resumeData.length : "Not array",
+        notificationPrefs: !!notificationPrefsData,
+        jobAlerts: !!jobAlertsData,
+        departments: Array.isArray(departmentsData) ? departmentsData.length : "Not array",
       });
 
       // Set data with fallbacks
@@ -296,6 +321,22 @@ export default function ProfileClient({ session }) {
         setResume(null);
       }
 
+      // Prefill React Query cache with notifications data
+      if (notificationPrefsData) {
+        queryClient.setQueryData(['notifications', 'preferences'], notificationPrefsData);
+        console.log("🔄 Prefilled notification preferences cache");
+      }
+      
+      if (jobAlertsData) {
+        queryClient.setQueryData(['notifications', 'jobAlerts'], jobAlertsData);
+        console.log("🔄 Prefilled job alerts cache");
+      }
+      
+      if (departmentsData) {
+        queryClient.setQueryData(['jobs', 'departments'], departmentsData);
+        console.log("🔄 Prefilled departments cache");
+      }
+
       console.log("✅ Profile data fetch completed successfully");
     } catch (err) {
       console.error("❌ Error fetching profile data:", err);
@@ -304,6 +345,16 @@ export default function ProfileClient({ session }) {
       setSavedJobs([]);
       setApplications([]);
       setResume(null);
+      
+      // Set default values for React Query cache on error
+      queryClient.setQueryData(['notifications', 'preferences'], {
+        emailNotificationsEnabled: true,
+        weeklyDigestEnabled: false,
+        instantJobAlertsEnabled: false,
+        notificationEmail: '',
+      });
+      queryClient.setQueryData(['notifications', 'jobAlerts'], { alerts: [] });
+      queryClient.setQueryData(['jobs', 'departments'], []);
 
       // You might want to show an error message to the user
       alert("Failed to load profile data. Please try refreshing the page.");
@@ -566,7 +617,7 @@ export default function ProfileClient({ session }) {
           {/* Navigation Tabs */}
           <div className="px-6">
             <nav className="flex space-x-8">
-              {["overview", "resume", "saved-jobs", "applications"].map(
+              {["overview", "resume", "saved-jobs", "applications", "notifications"].map(
                 (tab) => (
                   <button
                     key={tab}
@@ -1343,6 +1394,10 @@ export default function ProfileClient({ session }) {
                 </div>
               )}
             </div>
+          )}
+          
+          {activeTab === "notifications" && (
+            <NotificationsTab />
           )}
         </div>
       </div>

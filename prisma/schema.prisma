@@ -355,6 +355,7 @@ model jobs {
   job_approval_requests   job_approval_requests[]
   categories              categories              @relation(fields: [categoryId], references: [id])
   users                   users?                  @relation(fields: [createdBy], references: [id])
+  notification_logs       notification_logs[]
   saved_jobs              saved_jobs[]
 }
 
@@ -468,8 +469,8 @@ model users {
   calendar_integration_enabled                 Boolean?                        @default(false)
   calendar_integration_connected_at            DateTime?                       @db.Timestamp(6)
   calendar_timezone                            String?                         @default("America/Toronto") @db.VarChar(100)
-  zoom_access_token                            String?                         @db.VarChar(500)
-  zoom_refresh_token                           String?                         @db.VarChar(500)
+  zoom_access_token                            String?                         @db.VarChar(2000)
+  zoom_refresh_token                           String?                         @db.VarChar(2000)
   zoom_token_expires_at                        DateTime?                       @db.Timestamp(6)
   zoom_user_id                                 String?                         @db.VarChar(255)
   zoom_email                                   String?                         @db.VarChar(255)
@@ -483,6 +484,13 @@ model users {
   microsoft_tenant_id                          String?                         @db.VarChar(255)
   microsoft_integration_enabled                Boolean?                        @default(false)
   microsoft_integration_connected_at           DateTime?                       @db.Timestamp(6)
+  email_notifications_enabled                  Boolean?                        @default(true)
+  weekly_digest_enabled                        Boolean?                        @default(false)
+  instant_job_alerts_enabled                   Boolean?                        @default(false)
+  notification_email                           String?                         @db.VarChar(255)
+  max_daily_notifications                      Int?                            @default(5)
+  notification_batch_minutes                   Int?                            @default(30)
+  last_notification_sent_at                    DateTime?                       @db.Timestamp(6)
   application_stage_history                    application_stage_history[]
   applications                                 applications[]
   applications_applications_archived_byTousers applications[]                  @relation("applications_archived_byTousers")
@@ -497,9 +505,11 @@ model users {
   interview_reschedule_requests                interview_reschedule_requests[]
   interviews_interviews_created_byTousers      interviews[]                    @relation("interviews_created_byTousers")
   interviews_interviews_interviewer_idTousers  interviews[]                    @relation("interviews_interviewer_idTousers")
+  job_alert_subscriptions                      job_alert_subscriptions[]
   job_approval_requests_requested              job_approval_requests[]         @relation("job_requests_requested")
   job_approval_requests_reviewed               job_approval_requests[]         @relation("job_requests_reviewed")
   jobs                                         jobs[]
+  notification_logs                            notification_logs[]
   role_permissions                             role_permissions[]
   roles_roles_created_byTousers                roles[]                         @relation("roles_created_byTousers")
   saved_jobs                                   saved_jobs[]
@@ -632,4 +642,43 @@ model job_approval_requests {
   @@index([reviewed_by], map: "idx_job_approval_requests_reviewed_by")
   @@index([status], map: "idx_job_approval_requests_status")
   @@index([requested_at], map: "idx_job_approval_requests_requested_at")
+}
+
+model job_alert_subscriptions {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String              @db.Uuid
+  alert_type        String              @default("weekly_digest") @db.VarChar(20)
+  department        String?             @db.VarChar(255)
+  keywords          String?
+  is_active         Boolean?            @default(true)
+  frequency         String?             @default("immediate") @db.VarChar(20)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  user              users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  notification_logs notification_logs[]
+
+  @@index([user_id], map: "idx_job_alerts_user_id")
+  @@index([alert_type], map: "idx_job_alerts_type")
+  @@index([department], map: "idx_job_alerts_department")
+  @@index([is_active], map: "idx_job_alerts_active")
+  @@index([created_at], map: "idx_job_alerts_created")
+}
+
+model notification_logs {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String                  @db.Uuid
+  job_id            String                  @db.Uuid
+  subscription_id   String                  @db.Uuid
+  notification_type String                  @db.VarChar(50)
+  email_address     String                  @db.VarChar(255)
+  sent_at           DateTime?               @default(now()) @db.Timestamp(6)
+  batch_id          String?                 @db.Uuid
+  job               jobs                    @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notification_logs_job_id")
+  subscription      job_alert_subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notification_logs_subscription_id")
+  user              users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notification_logs_user_id")
+
+  @@index([user_id], map: "idx_notification_logs_user_id")
+  @@index([sent_at], map: "idx_notification_logs_sent_at")
+  @@index([notification_type], map: "idx_notification_logs_type")
+  @@index([batch_id], map: "idx_notification_logs_batch_id")
 }

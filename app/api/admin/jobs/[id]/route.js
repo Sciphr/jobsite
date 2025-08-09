@@ -325,6 +325,23 @@ export async function PATCH(req, { params }) {
       req
     );
 
+    // Trigger job notifications if job was just published
+    if (wasJustPublished) {
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/jobs/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jobId: updatedJob.id }),
+        });
+        console.log(`📧 Job notifications triggered for updated job: ${updatedJob.title}`);
+      } catch (notificationError) {
+        console.error('Failed to trigger job notifications:', notificationError);
+        // Don't fail job update if notification fails
+      }
+    }
+
     // Separately fetch creator if exists
     let creator = null;
     if (updatedJob.createdBy) {

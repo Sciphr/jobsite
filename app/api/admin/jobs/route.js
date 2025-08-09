@@ -339,6 +339,23 @@ export async function POST(req) {
       req
     );
 
+    // Trigger job notifications if job is published
+    if (newJob.status === "Active") {
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/jobs/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jobId: newJob.id }),
+        });
+        console.log(`📧 Job notifications triggered for: ${newJob.title}`);
+      } catch (notificationError) {
+        console.error('Failed to trigger job notifications:', notificationError);
+        // Don't fail job creation if notification fails
+      }
+    }
+
     // Include approval information in response
     const responseData = {
       ...newJob,

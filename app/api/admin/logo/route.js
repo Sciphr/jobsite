@@ -1,5 +1,7 @@
 // app/api/admin/logo/route.js
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
 import {

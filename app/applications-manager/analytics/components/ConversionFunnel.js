@@ -80,7 +80,7 @@ const ConversionFunnel = ({ analytics, selectedMetric }) => {
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{
-                          width: `${Math.min(100, analytics.conversionRates.applicationToInterview)}%`,
+                          width: `${Math.min(100, analytics.conversionRates.applicationToReview)}%`,
                         }}
                         transition={{ duration: 0.8, delay: 0.2 }}
                         className="bg-yellow-500 h-4 rounded-full"
@@ -353,7 +353,7 @@ const ConversionFunnel = ({ analytics, selectedMetric }) => {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${analytics.conversionRates.applicationToReview}%`,
+                    width: `${Math.min(100, analytics.conversionRates.applicationToReview)}%`,
                   }}
                   transition={{ duration: 0.8, delay: 0.2 }}
                   className="bg-yellow-500 h-3 rounded-full"
@@ -375,7 +375,7 @@ const ConversionFunnel = ({ analytics, selectedMetric }) => {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${analytics.conversionRates.reviewToInterview}%`,
+                    width: `${Math.min(100, analytics.conversionRates.reviewToInterview)}%`,
                   }}
                   transition={{ duration: 0.8, delay: 0.4 }}
                   className="bg-green-500 h-3 rounded-full"
@@ -397,7 +397,7 @@ const ConversionFunnel = ({ analytics, selectedMetric }) => {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: `${analytics.conversionRates.interviewToHire}%`,
+                    width: `${Math.min(100, analytics.conversionRates.interviewToHire)}%`,
                   }}
                   transition={{ duration: 0.8, delay: 0.6 }}
                   className="bg-emerald-600 h-3 rounded-full"

@@ -74,6 +74,29 @@ export default function ScheduleInterviewPage() {
       }));
     }
   }, [settingsData]);
+  
+  // Check Zoom integration status
+  const checkZoomIntegration = async () => {
+    try {
+      setCheckingZoomIntegration(true);
+      const response = await fetch('/api/zoom/integration/status');
+      if (response.ok) {
+        const data = await response.json();
+        setZoomIntegrationEnabled(data.connected && data.tokenValid);
+      }
+    } catch (error) {
+      console.error('Error checking Zoom integration:', error);
+      setZoomIntegrationEnabled(false);
+    } finally {
+      setCheckingZoomIntegration(false);
+    }
+  };
+  
+  // Check Zoom integration on component mount
+  useEffect(() => {
+    checkZoomIntegration();
+  }, []);
+  
   const [businessAddress, setBusinessAddress] = useState("");
   const [availability, setAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
@@ -84,6 +107,8 @@ export default function ScheduleInterviewPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sendEmailNotification, setSendEmailNotification] = useState(true);
+  const [zoomIntegrationEnabled, setZoomIntegrationEnabled] = useState(false);
+  const [checkingZoomIntegration, setCheckingZoomIntegration] = useState(true);
 
   // Get application data
   const { data: allApplications = [], isLoading: applicationsLoading } =
@@ -298,6 +323,47 @@ export default function ScheduleInterviewPage() {
     setError("");
 
     try {
+      let finalInterviewData = { ...interviewData };
+
+      // If Zoom is selected and integration is enabled, create Zoom meeting
+      if (interviewData.meetingProvider === "zoom" && zoomIntegrationEnabled) {
+        console.log("🔄 Creating Zoom meeting for interview...");
+        
+        const zoomResponse = await fetch("/api/zoom/meeting/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            topic: `Interview with ${application.name} - ${application.jobTitle}`,
+            start_time: selectedTimeSlot.start,
+            duration: interviewData.duration,
+            agenda: interviewData.agenda || `Interview for ${application.jobTitle} position`,
+            timezone: interviewData.timezone
+          }),
+        });
+
+        if (zoomResponse.ok) {
+          const zoomData = await zoomResponse.json();
+          console.log("✅ Zoom meeting created:", zoomData.meeting.join_url);
+          
+          // Update interview data with Zoom meeting link
+          finalInterviewData = {
+            ...finalInterviewData,
+            meetingLink: zoomData.meeting.join_url,
+            zoomMeetingId: zoomData.meeting.id,
+            zoomStartUrl: zoomData.meeting.start_url,
+            zoomPassword: zoomData.meeting.password
+          };
+        } else {
+          const zoomError = await zoomResponse.json();
+          console.error("Failed to create Zoom meeting:", zoomError);
+          setError("Failed to create Zoom meeting. Please try manual link or contact support.");
+          setScheduling(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/calendar/interview/schedule", {
         method: "POST",
         headers: {
@@ -306,7 +372,7 @@ export default function ScheduleInterviewPage() {
         body: JSON.stringify({
           applicationId: application.id,
           selectedTimeSlot,
-          interviewData,
+          interviewData: finalInterviewData,
           sendEmailNotification,
         }),
       });
@@ -743,7 +809,12 @@ export default function ScheduleInterviewPage() {
                       <div className="grid grid-cols-3 gap-3">
                         {[
                           { value: "google", label: "Google Meet", icon: "📹", description: "Auto-generated" },
-                          { value: "zoom", label: "Zoom", icon: "💻", description: "Manual link" },
+                          { 
+                            value: "zoom", 
+                            label: "Zoom", 
+                            icon: "💻", 
+                            description: zoomIntegrationEnabled ? "Auto-generated" : "Manual link" 
+                          },
                           { value: "custom", label: "Custom", icon: "🔗", description: "Other platform" }
                         ].map((provider) => (
                           <button
@@ -780,6 +851,16 @@ export default function ScheduleInterviewPage() {
                         </div>
                         <p className="text-sm text-blue-800">
                           A Google Meet link will be automatically generated when the interview is scheduled.
+                        </p>
+                      </div>
+                    ) : interviewData.meetingProvider === "zoom" && zoomIntegrationEnabled ? (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg">💻</span>
+                          <span className="font-medium text-purple-900">Zoom Meeting</span>
+                        </div>
+                        <p className="text-sm text-purple-800">
+                          A Zoom meeting will be automatically created using your connected Zoom account when the interview is scheduled.
                         </p>
                       </div>
                     ) : (

@@ -11,6 +11,9 @@ import {
   Settings,
   ExternalLink,
   RefreshCcw as Refresh,
+  Download,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 
 // Import tab components
@@ -21,6 +24,9 @@ import JobPerformanceTab from "./components/JobPerformanceTab";
 import UserJourneyTab from "./components/UserJourneyTab";
 import GeographyTab from "./components/GeographyTab";
 import ContentTab from "./components/ContentTab";
+
+// Import export utilities
+import { exportGoogleAnalyticsToExcel, exportGoogleAnalyticsToCSV } from "@/app/utils/googleAnalyticsExport";
 
 export default function GoogleAnalyticsPage() {
   const router = useRouter();
@@ -33,6 +39,7 @@ export default function GoogleAnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30d");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   // Animation variants
   const containerVariants = {
@@ -90,6 +97,20 @@ export default function GoogleAnalyticsPage() {
     fetchAnalyticsData();
   }, [timeRange]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportDropdownOpen && !event.target.closest('.export-dropdown')) {
+        setExportDropdownOpen(false);
+      }
+    };
+
+    if (exportDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [exportDropdownOpen]);
+
   // Format numbers with commas
   const formatNumber = (num) => {
     if (num === undefined || num === null) return "0";
@@ -115,6 +136,41 @@ export default function GoogleAnalyticsPage() {
   // Handle refresh
   const handleRefresh = () => {
     fetchAnalyticsData(true);
+  };
+
+  // Handle export functions
+  const handleExportExcel = async () => {
+    if (!analyticsData || !analyticsData.configured) {
+      alert('No analytics data available to export');
+      return;
+    }
+
+    try {
+      const filename = exportGoogleAnalyticsToExcel(analyticsData, timeRange);
+      console.log(`Google Analytics data exported to Excel: ${filename}`);
+      setExportDropdownOpen(false);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Failed to export data to Excel. Please try again.');
+      setExportDropdownOpen(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!analyticsData || !analyticsData.configured) {
+      alert('No analytics data available to export');
+      return;
+    }
+
+    try {
+      const filename = exportGoogleAnalyticsToCSV(analyticsData, timeRange);
+      console.log(`Google Analytics data exported to CSV: ${filename}`);
+      setExportDropdownOpen(false);
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      alert('Failed to export data to CSV. Please try again.');
+      setExportDropdownOpen(false);
+    }
   };
 
   // Time range options
@@ -383,6 +439,48 @@ export default function GoogleAnalyticsPage() {
               </option>
             ))}
           </select>
+
+          {analyticsData && analyticsData.configured && (
+            <div className="relative export-dropdown">
+              <button
+                onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${getButtonClasses("success")}`}
+                title="Export Analytics Data"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown 
+                  className={`h-4 w-4 transition-transform ${exportDropdownOpen ? 'rotate-180' : ''}`} 
+                />
+              </button>
+
+              {exportDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                  <button
+                    onClick={handleExportExcel}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 admin-text transition-colors"
+                  >
+                    <Download className="h-4 w-4 text-green-600" />
+                    <div>
+                      <div className="font-medium">Export to Excel</div>
+                      <div className="text-xs admin-text-light">XLSX format with multiple sheets</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={handleExportCSV}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 admin-text transition-colors"
+                  >
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <div className="font-medium">Export to CSV</div>
+                      <div className="text-xs admin-text-light">Single file with all data</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             onClick={handleRefresh}

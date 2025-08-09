@@ -44,6 +44,16 @@ export async function POST(request) {
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('scope', scopes);
     authUrl.searchParams.set('state', state);
+    
+    // Add additional debugging
+    console.log("🔍 Auth URL components:", {
+      baseUrl: authUrl.origin + authUrl.pathname,
+      clientId,
+      redirectUri,
+      scopes,
+      state,
+      fullUrl: authUrl.toString()
+    });
 
     console.log("Generated Zoom OAuth URL:", authUrl.toString());
 

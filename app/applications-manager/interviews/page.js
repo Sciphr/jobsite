@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useDeleteInterview } from "@/app/hooks/useAdminData";
+import { motion } from "framer-motion";
 import {
   Calendar,
   Clock,
@@ -40,6 +41,31 @@ export default function InterviewsPage() {
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const deleteInterviewMutation = useDeleteInterview();
   const router = useRouter();
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.08,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24,
+      },
+    },
+  };
 
   const [interviews, setInterviews] = useState([]);
   const [summary, setSummary] = useState({});
@@ -449,9 +475,17 @@ END:VCALENDAR`;
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+      <motion.div 
+        variants={itemVariants}
+        className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0"
+      >
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold admin-text">
             Interview Management
@@ -479,11 +513,17 @@ END:VCALENDAR`;
             <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+      <motion.div 
+        variants={itemVariants}
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+      >
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg md:text-2xl font-bold admin-text">
@@ -497,9 +537,12 @@ END:VCALENDAR`;
               <Calendar className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg md:text-2xl font-bold admin-text">
@@ -513,9 +556,12 @@ END:VCALENDAR`;
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg md:text-2xl font-bold admin-text">
@@ -529,9 +575,12 @@ END:VCALENDAR`;
               <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-600" />
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+        <motion.div 
+          whileHover={{ scale: 1.02, y: -2 }}
+          className="admin-card p-4 md:p-6 rounded-lg shadow hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg md:text-2xl font-bold admin-text">
@@ -545,11 +594,14 @@ END:VCALENDAR`;
               <Clock className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Filters */}
-      <div className="admin-card p-4 md:p-6 rounded-lg shadow">
+      <motion.div 
+        variants={itemVariants}
+        className="admin-card p-4 md:p-6 rounded-lg shadow"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4">
           {/* Search */}
           <div className="relative sm:col-span-2 lg:col-span-2">
@@ -614,10 +666,13 @@ END:VCALENDAR`;
             </label>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Interviews List */}
-      <div className="space-y-4">
+      <motion.div 
+        variants={itemVariants}
+        className="space-y-4"
+      >
         {filteredInterviews.length === 0 ? (
           <div className="text-center py-12 admin-card rounded-lg shadow">
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -639,8 +694,9 @@ END:VCALENDAR`;
             const timeUntil = getTimeUntilInterview(interview.scheduledAt);
 
             return (
-              <div
+              <motion.div
                 key={interview.id}
+                whileHover={{ scale: 1.005, y: -1 }}
                 className="admin-card p-6 rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between">
@@ -921,11 +977,11 @@ END:VCALENDAR`;
                     )}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })
         )}
-      </div>
+      </motion.div>
 
       {/* Interview Notes Modal */}
       {showNotesModal && (
@@ -1009,6 +1065,6 @@ END:VCALENDAR`;
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
