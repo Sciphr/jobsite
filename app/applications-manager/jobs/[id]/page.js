@@ -85,14 +85,14 @@ export default function JobSpecificApplications() {
     existingRequestId: null,
   });
 
-  // Get hire approval status for all job applications
-  const applicationIds = jobApplications.map(app => app.id);
-  const { hireApprovalStatus } = useHireApprovalStatus(applicationIds);
-
   // Filter applications for this specific job
   const jobApplications = useMemo(() => {
     return allApplications.filter((app) => app.jobId === jobId);
   }, [allApplications, jobId]);
+
+  // Get hire approval status for all job applications
+  const applicationIds = jobApplications.map(app => app.id);
+  const { hireApprovalStatus } = useHireApprovalStatus(applicationIds);
 
   // Apply filters and search
   const filteredApplications = useMemo(() => {

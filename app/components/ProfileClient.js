@@ -616,13 +616,13 @@ export default function ProfileClient({ session }) {
 
           {/* Navigation Tabs */}
           <div className="px-6">
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
               {["overview", "resume", "saved-jobs", "applications", "notifications"].map(
                 (tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors duration-200 ${
+                    className={`flex-shrink-0 py-4 px-2 sm:px-3 lg:px-1 border-b-2 font-medium text-xs sm:text-sm capitalize transition-colors duration-200 whitespace-nowrap ${
                       activeTab === tab
                         ? "site-primary-text hover:site-primary-text"
                         : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
@@ -632,7 +632,7 @@ export default function ProfileClient({ session }) {
                       color: 'var(--site-primary)'
                     } : {}}
                   >
-                    {tab.replace("-", " ")}
+                    {tab === "saved-jobs" ? "Saved" : tab === "applications" ? "Apps" : tab.replace("-", " ")}
                   </button>
                 )
               )}
