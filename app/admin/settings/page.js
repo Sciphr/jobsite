@@ -16,6 +16,7 @@ import { useSettings, usePrefetchAdminData, useAutoArchive, useAutoArchivePrevie
 import WeeklyDigestTester, {
   WeeklyDigestButton,
 } from "@/app/components/WeeklyDigestTester";
+import APIKeyManagement from "./components/APIKeyManagement";
 import {
   Settings,
   Save,
@@ -44,6 +45,7 @@ import {
   ChevronDown,
   ChevronRight,
   Archive,
+  Code,
 } from "lucide-react";
 
 export default function AdminSettings() {
@@ -77,7 +79,7 @@ export default function AdminSettings() {
   // Handle URL parameters for tab state and session refresh
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['system', 'branding', 'personal', 'notifications'].includes(tab)) {
+    if (tab && ['system', 'branding', 'personal', 'notifications', 'developer'].includes(tab)) {
       setActiveTab(tab);
     }
 
@@ -472,6 +474,17 @@ export default function AdminSettings() {
       bgColor: "bg-blue-100",
       borderColor: "border-blue-200",
       hoverColor: "hover:bg-blue-50",
+    },
+    {
+      id: "developer",
+      label: "Developer",
+      icon: Code,
+      minPrivilege: 3,
+      description: "API keys and integrations",
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-100",
+      borderColor: "border-indigo-200",
+      hoverColor: "hover:bg-indigo-50",
     },
     {
       id: "notifications",
@@ -899,9 +912,11 @@ export default function AdminSettings() {
                         ? "var(--admin-stat-2)"
                         : tab.id === "jobs"
                           ? "var(--admin-stat-1)"
-                          : tab.id === "notifications"
-                            ? "var(--admin-stat-3)"
-                            : "var(--admin-stat-5)"
+                          : tab.id === "developer"
+                            ? "var(--admin-stat-1)"
+                            : tab.id === "notifications"
+                              ? "var(--admin-stat-3)"
+                              : "var(--admin-stat-5)"
                     : undefined,
                   borderBottomColor: isActive
                     ? tab.id === "system"
@@ -910,9 +925,11 @@ export default function AdminSettings() {
                         ? "var(--admin-stat-2)"
                         : tab.id === "jobs"
                           ? "var(--admin-stat-1)"
-                          : tab.id === "notifications"
-                            ? "var(--admin-stat-3)"
-                            : "var(--admin-stat-5)"
+                          : tab.id === "developer"
+                            ? "var(--admin-stat-1)"
+                            : tab.id === "notifications"
+                              ? "var(--admin-stat-3)"
+                              : "var(--admin-stat-5)"
                     : undefined,
                 }}
               >
@@ -926,9 +943,11 @@ export default function AdminSettings() {
                           ? "var(--admin-stat-2)"
                           : tab.id === "jobs"
                             ? "var(--admin-stat-1)"
-                            : tab.id === "notifications"
-                              ? "var(--admin-stat-3)"
-                              : "var(--admin-stat-5)"
+                            : tab.id === "developer"
+                              ? "var(--admin-stat-1)"
+                              : tab.id === "notifications"
+                                ? "var(--admin-stat-3)"
+                                : "var(--admin-stat-5)"
                       : undefined,
                   }}
                 />
@@ -953,11 +972,13 @@ export default function AdminSettings() {
                   ? "var(--admin-stat-2-bg)"
                   : activeTabData?.bgColor === "bg-blue-100"
                     ? "var(--admin-stat-1-bg)"
-                    : activeTabData?.bgColor === "bg-yellow-100"
-                      ? "var(--admin-stat-3-bg)"
-                      : activeTabData?.bgColor === "bg-purple-100"
-                        ? "var(--admin-stat-5-bg)"
-                        : "var(--admin-stat-1-bg)",
+                    : activeTabData?.bgColor === "bg-indigo-100"
+                      ? "var(--admin-stat-1-bg)"
+                      : activeTabData?.bgColor === "bg-yellow-100"
+                        ? "var(--admin-stat-3-bg)"
+                        : activeTabData?.bgColor === "bg-purple-100"
+                          ? "var(--admin-stat-5-bg)"
+                          : "var(--admin-stat-1-bg)",
             borderLeftWidth: "4px",
             borderLeftColor:
               activeTabData?.bgColor === "bg-red-100"
@@ -966,11 +987,13 @@ export default function AdminSettings() {
                   ? "var(--admin-stat-2)"
                   : activeTabData?.bgColor === "bg-blue-100"
                     ? "var(--admin-stat-1)"
-                    : activeTabData?.bgColor === "bg-yellow-100"
-                      ? "var(--admin-stat-3)"
-                      : activeTabData?.bgColor === "bg-purple-100"
-                        ? "var(--admin-stat-5)"
-                        : "var(--admin-stat-1)",
+                    : activeTabData?.bgColor === "bg-indigo-100"
+                      ? "var(--admin-stat-1)"
+                      : activeTabData?.bgColor === "bg-yellow-100"
+                        ? "var(--admin-stat-3)"
+                        : activeTabData?.bgColor === "bg-purple-100"
+                          ? "var(--admin-stat-5)"
+                          : "var(--admin-stat-1)",
           }}
         >
           <div className="flex items-center justify-between">
@@ -987,11 +1010,13 @@ export default function AdminSettings() {
                             ? "var(--admin-stat-2-bg)"
                             : activeTabData?.bgColor === "bg-blue-100"
                               ? "var(--admin-stat-1-bg)"
-                              : activeTabData?.bgColor === "bg-yellow-100"
-                                ? "var(--admin-stat-3-bg)"
-                                : activeTabData?.bgColor === "bg-purple-100"
-                                  ? "var(--admin-stat-5-bg)"
-                                  : "var(--admin-stat-1-bg)",
+                              : activeTabData?.bgColor === "bg-indigo-100"
+                                ? "var(--admin-stat-1-bg)"
+                                : activeTabData?.bgColor === "bg-yellow-100"
+                                  ? "var(--admin-stat-3-bg)"
+                                  : activeTabData?.bgColor === "bg-purple-100"
+                                    ? "var(--admin-stat-5-bg)"
+                                    : "var(--admin-stat-1-bg)",
                     }}
                   >
                     <activeTabData.icon
@@ -1004,11 +1029,13 @@ export default function AdminSettings() {
                               ? "var(--admin-stat-2)"
                               : activeTabData?.bgColor === "bg-blue-100"
                                 ? "var(--admin-stat-1)"
-                                : activeTabData?.bgColor === "bg-yellow-100"
-                                  ? "var(--admin-stat-3)"
-                                  : activeTabData?.bgColor === "bg-purple-100"
-                                    ? "var(--admin-stat-5)"
-                                    : "var(--admin-stat-1)",
+                                : activeTabData?.bgColor === "bg-indigo-100"
+                                  ? "var(--admin-stat-1)"
+                                  : activeTabData?.bgColor === "bg-yellow-100"
+                                    ? "var(--admin-stat-3)"
+                                    : activeTabData?.bgColor === "bg-purple-100"
+                                      ? "var(--admin-stat-5)"
+                                      : "var(--admin-stat-1)",
                       }}
                     />
                   </div>
@@ -1023,11 +1050,13 @@ export default function AdminSettings() {
                               ? "var(--admin-stat-2)"
                               : activeTabData?.bgColor === "bg-blue-100"
                                 ? "var(--admin-stat-1)"
-                                : activeTabData?.bgColor === "bg-yellow-100"
-                                  ? "var(--admin-stat-3)"
-                                  : activeTabData?.bgColor === "bg-purple-100"
-                                    ? "var(--admin-stat-5)"
-                                    : "var(--admin-stat-1)",
+                                : activeTabData?.bgColor === "bg-indigo-100"
+                                  ? "var(--admin-stat-1)"
+                                  : activeTabData?.bgColor === "bg-yellow-100"
+                                    ? "var(--admin-stat-3)"
+                                    : activeTabData?.bgColor === "bg-purple-100"
+                                      ? "var(--admin-stat-5)"
+                                      : "var(--admin-stat-1)",
                       }}
                     >
                       {activeTabData.label}
@@ -1064,8 +1093,13 @@ export default function AdminSettings() {
 
         {/* Settings List */}
         <div className="p-6">
-          {/* Special handling for Personal tab - show theme selector and calendar integration */}
-          {activeTab === "personal" ? (
+          {/* Special handling for Developer tab - show API key management */}
+          {activeTab === "developer" ? (
+            <div className="space-y-6">
+              <APIKeyManagement getButtonClasses={getButtonClasses} />
+            </div>
+          ) : /* Special handling for Personal tab - show theme selector and calendar integration */
+          activeTab === "personal" ? (
             <div className="space-y-6">
               <ThemeSelector />
               
