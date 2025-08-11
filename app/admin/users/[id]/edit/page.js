@@ -243,16 +243,29 @@ export default function EditUserPage() {
                 {userData?.firstName} {userData?.lastName}
               </h3>
               <p className="text-gray-600 mt-1">{userData?.email}</p>
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-3 ${
-                userData?.isActive 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {userData?.isActive ? 'Active' : 'Inactive'}
+              <div className="flex items-center justify-center space-x-2 mt-3">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  userData?.isActive 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {userData?.isActive ? 'Active' : 'Inactive'}
+                </div>
+                {userData?.account_type === 'ldap' && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    LDAP
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="space-y-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Account Type:</span>
+                <span className="font-medium">
+                  {userData?.account_type === 'ldap' ? 'LDAP Account' : 'Local Account'}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Member Since:</span>
                 <span className="font-medium">{new Date(userData?.createdAt).toLocaleDateString()}</span>
@@ -265,6 +278,12 @@ export default function EditUserPage() {
                 <span className="text-gray-600">Privilege Level:</span>
                 <span className="font-medium">Level {userData?.privilegeLevel || 0}</span>
               </div>
+              {userData?.account_type === 'ldap' && userData?.ldap_synced_at && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">LDAP Last Sync:</span>
+                  <span className="font-medium">{new Date(userData.ldap_synced_at).toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-gray-200 pt-4 mt-6">

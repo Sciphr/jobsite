@@ -10,7 +10,10 @@ import {
   AlertTriangle, 
   Loader,
   Eye,
-  EyeOff 
+  EyeOff,
+  Settings,
+  Search,
+  UserCheck
 } from "lucide-react";
 
 export default function LDAPIntegration() {
@@ -23,11 +26,24 @@ export default function LDAPIntegration() {
     ldap_bind_password: '',
     ldap_user_search_base: '',
     ldap_group_search_base: '',
-    ldap_use_ssl: false
+    ldap_use_ssl: false,
+    // Field mapping settings
+    ldap_field_email: 'mail',
+    ldap_field_first_name: 'givenName',
+    ldap_field_last_name: 'sn',
+    ldap_field_phone: 'telephoneNumber',
+    ldap_field_display_name: 'displayName',
+    ldap_field_user_id: 'uid',
+    ldap_use_default_fallbacks: true
   });
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showFieldMapping, setShowFieldMapping] = useState(false);
+  const [showConfiguration, setShowConfiguration] = useState(false);
+  const [fieldTestResults, setFieldTestResults] = useState(null);
+  const [testUsername, setTestUsername] = useState('');
+  const [isTestingFields, setIsTestingFields] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +122,43 @@ export default function LDAPIntegration() {
     }
   };
 
+  const handleTestFieldMapping = async () => {
+    if (!testUsername.trim()) {
+      setFieldTestResults({ success: false, message: 'Please enter a test username' });
+      return;
+    }
+
+    setIsTestingFields(true);
+    setFieldTestResults(null);
+    
+    try {
+      const fieldMappings = {
+        email: settings.ldap_field_email,
+        first_name: settings.ldap_field_first_name,
+        last_name: settings.ldap_field_last_name,
+        phone: settings.ldap_field_phone,
+        display_name: settings.ldap_field_display_name,
+        user_id: settings.ldap_field_user_id
+      };
+
+      const response = await fetch('/api/admin/settings/ldap/test-fields', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ testUsername, fieldMappings }),
+      });
+
+      const data = await response.json();
+      setFieldTestResults(data);
+    } catch (error) {
+      console.error('Field mapping test failed:', error);
+      setFieldTestResults({ success: false, message: 'Failed to test field mappings' });
+    } finally {
+      setIsTestingFields(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="admin-card p-6">
@@ -133,7 +186,7 @@ export default function LDAPIntegration() {
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <div 
               className={`px-2 py-1 rounded-full text-xs font-medium ${
                 settings.ldap_enabled 
@@ -143,6 +196,16 @@ export default function LDAPIntegration() {
             >
               {settings.ldap_enabled ? 'Enabled' : 'Disabled'}
             </div>
+            {settings.ldap_enabled && (
+              <button
+                type="button"
+                onClick={() => setShowConfiguration(!showConfiguration)}
+                className="px-3 py-1.5 text-xs font-medium admin-text admin-border border rounded hover:admin-card hover:bg-opacity-50 transition-colors"
+              >
+                <Settings className="h-3 w-3 inline mr-1" />
+                {showConfiguration ? 'Hide Config' : 'Configure'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -178,8 +241,10 @@ export default function LDAPIntegration() {
 
         {settings.ldap_enabled && (
           <>
-            {/* Server Configuration */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Server Configuration - Hidden by default when enabled */}
+            {showConfiguration && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium admin-text mb-2">
                   LDAP Server <span className="text-red-500">*</span>
@@ -293,17 +358,210 @@ export default function LDAPIntegration() {
             </div>
 
             {/* SSL Option */}
-            <div className="flex items-center space-x-3">
-              <input
-                id="ldap_ssl"
-                type="checkbox"
-                className="admin-checkbox"
-                checked={settings.ldap_use_ssl}
-                onChange={(e) => handleInputChange('ldap_use_ssl', e.target.checked)}
-              />
-              <label htmlFor="ldap_ssl" className="text-sm font-medium admin-text">
-                Use SSL/TLS (LDAPS)
-              </label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    id="ldap_ssl"
+                    type="checkbox"
+                    className="admin-checkbox"
+                    checked={settings.ldap_use_ssl}
+                    onChange={(e) => handleInputChange('ldap_use_ssl', e.target.checked)}
+                  />
+                  <label htmlFor="ldap_ssl" className="text-sm font-medium admin-text">
+                    Use SSL/TLS (LDAPS)
+                  </label>
+                </div>
+              </>
+            )}
+
+            {/* Field Mapping Section - Always visible when LDAP enabled */}
+            <div className="border-t admin-border pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <Users className="h-5 w-5 admin-text" />
+                  <div>
+                    <h4 className="text-sm font-medium admin-text">Field Mapping</h4>
+                    <p className="text-xs admin-text-light">
+                      Map LDAP attributes to application fields
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFieldMapping(!showFieldMapping)}
+                  className="px-3 py-1.5 text-xs font-medium admin-text admin-border border rounded hover:admin-card hover:bg-opacity-50 transition-colors"
+                >
+                  {showFieldMapping ? 'Hide' : 'Customize'} Mapping
+                </button>
+              </div>
+
+              {showFieldMapping && (
+                <div className="space-y-4 p-4 admin-card bg-opacity-50 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        Email Attribute *
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_email}
+                        onChange={(e) => handleInputChange('ldap_field_email', e.target.value)}
+                        placeholder="e.g., mail, email, userPrincipalName"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        User ID Attribute *
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_user_id}
+                        onChange={(e) => handleInputChange('ldap_field_user_id', e.target.value)}
+                        placeholder="e.g., uid, sAMAccountName, cn"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        First Name Attribute
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_first_name}
+                        onChange={(e) => handleInputChange('ldap_field_first_name', e.target.value)}
+                        placeholder="e.g., givenName, firstName, fname"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        Last Name Attribute
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_last_name}
+                        onChange={(e) => handleInputChange('ldap_field_last_name', e.target.value)}
+                        placeholder="e.g., sn, surname, lastName, lname"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        Phone Attribute
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_phone}
+                        onChange={(e) => handleInputChange('ldap_field_phone', e.target.value)}
+                        placeholder="e.g., telephoneNumber, mobile, phone"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium admin-text mb-1">
+                        Display Name Attribute
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.ldap_field_display_name}
+                        onChange={(e) => handleInputChange('ldap_field_display_name', e.target.value)}
+                        placeholder="e.g., displayName, cn, fullName"
+                        className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-3 border-t admin-border">
+                    <input
+                      id="use_fallbacks"
+                      type="checkbox"
+                      className="admin-checkbox"
+                      checked={settings.ldap_use_default_fallbacks}
+                      onChange={(e) => handleInputChange('ldap_use_default_fallbacks', e.target.checked)}
+                    />
+                    <label htmlFor="use_fallbacks" className="text-xs admin-text">
+                      Use default fallbacks for empty fields (recommended)
+                    </label>
+                  </div>
+
+                  {/* Field Test Section */}
+                  <div className="border-t admin-border pt-4">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <UserCheck className="h-4 w-4 admin-text" />
+                      <h5 className="text-xs font-medium admin-text">Test Field Mapping</h5>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="text"
+                        value={testUsername}
+                        onChange={(e) => setTestUsername(e.target.value)}
+                        placeholder="Enter test username (e.g., tesla)"
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleTestFieldMapping}
+                        disabled={isTestingFields || !testUsername.trim()}
+                        className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isTestingFields ? (
+                          <Loader className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Search className="h-3 w-3" />
+                        )}
+                        <span>{isTestingFields ? 'Testing...' : 'Test Fields'}</span>
+                      </button>
+                    </div>
+
+                    {/* Field Test Results */}
+                    {fieldTestResults && (
+                      <div className={`mt-3 p-3 rounded-lg text-xs ${
+                        fieldTestResults.found && !fieldTestResults.error
+                          ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                          : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                      }`}>
+                        {fieldTestResults.found && !fieldTestResults.error ? (
+                          <div>
+                            <p className="font-medium text-green-800 dark:text-green-200 mb-2">
+                              ✅ User found! Mapped fields:
+                            </p>
+                            <div className="space-y-1">
+                              {Object.entries(fieldTestResults.mappedData || {}).map(([field, value]) => (
+                                <p key={field} className="text-green-700 dark:text-green-300">
+                                  <span className="font-medium">{field}:</span> {value || 'empty'}
+                                </p>
+                              ))}
+                            </div>
+                            {fieldTestResults.allAttributes && (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
+                                  View all available attributes
+                                </summary>
+                                <div className="mt-1 pl-2 space-y-1 max-h-32 overflow-y-auto">
+                                  {Object.entries(fieldTestResults.allAttributes).map(([attr, values]) => (
+                                    <p key={attr} className="text-green-600 dark:text-green-400">
+                                      <span className="font-mono">{attr}:</span> {Array.isArray(values) ? values.join(', ') : values}
+                                    </p>
+                                  ))}
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-red-800 dark:text-red-200">
+                            ❌ {fieldTestResults.message || fieldTestResults.error || 'User not found'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Test Result */}
@@ -366,7 +624,7 @@ export default function LDAPIntegration() {
             <button
               onClick={handleTestConnection}
               disabled={isTesting || !settings.ldap_server || !settings.ldap_base_dn}
-              className="px-4 py-2 text-sm font-medium admin-text admin-border border rounded-lg hover:admin-bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 text-sm font-medium admin-text admin-border border rounded-lg hover:admin-bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isTesting ? (
                 <>

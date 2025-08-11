@@ -62,6 +62,11 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
                   System Role
                 </span>
               )}
+              {role.is_ldap_role && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 ml-2">
+                  LDAP Role
+                </span>
+              )}
             </div>
           </div>
           
@@ -138,17 +143,26 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
               Assign Users
             </button>
 
-            <button
-              onClick={() => onEdit(role)}
-              className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('primary')} opacity-70 hover:opacity-100`}
-            >
-              <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-              Edit
-            </button>
+            {!role.is_ldap_role ? (
+              <button
+                onClick={() => onEdit(role)}
+                className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('primary')} opacity-70 hover:opacity-100`}
+              >
+                <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit
+              </button>
+            ) : (
+              <div className="inline-flex items-center px-3 py-1 text-xs font-medium text-gray-400 cursor-not-allowed opacity-50">
+                <svg className="-ml-0.5 mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit
+              </div>
+            )}
 
-            {!role.is_system_role && (
+            {!role.is_system_role && !role.is_ldap_role && (
               <button
                 onClick={() => onDelete(role)}
                 className={`inline-flex items-center px-3 py-1 shadow-sm text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${getButtonClasses('danger')} opacity-70 hover:opacity-100`}
@@ -175,6 +189,24 @@ export default function RoleCard({ role, onEdit, onDelete, onAssignUsers }) {
               <div className="ml-2">
                 <p className="text-xs text-amber-800 dark:text-amber-200">
                   System roles cannot be deleted and have restricted editing capabilities.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* LDAP Role Warning */}
+        {role.is_ldap_role && (
+          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-2">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  LDAP roles are automatically created from LDAP groups and cannot be edited or deleted manually.
                 </p>
               </div>
             </div>

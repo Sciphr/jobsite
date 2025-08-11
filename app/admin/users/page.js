@@ -1149,6 +1149,13 @@ function AdminUsersContent() {
                               {user.phone}
                             </div>
                           )}
+                          {user.account_type === 'ldap' && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                LDAP Account
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -1225,13 +1232,22 @@ function AdminUsersContent() {
                           <Settings className="h-4 w-4" />
                         </Link>
                         
-                        <Link
-                          href={`/admin/users/${user.id}/edit`}
-                          className="text-purple-600 hover:text-purple-900 p-2 sm:p-2 hover:bg-purple-50 rounded transition-colors duration-200 touch-action-manipulation"
-                          title="Edit user"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Link>
+                        {user.account_type !== 'ldap' ? (
+                          <Link
+                            href={`/admin/users/${user.id}/edit`}
+                            className="text-purple-600 hover:text-purple-900 p-2 sm:p-2 hover:bg-purple-50 rounded transition-colors duration-200 touch-action-manipulation"
+                            title="Edit user"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Link>
+                        ) : (
+                          <div 
+                            className="text-gray-400 p-2 sm:p-2 cursor-not-allowed"
+                            title="LDAP users cannot be edited"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </div>
+                        )}
 
                         {user.id !== session?.user?.id && (
                           <button

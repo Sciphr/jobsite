@@ -10,6 +10,7 @@ import CalendarIntegration from "./components/CalendarIntegration";
 import ZoomIntegration from "./components/ZoomIntegration";
 import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import LDAPIntegration from "./components/LDAPIntegration";
+import SAMLIntegration from "./components/SAMLIntegration";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
@@ -1358,9 +1359,12 @@ export default function AdminSettings() {
                 ([sectionId, section]) => renderSection(sectionId, section)
               )}
             </div>
-          ) : activeSettings.length > 0 ? (
+          ) : activeSettings.filter(setting => !setting.key.startsWith('ldap_') && !setting.key.startsWith('saml_')).length > 0 ? (
             <div className="space-y-6">
-              {activeSettings.map((setting, index) => {
+              {activeSettings.filter(setting => 
+                // Filter out LDAP and SAML settings from regular display since they have their own components
+                !setting.key.startsWith('ldap_') && !setting.key.startsWith('saml_')
+              ).map((setting, index) => {
                 const SettingIcon = getSettingIcon(setting.key);
                 const settingColorIndex = index % 4; // Cycle through 0-3 for theme colors
 
@@ -1451,7 +1455,7 @@ export default function AdminSettings() {
             </div>
           )}
 
-          {/* LDAP Authentication Section */}
+          {/* Authentication Section */}
           {activeTab === "system" && (
             <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold admin-text mb-4">
@@ -1461,7 +1465,10 @@ export default function AdminSettings() {
                 Configure enterprise authentication methods for your organization
               </p>
               
-              <LDAPIntegration />
+              <div className="space-y-8">
+                <LDAPIntegration />
+                <SAMLIntegration />
+              </div>
             </div>
           )}
 

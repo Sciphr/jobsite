@@ -11,7 +11,15 @@ const LDAP_SETTINGS = [
   'ldap_bind_password',
   'ldap_user_search_base',
   'ldap_group_search_base',
-  'ldap_use_ssl'
+  'ldap_use_ssl',
+  // Field mapping settings
+  'ldap_field_email',
+  'ldap_field_first_name',
+  'ldap_field_last_name',
+  'ldap_field_phone',
+  'ldap_field_display_name',
+  'ldap_field_user_id',
+  'ldap_use_default_fallbacks'
 ];
 
 export const GET = withAdminAuth(async (request) => {
@@ -36,12 +44,20 @@ export const GET = withAdminAuth(async (request) => {
       ldap_bind_password: '',
       ldap_user_search_base: '',
       ldap_group_search_base: '',
-      ldap_use_ssl: false
+      ldap_use_ssl: false,
+      // Field mapping defaults
+      ldap_field_email: 'mail',
+      ldap_field_first_name: 'givenName',
+      ldap_field_last_name: 'sn',
+      ldap_field_phone: 'telephoneNumber',
+      ldap_field_display_name: 'displayName',
+      ldap_field_user_id: 'uid',
+      ldap_use_default_fallbacks: true
     };
 
     // Override with database values
     settings.forEach(setting => {
-      if (setting.key === 'ldap_enabled' || setting.key === 'ldap_use_ssl') {
+      if (setting.key === 'ldap_enabled' || setting.key === 'ldap_use_ssl' || setting.key === 'ldap_use_default_fallbacks') {
         ldapSettings[setting.key] = setting.value === 'true';
       } else {
         ldapSettings[setting.key] = setting.value;

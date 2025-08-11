@@ -161,9 +161,9 @@ export default function RoleManagementPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Custom Roles</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">LDAP Roles</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {roles.filter(role => !role.is_system_role).length}
+                    {roles.filter(role => role.is_ldap_role).length}
                   </dd>
                 </dl>
               </div>
@@ -181,9 +181,9 @@ export default function RoleManagementPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Custom Roles</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {roles.reduce((sum, role) => sum + (role._count?.user_roles || 0), 0)}
+                    {roles.filter(role => !role.is_system_role && !role.is_ldap_role).length}
                   </dd>
                 </dl>
               </div>

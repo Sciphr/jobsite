@@ -322,13 +322,29 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
       <form id="user-form" onSubmit={handleSubmit} className="space-y-12">
         {/* Basic Information - Full Width */}
         <div className="admin-card rounded-xl shadow-sm border p-10">
-          <div className="flex items-center space-x-4 mb-8">
-            <div className="p-3 theme-stat-1-bg rounded-xl">
-              <User className="h-6 w-6 theme-stat-1" />
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 theme-stat-1-bg rounded-xl">
+                <User className="h-6 w-6 theme-stat-1" />
+              </div>
+              <h2 className="text-2xl font-semibold admin-text">
+                Basic Information
+              </h2>
             </div>
-            <h2 className="text-2xl font-semibold admin-text">
-              Basic Information
-            </h2>
+              {(initialData?.account_type === 'ldap' || initialData?.account_type === 'saml') && (
+              <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
+                initialData?.account_type === 'ldap'
+                  ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800'
+                  : 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
+              }`}>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span className="font-semibold text-sm">
+                  {initialData?.account_type === 'ldap' ? 'LDAP Account' : 'SAML Account'}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10">
@@ -342,8 +358,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 value={formData.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 onBlur={() => handleBlur("firstName")}
-                className={`w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
-                  errors.firstName ? "theme-danger-bg border-opacity-50" : "admin-border"
+                disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
+                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml')
+                    ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
+                    : 'bg-white dark:bg-gray-800'
+                } ${
+                  errors.firstName ? "border-red-300 dark:border-red-600" : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="Enter first name"
               />
@@ -365,8 +386,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 value={formData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 onBlur={() => handleBlur("lastName")}
-                className={`w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
-                  errors.lastName ? "theme-danger-bg border-opacity-50" : "admin-border"
+                disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
+                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml')
+                    ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
+                    : 'bg-white dark:bg-gray-800'
+                } ${
+                  errors.lastName ? "border-red-300 dark:border-red-600" : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="Enter last name"
               />
@@ -389,8 +415,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   onBlur={() => handleBlur("email")}
-                  className={`w-full px-4 py-3 pl-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
-                    errors.email ? "theme-danger-bg border-opacity-50" : "admin-border"
+                  disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
+                  className={`w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
+                    initialData?.account_type === 'ldap' 
+                      ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
+                      : 'bg-white dark:bg-gray-800'
+                  } ${
+                    errors.email ? "border-red-300 dark:border-red-600" : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Enter email address"
                 />
@@ -415,8 +446,13 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   onBlur={() => handleBlur("phone")}
-                  className={`w-full px-4 py-3 pl-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
-                    errors.phone ? "theme-danger-bg border-opacity-50" : "admin-border"
+                  disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
+                  className={`w-full px-4 py-3 pl-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
+                    initialData?.account_type === 'ldap' 
+                      ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
+                      : 'bg-white dark:bg-gray-800'
+                  } ${
+                    errors.phone ? "border-red-300 dark:border-red-600" : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Enter phone number"
                 />
@@ -432,16 +468,39 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
           </div>
         </div>
 
-        {/* Password Section - Full Width */}
-        <div className="admin-card rounded-xl shadow-sm border p-10">
-          <div className="flex items-center space-x-4 mb-8">
-            <div className="p-3 theme-stat-2-bg rounded-xl">
-              <Shield className="h-6 w-6 theme-stat-2" />
+        {/* Enterprise Account Warning */}
+        {(initialData?.account_type === 'ldap' || initialData?.account_type === 'saml') && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {initialData?.account_type === 'ldap' ? 'LDAP Account Restrictions' : 'SAML Account Restrictions'}
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  {initialData?.account_type === 'ldap' 
+                    ? 'This is an LDAP account. Personal information is managed through your LDAP directory and cannot be edited here. Only the account status can be modified.'
+                    : 'This is a SAML SSO account. Personal information is managed through your Identity Provider and cannot be edited here. Only the account status can be modified.'
+                  }
+                </p>
+              </div>
             </div>
-            <h2 className="text-2xl font-semibold admin-text">
-              {isEdit ? "Password Management" : "Set User Password"}
-            </h2>
           </div>
+        )}
+
+        {/* Password Section - Full Width - Hide for LDAP/SAML users */}
+        {initialData?.account_type !== 'ldap' && initialData?.account_type !== 'saml' && (
+          <div className="admin-card rounded-xl shadow-sm border p-10">
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="p-3 theme-stat-2-bg rounded-xl">
+                <Shield className="h-6 w-6 theme-stat-2" />
+              </div>
+              <h2 className="text-2xl font-semibold admin-text">
+                {isEdit ? "Password Management" : "Set User Password"}
+              </h2>
+            </div>
 
           {isEdit && (
             <div className="theme-stat-2-bg bg-opacity-20 border theme-stat-2-border rounded-xl p-6 mb-10">
@@ -465,8 +524,8 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("password", e.target.value)
                   }
                   onBlur={() => handleBlur("password")}
-                  className={`w-full px-4 py-3 pr-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
-                    errors.password ? "theme-danger-bg border-opacity-50" : "admin-border"
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
+                    errors.password ? "border-red-300 dark:border-red-600" : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder={isEdit ? "Enter new password" : "Enter password"}
                 />
@@ -503,10 +562,10 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("confirmPassword", e.target.value)
                   }
                   onBlur={() => handleBlur("confirmPassword")}
-                  className={`w-full px-4 py-3 pr-12 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text placeholder-gray-400 text-lg ${
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
                     errors.confirmPassword
-                      ? "theme-danger-bg border-opacity-50"
-                      : "admin-border"
+                      ? "border-red-300 dark:border-red-600"
+                      : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Confirm password"
                   disabled={!formData.password}
@@ -542,6 +601,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
             </div>
           </div>
         </div>
+        )}
 
         {/* Role Assignment Section - Only for new users */}
         {!isEdit && (
@@ -564,7 +624,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   name="role"
                   value={formData.role}
                   onChange={(e) => handleInputChange("role", e.target.value)}
-                  className="w-full px-4 py-3 admin-border border rounded-xl focus:ring-2 theme-primary-bg focus:ring-opacity-50 admin-text admin-card text-lg"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg"
                 >
                   {roleOptions.map((role) => (
                     <option
@@ -631,7 +691,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                     handleInputChange("isActive", e.target.checked)
                   }
                   disabled={isSelfEdit}
-                  className={`w-5 h-5 rounded admin-border theme-primary focus:ring-2 theme-primary-bg focus:ring-opacity-50 ${
+                  className={`w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2 bg-white dark:bg-gray-800 ${
                     isSelfEdit ? "cursor-not-allowed" : ""
                   }`}
                 />
@@ -653,11 +713,11 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
               
               <div className={`p-4 rounded-xl border ${
                 formData.isActive 
-                  ? 'theme-success-bg bg-opacity-20 theme-success-border' 
-                  : 'theme-danger-bg bg-opacity-20 theme-danger-border'
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
               }`}>
                 <p className={`text-base font-medium ${
-                  formData.isActive ? 'theme-success' : 'theme-danger'
+                  formData.isActive ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
                 }`}>
                   {formData.isActive 
                     ? "✓ User can log in and access the system"
@@ -671,9 +731,24 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
               <>
                 <div className="admin-card bg-opacity-50 rounded-xl p-6">
                   <h3 className="text-lg font-medium admin-text mb-4">
-                    Account Timeline
+                    Account Information
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className={`h-3 w-3 rounded-full ${
+                        initialData.account_type === 'ldap' ? 'bg-blue-500' : 
+                        initialData.account_type === 'saml' ? 'bg-green-500' : 
+                        'bg-gray-500'
+                      }`} />
+                      <div>
+                        <p className="text-base font-medium admin-text">Account Type</p>
+                        <p className="text-sm admin-text-light">
+                          {initialData.account_type === 'ldap' ? 'LDAP Account' : 
+                           initialData.account_type === 'saml' ? 'SAML Account' : 
+                           'Local Account'}
+                        </p>
+                      </div>
+                    </div>
                     <div className="flex items-center space-x-3">
                       <Calendar className="h-5 w-5 admin-text-light" />
                       <div>
@@ -688,6 +763,17 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                         <p className="text-sm admin-text-light">{new Date(initialData.updatedAt).toLocaleDateString()}</p>
                       </div>
                     </div>
+                    {initialData.account_type === 'ldap' && initialData.ldap_synced_at && (
+                      <div className="flex items-center space-x-3">
+                        <svg className="h-5 w-5 admin-text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <div>
+                          <p className="text-base font-medium admin-text">LDAP Last Sync</p>
+                          <p className="text-sm admin-text-light">{new Date(initialData.ldap_synced_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

@@ -5,11 +5,102 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
-import { authenticateLDAP, getUserGroups } from "../../../lib/ldap";
+import { authenticateLDAP, syncUserRoles, ensureLDAPUserRole } from "../../../lib/ldap";
+import { processSAMLResponse, generateSAMLLoginURL } from "../../../lib/saml";
 
 export const authOptions = {
   adapter: PrismaAdapter(authPrisma),
   providers: [
+    // SAML Authentication Provider
+    CredentialsProvider({
+      id: "saml",
+      name: "SAML SSO",
+      credentials: {
+        samlResponse: { label: "SAML Response", type: "text" },
+      },
+      async authorize(credentials) {
+        console.log("🔐 SAML NextAuth authorize called");
+
+        if (!credentials?.samlResponse) {
+          console.log("❌ Missing SAML response");
+          return null;
+        }
+
+        try {
+          // Process SAML response
+          const samlUser = await processSAMLResponse(credentials.samlResponse);
+          console.log("✅ SAML authentication successful:", samlUser);
+
+          // Check if user exists in local database
+          let localUser = await authPrisma.users.findUnique({
+            where: { email: samlUser.email },
+          });
+
+          const now = new Date();
+
+          // If user doesn't exist locally, create them
+          if (!localUser) {
+            console.log("🆕 Creating new user from SAML:", samlUser.email);
+            localUser = await authPrisma.users.create({
+              data: {
+                email: samlUser.email,
+                firstName: samlUser.firstName || samlUser.displayName?.split(' ')[0] || '',
+                lastName: samlUser.lastName || samlUser.displayName?.split(' ').slice(1).join(' ') || '',
+                phone: samlUser.phone || null,
+                role: 'hr', // Default role for SAML users
+                privilegeLevel: 1, // HR privilege level
+                isActive: true,
+                password: null, // SAML users don't have local passwords
+                account_type: 'saml',
+                ldap_dn: null, // SAML users don't have LDAP DN
+                ldap_groups: [],
+                ldap_synced_at: null,
+                updatedAt: now,
+              },
+            });
+          } else {
+            // Update existing user's SAML data on each login
+            localUser = await authPrisma.users.update({
+              where: { id: localUser.id },
+              data: {
+                firstName: samlUser.firstName || samlUser.displayName?.split(' ')[0] || localUser.firstName,
+                lastName: samlUser.lastName || samlUser.displayName?.split(' ').slice(1).join(' ') || localUser.lastName,
+                phone: samlUser.phone || localUser.phone,
+                account_type: 'saml',
+                ldap_dn: null,
+                ldap_groups: [],
+                ldap_synced_at: null,
+                updatedAt: now,
+              },
+            });
+          }
+
+          // Ensure SAML user has the basic "User" system role
+          try {
+            await ensureLDAPUserRole(localUser.id); // Reuse LDAP role function
+            console.log("✅ SAML user role assigned:", samlUser.email);
+          } catch (roleError) {
+            console.warn("⚠️ Failed to assign SAML user role:", roleError);
+          }
+
+          const returnUser = {
+            id: localUser.id,
+            email: localUser.email,
+            name: localUser.firstName + (localUser.lastName ? " " + localUser.lastName : ""),
+            role: localUser.role,
+            privilegeLevel: localUser.privilegeLevel,
+            authMethod: 'saml',
+          };
+
+          console.log("✅ SAML user authenticated:", returnUser);
+          return returnUser;
+        } catch (error) {
+          console.error("❌ SAML authentication error:", error);
+          return null;
+        }
+      },
+    }),
+
     // LDAP Authentication Provider
     CredentialsProvider({
       id: "ldap",
@@ -39,6 +130,8 @@ export const authOptions = {
             where: { email: ldapUser.email },
           });
 
+          const now = new Date();
+
           // If user doesn't exist locally, create them
           if (!localUser) {
             console.log("🆕 Creating new user from LDAP:", ldapUser.email);
@@ -47,13 +140,51 @@ export const authOptions = {
                 email: ldapUser.email,
                 firstName: ldapUser.firstName || ldapUser.name,
                 lastName: ldapUser.lastName || '',
+                phone: ldapUser.phone || null,
                 role: 'hr', // Default role for LDAP users
                 privilegeLevel: 1, // HR privilege level for testing
                 isActive: true,
                 password: null, // LDAP users don't have local passwords
-                updatedAt: new Date(), // Required field
+                account_type: 'ldap',
+                ldap_dn: ldapUser.dn,
+                ldap_groups: ldapUser.groups?.map(g => g.name) || [],
+                ldap_synced_at: now,
+                updatedAt: now, // Required field
               },
             });
+          } else {
+            // Update existing user's LDAP data on each login
+            localUser = await authPrisma.users.update({
+              where: { id: localUser.id },
+              data: {
+                firstName: ldapUser.firstName || ldapUser.name,
+                lastName: ldapUser.lastName || '',
+                phone: ldapUser.phone || null,
+                account_type: 'ldap',
+                ldap_dn: ldapUser.dn,
+                ldap_groups: ldapUser.groups?.map(g => g.name) || [],
+                ldap_synced_at: now,
+                updatedAt: now,
+              },
+            });
+          }
+
+          // Ensure LDAP user has the basic "User" system role
+          try {
+            await ensureLDAPUserRole(localUser.id);
+            console.log("✅ LDAP user role assigned:", ldapUser.email);
+          } catch (roleError) {
+            console.warn("⚠️ Failed to assign LDAP user role:", roleError);
+          }
+
+          // Sync user roles based on LDAP groups
+          if (ldapUser.groups && ldapUser.groups.length > 0) {
+            try {
+              await syncUserRoles(localUser.id, ldapUser.groups);
+              console.log("✅ LDAP roles synced for user:", ldapUser.email);
+            } catch (roleError) {
+              console.warn("⚠️ Failed to sync LDAP roles:", roleError);
+            }
           }
 
           const returnUser = {

@@ -398,11 +398,15 @@ model roles {
   created_at                    DateTime?          @default(now()) @db.Timestamptz(6)
   updated_at                    DateTime?          @default(now()) @db.Timestamptz(6)
   created_by                    String?            @db.Uuid
+  is_ldap_role                  Boolean?           @default(false)
+  ldap_group_name               String?            @db.VarChar(200)
+  is_editable                   Boolean?           @default(true)
   role_permissions              role_permissions[]
   users_roles_created_byTousers users?             @relation("roles_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
   user_roles                    user_roles[]
 
   @@index([is_active], map: "idx_roles_active")
+  @@index([is_ldap_role], map: "idx_roles_ldap")
 }
 
 model saved_jobs {
@@ -491,6 +495,10 @@ model users {
   max_daily_notifications                      Int?                            @default(5)
   notification_batch_minutes                   Int?                            @default(30)
   last_notification_sent_at                    DateTime?                       @db.Timestamp(6)
+  account_type                                 String?                         @default("local") @db.VarChar(20)
+  ldap_dn                                      String?                         @db.VarChar(500)
+  ldap_groups                                  String[]
+  ldap_synced_at                               DateTime?                       @db.Timestamptz(6)
   api_keys                                     api_keys?
   application_stage_history                    application_stage_history[]
   applications                                 applications[]
@@ -518,6 +526,8 @@ model users {
   user_resumes                                 user_resumes[]
   user_roles                                   user_roles[]
   weekly_digests                               weekly_digests[]
+
+  @@index([account_type], map: "idx_users_account_type")
 }
 
 model user_roles {

@@ -39,6 +39,10 @@ export async function GET(req, { params }) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        account_type: true,
+        ldap_dn: true,
+        ldap_groups: true,
+        ldap_synced_at: true,
         user_roles: {
           where: { is_active: true },
           select: {
@@ -136,6 +140,10 @@ export async function PATCH(req, { params }) {
         role: true,
         privilegeLevel: true,
         isActive: true,
+        account_type: true,
+        ldap_dn: true,
+        ldap_groups: true,
+        ldap_synced_at: true,
       },
     });
 
@@ -160,6 +168,23 @@ export async function PATCH(req, { params }) {
       return new Response(JSON.stringify({ message: "User not found" }), {
         status: 404,
       });
+    }
+
+    // Prevent editing of LDAP users (except for status changes)
+    if (currentUser.account_type === 'ldap') {
+      // Only allow status changes for LDAP users
+      const allowedLDAPFields = ['isActive'];
+      const attemptedFields = Object.keys(body);
+      const invalidFields = attemptedFields.filter(field => !allowedLDAPFields.includes(field));
+      
+      if (invalidFields.length > 0) {
+        return new Response(
+          JSON.stringify({ 
+            message: "LDAP users cannot be edited. Only account status can be changed." 
+          }),
+          { status: 403 }
+        );
+      }
     }
 
     // Extract fields that can be updated
@@ -257,6 +282,10 @@ export async function PATCH(req, { params }) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        account_type: true,
+        ldap_dn: true,
+        ldap_groups: true,
+        ldap_synced_at: true,
         user_roles: {
           where: { is_active: true },
           select: {
@@ -400,17 +429,17 @@ export async function DELETE(req, { params }) {
     const userToDelete = await appPrisma.users.findUnique({
       where: { id },
       include: {
-        resumes: true, // Get all resume records with storage paths
+        user_resumes: true, // Get all resume records with storage paths
         applications: true,
         saved_jobs: true,
-        createdJobs: true,
+        jobs: true, // Changed from createdJobs to jobs
         settings: true,
         _count: {
           select: {
             jobs: true,
             applications: true,
             saved_jobs: true,
-            resumes: true,
+            user_resumes: true, // Changed from resumes to user_resumes
             settings: true,
           },
         },
@@ -424,18 +453,18 @@ export async function DELETE(req, { params }) {
     }
 
     console.log(`Preparing to delete user ${id} with:`, {
-      jobs: userToDelete._count.createdJobs,
+      jobs: userToDelete._count.jobs,
       applications: userToDelete._count.applications,
-      savedJobs: userToDelete._count.savedJobs,
-      resumes: userToDelete._count.resumes,
+      savedJobs: userToDelete._count.saved_jobs,
+      resumes: userToDelete._count.user_resumes,
       settings: userToDelete._count.settings,
     });
 
-    // Step 1: Delete resume files from  storage
-    const resumeDeletionPromises = userToDelete.resumes.map(async (resume) => {
+    // Step 1: Delete resume files from storage
+    const resumeDeletionPromises = userToDelete.user_resumes.map(async (resume) => {
       try {
         console.log(`Deleting resume file: ${resume.storagePath}`);
-        const { error } = await deleteFromStorage(resume.storagePath);
+        const { error } = await deleteFromMinio(resume.storagePath);
         if (error) {
           console.error(
             `Failed to delete resume file ${resume.storagePath}:`,
@@ -459,8 +488,8 @@ export async function DELETE(req, { params }) {
     await Promise.allSettled(resumeDeletionPromises);
 
     // Step 2: Handle jobs created by this user
-    if (userToDelete.createdJobs.length > 0) {
-      console.log(`User has ${userToDelete.createdJobs.length} created jobs`);
+    if (userToDelete.jobs.length > 0) {
+      console.log(`User has ${userToDelete.jobs.length} created jobs`);
 
       // Option A: Set createdBy to null (recommended)
       await appPrisma.jobs.updateMany({
@@ -472,15 +501,15 @@ export async function DELETE(req, { params }) {
     // Step 3: Delete user's applications
     if (userToDelete._count.applications > 0) {
       console.log(`Deleting ${userToDelete._count.applications} applications`);
-      await appPrisma.application.deleteMany({
+      await appPrisma.applications.deleteMany({
         where: { userId: id },
       });
     }
 
     // Step 4: Delete user's saved jobs
-    if (userToDelete._count.savedJobs > 0) {
-      console.log(`Deleting ${userToDelete._count.savedJobs} saved jobs`);
-      await appPrisma.savedJob.deleteMany({
+    if (userToDelete._count.saved_jobs > 0) {
+      console.log(`Deleting ${userToDelete._count.saved_jobs} saved jobs`);
+      await appPrisma.saved_jobs.deleteMany({
         where: { userId: id },
       });
     }
@@ -497,11 +526,11 @@ export async function DELETE(req, { params }) {
         message: "User deleted successfully",
         deletedData: {
           applications: userToDelete._count.applications,
-          savedJobs: userToDelete._count.savedJobs,
-          resumes: userToDelete._count.resumes,
-          resumeFiles: userToDelete.resumes.length,
+          savedJobs: userToDelete._count.saved_jobs,
+          resumes: userToDelete._count.user_resumes,
+          resumeFiles: userToDelete.user_resumes.length,
           settings: userToDelete._count.settings,
-          jobsHandled: userToDelete._count.createdJobs,
+          jobsHandled: userToDelete._count.jobs,
         },
       }),
       { status: 200 }
