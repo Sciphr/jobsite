@@ -8,6 +8,22 @@ import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
 import { authenticateLDAP, syncUserRoles, ensureLDAPUserRole } from "../../../lib/ldap";
 import { processSAMLResponse, generateSAMLLoginURL } from "../../../lib/saml";
 
+// Helper function for determining combined account types
+function determineAccountType(existingType, newAuthMethod) {
+  if (!existingType || existingType === 'local') {
+    return newAuthMethod;
+  }
+  if (existingType === newAuthMethod) {
+    return existingType;
+  }
+  // If user has both LDAP and SAML, mark as 'combined'
+  if ((existingType === 'ldap' && newAuthMethod === 'saml') || 
+      (existingType === 'saml' && newAuthMethod === 'ldap')) {
+    return 'combined';
+  }
+  return existingType;
+}
+
 export const authOptions = {
   adapter: PrismaAdapter(authPrisma),
   providers: [
@@ -38,6 +54,7 @@ export const authOptions = {
 
           const now = new Date();
 
+
           // If user doesn't exist locally, create them
           if (!localUser) {
             console.log("🆕 Creating new user from SAML:", samlUser.email);
@@ -59,19 +76,34 @@ export const authOptions = {
               },
             });
           } else {
-            // Update existing user's SAML data on each login
+            // Determine the new account type (existing user linking SAML)
+            const newAccountType = determineAccountType(localUser.account_type, 'saml');
+            console.log(`🔗 Linking SAML to existing account. Type: ${localUser.account_type} -> ${newAccountType}`);
+            
+            // Update existing user with SAML data, preserving LDAP data if present
+            const updateData = {
+              // Only update name/phone from SAML if not an LDAP account or if it's empty
+              firstName: (localUser.account_type !== 'ldap' && localUser.account_type !== 'combined') 
+                ? (samlUser.firstName || samlUser.displayName?.split(' ')[0] || localUser.firstName)
+                : localUser.firstName,
+              lastName: (localUser.account_type !== 'ldap' && localUser.account_type !== 'combined')
+                ? (samlUser.lastName || samlUser.displayName?.split(' ').slice(1).join(' ') || localUser.lastName)
+                : localUser.lastName,
+              phone: localUser.phone || samlUser.phone, // Keep existing phone if present
+              account_type: newAccountType,
+              updatedAt: now,
+            };
+
+            // Don't overwrite LDAP data if this is a combined account
+            if (localUser.account_type !== 'ldap' && localUser.account_type !== 'combined') {
+              updateData.ldap_dn = null;
+              updateData.ldap_groups = [];
+              updateData.ldap_synced_at = null;
+            }
+
             localUser = await authPrisma.users.update({
               where: { id: localUser.id },
-              data: {
-                firstName: samlUser.firstName || samlUser.displayName?.split(' ')[0] || localUser.firstName,
-                lastName: samlUser.lastName || samlUser.displayName?.split(' ').slice(1).join(' ') || localUser.lastName,
-                phone: samlUser.phone || localUser.phone,
-                account_type: 'saml',
-                ldap_dn: null,
-                ldap_groups: [],
-                ldap_synced_at: null,
-                updatedAt: now,
-              },
+              data: updateData,
             });
           }
 
@@ -153,14 +185,19 @@ export const authOptions = {
               },
             });
           } else {
+            // Determine the new account type (existing user linking LDAP)
+            const newAccountType = determineAccountType(localUser.account_type, 'ldap');
+            console.log(`🔗 Linking LDAP to existing account. Type: ${localUser.account_type} -> ${newAccountType}`);
+            
             // Update existing user's LDAP data on each login
             localUser = await authPrisma.users.update({
               where: { id: localUser.id },
               data: {
+                // Always update name/phone from LDAP (LDAP is authoritative)
                 firstName: ldapUser.firstName || ldapUser.name,
                 lastName: ldapUser.lastName || '',
-                phone: ldapUser.phone || null,
-                account_type: 'ldap',
+                phone: ldapUser.phone || localUser.phone,
+                account_type: newAccountType,
                 ldap_dn: ldapUser.dn,
                 ldap_groups: ldapUser.groups?.map(g => g.name) || [],
                 ldap_synced_at: now,
@@ -168,6 +205,7 @@ export const authOptions = {
               },
             });
           }
+
 
           // Ensure LDAP user has the basic "User" system role
           try {

@@ -360,7 +360,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 onBlur={() => handleBlur("firstName")}
                 disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
-                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml')
+                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml' || initialData?.account_type === 'combined')
                     ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
                     : 'bg-white dark:bg-gray-800'
                 } ${
@@ -388,7 +388,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                 onBlur={() => handleBlur("lastName")}
                 disabled={initialData?.account_type === 'ldap' || initialData?.account_type === 'saml'}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-lg ${
-                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml')
+                  (initialData?.account_type === 'ldap' || initialData?.account_type === 'saml' || initialData?.account_type === 'combined')
                     ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' 
                     : 'bg-white dark:bg-gray-800'
                 } ${
@@ -469,7 +469,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
         </div>
 
         {/* Enterprise Account Warning */}
-        {(initialData?.account_type === 'ldap' || initialData?.account_type === 'saml') && (
+        {initialData?.account_type && initialData.account_type !== 'local' && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
             <div className="flex items-start space-x-3">
               <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,12 +477,16 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
               </svg>
               <div>
                 <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  {initialData?.account_type === 'ldap' ? 'LDAP Account Restrictions' : 'SAML Account Restrictions'}
+                  {initialData.account_type === 'combined' ? 'External Account Restrictions' : 
+                   initialData.account_type === 'ldap' ? 'LDAP Account Restrictions' : 
+                   'SAML Account Restrictions'}
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  {initialData?.account_type === 'ldap' 
-                    ? 'This is an LDAP account. Personal information is managed through your LDAP directory and cannot be edited here. Only the account status can be modified.'
-                    : 'This is a SAML SSO account. Personal information is managed through your Identity Provider and cannot be edited here. Only the account status can be modified.'
+                  {initialData.account_type === 'combined' 
+                    ? 'This account is linked to both LDAP and SAML authentication. Personal information is managed externally and cannot be edited here. Only the account status can be modified.'
+                    : initialData.account_type === 'ldap' 
+                      ? 'This is an LDAP account. Personal information is managed through your LDAP directory and cannot be edited here. Only the account status can be modified.'
+                      : 'This is a SAML SSO account. Personal information is managed through your Identity Provider and cannot be edited here. Only the account status can be modified.'
                   }
                 </p>
               </div>
@@ -490,8 +494,8 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
           </div>
         )}
 
-        {/* Password Section - Full Width - Hide for LDAP/SAML users */}
-        {initialData?.account_type !== 'ldap' && initialData?.account_type !== 'saml' && (
+        {/* Password Section - Full Width - Hide for external auth users */}
+        {initialData?.account_type !== 'ldap' && initialData?.account_type !== 'saml' && initialData?.account_type !== 'combined' && (
           <div className="admin-card rounded-xl shadow-sm border p-10">
             <div className="flex items-center space-x-4 mb-8">
               <div className="p-3 theme-stat-2-bg rounded-xl">
@@ -736,6 +740,7 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3">
                       <div className={`h-3 w-3 rounded-full ${
+                        initialData.account_type === 'combined' ? 'bg-purple-500' :
                         initialData.account_type === 'ldap' ? 'bg-blue-500' : 
                         initialData.account_type === 'saml' ? 'bg-green-500' : 
                         'bg-gray-500'
@@ -743,7 +748,8 @@ export default function UserForm({ userId = null, initialData = null, refreshTri
                       <div>
                         <p className="text-base font-medium admin-text">Account Type</p>
                         <p className="text-sm admin-text-light">
-                          {initialData.account_type === 'ldap' ? 'LDAP Account' : 
+                          {initialData.account_type === 'combined' ? 'Combined Account (LDAP + SAML)' :
+                           initialData.account_type === 'ldap' ? 'LDAP Account' : 
                            initialData.account_type === 'saml' ? 'SAML Account' : 
                            'Local Account'}
                         </p>

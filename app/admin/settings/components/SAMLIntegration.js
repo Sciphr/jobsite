@@ -82,16 +82,24 @@ export default function SAMLIntegration() {
   const applyProviderPreset = (presetKey) => {
     const preset = SAML_PROVIDER_PRESETS[presetKey];
     if (preset) {
+      const fieldMappingUpdates = {};
+      
+      // Map field names correctly
+      if (preset.fieldMappings.email) fieldMappingUpdates.saml_field_email = preset.fieldMappings.email;
+      if (preset.fieldMappings.firstName) fieldMappingUpdates.saml_field_first_name = preset.fieldMappings.firstName;
+      if (preset.fieldMappings.lastName) fieldMappingUpdates.saml_field_last_name = preset.fieldMappings.lastName;
+      if (preset.fieldMappings.displayName) fieldMappingUpdates.saml_field_display_name = preset.fieldMappings.displayName;
+      if (preset.fieldMappings.userId) fieldMappingUpdates.saml_field_user_id = preset.fieldMappings.userId;
+      
       setSettings(prev => ({
         ...prev,
         saml_entity_id: preset.entityId,
-        ...Object.keys(preset.fieldMappings).reduce((acc, field) => {
-          acc[`saml_field_${field === 'userId' ? 'user_id' : field === 'firstName' ? 'first_name' : field === 'lastName' ? 'last_name' : field === 'displayName' ? 'display_name' : field}`] = preset.fieldMappings[field];
-          return acc;
-        }, {})
+        ...fieldMappingUpdates
       }));
       setHasChanges(true);
       setSelectedPreset(presetKey);
+      
+      console.log('Applied preset:', presetKey, fieldMappingUpdates);
     }
   };
 

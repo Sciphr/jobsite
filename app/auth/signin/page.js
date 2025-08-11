@@ -18,9 +18,10 @@ export default function SignIn() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [authMethod, setAuthMethod] = useState("credentials"); // 'credentials' or 'ldap'
+  const [authMethod, setAuthMethod] = useState("credentials"); // 'credentials', 'ldap', or 'saml'
   const [isLDAPEnabled, setIsLDAPEnabled] = useState(false);
-  const [isLoadingLDAPStatus, setIsLoadingLDAPStatus] = useState(true);
+  const [isSAMLEnabled, setIsSAMLEnabled] = useState(false);
+  const [isLoadingAuthStatus, setIsLoadingAuthStatus] = useState(true);
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
 
@@ -31,22 +32,30 @@ export default function SignIn() {
     setCallbackUrl(callback);
   }, []);
 
-  // Check if LDAP is enabled
+  // Check if LDAP and SAML are enabled
   useEffect(() => {
-    const checkLDAPStatus = async () => {
+    const checkAuthStatus = async () => {
       try {
-        const response = await fetch('/api/auth/ldap-status');
-        const data = await response.json();
-        setIsLDAPEnabled(data.ldap_enabled);
+        const [ldapResponse, samlResponse] = await Promise.all([
+          fetch('/api/auth/ldap-status'),
+          fetch('/api/auth/saml-status')
+        ]);
+        
+        const ldapData = await ldapResponse.json();
+        const samlData = await samlResponse.json();
+        
+        setIsLDAPEnabled(ldapData.ldap_enabled);
+        setIsSAMLEnabled(samlData.saml_enabled);
       } catch (error) {
-        console.error('Failed to check LDAP status:', error);
+        console.error('Failed to check auth status:', error);
         setIsLDAPEnabled(false);
+        setIsSAMLEnabled(false);
       } finally {
-        setIsLoadingLDAPStatus(false);
+        setIsLoadingAuthStatus(false);
       }
     };
 
-    checkLDAPStatus();
+    checkAuthStatus();
   }, []);
 
   // Redirect if already logged in
@@ -83,7 +92,11 @@ export default function SignIn() {
     try {
       let result;
       
-      if (authMethod === "ldap" && isLDAPEnabled) {
+      if (authMethod === "saml" && isSAMLEnabled) {
+        // Redirect to SAML login URL
+        window.location.href = "/api/auth/saml/login";
+        return;
+      } else if (authMethod === "ldap" && isLDAPEnabled) {
         result = await signIn("ldap", {
           username: formData.username,
           password: formData.password,
@@ -98,7 +111,10 @@ export default function SignIn() {
       }
 
       if (result?.error) {
-        setError(authMethod === "ldap" && isLDAPEnabled ? "Invalid LDAP credentials" : "Invalid email or password");
+        const errorMessage = 
+          authMethod === "ldap" && isLDAPEnabled ? "Invalid LDAP credentials" : 
+          "Invalid email or password";
+        setError(errorMessage);
       } else {
         // Redirect to callback URL or profile
         router.push(callbackUrl);
@@ -137,13 +153,13 @@ export default function SignIn() {
 
         {/* Form Card */}
         <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8 space-y-6 transition-colors duration-200">
-          {/* Authentication Method Selector - Only show if LDAP is enabled */}
-          {!isLoadingLDAPStatus && isLDAPEnabled && (
+          {/* Authentication Method Selector - Show if LDAP or SAML is enabled */}
+          {!isLoadingAuthStatus && (isLDAPEnabled || isSAMLEnabled) && (
             <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
                 type="button"
                 onClick={() => setAuthMethod("credentials")}
-                className={`flex-1 text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 ${
+                className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
                   authMethod === "credentials"
                     ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -151,23 +167,80 @@ export default function SignIn() {
               >
                 Local Account
               </button>
-              <button
-                type="button"
-                onClick={() => setAuthMethod("ldap")}
-                className={`flex-1 text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 ${
-                  authMethod === "ldap"
-                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                Employee Login
-              </button>
+              {isLDAPEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod("ldap")}
+                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
+                    authMethod === "ldap"
+                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  LDAP Login
+                </button>
+              )}
+              {isSAMLEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod("saml")}
+                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
+                    authMethod === "saml"
+                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  SSO Login
+                </button>
+              )}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email/Username Field */}
-            <div>
+          {/* SAML SSO Button - Show when SAML is selected */}
+          {authMethod === "saml" && isSAMLEnabled ? (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="mb-4">
+                  <div className="h-16 w-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <svg className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Single Sign-On</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Click below to sign in with your organization's SAML Identity Provider
+                  </p>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Redirecting to SSO...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      Continue with SSO
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email/Username Field */}
+              <div>
               <label
                 htmlFor={authMethod === "ldap" && isLDAPEnabled ? "username" : "email"}
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-200"
@@ -296,7 +369,8 @@ export default function SignIn() {
                 </>
               )}
             </ThemedButton>
-          </form>
+            </form>
+          )}
 
           {/* Footer */}
           <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">

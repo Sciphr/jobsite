@@ -1149,11 +1149,29 @@ function AdminUsersContent() {
                               {user.phone}
                             </div>
                           )}
-                          {user.account_type === 'ldap' && (
-                            <div className="mt-1">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                LDAP Account
-                              </span>
+                          {/* Account Type Indicators */}
+                          {user.account_type && user.account_type !== 'local' && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {user.account_type === 'ldap' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                  LDAP Account
+                                </span>
+                              )}
+                              {user.account_type === 'saml' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+                                  SAML Account
+                                </span>
+                              )}
+                              {user.account_type === 'combined' && (
+                                <>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                    LDAP
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+                                    SAML
+                                  </span>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1232,7 +1250,7 @@ function AdminUsersContent() {
                           <Settings className="h-4 w-4" />
                         </Link>
                         
-                        {user.account_type !== 'ldap' ? (
+                        {user.account_type !== 'ldap' && user.account_type !== 'saml' && user.account_type !== 'combined' ? (
                           <Link
                             href={`/admin/users/${user.id}/edit`}
                             className="text-purple-600 hover:text-purple-900 p-2 sm:p-2 hover:bg-purple-50 rounded transition-colors duration-200 touch-action-manipulation"
@@ -1243,7 +1261,7 @@ function AdminUsersContent() {
                         ) : (
                           <div 
                             className="text-gray-400 p-2 sm:p-2 cursor-not-allowed"
-                            title="LDAP users cannot be edited"
+                            title={`${user.account_type === 'combined' ? 'External account' : user.account_type === 'ldap' ? 'LDAP' : 'SAML'} users cannot be edited`}
                           >
                             <Edit3 className="h-4 w-4" />
                           </div>
