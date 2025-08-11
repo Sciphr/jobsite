@@ -282,31 +282,82 @@ export default function SAMLIntegration() {
 
         {settings.saml_enabled && (
           <>
-            {/* Provider Presets */}
-            <div className="border-t admin-border pt-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Zap className="h-5 w-5 admin-text" />
+            {/* Provider Presets - Enhanced UI */}
+            <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl border border-green-200 dark:border-green-700 p-6 mb-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-3 bg-green-500 rounded-xl">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <h4 className="text-sm font-medium admin-text">Quick Setup</h4>
-                  <p className="text-xs admin-text-light">
-                    Use presets for common SAML providers
+                  <h4 className="text-lg font-bold text-green-900 dark:text-green-100">Quick Configuration</h4>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Choose your Identity Provider to automatically configure field mappings
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              
+              {/* Step-by-step instructions */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-600 p-4 mb-6">
+                <h5 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-3">Setup Instructions:</h5>
+                <ol className="text-sm text-green-800 dark:text-green-200 space-y-2">
+                  <li className="flex items-start space-x-2">
+                    <span className="flex-shrink-0 w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">1</span>
+                    <span>Click your Identity Provider below to auto-configure field mappings</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="flex-shrink-0 w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span>
+                    <span>Fill in the required connection details (SSO URL, Certificate, Entity ID)</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="flex-shrink-0 w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
+                    <span>Test the configuration and enable SAML authentication</span>
+                  </li>
+                </ol>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Object.entries(SAML_PROVIDER_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
                     onClick={() => applyProviderPreset(key)}
-                    className={`p-3 text-xs font-medium rounded-lg border transition-colors ${
+                    className={`group relative bg-white dark:bg-gray-800 border-2 rounded-xl p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${
                       selectedPreset === key
-                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-300'
-                        : 'admin-border hover:admin-bg-secondary admin-text'
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                        : 'border-green-200 dark:border-green-700 hover:border-green-400 dark:hover:border-green-500'
                     }`}
                   >
-                    {preset.name}
+                    <div className="text-center">
+                      <div className={`w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200 ${
+                        selectedPreset === key
+                          ? 'bg-green-500'
+                          : 'bg-gradient-to-br from-green-400 to-green-600'
+                      }`}>
+                        <span className="text-white font-bold text-lg">
+                          {preset.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div className={`font-semibold group-hover:text-green-600 dark:group-hover:text-green-400 ${
+                        selectedPreset === key
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-gray-900 dark:text-gray-100'
+                      }`}>
+                        {preset.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {selectedPreset === key ? 'Selected' : 'Auto-configure fields'}
+                      </div>
+                    </div>
+                    
+                    {/* Hover effect overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-600 rounded-xl opacity-0 group-hover:opacity-10 transition-opacity duration-200"></div>
                   </button>
                 ))}
+              </div>
+              
+              <div className="mt-4 text-center">
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                  💡 Clicking a provider will automatically fill the field mapping section below
+                </p>
               </div>
             </div>
 

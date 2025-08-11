@@ -21,6 +21,7 @@ export default function SignIn() {
   const [authMethod, setAuthMethod] = useState("credentials"); // 'credentials', 'ldap', or 'saml'
   const [isLDAPEnabled, setIsLDAPEnabled] = useState(false);
   const [isSAMLEnabled, setIsSAMLEnabled] = useState(false);
+  const [isLocalAuthEnabled, setIsLocalAuthEnabled] = useState(true);
   const [isLoadingAuthStatus, setIsLoadingAuthStatus] = useState(true);
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
@@ -32,24 +33,35 @@ export default function SignIn() {
     setCallbackUrl(callback);
   }, []);
 
-  // Check if LDAP and SAML are enabled
+  // Check if LDAP, SAML, and local auth are enabled
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const [ldapResponse, samlResponse] = await Promise.all([
+        const [ldapResponse, samlResponse, localAuthResponse] = await Promise.all([
           fetch('/api/auth/ldap-status'),
-          fetch('/api/auth/saml-status')
+          fetch('/api/auth/saml-status'),
+          fetch('/api/auth/local-status')
         ]);
         
         const ldapData = await ldapResponse.json();
         const samlData = await samlResponse.json();
+        const localAuthData = await localAuthResponse.json();
         
         setIsLDAPEnabled(ldapData.ldap_enabled);
         setIsSAMLEnabled(samlData.saml_enabled);
+        setIsLocalAuthEnabled(localAuthData.local_auth_enabled);
+        
+        // Auto-select first available auth method
+        if (!localAuthData.local_auth_enabled && ldapData.ldap_enabled) {
+          setAuthMethod('ldap');
+        } else if (!localAuthData.local_auth_enabled && samlData.saml_enabled) {
+          setAuthMethod('saml');
+        }
       } catch (error) {
         console.error('Failed to check auth status:', error);
         setIsLDAPEnabled(false);
         setIsSAMLEnabled(false);
+        setIsLocalAuthEnabled(true);
       } finally {
         setIsLoadingAuthStatus(false);
       }
@@ -153,20 +165,22 @@ export default function SignIn() {
 
         {/* Form Card */}
         <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8 space-y-6 transition-colors duration-200">
-          {/* Authentication Method Selector - Show if LDAP or SAML is enabled */}
-          {!isLoadingAuthStatus && (isLDAPEnabled || isSAMLEnabled) && (
+          {/* Authentication Method Selector - Show if multiple auth methods available */}
+          {!isLoadingAuthStatus && (isLDAPEnabled || isSAMLEnabled || !isLocalAuthEnabled) && (
             <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => setAuthMethod("credentials")}
-                className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
-                  authMethod === "credentials"
-                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                Local Account
-              </button>
+              {isLocalAuthEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod("credentials")}
+                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
+                    authMethod === "credentials"
+                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Local Account
+                </button>
+              )}
               {isLDAPEnabled && (
                 <button
                   type="button"
@@ -193,6 +207,23 @@ export default function SignIn() {
                   SSO Login
                 </button>
               )}
+            </div>
+          )}
+
+          {/* No Auth Methods Available Warning */}
+          {!isLoadingAuthStatus && !isLocalAuthEnabled && !isLDAPEnabled && !isSAMLEnabled && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+              <div className="mx-auto h-12 w-12 text-red-400 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
+                No Authentication Methods Available
+              </h3>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                All authentication methods have been disabled. Please contact your administrator.
+              </p>
             </div>
           )}
 
@@ -238,6 +269,8 @@ export default function SignIn() {
               </div>
             </div>
           ) : (
+            /* Only show form if local auth is enabled or LDAP is available */
+            (isLocalAuthEnabled || isLDAPEnabled) ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email/Username Field */}
               <div>
@@ -370,6 +403,14 @@ export default function SignIn() {
               )}
             </ThemedButton>
             </form>
+            ) : (
+              /* Show message when no local auth or LDAP available */
+              <div className="text-center py-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Please use one of the available authentication methods above.
+                </p>
+              </div>
+            )
           )}
 
           {/* Footer */}

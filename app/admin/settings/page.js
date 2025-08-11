@@ -11,6 +11,7 @@ import ZoomIntegration from "./components/ZoomIntegration";
 import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import LDAPIntegration from "./components/LDAPIntegration";
 import SAMLIntegration from "./components/SAMLIntegration";
+import LocalAuthSettings from "./components/LocalAuthSettings";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
@@ -444,6 +445,17 @@ export default function AdminSettings() {
 
   // Define tabs based on user privilege level with colors
   const tabs = [
+    {
+      id: "authentication",
+      label: "Authentication",
+      icon: Shield,
+      minPrivilege: 3,
+      description: "User authentication and security settings",
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+      borderColor: "border-purple-200",
+      hoverColor: "hover:bg-purple-50",
+    },
     {
       id: "system",
       label: "System",
@@ -1095,8 +1107,69 @@ export default function AdminSettings() {
 
         {/* Settings List */}
         <div className="p-6">
-          {/* Special handling for Developer tab - show API key management */}
-          {activeTab === "developer" ? (
+          {/* Special handling for Authentication tab */}
+          {activeTab === "authentication" ? (
+            <div className="space-y-8">
+              {/* Local Authentication Container */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/30 dark:to-gray-800/30 px-6 py-4 rounded-t-xl border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-gray-500 rounded-lg">
+                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Local Authentication</h3>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">Traditional username and password authentication</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <LocalAuthSettings />
+                </div>
+              </div>
+
+              {/* LDAP Authentication Container */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 px-6 py-4 rounded-t-xl border-b border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-500 rounded-lg">
+                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">LDAP Directory Authentication</h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">Connect to your organization's LDAP directory for user authentication</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <LDAPIntegration />
+                </div>
+              </div>
+
+              {/* SAML SSO Container */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 px-6 py-4 rounded-t-xl border-b border-green-200 dark:border-green-700">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-500 rounded-lg">
+                      <Shield className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">SAML Single Sign-On</h3>
+                      <p className="text-sm text-green-700 dark:text-green-300">Enable web-based SSO with your Identity Provider (Okta, Azure AD, Google)</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <SAMLIntegration />
+                </div>
+              </div>
+            </div>
+          ) : /* Special handling for Developer tab - show API key management */
+          activeTab === "developer" ? (
             <div className="space-y-6">
               <APIKeyManagement getButtonClasses={getButtonClasses} />
             </div>
@@ -1455,22 +1528,6 @@ export default function AdminSettings() {
             </div>
           )}
 
-          {/* Authentication Section */}
-          {activeTab === "system" && (
-            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold admin-text mb-4">
-                Authentication
-              </h3>
-              <p className="text-sm admin-text-light mb-6">
-                Configure enterprise authentication methods for your organization
-              </p>
-              
-              <div className="space-y-8">
-                <LDAPIntegration />
-                <SAMLIntegration />
-              </div>
-            </div>
-          )}
 
           {/* Auto-Archive Management Section */}
           {activeTab === "system" && autoArchivePreview && (

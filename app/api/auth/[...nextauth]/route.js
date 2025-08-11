@@ -251,6 +251,24 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // Check if local auth is enabled
+        try {
+          const localAuthSetting = await authPrisma.settings.findFirst({
+            where: {
+              key: 'local_auth_enabled',
+              userId: null
+            }
+          });
+          
+          const isLocalAuthEnabled = localAuthSetting?.value === 'true' || true; // Default to true
+          
+          if (!isLocalAuthEnabled) {
+            console.log("❌ Local authentication is disabled");
+            return null;
+          }
+        } catch (error) {
+          console.warn("⚠️ Could not check local auth status, allowing login:", error);
+        }
         console.log("🔐 NextAuth authorize called with:", {
           hasEmail: !!credentials?.email,
           hasPassword: !!credentials?.password,
