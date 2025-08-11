@@ -664,13 +664,30 @@ This email was sent automatically when you submitted your application. Please sa
 
 export async function GET(request) {
   const requestContext = extractRequestContext(request);
-
-  // Import the new protection middleware
-  const { protectAPIRoute } = await import("../../lib/middleware/apiProtection");
   
-  // Check authentication (API key or session)
-  const authResult = await protectAPIRoute(request, "applications", "read");
-  if (authResult.error) return authResult.error;
+  // Check if user is accessing via API key (requires permissions) or session (allows own applications)
+  const authHeader = request.headers.get('authorization');
+  const isAPIKey = authHeader?.startsWith('Bearer ');
+  
+  let authResult;
+  
+  if (isAPIKey) {
+    // API key access requires explicit permissions
+    const { protectAPIRoute } = await import("../../lib/middleware/apiProtection");
+    authResult = await protectAPIRoute(request, "applications", "read");
+    if (authResult.error) return authResult.error;
+  } else {
+    // Session access allows users to view their own applications
+    const { getServerSession } = await import("next-auth/next");
+    const { authOptions } = await import("../auth/[...nextauth]/route");
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    authResult = { session, authType: 'session' };
+  }
   
   const { session, apiKeyData, authType } = authResult;
 

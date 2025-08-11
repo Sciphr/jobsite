@@ -7,7 +7,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f jobsite"
   },
   "dependencies": {
     "@google-analytics/data": "^5.2.0",
@@ -23,6 +27,7 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.0",
     "googleapis": "^154.0.0",
+    "ldapjs": "^3.0.7",
     "lucide-react": "^0.525.0",
     "minio": "^8.0.5",
     "next": "15.3.5",

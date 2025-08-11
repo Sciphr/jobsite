@@ -1,0 +1,86 @@
+# Create Organizational Units for JobSite
+dn: ou=people,dc=jobsite,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=jobsite,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+# Create Groups matching your JobSite roles
+dn: cn=users,ou=groups,dc=jobsite,dc=local
+objectClass: groupOfNames
+cn: users
+description: Regular JobSite Users
+member: cn=admin,dc=jobsite,dc=local
+
+dn: cn=hr,ou=groups,dc=jobsite,dc=local
+objectClass: groupOfNames
+cn: hr
+description: HR Personnel
+member: cn=admin,dc=jobsite,dc=local
+
+dn: cn=admins,ou=groups,dc=jobsite,dc=local
+objectClass: groupOfNames
+cn: admins
+description: JobSite Administrators
+member: cn=admin,dc=jobsite,dc=local
+
+dn: cn=super_admins,ou=groups,dc=jobsite,dc=local
+objectClass: groupOfNames
+cn: super_admins
+description: JobSite Super Administrators
+member: cn=admin,dc=jobsite,dc=local
+
+# Test Users
+dn: cn=john.doe,ou=people,dc=jobsite,dc=local
+objectClass: inetOrgPerson
+objectClass: person
+objectClass: top
+cn: john.doe
+sn: Doe
+givenName: John
+displayName: John Doe
+mail: john.doe@company.com
+uid: john.doe
+userPassword: {SSHA}password123
+
+dn: cn=jane.smith,ou=people,dc=jobsite,dc=local
+objectClass: inetOrgPerson
+objectClass: person
+objectClass: top
+cn: jane.smith
+sn: Smith
+givenName: Jane
+displayName: Jane Smith
+mail: jane.smith@company.com
+uid: jane.smith
+userPassword: {SSHA}password123
+
+dn: cn=admin.user,ou=people,dc=jobsite,dc=local
+objectClass: inetOrgPerson
+objectClass: person
+objectClass: top
+cn: admin.user
+sn: User
+givenName: Admin
+displayName: Admin User
+mail: admin@company.com
+uid: admin.user
+userPassword: {SSHA}admin123
+
+# Add users to appropriate groups
+dn: cn=hr,ou=groups,dc=jobsite,dc=local
+changetype: modify
+add: member
+member: cn=jane.smith,ou=people,dc=jobsite,dc=local
+
+dn: cn=admins,ou=groups,dc=jobsite,dc=local
+changetype: modify
+add: member
+member: cn=admin.user,ou=people,dc=jobsite,dc=local
+
+dn: cn=users,ou=groups,dc=jobsite,dc=local
+changetype: modify
+add: member
+member: cn=john.doe,ou=people,dc=jobsite,dc=local

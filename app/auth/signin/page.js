@@ -13,10 +13,14 @@ export default function SignIn() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    username: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authMethod, setAuthMethod] = useState("credentials"); // 'credentials' or 'ldap'
+  const [isLDAPEnabled, setIsLDAPEnabled] = useState(false);
+  const [isLoadingLDAPStatus, setIsLoadingLDAPStatus] = useState(true);
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
 
@@ -25,6 +29,24 @@ export default function SignIn() {
     const params = new URLSearchParams(window.location.search);
     const callback = params.get("callbackUrl") || "/profile";
     setCallbackUrl(callback);
+  }, []);
+
+  // Check if LDAP is enabled
+  useEffect(() => {
+    const checkLDAPStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/ldap-status');
+        const data = await response.json();
+        setIsLDAPEnabled(data.ldap_enabled);
+      } catch (error) {
+        console.error('Failed to check LDAP status:', error);
+        setIsLDAPEnabled(false);
+      } finally {
+        setIsLoadingLDAPStatus(false);
+      }
+    };
+
+    checkLDAPStatus();
   }, []);
 
   // Redirect if already logged in
@@ -59,14 +81,24 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
+      let result;
+      
+      if (authMethod === "ldap" && isLDAPEnabled) {
+        result = await signIn("ldap", {
+          username: formData.username,
+          password: formData.password,
+          redirect: false,
+        });
+      } else {
+        result = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+      }
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(authMethod === "ldap" && isLDAPEnabled ? "Invalid LDAP credentials" : "Invalid email or password");
       } else {
         // Redirect to callback URL or profile
         router.push(callbackUrl);
@@ -105,30 +137,63 @@ export default function SignIn() {
 
         {/* Form Card */}
         <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8 space-y-6 transition-colors duration-200">
+          {/* Authentication Method Selector - Only show if LDAP is enabled */}
+          {!isLoadingLDAPStatus && isLDAPEnabled && (
+            <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => setAuthMethod("credentials")}
+                className={`flex-1 text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 ${
+                  authMethod === "credentials"
+                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Local Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMethod("ldap")}
+                className={`flex-1 text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 ${
+                  authMethod === "ldap"
+                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                LDAP
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Email/Username Field */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor={authMethod === "ldap" && isLDAPEnabled ? "username" : "email"}
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-200"
               >
-                Email address
+                {authMethod === "ldap" && isLDAPEnabled ? "Username" : "Email address"}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500 transition-colors duration-200" />
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id={authMethod === "ldap" && isLDAPEnabled ? "username" : "email"}
+                  name={authMethod === "ldap" && isLDAPEnabled ? "username" : "email"}
+                  type={authMethod === "ldap" && isLDAPEnabled ? "text" : "email"}
                   required
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors duration-200"
-                  placeholder="Enter your email"
-                  value={formData.email}
+                  placeholder={authMethod === "ldap" && isLDAPEnabled ? "Enter your LDAP username" : "Enter your email"}
+                  value={authMethod === "ldap" && isLDAPEnabled ? formData.username : formData.email}
                   onChange={handleChange}
                 />
               </div>
+              {authMethod === "ldap" && isLDAPEnabled && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Enter your LDAP username
+                </p>
+              )}
             </div>
 
             {/* Password Field */}

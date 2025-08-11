@@ -2,6 +2,9 @@ import { db } from "./lib/db";
 import Link from "next/link";
 import { ThemedLink } from "./components/ThemedButton";
 
+// Disable static generation for this page since it needs database access
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   // Fetch featured jobs from database
   const featuredJobs = await db.jobs.findMany({

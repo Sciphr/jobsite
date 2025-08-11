@@ -1,6 +1,6 @@
 // lib/auth.js
 import { getServerSession } from "next-auth";
-import { authOptions } from "../app/api/auth/[...nextauth]/route";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 
 export const PRIVILEGE_LEVELS = {
   USER: 0,

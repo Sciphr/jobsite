@@ -5,10 +5,76 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
+import { authenticateLDAP, getUserGroups } from "../../../lib/ldap";
 
 export const authOptions = {
   adapter: PrismaAdapter(authPrisma),
   providers: [
+    // LDAP Authentication Provider
+    CredentialsProvider({
+      id: "ldap",
+      name: "LDAP",
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "Enter your LDAP username" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        console.log("🔐 LDAP NextAuth authorize called with:", {
+          hasUsername: !!credentials?.username,
+          hasPassword: !!credentials?.password,
+        });
+
+        if (!credentials?.username || !credentials?.password) {
+          console.log("❌ Missing LDAP credentials");
+          return null;
+        }
+
+        try {
+          // Authenticate against LDAP
+          const ldapUser = await authenticateLDAP(credentials.username, credentials.password);
+          console.log("✅ LDAP authentication successful:", ldapUser);
+
+          // Check if user exists in local database
+          let localUser = await authPrisma.users.findUnique({
+            where: { email: ldapUser.email },
+          });
+
+          // If user doesn't exist locally, create them
+          if (!localUser) {
+            console.log("🆕 Creating new user from LDAP:", ldapUser.email);
+            localUser = await authPrisma.users.create({
+              data: {
+                email: ldapUser.email,
+                firstName: ldapUser.firstName || ldapUser.name,
+                lastName: ldapUser.lastName || '',
+                role: 'hr', // Default role for LDAP users
+                privilegeLevel: 1, // HR privilege level for testing
+                isActive: true,
+                password: null, // LDAP users don't have local passwords
+                updatedAt: new Date(), // Required field
+              },
+            });
+          }
+
+          const returnUser = {
+            id: localUser.id,
+            email: localUser.email,
+            name: localUser.firstName + (localUser.lastName ? " " + localUser.lastName : ""),
+            role: localUser.role,
+            privilegeLevel: localUser.privilegeLevel,
+            authMethod: 'ldap',
+          };
+
+          console.log("✅ LDAP user authenticated:", returnUser);
+          return returnUser;
+        } catch (error) {
+          console.error("❌ LDAP authentication error:", error);
+          return null;
+        }
+      },
+    }),
+    
+    // Local Database Authentication Provider  
     CredentialsProvider({
       name: "credentials",
       credentials: {

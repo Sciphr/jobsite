@@ -4,6 +4,9 @@ import { appPrisma } from "../../lib/prisma";
 import { getSystemSetting } from "../../lib/settings";
 import JobDetailsClient from "./JobDetailsClient";
 
+// Disable static generation for this page since it needs database access
+export const dynamic = 'force-dynamic';
+
 async function getJob(slug) {
   try {
     const job = await appPrisma.jobs.findUnique({

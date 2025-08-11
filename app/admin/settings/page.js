@@ -9,6 +9,7 @@ import ThemeSelector from "./components/ThemeSelector";
 import CalendarIntegration from "./components/CalendarIntegration";
 import ZoomIntegration from "./components/ZoomIntegration";
 import MicrosoftIntegration from "./components/MicrosoftIntegration";
+import LDAPIntegration from "./components/LDAPIntegration";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
@@ -1120,6 +1121,7 @@ export default function AdminSettings() {
                 </div>
               </div>
 
+
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(
                 (setting) =>
@@ -1446,6 +1448,20 @@ export default function AdminSettings() {
                 No settings are available for this category at your privilege
                 level.
               </p>
+            </div>
+          )}
+
+          {/* LDAP Authentication Section */}
+          {activeTab === "system" && (
+            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold admin-text mb-4">
+                Authentication
+              </h3>
+              <p className="text-sm admin-text-light mb-6">
+                Configure enterprise authentication methods for your organization
+              </p>
+              
+              <LDAPIntegration />
             </div>
           )}
 

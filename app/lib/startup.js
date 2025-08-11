@@ -43,6 +43,7 @@ export async function initializeApplication() {
 }
 
 // Auto-initialize when this module is imported (for server-side)
-if (typeof window === 'undefined') {
+// But NOT during build time (when DATABASE_URL contains 'temp')
+if (typeof window === 'undefined' && !process.env.DATABASE_URL?.includes('temp')) {
   initializeApplication();
 }
