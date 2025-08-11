@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { appPrisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
+import { AuthAudit } from '../../../../lib/audit';
 
 export async function GET() {
   try {
@@ -71,6 +72,14 @@ export async function PUT(request) {
         updatedAt: new Date()
       }
     });
+
+    // Log authentication method change
+    const session = await getServerSession(authOptions);
+    if (local_auth_enabled) {
+      await AuthAudit.authMethodEnabled('local', session?.user);
+    } else {
+      await AuthAudit.authMethodDisabled('local', session?.user);
+    }
 
     return NextResponse.json({
       success: true,

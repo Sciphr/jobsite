@@ -22,6 +22,7 @@ async function getSAMLConfig() {
             'saml_field_phone',
             'saml_field_display_name',
             'saml_field_user_id',
+            'saml_field_groups',
             'saml_use_default_fallbacks'
           ]
         },
@@ -55,7 +56,8 @@ async function getSAMLConfig() {
         lastName: config.saml_field_last_name || 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
         phone: config.saml_field_phone || 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone',
         displayName: config.saml_field_display_name || 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/displayname',
-        userId: config.saml_field_user_id || 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'
+        userId: config.saml_field_user_id || 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
+        groups: config.saml_field_groups || 'http://schemas.xmlsoap.org/claims/Group'
       },
       useDefaultFallbacks: config.saml_use_default_fallbacks !== false
     };
@@ -76,7 +78,8 @@ async function getSAMLConfig() {
         lastName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
         phone: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone',
         displayName: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/displayname',
-        userId: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'
+        userId: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
+        groups: 'http://schemas.xmlsoap.org/claims/Group'
       },
       useDefaultFallbacks: true
     };
@@ -135,11 +138,13 @@ export async function processSAMLResponse(samlResponse) {
       lastName: 'User',
       displayName: 'Test User',
       phone: '+1234567890',
+      groups: ['hr-team', 'employees', 'saml-users'],
       allAttributes: {
         'email': 'test@company.com',
         'firstName': 'Test',
         'lastName': 'User',
-        'displayName': 'Test User'
+        'displayName': 'Test User',
+        'http://schemas.xmlsoap.org/claims/Group': ['hr-team', 'employees', 'saml-users']
       }
     };
 
@@ -169,6 +174,7 @@ export async function processSAMLResponse(samlResponse) {
       lastName: getAttribute(mockUserData.allAttributes, config.fieldMappings.lastName, ['last_name', 'lastName', 'surname', 'sn']) || mockUserData.lastName,
       displayName: getAttribute(mockUserData.allAttributes, config.fieldMappings.displayName, ['display_name', 'displayName', 'name']) || mockUserData.displayName,
       phone: getAttribute(mockUserData.allAttributes, config.fieldMappings.phone, ['phone', 'phoneNumber', 'mobile']) || mockUserData.phone,
+      groups: getAttribute(mockUserData.allAttributes, config.fieldMappings.groups, ['groups', 'memberOf', 'roles']) || mockUserData.groups || [],
       allAttributes: mockUserData.allAttributes
     };
 
@@ -259,6 +265,240 @@ export async function testSAMLConnection() {
     message: allPassed ? 'SAML configuration appears valid' : 'SAML configuration has issues',
     tests
   };
+}
+
+/**
+ * Auto-refresh SAML metadata and certificates
+ */
+export async function refreshSAMLMetadata() {
+  try {
+    const config = await getSAMLConfig();
+    
+    if (!config.enabled || !config.entityId) {
+      throw new Error('SAML is not properly configured');
+    }
+
+    // Get metadata URL from entity ID or a configured metadata endpoint
+    let metadataUrl = config.entityId;
+    
+    // If entity ID is not a URL, try to construct metadata URL
+    if (!metadataUrl.startsWith('http')) {
+      throw new Error('Cannot auto-refresh: Entity ID is not a metadata URL');
+    }
+    
+    console.log(`📡 Fetching SAML metadata from: ${metadataUrl}`);
+    
+    // Fetch metadata
+    const response = await fetch(metadataUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/samlmetadata+xml, application/xml, text/xml',
+        'User-Agent': 'JobSite-SAML-Client/1.0'
+      },
+      timeout: 10000 // 10 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+    }
+
+    const metadataXml = await response.text();
+    
+    // Parse metadata to extract certificate and URLs
+    const parsedMetadata = await parseSAMLMetadata(metadataXml);
+    
+    if (!parsedMetadata.certificate) {
+      throw new Error('No certificate found in metadata');
+    }
+
+    // Update database settings with new metadata
+    const updates = [];
+    
+    if (parsedMetadata.certificate && parsedMetadata.certificate !== config.certificate) {
+      updates.push({
+        key: 'saml_certificate',
+        value: parsedMetadata.certificate,
+        description: 'SAML Identity Provider certificate (auto-refreshed)',
+        dataType: 'text',
+        category: 'authentication'
+      });
+    }
+    
+    if (parsedMetadata.ssoUrl && parsedMetadata.ssoUrl !== config.ssoUrl) {
+      updates.push({
+        key: 'saml_sso_url',
+        value: parsedMetadata.ssoUrl,
+        description: 'SAML Single Sign-On URL (auto-refreshed)',
+        dataType: 'text',
+        category: 'authentication'
+      });
+    }
+    
+    if (parsedMetadata.slsUrl && parsedMetadata.slsUrl !== config.slsUrl) {
+      updates.push({
+        key: 'saml_sls_url',
+        value: parsedMetadata.slsUrl,
+        description: 'SAML Single Logout URL (auto-refreshed)',
+        dataType: 'text',
+        category: 'authentication'
+      });
+    }
+
+    // Apply updates
+    for (const update of updates) {
+      await appPrisma.settings.upsert({
+        where: {
+          key_userId: {
+            key: update.key,
+            userId: null
+          }
+        },
+        update: {
+          value: update.value,
+          updatedAt: new Date()
+        },
+        create: {
+          ...update,
+          userId: null,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    // Update last refresh timestamp
+    await appPrisma.settings.upsert({
+      where: {
+        key_userId: {
+          key: 'saml_metadata_last_refresh',
+          userId: null
+        }
+      },
+      update: {
+        value: new Date().toISOString(),
+        updatedAt: new Date()
+      },
+      create: {
+        key: 'saml_metadata_last_refresh',
+        value: new Date().toISOString(),
+        description: 'Timestamp of last SAML metadata refresh',
+        dataType: 'datetime',
+        category: 'authentication',
+        userId: null,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log(`✅ SAML metadata refreshed successfully. Updated ${updates.length} settings.`);
+    
+    return {
+      success: true,
+      updatesApplied: updates.length,
+      lastRefresh: new Date().toISOString(),
+      changes: updates.map(u => u.key)
+    };
+  } catch (error) {
+    console.error('Failed to refresh SAML metadata:', error);
+    
+    // Log the failed refresh attempt
+    await appPrisma.settings.upsert({
+      where: {
+        key_userId: {
+          key: 'saml_metadata_last_refresh_error',
+          userId: null
+        }
+      },
+      update: {
+        value: error.message,
+        updatedAt: new Date()
+      },
+      create: {
+        key: 'saml_metadata_last_refresh_error',
+        value: error.message,
+        description: 'Last SAML metadata refresh error',
+        dataType: 'text',
+        category: 'authentication',
+        userId: null,
+        updatedAt: new Date()
+      }
+    });
+    
+    throw error;
+  }
+}
+
+/**
+ * Parse SAML metadata XML to extract certificate and URLs
+ */
+async function parseSAMLMetadata(metadataXml) {
+  try {
+    // Basic XML parsing (in production, use a proper XML parser)
+    const parsed = {
+      certificate: null,
+      ssoUrl: null,
+      slsUrl: null
+    };
+
+    // Extract certificate
+    const certMatch = metadataXml.match(/<ds:X509Certificate[^>]*>([\s\S]*?)<\/ds:X509Certificate>/i) ||
+                      metadataXml.match(/<X509Certificate[^>]*>([\s\S]*?)<\/X509Certificate>/i);
+    if (certMatch) {
+      // Clean up certificate - remove whitespace and ensure proper format
+      let cert = certMatch[1].replace(/\s+/g, '');
+      if (!cert.includes('BEGIN CERTIFICATE')) {
+        cert = `-----BEGIN CERTIFICATE-----\n${cert.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`;
+      }
+      parsed.certificate = cert;
+    }
+
+    // Extract SSO URL
+    const ssoMatch = metadataXml.match(/<SingleSignOnService[^>]*Binding="[^"]*HTTP-(?:POST|Redirect)"[^>]*Location="([^"]*)"/) ||
+                     metadataXml.match(/Location="([^"]*)"[^>]*Binding="[^"]*HTTP-(?:POST|Redirect)"/);
+    if (ssoMatch) {
+      parsed.ssoUrl = ssoMatch[1];
+    }
+
+    // Extract SLS URL
+    const slsMatch = metadataXml.match(/<SingleLogoutService[^>]*Binding="[^"]*HTTP-(?:POST|Redirect)"[^>]*Location="([^"]*)"/) ||
+                     metadataXml.match(/Location="([^"]*)"[^>]*Binding="[^"]*HTTP-(?:POST|Redirect)"[^>]*>[^<]*Logout/);
+    if (slsMatch) {
+      parsed.slsUrl = slsMatch[1];
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('Error parsing SAML metadata:', error);
+    throw new Error(`Failed to parse SAML metadata: ${error.message}`);
+  }
+}
+
+/**
+ * Check if SAML metadata needs refresh based on configured interval
+ */
+export async function shouldRefreshSAMLMetadata() {
+  try {
+    const [lastRefreshSetting, intervalSetting] = await Promise.all([
+      appPrisma.settings.findFirst({
+        where: { key: 'saml_metadata_last_refresh', userId: null }
+      }),
+      appPrisma.settings.findFirst({
+        where: { key: 'saml_metadata_refresh_interval_hours', userId: null }
+      })
+    ]);
+
+    const refreshIntervalHours = parseInt(intervalSetting?.value || '24'); // Default 24 hours
+    
+    if (!lastRefreshSetting) {
+      return true; // Never refreshed before
+    }
+
+    const lastRefresh = new Date(lastRefreshSetting.value);
+    const nextRefreshTime = new Date(lastRefresh.getTime() + (refreshIntervalHours * 60 * 60 * 1000));
+    
+    return new Date() >= nextRefreshTime;
+  } catch (error) {
+    console.error('Error checking if SAML metadata needs refresh:', error);
+    return false;
+  }
 }
 
 /**

@@ -7,6 +7,8 @@ import bcrypt from "bcryptjs";
 import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
 import { authenticateLDAP, syncUserRoles, ensureLDAPUserRole } from "../../../lib/ldap";
 import { processSAMLResponse, generateSAMLLoginURL } from "../../../lib/saml";
+import { AuthAudit } from "../../../lib/audit";
+import { performJITProvisioning, mapGroupsToRoles, syncUserRoles } from "../../../lib/jit-provisioning";
 
 // Helper function for determining combined account types
 function determineAccountType(existingType, newAuthMethod) {
@@ -47,6 +49,9 @@ export const authOptions = {
           const samlUser = await processSAMLResponse(credentials.samlResponse);
           console.log("✅ SAML authentication successful:", samlUser);
 
+          // Log SAML response processing
+          await AuthAudit.samlResponse(null, samlUser.email, samlUser.allAttributes);
+
           // Check if user exists in local database
           let localUser = await authPrisma.users.findUnique({
             where: { email: samlUser.email },
@@ -54,12 +59,12 @@ export const authOptions = {
 
           const now = new Date();
 
-
-          // If user doesn't exist locally, create them
+          // If user doesn't exist locally, use JIT provisioning
           if (!localUser) {
-            console.log("🆕 Creating new user from SAML:", samlUser.email);
-            localUser = await authPrisma.users.create({
-              data: {
+            console.log("🆕 JIT provisioning new user from SAML:", samlUser.email);
+            
+            const jitResult = await performJITProvisioning({
+              userData: {
                 email: samlUser.email,
                 firstName: samlUser.firstName || samlUser.displayName?.split(' ')[0] || '',
                 lastName: samlUser.lastName || samlUser.displayName?.split(' ').slice(1).join(' ') || '',
@@ -72,13 +77,33 @@ export const authOptions = {
                 ldap_dn: null, // SAML users don't have LDAP DN
                 ldap_groups: [],
                 ldap_synced_at: null,
-                updatedAt: now,
               },
+              groups: samlUser.groups || [],
+              authMethod: 'saml',
+              existingUser: null
             });
+            
+            if (!jitResult.success) {
+              console.error("❌ JIT provisioning failed:", jitResult.error);
+              throw new Error(`JIT provisioning failed: ${jitResult.error}`);
+            }
+            
+            localUser = jitResult.user;
+            console.log("✅ SAML user provisioned via JIT:", samlUser.email);
           } else {
             // Determine the new account type (existing user linking SAML)
             const newAccountType = determineAccountType(localUser.account_type, 'saml');
             console.log(`🔗 Linking SAML to existing account. Type: ${localUser.account_type} -> ${newAccountType}`);
+            
+            // Log account linking if account type changed
+            if (localUser.account_type !== newAccountType) {
+              await AuthAudit.accountLinked(
+                localUser.id,
+                localUser.email,
+                localUser.account_type,
+                newAccountType
+              );
+            }
             
             // Update existing user with SAML data, preserving LDAP data if present
             const updateData = {
@@ -105,6 +130,16 @@ export const authOptions = {
               where: { id: localUser.id },
               data: updateData,
             });
+            
+            // Sync roles from SAML groups for existing users
+            if (samlUser.groups && samlUser.groups.length > 0) {
+              try {
+                await syncUserRoles(localUser.id, samlUser.groups, 'saml');
+                console.log("✅ SAML roles synced for existing user:", samlUser.email);
+              } catch (roleError) {
+                console.warn("⚠️ Failed to sync SAML roles:", roleError);
+              }
+            }
           }
 
           // Ensure SAML user has the basic "User" system role
@@ -124,10 +159,27 @@ export const authOptions = {
             authMethod: 'saml',
           };
 
+          // Log successful login
+          await AuthAudit.loginSuccess(
+            localUser.id,
+            localUser.email,
+            'saml',
+            null,
+            { saml_attributes: Object.keys(samlUser.allAttributes || {}) }
+          );
+
           console.log("✅ SAML user authenticated:", returnUser);
           return returnUser;
         } catch (error) {
           console.error("❌ SAML authentication error:", error);
+          
+          // Log failed login attempt
+          await AuthAudit.loginFailure(
+            credentials?.samlResponse ? 'unknown' : 'missing-response',
+            'saml',
+            error.message
+          );
+          
           return null;
         }
       },
@@ -149,6 +201,14 @@ export const authOptions = {
 
         if (!credentials?.username || !credentials?.password) {
           console.log("❌ Missing LDAP credentials");
+          
+          // Log failed login attempt
+          await AuthAudit.loginFailure(
+            credentials?.username || 'unknown',
+            'ldap',
+            'Missing credentials'
+          );
+          
           return null;
         }
 
@@ -157,6 +217,13 @@ export const authOptions = {
           const ldapUser = await authenticateLDAP(credentials.username, credentials.password);
           console.log("✅ LDAP authentication successful:", ldapUser);
 
+          // Log LDAP sync
+          await AuthAudit.ldapSync(
+            null, 
+            ldapUser.email, 
+            ldapUser.groups?.map(g => g.name) || []
+          );
+
           // Check if user exists in local database
           let localUser = await authPrisma.users.findUnique({
             where: { email: ldapUser.email },
@@ -164,11 +231,12 @@ export const authOptions = {
 
           const now = new Date();
 
-          // If user doesn't exist locally, create them
+          // If user doesn't exist locally, use JIT provisioning
           if (!localUser) {
-            console.log("🆕 Creating new user from LDAP:", ldapUser.email);
-            localUser = await authPrisma.users.create({
-              data: {
+            console.log("🆕 JIT provisioning new user from LDAP:", ldapUser.email);
+            
+            const jitResult = await performJITProvisioning({
+              userData: {
                 email: ldapUser.email,
                 firstName: ldapUser.firstName || ldapUser.name,
                 lastName: ldapUser.lastName || '',
@@ -181,13 +249,33 @@ export const authOptions = {
                 ldap_dn: ldapUser.dn,
                 ldap_groups: ldapUser.groups?.map(g => g.name) || [],
                 ldap_synced_at: now,
-                updatedAt: now, // Required field
               },
+              groups: ldapUser.groups || [],
+              authMethod: 'ldap',
+              existingUser: null
             });
+            
+            if (!jitResult.success) {
+              console.error("❌ JIT provisioning failed:", jitResult.error);
+              throw new Error(`JIT provisioning failed: ${jitResult.error}`);
+            }
+            
+            localUser = jitResult.user;
+            console.log("✅ LDAP user provisioned via JIT:", ldapUser.email);
           } else {
             // Determine the new account type (existing user linking LDAP)
             const newAccountType = determineAccountType(localUser.account_type, 'ldap');
             console.log(`🔗 Linking LDAP to existing account. Type: ${localUser.account_type} -> ${newAccountType}`);
+            
+            // Log account linking if account type changed
+            if (localUser.account_type !== newAccountType) {
+              await AuthAudit.accountLinked(
+                localUser.id,
+                localUser.email,
+                localUser.account_type,
+                newAccountType
+              );
+            }
             
             // Update existing user's LDAP data on each login
             localUser = await authPrisma.users.update({
@@ -234,10 +322,30 @@ export const authOptions = {
             authMethod: 'ldap',
           };
 
+          // Log successful login
+          await AuthAudit.loginSuccess(
+            localUser.id,
+            localUser.email,
+            'ldap',
+            null,
+            { 
+              ldap_groups: ldapUser.groups?.map(g => g.name) || [],
+              ldap_dn: ldapUser.dn
+            }
+          );
+
           console.log("✅ LDAP user authenticated:", returnUser);
           return returnUser;
         } catch (error) {
           console.error("❌ LDAP authentication error:", error);
+          
+          // Log failed login attempt
+          await AuthAudit.loginFailure(
+            credentials?.username || 'unknown',
+            'ldap',
+            error.message
+          );
+          
           return null;
         }
       },
@@ -264,6 +372,14 @@ export const authOptions = {
           
           if (!isLocalAuthEnabled) {
             console.log("❌ Local authentication is disabled");
+            
+            // Log blocked login attempt
+            await AuthAudit.loginFailure(
+              credentials?.email || 'unknown',
+              'local',
+              'Local authentication disabled'
+            );
+            
             return null;
           }
         } catch (error) {
@@ -278,6 +394,14 @@ export const authOptions = {
 
         if (!credentials?.email || !credentials?.password) {
           console.log("❌ Missing credentials");
+          
+          // Log failed login attempt
+          await AuthAudit.loginFailure(
+            credentials?.email || 'unknown',
+            'local',
+            'Missing credentials'
+          );
+          
           return null;
         }
 
@@ -297,14 +421,28 @@ export const authOptions = {
           });
 
           if (!user || !user.password) {
-            // TODO: Re-enable audit logging after fixing import issues
             console.log("Failed login attempt - user not found:", credentials.email);
+            
+            // Log failed login attempt
+            await AuthAudit.loginFailure(
+              credentials.email,
+              'local',
+              'User not found or no password set'
+            );
+            
             return null;
           }
 
           if (!user.isActive) {
-            // TODO: Re-enable audit logging after fixing import issues
             console.log("Failed login attempt - account deactivated:", credentials.email);
+            
+            // Log failed login attempt
+            await AuthAudit.loginFailure(
+              credentials.email,
+              'local',
+              'Account deactivated'
+            );
+            
             return null;
           }
 
@@ -314,8 +452,15 @@ export const authOptions = {
           );
 
           if (!isPasswordValid) {
-            // TODO: Re-enable audit logging after fixing import issues
             console.log("Failed login attempt - invalid password:", credentials.email);
+            
+            // Log failed login attempt
+            await AuthAudit.loginFailure(
+              credentials.email,
+              'local',
+              'Invalid password'
+            );
+            
             return null;
           }
 
@@ -326,7 +471,15 @@ export const authOptions = {
             role: user.role,
             privilegeLevel: user.privilegeLevel,
           };
-          // TODO: Re-enable audit logging after fixing import issues
+          // Log successful login
+          await AuthAudit.loginSuccess(
+            user.id,
+            user.email,
+            'local',
+            null,
+            { account_type: 'local' }
+          );
+          
           console.log("✅ Successful login:", credentials.email, "User ID:", user.id);
           return returnUser;
         } catch (error) {
