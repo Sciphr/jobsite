@@ -71,12 +71,29 @@ export default function APIKeyManagement({ getButtonClasses }) {
   // Revoke API key mutation
   const revokeKeyMutation = useMutation({
     mutationFn: async (keyId) => {
-      const response = await fetch(`/api/admin/api-keys?keyId=${keyId}`, {
+      const response = await fetch(`/api/admin/api-keys?keyId=${keyId}&action=revoke`, {
         method: 'DELETE'
       });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to revoke API key');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['api-keys']);
+    }
+  });
+
+  // Delete API key mutation
+  const deleteKeyMutation = useMutation({
+    mutationFn: async (keyId) => {
+      const response = await fetch(`/api/admin/api-keys?keyId=${keyId}&action=delete`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete API key');
       }
       return response.json();
     },
@@ -92,16 +109,20 @@ export default function APIKeyManagement({ getButtonClasses }) {
   };
 
   const handleRevokeKey = (keyId) => {
-    if (confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to revoke this API key? This will deactivate it but keep it in the system.')) {
       revokeKeyMutation.mutate(keyId);
     }
   };
 
+  const handleDeleteKey = (keyId) => {
+    if (confirm('Are you sure you want to permanently delete this API key? This action cannot be undone and will remove all associated usage logs.')) {
+      deleteKeyMutation.mutate(keyId);
+    }
+  };
+
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      // You could add a toast notification here
-      alert('Copied to clipboard!');
-    });
+    navigator.clipboard.writeText(text);
+    // Individual components will handle their own feedback
   };
 
   if (isLoading) {
@@ -181,9 +202,10 @@ export default function APIKeyManagement({ getButtonClasses }) {
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className={`${getButtonClasses("primary")}`}
+              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg ${getButtonClasses("primary")}`}
             >
-              Generate Your First API Key
+              <Plus className="h-4 w-4" />
+              <span>Generate Your First API Key</span>
             </button>
           </div>
         ) : (
@@ -193,6 +215,7 @@ export default function APIKeyManagement({ getButtonClasses }) {
                 key={apiKey.id}
                 apiKey={apiKey}
                 onRevoke={() => handleRevokeKey(apiKey.id)}
+                onDelete={() => handleDeleteKey(apiKey.id)}
                 onViewUsage={() => {
                   setSelectedKey(apiKey);
                   setShowUsageModal(true);
@@ -262,8 +285,8 @@ export default function APIKeyManagement({ getButtonClasses }) {
 }
 
 // API Key Card Component
-function APIKeyCard({ apiKey, onRevoke, onViewUsage, onCopy, getButtonClasses }) {
-  const [showKey, setShowKey] = useState(false);
+function APIKeyCard({ apiKey, onRevoke, onDelete, onViewUsage, onCopy, getButtonClasses }) {
+  const [copyFeedback, setCopyFeedback] = useState('');
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
@@ -302,20 +325,24 @@ function APIKeyCard({ apiKey, onRevoke, onViewUsage, onCopy, getButtonClasses })
         {/* API Key Display */}
         <div className="flex items-center space-x-2">
           <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded border p-2 font-mono text-sm">
-            {showKey ? apiKey.key_prefix : apiKey.key_prefix}
+            {apiKey.key_prefix}
           </div>
           <button
-            onClick={() => setShowKey(!showKey)}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-          <button
-            onClick={() => onCopy(apiKey.key_prefix)}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            onClick={() => {
+              onCopy(apiKey.key_prefix);
+              setCopyFeedback('Copied!');
+              setTimeout(() => setCopyFeedback(''), 2000);
+            }}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 relative"
+            title={copyFeedback || "Copy to clipboard"}
           >
             <Copy className="h-4 w-4" />
           </button>
+          {copyFeedback && (
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+              {copyFeedback}
+            </span>
+          )}
         </div>
 
         {/* Stats */}
@@ -344,7 +371,7 @@ function APIKeyCard({ apiKey, onRevoke, onViewUsage, onCopy, getButtonClasses })
         <div>
           <div className="text-sm font-medium admin-text mb-2">Permissions:</div>
           <div className="flex flex-wrap gap-1">
-            {JSON.parse(apiKey.permissions || '[]').map((permission) => (
+            {(Array.isArray(apiKey.permissions) ? apiKey.permissions : JSON.parse(apiKey.permissions || '[]')).map((permission) => (
               <span
                 key={permission}
                 className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
@@ -370,11 +397,17 @@ function APIKeyCard({ apiKey, onRevoke, onViewUsage, onCopy, getButtonClasses })
             {apiKey.is_active && (
               <button
                 onClick={onRevoke}
-                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                className="text-sm text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
               >
                 Revoke
               </button>
             )}
+            <button
+              onClick={onDelete}
+              className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            >
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -392,13 +425,23 @@ function CreateAPIKeyModal({ onClose, onCreate, isLoading, error, getButtonClass
   });
 
   const availablePermissions = [
-    { value: 'jobs:read', label: 'Jobs: Read', description: 'List and view job details' },
+    // Applications permissions
+    { value: 'applications:read', label: 'Applications: Read', description: 'List and view applications with filtering' },
+    { value: 'applications:create', label: 'Applications: Create', description: 'Submit new job applications' },
+    { value: 'applications:update', label: 'Applications: Update', description: 'Update application status, stage, and details' },
+    { value: 'applications:delete', label: 'Applications: Delete', description: 'Permanently delete applications' },
+    
+    // Jobs permissions  
+    { value: 'jobs:read', label: 'Jobs: Read', description: 'List and view job details with filtering' },
     { value: 'jobs:create', label: 'Jobs: Create', description: 'Create new job postings' },
-    { value: 'jobs:update', label: 'Jobs: Update', description: 'Modify existing jobs' },
-    { value: 'jobs:delete', label: 'Jobs: Delete', description: 'Remove job postings' },
-    { value: 'applications:read', label: 'Applications: Read', description: 'List and view applications' },
-    { value: 'applications:create', label: 'Applications: Create', description: 'Submit new applications' },
-    { value: 'applications:update', label: 'Applications: Update', description: 'Update application status' }
+    { value: 'jobs:update', label: 'Jobs: Update', description: 'Modify existing jobs and their status' },
+    { value: 'jobs:delete', label: 'Jobs: Delete', description: 'Remove job postings (if no applications)' },
+    
+    // Users permissions
+    { value: 'users:read', label: 'Users: Read', description: 'List and view user profiles and statistics' },
+    { value: 'users:create', label: 'Users: Create', description: 'Create new user accounts with role assignment' },
+    { value: 'users:update', label: 'Users: Update', description: 'Update user profiles, roles, and status' },
+    { value: 'users:delete', label: 'Users: Delete', description: 'Delete user accounts (if no dependencies)' }
   ];
 
   const handlePermissionChange = (permission, checked) => {

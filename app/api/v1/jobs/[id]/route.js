@@ -15,7 +15,7 @@ import prisma from '../../../../lib/prisma.js';
 export async function GET(request, { params }) {
   return protectAPIRoute(request, 'jobs', 'read', async (apiKeyData) => {
     try {
-      const jobId = params.id;
+      const { id: jobId } = await params;
       
       if (!jobId) {
         return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
@@ -116,7 +116,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   return protectAPIRoute(request, 'jobs', 'update', async (apiKeyData) => {
     try {
-      const jobId = params.id;
+      const { id: jobId } = await params;
       
       if (!jobId) {
         return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
@@ -327,7 +327,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   return protectAPIRoute(request, 'jobs', 'delete', async (apiKeyData) => {
     try {
-      const jobId = params.id;
+      const { id: jobId } = await params;
       
       if (!jobId) {
         return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });

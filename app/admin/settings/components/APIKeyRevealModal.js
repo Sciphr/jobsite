@@ -106,7 +106,7 @@ export default function APIKeyRevealModal({ apiKeyData, onClose, getButtonClasse
                   </button>
                 </div>
                 {copied && (
-                  <div className="absolute -bottom-8 left-0 text-sm text-green-600 dark:text-green-400">
+                  <div className="mt-2 text-sm text-green-600 dark:text-green-400 font-medium">
                     ✓ Copied to clipboard!
                   </div>
                 )}
@@ -173,7 +173,7 @@ export default function APIKeyRevealModal({ apiKeyData, onClose, getButtonClasse
             </label>
             <div className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto">
               <pre className="text-sm">
-{`curl -H "Authorization: Bearer ${apiKeyData.keyPrefix}" \\
+{`curl -H "Authorization: Bearer ${apiKeyData.apiKey}" \\
      -H "Content-Type: application/json" \\
      https://yourdomain.com/api/v1/jobs`}
               </pre>

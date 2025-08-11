@@ -40,6 +40,15 @@ export async function createAPIKey({
     // Extract prefix for display
     const keyPrefix = apiKey.substring(0, 15) + '...';
     
+    // Check if user already has an API key (due to unique constraint)
+    const existingKey = await prisma.api_keys.findUnique({
+      where: { user_id: userId }
+    });
+
+    if (existingKey) {
+      throw new Error('User already has an API key. Please delete the existing key before creating a new one.');
+    }
+
     // Create the database record
     const apiKeyRecord = await prisma.api_keys.create({
       data: {
@@ -47,7 +56,7 @@ export async function createAPIKey({
         name,
         key_hash: keyHash,
         key_prefix: keyPrefix,
-        permissions: JSON.stringify(permissions),
+        permissions: permissions,
         rate_limit: rateLimit,
         expires_at: expiresAt,
         is_active: true
@@ -67,7 +76,7 @@ export async function createAPIKey({
     
   } catch (error) {
     console.error('Error creating API key:', error);
-    throw new Error('Failed to create API key');
+    throw error; // Throw the original error for better debugging
   }
 }
 
@@ -127,7 +136,7 @@ export async function validateAPIKey(apiKey) {
           keyId: keyRecord.id,
           userId: keyRecord.user_id,
           user: keyRecord.users,
-          permissions: JSON.parse(keyRecord.permissions || '[]'),
+          permissions: Array.isArray(keyRecord.permissions) ? keyRecord.permissions : JSON.parse(keyRecord.permissions || '[]'),
           rateLimit: keyRecord.rate_limit,
           name: keyRecord.name
         };
@@ -262,7 +271,7 @@ export async function getUserAPIKeys(userId) {
     
     return apiKeys.map(key => ({
       ...key,
-      permissions: JSON.parse(key.permissions || '[]')
+      permissions: Array.isArray(key.permissions) ? key.permissions : JSON.parse(key.permissions || '[]')
     }));
     
   } catch (error) {
@@ -300,6 +309,40 @@ export async function revokeAPIKey(keyId, userId) {
   } catch (error) {
     console.error('Error revoking API key:', error);
     throw new Error('Failed to revoke API key');
+  }
+}
+
+/**
+ * Delete an API key completely from the database
+ */
+export async function deleteAPIKey(keyId, userId) {
+  try {
+    const apiKey = await prisma.api_keys.findFirst({
+      where: { 
+        id: keyId,
+        user_id: userId // Ensure user owns the key
+      }
+    });
+    
+    if (!apiKey) {
+      throw new Error('API key not found');
+    }
+    
+    // Delete related usage logs first (if any)
+    await prisma.api_usage_logs.deleteMany({
+      where: { api_key_id: keyId }
+    });
+    
+    // Delete the API key
+    await prisma.api_keys.delete({
+      where: { id: keyId }
+    });
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error deleting API key:', error);
+    throw error;
   }
 }
 

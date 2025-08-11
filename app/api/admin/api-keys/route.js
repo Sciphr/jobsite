@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route.js';
 import { protectRoute } from '../../../lib/middleware/apiProtection.js';
-import { createAPIKey, getUserAPIKeys, revokeAPIKey } from '../../../lib/apiKeyManager.js';
+import { createAPIKey, getUserAPIKeys, revokeAPIKey, deleteAPIKey } from '../../../lib/apiKeyManager.js';
 
 /**
  * API Key Management Routes for Admin Interface
@@ -115,7 +115,7 @@ export async function POST(request) {
 }
 
 /**
- * DELETE - Revoke API key
+ * DELETE - Delete or Revoke API key
  */
 export async function DELETE(request) {
   // Protect route - only users with API management permissions
@@ -127,6 +127,7 @@ export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const keyId = searchParams.get('keyId');
+    const action = searchParams.get('action') || 'revoke'; // 'revoke' or 'delete'
     
     if (!keyId) {
       return NextResponse.json(
@@ -135,16 +136,26 @@ export async function DELETE(request) {
       );
     }
     
-    // Revoke the API key
-    await revokeAPIKey(keyId, session.user.id);
-    
-    return NextResponse.json({
-      success: true,
-      message: 'API key revoked successfully'
-    });
+    if (action === 'delete') {
+      // Permanently delete the API key
+      await deleteAPIKey(keyId, session.user.id);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'API key deleted successfully'
+      });
+    } else {
+      // Revoke the API key (set inactive)
+      await revokeAPIKey(keyId, session.user.id);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'API key revoked successfully'
+      });
+    }
     
   } catch (error) {
-    console.error('Error revoking API key:', error);
+    console.error('Error with API key:', error);
     
     if (error.message === 'API key not found') {
       return NextResponse.json(
@@ -154,7 +165,7 @@ export async function DELETE(request) {
     }
     
     return NextResponse.json(
-      { error: 'Failed to revoke API key' },
+      { error: `Failed to ${action} API key` },
       { status: 500 }
     );
   }

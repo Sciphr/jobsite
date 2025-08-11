@@ -1,6 +1,96 @@
 // app/lib/middleware/apiProtection.js
 import { NextResponse } from "next/server";
 import { userHasPermission } from "../permissions";
+import { validateAPIKey, hasAPIPermission } from "../apiKeyManager";
+
+/**
+ * Protect API routes with both session and API key authentication support
+ * Checks for Authorization header first, then falls back to session authentication
+ * Usage: const result = await protectAPIRoute(request, resource, action, options);
+ * if (result.error) return result.error;
+ * const { session, apiKeyData } = result;
+ */
+export async function protectAPIRoute(request, resource, action, options = {}) {
+  const {
+    allowSessionAuth = true,
+    allowAPIKeyAuth = true,
+    minPrivilegeLevel = null,
+    customCheck = null
+  } = options;
+
+  try {
+    // Check for API key authentication first
+    if (allowAPIKeyAuth) {
+      const authHeader = request.headers.get('authorization');
+      
+      console.log('API Key Debug:', { 
+        hasAuthHeader: !!authHeader, 
+        startsWithBearer: authHeader?.startsWith('Bearer '),
+        headerValue: authHeader?.substring(0, 20) + '...' // Only log first 20 chars for security
+      });
+      
+      if (authHeader?.startsWith('Bearer ')) {
+        const apiKey = authHeader.substring(7);
+        console.log('Validating API key:', apiKey.substring(0, 20) + '...');
+        
+        const apiKeyValidation = await validateAPIKey(apiKey);
+        console.log('API key validation result:', { 
+          valid: apiKeyValidation.valid, 
+          error: apiKeyValidation.error,
+          userId: apiKeyValidation.userId 
+        });
+        
+        if (apiKeyValidation.valid) {
+          // Check if API key has required permission
+          const hasPermission = hasAPIPermission(apiKeyValidation, resource, action);
+          console.log('Permission check:', { resource, action, hasPermission, permissions: apiKeyValidation.permissions });
+          
+          if (!hasPermission) {
+            return {
+              error: NextResponse.json(
+                { 
+                  error: "Insufficient API key permissions",
+                  required: `${resource}:${action}`,
+                  message: `Your API key doesn't have permission to ${action} ${resource}`
+                },
+                { status: 403 }
+              )
+            };
+          }
+          
+          return { 
+            apiKeyData: apiKeyValidation,
+            authType: 'api_key'
+          };
+        } else {
+          console.log('API key validation failed:', apiKeyValidation.error);
+        }
+      }
+    }
+
+    // Fall back to session authentication if no valid API key
+    if (allowSessionAuth) {
+      return await protectRoute(resource, action, options);
+    }
+
+    // Neither authentication method worked
+    return {
+      error: NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      )
+    };
+    
+  } catch (error) {
+    console.error("API route protection error:", error);
+    return {
+      error: NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      )
+    };
+  }
+}
 
 /**
  * Simple function to protect API routes with permission checking

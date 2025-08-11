@@ -663,33 +663,27 @@ This email was sent automatically when you submitted your application. Please sa
 }
 
 export async function GET(request) {
-  const session = await getServerSession(authOptions);
   const requestContext = extractRequestContext(request);
 
-  if (!session) {
-    // Log unauthorized applications list access attempt
-    await logAuditEvent(
-      {
-        eventType: "ERROR",
-        category: "SECURITY",
-        action: "Unauthorized applications list access attempt",
-        description: "Applications list access attempted without valid session",
-        actorType: "anonymous",
-        actorName: "Anonymous",
-        ipAddress: requestContext.ipAddress,
-        userAgent: requestContext.userAgent,
-        requestId: requestContext.requestId,
-        severity: "warning",
-        status: "failure",
-        tags: ["applications", "list", "unauthorized", "security"]
-      },
-      request
-    );
-    
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  // Import the new protection middleware
+  const { protectAPIRoute } = await import("../../lib/middleware/apiProtection");
+  
+  // Check authentication (API key or session)
+  const authResult = await protectAPIRoute(request, "applications", "read");
+  if (authResult.error) return authResult.error;
+  
+  const { session, apiKeyData, authType } = authResult;
 
-  const userId = session.user.id;
+  // Determine user ID based on auth type
+  let userId;
+  let userEmail;
+  if (authType === 'api_key') {
+    userId = apiKeyData.userId;
+    userEmail = apiKeyData.user.email;
+  } else {
+    userId = session.user.id;
+    userEmail = session.user.email;
+  }
 
   try {
     const applications = await appPrisma.applications.findMany({
@@ -716,10 +710,10 @@ export async function GET(request) {
         eventType: "VIEW",
         category: "APPLICATION",
         action: "Applications list accessed",
-        description: `User ${session.user.email} accessed their applications list (${applications.length} applications)`,
+        description: `User ${userEmail} accessed their applications list (${applications.length} applications) via ${authType || 'session'}`,
         actorId: userId,
         actorType: "user",
-        actorName: session.user.name || session.user.email,
+        actorName: authType === 'api_key' ? apiKeyData.user.firstName + ' ' + apiKeyData.user.lastName || userEmail : session.user.name || userEmail,
         entityType: "application",
         ipAddress: requestContext.ipAddress,
         userAgent: requestContext.userAgent,
@@ -727,10 +721,12 @@ export async function GET(request) {
         relatedUserId: userId,
         severity: "info",
         status: "success",
-        tags: ["applications", "list", "access", "view"],
+        tags: ["applications", "list", "access", "view", authType || 'session'],
         metadata: {
           applicationCount: applications.length,
-          userEmail: session.user.email
+          userEmail: userEmail,
+          authType: authType || 'session',
+          apiKeyId: authType === 'api_key' ? apiKeyData.keyId : null
         }
       },
       request
@@ -753,10 +749,10 @@ export async function GET(request) {
         eventType: "ERROR",
         category: "SYSTEM",
         action: "Applications list access failed - server error",
-        description: `Server error during applications list access for user: ${session.user.email}`,
+        description: `Server error during applications list access for user: ${userEmail}`,
         actorId: userId,
         actorType: "user",
-        actorName: session.user.name || session.user.email,
+        actorName: authType === 'api_key' ? apiKeyData.user.firstName + ' ' + apiKeyData.user.lastName || userEmail : session.user.name || userEmail,
         entityType: "application",
         ipAddress: requestContext.ipAddress,
         userAgent: requestContext.userAgent,
@@ -764,11 +760,13 @@ export async function GET(request) {
         relatedUserId: userId,
         severity: "error",
         status: "failure",
-        tags: ["applications", "list", "server_error", "system"],
+        tags: ["applications", "list", "server_error", "system", authType || 'session'],
         metadata: {
           error: error.message,
           stack: error.stack,
-          userEmail: session.user.email
+          userEmail: userEmail,
+          authType: authType || 'session',
+          apiKeyId: authType === 'api_key' ? apiKeyData.keyId : null
         }
       },
       request
