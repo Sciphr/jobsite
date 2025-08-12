@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
-import { authenticateLDAP, syncUserRoles, ensureLDAPUserRole } from "../../../lib/ldap";
+import { authenticateLDAP, ensureLDAPUserRole } from "../../../lib/ldap";
 import { processSAMLResponse, generateSAMLLoginURL } from "../../../lib/saml";
 import { AuthAudit } from "../../../lib/audit";
 import { performJITProvisioning, mapGroupsToRoles, syncUserRoles } from "../../../lib/jit-provisioning";

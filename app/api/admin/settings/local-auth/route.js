@@ -74,7 +74,6 @@ export async function PUT(request) {
     });
 
     // Log authentication method change
-    const session = await getServerSession(authOptions);
     if (local_auth_enabled) {
       await AuthAudit.authMethodEnabled('local', session?.user);
     } else {
