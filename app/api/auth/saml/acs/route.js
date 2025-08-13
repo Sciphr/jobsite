@@ -1,5 +1,4 @@
 import { processSAMLResponse } from "../../../../lib/saml";
-import { signIn } from "next-auth/react";
 
 // Handle SAML Assertion Consumer Service (ACS) - where SAML responses are posted
 export const POST = async (request) => {
@@ -13,8 +12,7 @@ export const POST = async (request) => {
 
     console.log('🔐 Received SAML response at ACS endpoint');
 
-    // For now, redirect to a custom sign-in page that can handle the SAML response
-    // In production, you'd want to process this more securely
+    // Redirect to signin page with SAML response - it will process immediately and redirect
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const redirectUrl = new URL('/auth/signin', baseUrl);
     redirectUrl.searchParams.set('saml_response', samlResponse);

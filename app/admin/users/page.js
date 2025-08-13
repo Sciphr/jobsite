@@ -53,6 +53,7 @@ function AdminUsersContent() {
   const [roleBooleanOperator, setRoleBooleanOperator] = useState("OR"); // "AND" or "OR"
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleCountFilter, setRoleCountFilter] = useState("all");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("all");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -135,9 +136,26 @@ function AdminUsersContent() {
       });
     }
 
+    // Account type filter
+    if (accountTypeFilter !== "all") {
+      filtered = filtered.filter((user) => {
+        switch (accountTypeFilter) {
+          case "local":
+            return user.account_type === "local" || !user.account_type;
+          case "ldap":
+            return user.account_type === "ldap";
+          case "saml":
+            return user.account_type === "saml";
+          case "combined":
+            return user.account_type === "combined";
+          default:
+            return true;
+        }
+      });
+    }
 
     return filtered;
-  }, [users, searchTerm, roleFilter, roleBooleanOperator, statusFilter, roleCountFilter]);
+  }, [users, searchTerm, roleFilter, roleBooleanOperator, statusFilter, roleCountFilter, accountTypeFilter]);
 
   // ✅ NEW: Client-side pagination
   const paginatedUsers = useMemo(() => {
@@ -161,7 +179,7 @@ function AdminUsersContent() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, roleFilter, roleBooleanOperator, statusFilter]);
+  }, [searchTerm, roleFilter, roleBooleanOperator, statusFilter, roleCountFilter, accountTypeFilter]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -722,6 +740,7 @@ function AdminUsersContent() {
                 setRoleBooleanOperator('OR');
                 setStatusFilter('all');
                 setRoleCountFilter('all');
+                setAccountTypeFilter('all');
               }}
               className="text-xs text-purple-600 hover:text-purple-800 font-medium"
             >
@@ -872,13 +891,26 @@ function AdminUsersContent() {
               <option value="multiple">Multiple Roles (2+)</option>
               <option value="none">No Roles (0)</option>
             </select>
+
+            {/* Account Type Filter */}
+            <select
+              value={accountTypeFilter}
+              onChange={(e) => setAccountTypeFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 admin-text bg-white dark:bg-gray-700"
+            >
+              <option value="all">All Account Types</option>
+              <option value="local">Local Accounts</option>
+              <option value="ldap">LDAP Accounts</option>
+              <option value="saml">SAML Accounts</option>
+              <option value="combined">Combined (LDAP + SAML)</option>
+            </select>
           </div>
 
           {/* Filter Results Summary */}
           <div className="flex items-center justify-end text-sm admin-text-light">
             <span>
               Showing {filteredUsers.length} of {users.length} users
-              {(searchTerm || roleFilter.length > 0 || statusFilter !== 'all' || roleCountFilter !== 'all') && 
+              {(searchTerm || roleFilter.length > 0 || statusFilter !== 'all' || roleCountFilter !== 'all' || accountTypeFilter !== 'all') && 
                 <span className="ml-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
                   Filtered
                 </span>

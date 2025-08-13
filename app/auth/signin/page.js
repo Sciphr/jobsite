@@ -25,6 +25,7 @@ export default function SignIn() {
   const [isLoadingAuthStatus, setIsLoadingAuthStatus] = useState(true);
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
+  const [isProcessingSAML, setIsProcessingSAML] = useState(false);
 
   // Add this useEffect to get the callback URL and handle SAML response
   useEffect(() => {
@@ -35,8 +36,9 @@ export default function SignIn() {
     
     setCallbackUrl(callback);
     
-    // Handle SAML response if present
+    // Handle SAML response if present - hide the UI during processing
     if (samlResponse && provider === "saml") {
+      setIsProcessingSAML(true);
       handleSAMLResponse(samlResponse);
     }
   }, []);
@@ -48,18 +50,13 @@ export default function SignIn() {
       
       const result = await signIn("saml", {
         samlResponse: samlResponse,
-        redirect: false,
+        callbackUrl: callbackUrl,
       });
 
-      if (result?.ok) {
-        router.push(callbackUrl);
-      } else {
-        setError("SAML authentication failed. Please try again.");
-      }
+      // NextAuth will handle the redirect automatically
     } catch (error) {
       console.error("SAML authentication error:", error);
       setError("SAML authentication failed. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -175,6 +172,25 @@ export default function SignIn() {
       [e.target.name]: e.target.value,
     });
   };
+
+  // Show loading screen when processing SAML
+  if (isProcessingSAML) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-6" style={{backgroundColor: 'var(--site-primary)'}}>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Signing you in...
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Processing your SSO authentication
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
