@@ -26,12 +26,43 @@ export default function SignIn() {
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
 
-  // Add this useEffect to get the callback URL
+  // Add this useEffect to get the callback URL and handle SAML response
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const callback = params.get("callbackUrl") || "/profile";
+    const samlResponse = params.get("saml_response");
+    const provider = params.get("provider");
+    
     setCallbackUrl(callback);
+    
+    // Handle SAML response if present
+    if (samlResponse && provider === "saml") {
+      handleSAMLResponse(samlResponse);
+    }
   }, []);
+
+  // Handle SAML response
+  const handleSAMLResponse = async (samlResponse) => {
+    try {
+      setIsLoading(true);
+      
+      const result = await signIn("saml", {
+        samlResponse: samlResponse,
+        redirect: false,
+      });
+
+      if (result?.ok) {
+        router.push(callbackUrl);
+      } else {
+        setError("SAML authentication failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("SAML authentication error:", error);
+      setError("SAML authentication failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Check if LDAP, SAML, and local auth are enabled
   useEffect(() => {
