@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 async function refreshTokenIfNeeded(oauth2Client, user) {
   const now = new Date();
-  const tokenExpiresAt = new Date(user.googleTokenExpiresAt);
+  const tokenExpiresAt = new Date(user.google_token_expires_at);
   
   // If token expires within 5 minutes, refresh it
   if (tokenExpiresAt <= new Date(now.getTime() + 5 * 60 * 1000)) {
@@ -25,12 +25,12 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
         expiresAt.setHours(expiresAt.getHours() + 1);
       }
       
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: user.id },
         data: {
-          googleAccessToken: credentials.access_token,
-          googleTokenExpiresAt: expiresAt,
-          ...(credentials.refresh_token && { googleRefreshToken: credentials.refresh_token }),
+          google_access_token: credentials.access_token,
+          google_token_expires_at: expiresAt,
+          ...(credentials.refresh_token && { google_refresh_token: credentials.refresh_token }),
         },
       });
       
@@ -41,7 +41,7 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
     }
   }
   
-  return user.googleAccessToken;
+  return user.google_access_token;
 }
 
 export async function POST() {
@@ -52,18 +52,18 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
-        googleAccessToken: true,
-        googleRefreshToken: true,
-        googleTokenExpiresAt: true,
-        calendarIntegrationEnabled: true,
+        google_access_token: true,
+        google_refresh_token: true,
+        google_token_expires_at: true,
+        calendar_integration_enabled: true,
       },
     });
 
-    if (!user || !user.calendarIntegrationEnabled || !user.googleAccessToken) {
+    if (!user || !user.calendar_integration_enabled || !user.google_access_token) {
       return NextResponse.json(
         { error: "Google Calendar not connected" },
         { status: 400 }
@@ -76,8 +76,8 @@ export async function POST() {
     );
 
     oauth2Client.setCredentials({
-      access_token: user.googleAccessToken,
-      refresh_token: user.googleRefreshToken,
+      access_token: user.google_access_token,
+      refresh_token: user.google_refresh_token,
     });
 
     // Refresh token if needed
@@ -104,13 +104,13 @@ export async function POST() {
     // Check if it's an authentication error
     if (error.code === 401 || error.message?.includes('invalid_grant')) {
       // Token is invalid, disconnect the integration
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: session.user.id },
         data: {
-          calendarIntegrationEnabled: false,
-          googleAccessToken: null,
-          googleRefreshToken: null,
-          googleTokenExpiresAt: null,
+          calendar_integration_enabled: false,
+          google_access_token: null,
+          google_refresh_token: null,
+          google_token_expires_at: null,
         },
       });
       
