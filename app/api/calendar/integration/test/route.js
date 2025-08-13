@@ -5,9 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { PrismaClient } from "@/app/generated/prisma";
 import { google } from "googleapis";
 
-const prisma = new PrismaClient();
-
-async function refreshTokenIfNeeded(oauth2Client, user) {
+async function refreshTokenIfNeeded(oauth2Client, user, prisma) {
   const now = new Date();
   const tokenExpiresAt = new Date(user.google_token_expires_at);
   
@@ -45,6 +43,8 @@ async function refreshTokenIfNeeded(oauth2Client, user) {
 }
 
 export async function POST() {
+  const prisma = new PrismaClient();
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -81,7 +81,7 @@ export async function POST() {
     });
 
     // Refresh token if needed and get the current access token
-    const currentToken = await refreshTokenIfNeeded(oauth2Client, user);
+    const currentToken = await refreshTokenIfNeeded(oauth2Client, user, prisma);
     
     // Make sure we're using the current token
     oauth2Client.setCredentials({
@@ -136,5 +136,7 @@ export async function POST() {
       { error: "Failed to access Google Calendar" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

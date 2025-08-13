@@ -47,4 +47,17 @@ const handler = async (request) => {
   }
 };
 
-export const GET = withAdminAuth(handler, PRIVILEGE_LEVELS.HR);
+// Temporary test route to see if it's reachable
+export async function GET(request) {
+  console.log("🔍 Stale applications route accessed!");
+  console.log("🔍 Request URL:", request.url);
+  console.log("🔍 Request headers:", Object.fromEntries(request.headers.entries()));
+  
+  return new Response(JSON.stringify({ 
+    message: "Route accessible - testing auth...",
+    url: request.url 
+  }), { 
+    status: 200, 
+    headers: { 'Content-Type': 'application/json' } 
+  });
+}
