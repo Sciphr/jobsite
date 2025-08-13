@@ -80,8 +80,14 @@ export async function POST() {
       refresh_token: user.google_refresh_token,
     });
 
-    // Refresh token if needed
-    await refreshTokenIfNeeded(oauth2Client, user);
+    // Refresh token if needed and get the current access token
+    const currentToken = await refreshTokenIfNeeded(oauth2Client, user);
+    
+    // Make sure we're using the current token
+    oauth2Client.setCredentials({
+      access_token: currentToken,
+      refresh_token: user.google_refresh_token,
+    });
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -100,6 +106,12 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Error testing calendar access:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      response: error.response?.data
+    });
     
     // Check if it's an authentication error
     if (error.code === 401 || error.message?.includes('invalid_grant')) {

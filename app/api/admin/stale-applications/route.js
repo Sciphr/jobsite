@@ -8,7 +8,6 @@ import {
 
 const handler = async (request) => {
   try {
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'full';
 

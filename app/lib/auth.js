@@ -74,6 +74,8 @@ export function withAdminAuth(
     const authResult = await requireAdmin(req, minPrivilegeLevel);
 
     if (authResult.error) {
+      // Debug log for now
+      console.log("❌ Auth failed - User:", authResult.user?.email, "Required level:", minPrivilegeLevel, "User level:", authResult.user?.privilegeLevel, "Error:", authResult.error);
       return new Response(JSON.stringify({ message: authResult.error }), {
         status: authResult.status,
       });
