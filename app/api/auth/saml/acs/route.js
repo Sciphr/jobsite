@@ -15,7 +15,8 @@ export const POST = async (request) => {
 
     // For now, redirect to a custom sign-in page that can handle the SAML response
     // In production, you'd want to process this more securely
-    const redirectUrl = new URL('/auth/signin', request.url);
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const redirectUrl = new URL('/auth/signin', baseUrl);
     redirectUrl.searchParams.set('saml_response', samlResponse);
     redirectUrl.searchParams.set('provider', 'saml');
     
