@@ -217,8 +217,18 @@ export default function LogoUpload({ getButtonClasses, compact = false }) {
                 alt="Current site logo"
                 className={`${compact ? "h-12 w-12" : "h-16 w-16"} object-contain rounded-lg border border-gray-200`}
                 onError={(e) => {
-                  e.target.style.display = 'none';
-                  setError('Failed to load logo image');
+                  console.log('Logo image load error, retrying...', e);
+                  // Try reloading the image after a brief delay
+                  setTimeout(() => {
+                    e.target.src = e.target.src + '?retry=' + Date.now();
+                  }, 1000);
+                  // Only show error after retry fails
+                  setTimeout(() => {
+                    if (e.target.complete && e.target.naturalHeight === 0) {
+                      e.target.style.display = 'none';
+                      setError('Failed to load logo image');
+                    }
+                  }, 3000);
                 }}
               />
             </div>

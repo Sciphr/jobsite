@@ -218,8 +218,18 @@ export default function FaviconUpload({ getButtonClasses, compact = false }) {
                   alt="Current site favicon"
                   className={`${compact ? "h-6 w-6" : "h-8 w-8"} object-contain rounded border border-gray-200`}
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    setError('Failed to load favicon image');
+                    console.log('Favicon image load error, retrying...', e);
+                    // Try reloading the image after a brief delay
+                    setTimeout(() => {
+                      e.target.src = e.target.src + '?retry=' + Date.now();
+                    }, 1000);
+                    // Only show error after retry fails
+                    setTimeout(() => {
+                      if (e.target.complete && e.target.naturalHeight === 0) {
+                        e.target.style.display = 'none';
+                        setError('Failed to load favicon image');
+                      }
+                    }, 3000);
                   }}
                 />
                 {/* Show preview in browser tab context */}
