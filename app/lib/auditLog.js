@@ -1,4 +1,4 @@
-import { appPrisma } from "./appPrisma";
+import { appPrisma } from "./prisma";
 
 /**
  * Comprehensive Audit Logging Service

@@ -1,5 +1,5 @@
 // app/lib/microsoftAuth.js
-import { appPrisma } from "./appPrisma";
+import { appPrisma } from "./prisma";
 
 export async function refreshMicrosoftToken(user) {
   if (!user.microsoft_refresh_token) {
