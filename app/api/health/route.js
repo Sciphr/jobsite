@@ -1,13 +1,11 @@
 // Simple health check endpoint for SaaS management monitoring
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { appPrisma } from '../../lib/prisma';
 
 export async function GET() {
   try {
     // Basic database connectivity test
-    await prisma.$queryRaw`SELECT 1`;
+    await appPrisma.$queryRaw`SELECT 1`;
     
     return NextResponse.json({
       status: 'healthy',

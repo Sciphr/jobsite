@@ -1,6 +1,4 @@
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "./appPrisma";
 
 /**
  * Comprehensive Audit Logging Service
@@ -172,7 +170,7 @@ export async function createAuditLog(logData) {
       );
     }
 
-    const auditLog = await prisma.audit_logs.create({
+    const auditLog = await appPrisma.audit_logs.create({
       data: {
         event_type: eventType,
         category,

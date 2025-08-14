@@ -1,7 +1,5 @@
 // app/lib/microsoftAuth.js
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "./appPrisma";
 
 export async function refreshMicrosoftToken(user) {
   if (!user.microsoft_refresh_token) {
@@ -37,7 +35,7 @@ export async function refreshMicrosoftToken(user) {
   expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
 
   // Update user with new tokens
-  await prisma.users.update({
+  await appPrisma.users.update({
     where: { id: user.id },
     data: {
       microsoft_access_token: tokens.access_token,
@@ -56,7 +54,7 @@ export async function refreshMicrosoftToken(user) {
 
 export async function getMicrosoftAccessToken(userId, forceRefresh = false) {
   try {
-    const user = await prisma.users.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -86,7 +84,7 @@ export async function getMicrosoftAccessToken(userId, forceRefresh = false) {
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         // Disable integration if refresh fails
-        await prisma.users.update({
+        await appPrisma.users.update({
           where: { id: userId },
           data: {
             microsoft_integration_enabled: false,
@@ -106,7 +104,7 @@ export async function getMicrosoftAccessToken(userId, forceRefresh = false) {
 
     return user.microsoft_access_token;
   } finally {
-    await prisma.$disconnect();
+    await appPrisma.$disconnect();
   }
 }
 
