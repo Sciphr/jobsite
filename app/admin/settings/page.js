@@ -20,6 +20,7 @@ import WeeklyDigestTester, {
   WeeklyDigestButton,
 } from "@/app/components/WeeklyDigestTester";
 import APIKeyManagement from "./components/APIKeyManagement";
+import SupportTickets from "./components/SupportTickets";
 import {
   Settings,
   Save,
@@ -48,6 +49,7 @@ import {
   ChevronDown,
   ChevronRight,
   Archive,
+  HelpCircle,
   Code,
 } from "lucide-react";
 
@@ -501,6 +503,17 @@ export default function AdminSettings() {
       hoverColor: "hover:bg-indigo-50",
     },
     {
+      id: "support",
+      label: "Support",
+      icon: HelpCircle,
+      minPrivilege: 2,
+      description: "Submit support tickets and get help",
+      color: "text-teal-600",
+      bgColor: "bg-teal-100",
+      borderColor: "border-teal-200",
+      hoverColor: "hover:bg-teal-50",
+    },
+    {
       id: "notifications",
       label: "Notifications",
       icon: Bell,
@@ -928,9 +941,11 @@ export default function AdminSettings() {
                           ? "var(--admin-stat-1)"
                           : tab.id === "developer"
                             ? "var(--admin-stat-1)"
-                            : tab.id === "notifications"
-                              ? "var(--admin-stat-3)"
-                              : "var(--admin-stat-5)"
+                            : tab.id === "support"
+                              ? "var(--admin-stat-6)"
+                              : tab.id === "notifications"
+                                ? "var(--admin-stat-3)"
+                                : "var(--admin-stat-5)"
                     : undefined,
                   borderBottomColor: isActive
                     ? tab.id === "system"
@@ -941,9 +956,11 @@ export default function AdminSettings() {
                           ? "var(--admin-stat-1)"
                           : tab.id === "developer"
                             ? "var(--admin-stat-1)"
-                            : tab.id === "notifications"
-                              ? "var(--admin-stat-3)"
-                              : "var(--admin-stat-5)"
+                            : tab.id === "support"
+                              ? "var(--admin-stat-6)"
+                              : tab.id === "notifications"
+                                ? "var(--admin-stat-3)"
+                                : "var(--admin-stat-5)"
                     : undefined,
                 }}
               >
@@ -1172,6 +1189,11 @@ export default function AdminSettings() {
           activeTab === "developer" ? (
             <div className="space-y-6">
               <APIKeyManagement getButtonClasses={getButtonClasses} />
+            </div>
+          ) : /* Special handling for Support tab - show support tickets */
+          activeTab === "support" ? (
+            <div className="space-y-6">
+              <SupportTickets />
             </div>
           ) : /* Special handling for Personal tab - show theme selector and calendar integration */
           activeTab === "personal" ? (
