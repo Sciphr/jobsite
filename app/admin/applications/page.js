@@ -678,51 +678,6 @@ function AdminApplicationsContent() {
         </div>
       </div>
 
-      {/* NEW: Applications Manager Promotion Card */}
-      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-8 text-white">
-          <div className="flex flex-col space-y-3 sm:space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-4">
-                <div className="bg-white bg-opacity-20 p-1.5 sm:p-2 rounded-lg">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-                </div>
-                <h3 className="text-base sm:text-lg lg:text-xl font-bold">
-                  Upgrade to Applications Manager
-                </h3>
-              </div>
-              <p className="text-blue-100 mb-2 sm:mb-4 text-xs sm:text-sm lg:text-base max-w-2xl">
-                Get enterprise-level application management with job-specific
-                views, pipeline workflows, advanced analytics, and automated
-                tools.
-              </p>
-              <div className="hidden sm:flex flex-wrap gap-3 lg:gap-6 text-xs sm:text-sm text-blue-100">
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>Advanced Analytics</span>
-                </div>
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>Pipeline Management</span>
-                </div>
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>Automated Communications</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 mt-2 sm:mt-4 lg:mt-0 lg:ml-6">
-              <button
-                onClick={() => router.push("/applications-manager")}
-                className="bg-white text-blue-600 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 shadow-lg w-full lg:w-auto justify-center text-sm sm:text-base"
-              >
-                <span>Open Manager</span>
-                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
