@@ -172,29 +172,6 @@ class EmailService {
       return { success: true, data: result, provider: this.provider };
     } catch (error) {
       console.error("❌ Email send failed:", error);
-
-      // If SMTP fails, try falling back to Resend (optional)
-      if (this.provider === "smtp" && process.env.RESEND_API_KEY) {
-        console.log("🔄 SMTP failed, attempting fallback to Resend...");
-        try {
-          const fallbackResult = await this.sendWithResend({
-            to,
-            subject,
-            html,
-            text,
-            from: await this.getResendFromAddress(),
-          });
-          console.log("✅ Fallback to Resend successful");
-          return {
-            success: true,
-            data: fallbackResult,
-            provider: "resend-fallback",
-          };
-        } catch (fallbackError) {
-          console.error("❌ Resend fallback also failed:", fallbackError);
-        }
-      }
-
       return { success: false, error: error.message };
     }
   }
