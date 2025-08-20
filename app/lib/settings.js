@@ -2,9 +2,50 @@
 import { appPrisma } from "./prisma";
 
 /**
+ * Static defaults for build-time (professional approach)
+ * These are used during builds when database isn't available
+ */
+const BUILD_TIME_DEFAULTS = {
+  site_name: "JobSite",
+  site_description: "Find your next career opportunity",
+  site_color_theme: "ocean-blue",
+  allow_guest_applications: "true",
+  weekly_digest_enabled: "true",
+  email_new_applications: "true",
+  max_resume_size_mb: "10",
+  default_currency: "USD"
+};
+
+/**
+ * Detect if we're in build/static generation mode
+ * Professional approach: reliable indicators
+ */
+function isBuildTime() {
+  return (
+    // During npm run build
+    process.env.npm_lifecycle_event === 'build' ||
+    // Next.js build phase
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    // Database URL contains temp (build environments)
+    process.env.DATABASE_URL?.includes('temp') ||
+    // CI/CD environments
+    process.env.CI === 'true'
+  );
+}
+
+/**
  * Get a system setting value
+ * Uses static defaults during build, database at runtime
  */
 export async function getSystemSetting(key, defaultValue = null) {
+  // During build: use static defaults (no database calls)
+  if (isBuildTime()) {
+    const buildDefault = BUILD_TIME_DEFAULTS[key] || defaultValue;
+    console.log(`🏗️  Build time: Using static default for ${key}: ${buildDefault}`);
+    return buildDefault;
+  }
+
+  // Runtime: use database with graceful fallback
   try {
     const setting = await appPrisma.settings.findFirst({
       where: {
@@ -14,13 +55,14 @@ export async function getSystemSetting(key, defaultValue = null) {
     });
 
     if (!setting) {
-      return defaultValue;
+      return BUILD_TIME_DEFAULTS[key] || defaultValue;
     }
 
     return parseSettingValue(setting.value, setting.dataType);
   } catch (error) {
     console.error(`Error getting system setting ${key}:`, error);
-    return defaultValue;
+    // Graceful degradation: use static defaults if database fails
+    return BUILD_TIME_DEFAULTS[key] || defaultValue;
   }
 }
 
