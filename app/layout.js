@@ -10,7 +10,7 @@ import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import GoogleAnalytics from "./components/GoogleAnalytics";
-import "./lib/startup"; // Initialize background services
+// import "./lib/startup"; // Cron services moved to external system cron
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

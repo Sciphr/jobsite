@@ -1,22 +1,17 @@
 // app/api/system/health/route.js
 import { NextResponse } from 'next/server';
-import { weeklyDigestScheduler } from '../../../lib/weeklyDigestScheduler';
-import '../../../lib/startup'; // This will auto-initialize the scheduler
+// import { weeklyDigestScheduler } from '../../../lib/weeklyDigestScheduler';
+// import '../../../lib/startup'; // Cron services moved to external system cron
 
 export async function GET() {
   try {
-    // Get scheduler status
-    const scheduleInfo = await weeklyDigestScheduler.getScheduleInfo();
-    
     return NextResponse.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       services: {
-        weeklyDigestScheduler: {
-          enabled: scheduleInfo?.enabled || false,
-          isRunning: scheduleInfo?.isRunning || false,
-          hasActiveTask: scheduleInfo?.hasActiveTask || false,
-          nextRun: scheduleInfo ? `${scheduleInfo.dayName} at ${scheduleInfo.time}` : 'Not configured'
+        cronJobs: {
+          message: 'Cron jobs now managed by external system cron',
+          endpoint: '/api/cron/scheduler'
         }
       }
     });
