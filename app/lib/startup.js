@@ -1,10 +1,6 @@
 // app/lib/startup.js
-import { weeklyDigestScheduler } from './weeklyDigestScheduler';
-import { autoArchiveScheduler } from './autoArchiveScheduler';
-import { autoProgressScheduler } from './autoProgressScheduler';
-import { autoRejectScheduler } from './autoRejectScheduler';
-import { staleApplicationScheduler } from './staleApplicationScheduler';
-import { dataRetentionScheduler } from './dataRetentionScheduler';
+// NOTE: Cron schedulers have been moved to external system cron + API endpoints
+// This file is kept for any future non-cron initialization needs
 
 let isInitialized = false;
 
@@ -17,23 +13,8 @@ export async function initializeApplication() {
   console.log('🚀 Initializing application services...');
 
   try {
-    // Start the weekly digest scheduler
-    await weeklyDigestScheduler.start();
-    
-    // Start the auto-archive scheduler
-    await autoArchiveScheduler.start();
-    
-    // Start the auto-progress scheduler
-    await autoProgressScheduler.start();
-    
-    // Start the auto-reject scheduler
-    await autoRejectScheduler.start();
-    
-    // Start the stale application scheduler
-    await staleApplicationScheduler.start();
-    
-    // Start the data retention scheduler
-    await dataRetentionScheduler.start();
+    // Cron jobs are now handled by external system cron calling /api/cron/scheduler
+    // Add any non-cron initialization here if needed in the future
     
     isInitialized = true;
     console.log('✅ Application services initialized successfully');

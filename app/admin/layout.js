@@ -28,7 +28,11 @@ import {
   useAdminTheme,
 } from "../contexts/AdminThemeContext";
 import { QueryProvider } from "../providers/QueryProvider";
-import { usePrefetchAdminData, useStaleApplications, useHireApprovalRequests } from "../hooks/useAdminData";
+import {
+  usePrefetchAdminData,
+  useStaleApplications,
+  useHireApprovalRequests,
+} from "../hooks/useAdminData";
 import { usePermissions } from "../hooks/usePermissions";
 
 function AdminLayoutContent({ children }) {
@@ -68,10 +72,10 @@ function AdminLayoutContent({ children }) {
   } = usePrefetchAdminData();
 
   // Get stale applications count for notification badge
-  const { data: staleData } = useStaleApplications('count');
-  
+  const { data: staleData } = useStaleApplications("count");
+
   // Get pending hire approvals count for notification badge
-  const { data: hireApprovalsData } = useHireApprovalRequests('count');
+  const { data: hireApprovalsData } = useHireApprovalRequests("count");
 
   // Mobile detection effect
   useEffect(() => {
@@ -263,7 +267,10 @@ function AdminLayoutContent({ children }) {
 
     // Special case for Approvals - check for either hire approval or job approval permissions
     if (item.name === "Approvals") {
-      return hasPermission("applications", "approve_hire") || hasPermission("jobs", "approve");
+      return (
+        hasPermission("applications", "approve_hire") ||
+        hasPermission("jobs", "approve")
+      );
     }
 
     // Check specific permission
@@ -300,7 +307,7 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden">
+    <div className="h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden flex flex-col">
       {/* Mobile Header */}
       {isMobile && (
         <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-30 relative">
@@ -320,7 +327,7 @@ function AdminLayoutContent({ children }) {
               >
                 <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                  {staleData.count > 99 ? '99+' : staleData.count}
+                  {staleData.count > 99 ? "99+" : staleData.count}
                 </span>
               </Link>
             )}
@@ -338,7 +345,7 @@ function AdminLayoutContent({ children }) {
         </div>
       )}
 
-      <div className={`flex ${isMobile ? "h-[calc(100vh-4rem)]" : "h-full"}`}>
+      <div className={`flex flex-1 ${isMobile ? "min-h-0" : "h-full"}`}>
         {/* Sidebar - Desktop: always visible, Mobile: overlay when open */}
         <AnimatePresence>
           {(!isMobile || isMobileMenuOpen) && (
@@ -364,7 +371,7 @@ function AdminLayoutContent({ children }) {
                   isMobile
                     ? "fixed left-0 top-0 h-full w-80 z-50"
                     : "w-64 flex-shrink-0"
-                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col h-full`}
+                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col ${isMobile ? "h-full" : "h-full"}`}
               >
                 {/* Desktop Header - only show on desktop */}
                 {!isMobile && (
@@ -388,26 +395,29 @@ function AdminLayoutContent({ children }) {
                             {badge.text}
                           </span>
                         </div>
-                        {/* Stale Applications Badge */}
-                        {staleData?.count > 0 && (
-                          <Link
-                            href="/admin/applications?filter=stale"
-                            className="relative inline-flex items-center p-2 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 transition-colors duration-200"
-                            title={`${staleData.count} stale applications need attention`}
-                          >
-                            <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                              {staleData.count > 99 ? '99+' : staleData.count}
-                            </span>
-                          </Link>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {/* Tour Button */}
+                          {/* Stale Applications Badge */}
+                          {staleData?.count > 0 && (
+                            <Link
+                              href="/admin/applications?filter=stale"
+                              className="relative inline-flex items-center p-2 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 transition-colors duration-200"
+                              title={`${staleData.count} stale applications need attention`}
+                            >
+                              <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                                {staleData.count > 99 ? "99+" : staleData.count}
+                              </span>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 <nav
-                  className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2 flex-1 overflow-y-auto`}
+                  className={`${isMobile ? "p-4 pt-6" : "p-4"} space-y-2 flex-1 overflow-y-auto min-h-0`}
                 >
                   {allowedNavItems.map((item) => {
                     const isActive = pathname === item.href;
@@ -459,7 +469,7 @@ function AdminLayoutContent({ children }) {
                               {/* Badge for notification count */}
                               {item.badge && (
                                 <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-xs font-medium">
-                                  {item.badge > 99 ? '99+' : item.badge}
+                                  {item.badge > 99 ? "99+" : item.badge}
                                 </span>
                               )}
                             </div>
@@ -525,7 +535,7 @@ function AdminLayoutContent({ children }) {
         </AnimatePresence>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden h-full">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <AnimatePresence mode="wait">
             <motion.main
               key={pathname}
