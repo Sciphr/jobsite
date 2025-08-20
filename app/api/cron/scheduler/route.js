@@ -69,15 +69,25 @@ async function checkWeeklyDigest() {
     
     const [hours, minutes] = time.split(':').map(n => parseInt(n));
     
-    // Check if we're in the right day and hour window
+    // Check if we're in the right day and time window (5-minute window)
     const isRightDay = now.getDay() === targetDay;
-    const isRightHour = now.getHours() === hours && now.getMinutes() >= minutes;
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
     
-    // Don't run if we already ran today
-    const today = now.toDateString();
-    const lastRunDate = lastRun ? new Date(lastRun).toDateString() : null;
+    // Only run if we're within 5 minutes of the target time
+    const isRightTime = currentHour === hours && Math.abs(currentMinute - minutes) <= 2;
     
-    if (isRightDay && isRightHour && lastRunDate !== today) {
+    // Don't run if we already ran this week
+    const lastRunDate = lastRun ? new Date(lastRun) : null;
+    const daysSinceLastRun = lastRunDate ? Math.floor((now - lastRunDate) / (1000 * 60 * 60 * 24)) : 999;
+    
+    // Debug logging
+    console.log(`📅 Weekly Digest Check: ${now.toISOString()}`);
+    console.log(`📅 Target: ${day} at ${time} | Current: ${now.toLocaleString()} (Day ${now.getDay()}, ${currentHour}:${currentMinute.toString().padStart(2, '0')})`);
+    console.log(`📅 Checks: isRightDay=${isRightDay}, isRightTime=${isRightTime}, daysSinceLastRun=${daysSinceLastRun}`);
+    console.log(`📅 Last run: ${lastRun || 'Never'}`);
+    
+    if (isRightDay && isRightTime && daysSinceLastRun >= 6) {
       console.log('📧 Running weekly digest...');
       
       // Import and run the weekly digest
