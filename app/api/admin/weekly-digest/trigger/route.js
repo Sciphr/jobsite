@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
-import { weeklyDigestScheduler } from '../../../../lib/weeklyDigestScheduler';
+// import { weeklyDigestScheduler } from '../../../../lib/weeklyDigestScheduler';
 
 export async function POST(req) {
   try {
@@ -19,14 +19,16 @@ export async function POST(req) {
 
     console.log('🔧 Manual weekly digest trigger requested by:', session.user.email);
 
-    // Manually trigger the digest
-    await weeklyDigestScheduler.triggerNow();
+    // Import and run weekly digest directly
+    const { weeklyDigestService } = await import('../../../../lib/weeklyDigest');
+    const result = await weeklyDigestService.generateAndSend(null, null);
 
     return NextResponse.json({
       success: true,
       message: 'Weekly digest triggered successfully',
       triggeredBy: session.user.email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      result
     });
 
   } catch (error) {
@@ -53,21 +55,30 @@ export async function GET(req) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get current schedule status
-    const scheduleInfo = await weeklyDigestScheduler.getScheduleInfo();
+    // Get settings from database directly
+    const { appPrisma } = await import('../../../../lib/prisma');
+    const settings = await appPrisma.settings.findMany({
+      where: {
+        key: {
+          in: ['weekly_digest_enabled', 'weekly_digest_day', 'weekly_digest_time', 'weekly_digest_last_run']
+        },
+        userId: null
+      }
+    });
+
+    const settingsMap = {};
+    settings.forEach(setting => {
+      settingsMap[setting.key] = setting.value;
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        enabled: scheduleInfo?.enabled || false,
-        isRunning: scheduleInfo?.isRunning || false,
-        hasActiveTask: scheduleInfo?.hasActiveTask || false,
-        schedule: scheduleInfo ? {
-          dayOfWeek: scheduleInfo.dayOfWeek,
-          dayName: scheduleInfo.dayName,
-          time: scheduleInfo.time,
-          nextRun: `${scheduleInfo.dayName} at ${scheduleInfo.time}`
-        } : null
+        enabled: settingsMap.weekly_digest_enabled === 'true',
+        day: settingsMap.weekly_digest_day || 'monday',
+        time: settingsMap.weekly_digest_time || '09:00',
+        lastRun: settingsMap.weekly_digest_last_run || 'Never',
+        managedBy: 'External system cron'
       }
     });
 

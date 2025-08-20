@@ -1,6 +1,6 @@
 // app/lib/staleApplicationUtils.js
 import { appPrisma } from "./prisma";
-import { staleApplicationScheduler } from "./staleApplicationScheduler";
+// import { staleApplicationScheduler } from "./staleApplicationScheduler";
 
 /**
  * Get the current stale application threshold from settings
@@ -34,10 +34,7 @@ export async function isApplicationStale(applicationId) {
     const threshold = await getStaleApplicationThreshold();
     if (!threshold) return false;
 
-    // First check the scheduler cache for better performance
-    if (staleApplicationScheduler.isApplicationStale(applicationId)) {
-      return true;
-    }
+    // Scheduler cache no longer available - use direct database query
 
     // Fallback to database query
     const application = await appPrisma.applications.findUnique({
@@ -71,11 +68,7 @@ export async function getApplicationStaleInfo(applicationId) {
     const threshold = await getStaleApplicationThreshold();
     if (!threshold) return null;
 
-    // First check the scheduler cache
-    const cachedInfo = staleApplicationScheduler.getApplicationStaleInfo(applicationId);
-    if (cachedInfo) {
-      return cachedInfo;
-    }
+    // Scheduler cache no longer available - use direct database query
 
     // Fallback to database query
     const application = await appPrisma.applications.findUnique({
@@ -125,11 +118,7 @@ export async function getApplicationStaleInfo(applicationId) {
  */
 export async function getAllStaleApplications() {
   try {
-    // First try to get from scheduler cache
-    const cachedStale = staleApplicationScheduler.getStaleApplications();
-    if (cachedStale.length > 0) {
-      return cachedStale;
-    }
+    // Scheduler cache no longer available - use direct database query
 
     // Fallback to fresh database query
     const threshold = await getStaleApplicationThreshold();
@@ -183,11 +172,7 @@ export async function getAllStaleApplications() {
  */
 export async function getStaleApplicationsCount() {
   try {
-    // First try scheduler cache
-    const cachedCount = staleApplicationScheduler.getStaleApplicationsCount();
-    if (cachedCount > 0) {
-      return cachedCount;
-    }
+    // Scheduler cache no longer available - use direct database query
 
     // Fallback to database query
     const staleApps = await getAllStaleApplications();

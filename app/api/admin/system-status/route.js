@@ -2,9 +2,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { Client } from "minio";
-import { weeklyDigestScheduler } from "../../../lib/weeklyDigestScheduler";
-import { autoArchiveScheduler } from "../../../lib/autoArchiveScheduler";
-import { autoProgressScheduler } from "../../../lib/autoProgressScheduler";
+// import { weeklyDigestScheduler } from "../../../lib/weeklyDigestScheduler";
+// import { autoArchiveScheduler } from "../../../lib/autoArchiveScheduler";
+// import { autoProgressScheduler } from "../../../lib/autoProgressScheduler";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -159,52 +159,59 @@ export async function GET(req) {
       };
     }
 
-    // 4. Scheduled Tasks Status
+    // 4. Scheduled Tasks Status - Now handled by external cron
     try {
-      // Get weekly digest scheduler info
-      const weeklyDigestInfo = await weeklyDigestScheduler.getScheduleInfo();
-      
-      // Get auto-archive scheduler info  
-      const autoArchiveInfo = await autoArchiveScheduler.getScheduleInfo();
-      
-      // Get auto-progress scheduler info
-      const autoProgressInfo = await autoProgressScheduler.getScheduleInfo();
+      // Check if cron jobs are configured by looking at settings
+      const cronSettings = await appPrisma.settings.findMany({
+        where: {
+          key: {
+            in: [
+              'weekly_digest_enabled',
+              'weekly_digest_last_run',
+              'auto_archive_rejected_days',
+              'auto_archive_last_run',
+              'auto_progress_days',
+              'auto_progress_last_run'
+            ]
+          },
+          userId: null
+        }
+      });
+
+      const settingsMap = {};
+      cronSettings.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
 
       status.scheduledTasks = {
-        status: "Monitoring schedulers",
+        status: "External System Cron",
         healthy: true,
         details: {
-          weeklyDigest: weeklyDigestInfo ? {
-            enabled: weeklyDigestInfo.enabled,
-            dayName: weeklyDigestInfo.dayName,
-            time: weeklyDigestInfo.time,
-            isRunning: weeklyDigestInfo.isRunning,
-            hasActiveTask: weeklyDigestInfo.hasActiveTask,
-            status: weeklyDigestInfo.enabled && weeklyDigestInfo.hasActiveTask ? 'Active' : 'Inactive'
-          } : { status: 'Unknown' },
-          autoArchive: autoArchiveInfo ? {
-            enabled: autoArchiveInfo.enabled,
-            daysThreshold: autoArchiveInfo.daysThreshold,
-            time: autoArchiveInfo.time,
-            isRunning: autoArchiveInfo.isRunning,
-            hasActiveTask: autoArchiveInfo.hasActiveTask,
-            status: autoArchiveInfo.enabled && autoArchiveInfo.hasActiveTask ? 'Active' : 'Inactive'
-          } : { status: 'Unknown' },
-          autoProgress: autoProgressInfo ? {
-            enabled: autoProgressInfo.enabled,
-            daysThreshold: autoProgressInfo.daysThreshold,
-            time: autoProgressInfo.time,
-            isRunning: autoProgressInfo.isRunning,
-            hasActiveTask: autoProgressInfo.hasActiveTask,
-            status: autoProgressInfo.enabled && autoProgressInfo.hasActiveTask ? 'Active' : 'Inactive'
-          } : { status: 'Unknown' }
+          message: "Cron jobs managed by external system cron calling /api/cron/scheduler",
+          weeklyDigest: {
+            enabled: settingsMap.weekly_digest_enabled === 'true',
+            lastRun: settingsMap.weekly_digest_last_run || 'Never',
+            status: settingsMap.weekly_digest_enabled === 'true' ? 'Configured' : 'Disabled'
+          },
+          autoArchive: {
+            enabled: !!settingsMap.auto_archive_rejected_days,
+            daysThreshold: settingsMap.auto_archive_rejected_days,
+            lastRun: settingsMap.auto_archive_last_run || 'Never',
+            status: settingsMap.auto_archive_rejected_days ? 'Configured' : 'Not Configured'
+          },
+          autoProgress: {
+            enabled: !!settingsMap.auto_progress_days,
+            daysThreshold: settingsMap.auto_progress_days,
+            lastRun: settingsMap.auto_progress_last_run || 'Never',
+            status: settingsMap.auto_progress_days ? 'Configured' : 'Not Configured'
+          }
         }
       };
     } catch (error) {
       status.scheduledTasks = {
         status: "Check Failed",
         healthy: false,
-        details: `Error checking schedulers: ${error.message}`,
+        details: `Error checking cron settings: ${error.message}`,
       };
     }
 

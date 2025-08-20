@@ -1,7 +1,7 @@
 // app/lib/test-data-retention.js
 // This is a test file to verify the data retention setup
 import { updateSystemSetting, getSystemSetting } from './settings.js';
-import { dataRetentionScheduler } from './dataRetentionScheduler.js';
+// import { dataRetentionScheduler } from './dataRetentionScheduler.js';
 
 export async function testDataRetentionSetup() {
   console.log("🧪 Testing Data Retention Setup...");
@@ -26,9 +26,9 @@ export async function testDataRetentionSetup() {
     const retrievedValue = await getSystemSetting("candidate_data_retention_years");
     console.log("✅ Retrieved value:", retrievedValue);
     
-    // Test 4: Check scheduler configuration
-    console.log("4. Testing scheduler configuration...");
-    const scheduleInfo = await dataRetentionScheduler.getScheduleInfo();
+    // Test 4: Check scheduler configuration (now external cron)
+    console.log("4. Data retention now handled by external cron system...");
+    const scheduleInfo = { message: "Data retention handled by external system cron" };
     console.log("✅ Schedule info:", scheduleInfo);
     
     console.log("🎉 All tests passed! Data retention setup is working correctly.");
