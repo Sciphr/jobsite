@@ -343,7 +343,28 @@ class AutoRejectScheduler {
   }
 }
 
-// Create singleton instance
-const autoRejectScheduler = new AutoRejectScheduler();
+// Create singleton instance only when not building
+function isBuildTime() {
+  return (
+    process.env.npm_lifecycle_event === 'build' ||
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.DATABASE_URL?.includes('temp') ||
+    process.env.CI === 'true'
+  );
+}
+
+let autoRejectScheduler;
+
+if (!isBuildTime()) {
+  autoRejectScheduler = new AutoRejectScheduler();
+} else {
+  console.log("🚫 Skipping AutoRejectScheduler creation during build");
+  autoRejectScheduler = {
+    start: () => Promise.resolve(),
+    stop: () => {},
+    getScheduleInfo: () => Promise.resolve(null),
+    triggerNow: () => Promise.resolve()
+  };
+}
 
 export { autoRejectScheduler };

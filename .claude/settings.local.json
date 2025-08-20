@@ -32,7 +32,8 @@
       "Bash(npx prisma db pull:*)",
       "Bash(rd:*)",
       "Bash(grep:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

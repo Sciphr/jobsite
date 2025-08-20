@@ -281,7 +281,31 @@ class StaleApplicationScheduler {
   }
 }
 
-// Create singleton instance
-const staleApplicationScheduler = new StaleApplicationScheduler();
+// Create singleton instance only when not building
+function isBuildTime() {
+  return (
+    process.env.npm_lifecycle_event === 'build' ||
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.DATABASE_URL?.includes('temp') ||
+    process.env.CI === 'true'
+  );
+}
+
+let staleApplicationScheduler;
+
+if (!isBuildTime()) {
+  staleApplicationScheduler = new StaleApplicationScheduler();
+} else {
+  console.log("⏰ Skipping StaleApplicationScheduler creation during build");
+  staleApplicationScheduler = {
+    start: () => Promise.resolve(),
+    stop: () => {},
+    getScheduleInfo: () => Promise.resolve(null),
+    getStaleApplications: () => [],
+    getStaleApplicationsCount: () => 0,
+    isApplicationStale: () => false,
+    getApplicationStaleInfo: () => null
+  };
+}
 
 export { staleApplicationScheduler };

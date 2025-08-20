@@ -8,6 +8,11 @@ import JobDetailsClient from "./JobDetailsClient";
 export const dynamic = 'force-dynamic';
 
 async function getJob(slug) {
+  // Build-time guard: return null during build
+  if (process.env.npm_lifecycle_event === 'build' || process.env.NEXT_PHASE === 'phase-production-build') {
+    return null;
+  }
+  
   try {
     const job = await appPrisma.jobs.findUnique({
       where: {

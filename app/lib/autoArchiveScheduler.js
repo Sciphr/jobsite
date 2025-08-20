@@ -349,7 +349,28 @@ class AutoArchiveScheduler {
   }
 }
 
-// Create singleton instance
-const autoArchiveScheduler = new AutoArchiveScheduler();
+// Create singleton instance only when not building
+function isBuildTime() {
+  return (
+    process.env.npm_lifecycle_event === 'build' ||
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.DATABASE_URL?.includes('temp') ||
+    process.env.CI === 'true'
+  );
+}
+
+let autoArchiveScheduler;
+
+if (!isBuildTime()) {
+  autoArchiveScheduler = new AutoArchiveScheduler();
+} else {
+  console.log("📦 Skipping AutoArchiveScheduler creation during build");
+  autoArchiveScheduler = {
+    start: () => Promise.resolve(),
+    stop: () => {},
+    getScheduleInfo: () => Promise.resolve(null),
+    triggerNow: () => Promise.resolve()
+  };
+}
 
 export { autoArchiveScheduler };

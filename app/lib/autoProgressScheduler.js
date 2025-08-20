@@ -341,7 +341,28 @@ class AutoProgressScheduler {
   }
 }
 
-// Create singleton instance
-const autoProgressScheduler = new AutoProgressScheduler();
+// Create singleton instance only when not building
+function isBuildTime() {
+  return (
+    process.env.npm_lifecycle_event === 'build' ||
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.DATABASE_URL?.includes('temp') ||
+    process.env.CI === 'true'
+  );
+}
+
+let autoProgressScheduler;
+
+if (!isBuildTime()) {
+  autoProgressScheduler = new AutoProgressScheduler();
+} else {
+  console.log("📈 Skipping AutoProgressScheduler creation during build");
+  autoProgressScheduler = {
+    start: () => Promise.resolve(),
+    stop: () => {},
+    getScheduleInfo: () => Promise.resolve(null),
+    triggerNow: () => Promise.resolve()
+  };
+}
 
 export { autoProgressScheduler };

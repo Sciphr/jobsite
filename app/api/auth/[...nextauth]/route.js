@@ -3,6 +3,30 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { authPrisma } from "../../../lib/prisma";
+
+// Build-safe adapter creation
+function createAdapter() {
+  // During build, return a minimal mock adapter
+  if (process.env.npm_lifecycle_event === 'build' || process.env.NEXT_PHASE === 'phase-production-build') {
+    return {
+      createUser: () => Promise.resolve({}),
+      getUser: () => Promise.resolve(null),
+      getUserByEmail: () => Promise.resolve(null),
+      getUserByAccount: () => Promise.resolve(null),
+      updateUser: () => Promise.resolve({}),
+      deleteUser: () => Promise.resolve(),
+      linkAccount: () => Promise.resolve(),
+      unlinkAccount: () => Promise.resolve(),
+      createSession: () => Promise.resolve({}),
+      getSessionAndUser: () => Promise.resolve(null),
+      updateSession: () => Promise.resolve({}),
+      deleteSession: () => Promise.resolve(),
+      createVerificationToken: () => Promise.resolve({}),
+      useVerificationToken: () => Promise.resolve(null),
+    };
+  }
+  return PrismaAdapter(authPrisma);
+}
 import bcrypt from "bcryptjs";
 import { getUserPermissions, getUserRoles } from "../../../lib/permissions";
 import { authenticateLDAP, ensureLDAPUserRole } from "../../../lib/ldap";
@@ -27,7 +51,7 @@ function determineAccountType(existingType, newAuthMethod) {
 }
 
 export const authOptions = {
-  adapter: PrismaAdapter(authPrisma),
+  adapter: createAdapter(),
   providers: [
     // SAML Authentication Provider
     CredentialsProvider({
