@@ -171,20 +171,39 @@ export default function CalendarIntegration() {
 
   const isConnected = integrationData?.connected;
 
+  // Dynamic color scheme based on connection status
+  const colorScheme = isConnected ? {
+    border: "border-green-200",
+    bg: "bg-green-50",
+    borderB: "border-green-200",
+    iconBg: "bg-green-100",
+    iconColor: "text-green-600",
+    textColor: "text-green-900",
+    textColorLight: "text-green-700"
+  } : {
+    border: "border-blue-200", 
+    bg: "bg-blue-50",
+    borderB: "border-blue-200",
+    iconBg: "bg-blue-100",
+    iconColor: "text-blue-600",
+    textColor: "text-blue-900",
+    textColorLight: "text-blue-700"
+  };
+
   return (
-    <div className="border border-green-200 rounded-lg overflow-hidden">
+    <div className={`border ${colorScheme.border} rounded-lg overflow-hidden`}>
       {/* Header */}
-      <div className="bg-green-50 px-6 py-4 border-b border-green-200">
+      <div className={`${colorScheme.bg} px-6 py-4 border-b ${colorScheme.borderB}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Calendar className="h-5 w-5 text-green-600" />
+            <div className={`p-2 ${colorScheme.iconBg} rounded-lg`}>
+              <Calendar className={`h-5 w-5 ${colorScheme.iconColor}`} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-green-900">
+              <h3 className={`text-lg font-semibold ${colorScheme.textColor}`}>
                 Google Calendar Integration
               </h3>
-              <p className="text-sm text-green-700">
+              <p className={`text-sm ${colorScheme.textColorLight}`}>
                 Connect your Google Calendar to enable interview scheduling features
               </p>
             </div>

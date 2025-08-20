@@ -2,9 +2,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { appPrisma } from "@/app/lib/prisma";
+import { getValidZoomToken } from "@/app/lib/zoomAuth";
 
 export async function GET(request) {
   try {
@@ -14,7 +13,7 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
+    const user = await appPrisma.users.findUnique({
       where: { id: session.user.id },
       select: {
         zoom_integration_enabled: true,
@@ -22,6 +21,8 @@ export async function GET(request) {
         zoom_email: true,
         zoom_user_id: true,
         zoom_token_expires_at: true,
+        zoom_access_token: true,
+        zoom_refresh_token: true,
       },
     });
 
@@ -29,15 +30,30 @@ export async function GET(request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const isTokenValid = user.zoom_token_expires_at && new Date() < new Date(user.zoom_token_expires_at);
+    let isConnected = false;
+    let tokenValid = false;
+
+    if (user.zoom_integration_enabled && user.zoom_access_token) {
+      try {
+        // This will refresh the token if needed
+        await getValidZoomToken(session.user.id);
+        isConnected = true;
+        tokenValid = true;
+      } catch (error) {
+        console.log("Zoom token validation failed:", error.message);
+        // Token refresh failed - integration is effectively disconnected
+        isConnected = false;
+        tokenValid = false;
+      }
+    }
 
     return NextResponse.json({
-      connected: user.zoom_integration_enabled && isTokenValid,
+      connected: isConnected,
       zoomEmail: user.zoom_email,
       zoomUserId: user.zoom_user_id,
       connectedAt: user.zoom_integration_connected_at,
       tokenExpiresAt: user.zoom_token_expires_at,
-      tokenValid: isTokenValid,
+      tokenValid: tokenValid,
     });
 
   } catch (error) {

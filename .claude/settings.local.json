@@ -33,7 +33,9 @@
       "Bash(rd:*)",
       "Bash(grep:*)",
       "WebSearch",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
