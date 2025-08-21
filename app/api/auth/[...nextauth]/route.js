@@ -516,18 +516,55 @@ export const authOptions = {
 
   session: {
     strategy: "jwt",
-    // Removed temporary short maxAge that was causing loops
+    maxAge: 24 * 60 * 60, // 24 hours
+    updateAge: 24 * 60 * 60, // 24 hours
   },
 
-  // Simple configuration for ngrok compatibility  
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours
+    // Additional security: rotate tokens more frequently in production
+    updateAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 24 * 60 * 60, // 1 hour in prod, 24h in dev
+  },
+
+  // Security configuration
   trustHost: true,
-  debug: true, // Always enable debug for troubleshooting
+  debug: process.env.NODE_ENV === 'development', // Only debug in development
   
-  // Minimal secure configuration for ngrok
-  useSecureCookies: false, // Let NextAuth auto-detect
+  // Secure cookies configuration
+  useSecureCookies: process.env.NODE_ENV === 'production',
   
-  // Add explicit secret (sometimes needed for ngrok)
+  // Strong secret validation
   secret: process.env.NEXTAUTH_SECRET,
+
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 // 24 hours
+      }
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Host-next-auth.csrf-token' : 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  },
 
   pages: {
     signIn: "/auth/signin",

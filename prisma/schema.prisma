@@ -538,6 +538,9 @@ model users {
   user_roles                                   user_roles[]
   weekly_digests                               weekly_digests[]
 
+  security_events_security_events_user_idTousers        security_events[] @relation("security_events_user_idTousers")
+security_alerts_security_alerts_resolved_byTousers    security_alerts[] @relation("security_alerts_resolved_byTousers")
+
   @@index([account_type], map: "idx_users_account_type")
   @@index([mfa_methods_enabled], map: "idx_users_mfa_methods", type: Gin)
 }
@@ -783,4 +786,44 @@ model api_webhook_endpoints {
 
   @@index([is_active], map: "idx_api_webhook_endpoints_active")
   @@index([api_key_id], map: "idx_api_webhook_endpoints_api_key_id")
+}
+
+model security_events {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_type String   @db.VarChar(50)
+  severity   String   @default("low") @db.VarChar(20)
+  ip_address String?  @db.Inet
+  user_id    String?  @db.Uuid
+  user_agent String?
+  details    Json     @default("{}")
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  // Relations
+  users      users?   @relation("security_events_user_idTousers", fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([created_at])
+  @@index([event_type])
+  @@index([severity])
+  @@index([ip_address])
+  @@index([user_id])
+}
+
+model security_alerts {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alert_type   String    @db.VarChar(50)
+  severity     String    @default("medium") @db.VarChar(20)
+  ip_address   String?   @db.Inet
+  event_count  Int       @default(1)
+  details      Json      @default("{}")
+  resolved     Boolean   @default(false)
+  resolved_at  DateTime? @db.Timestamp(6)
+  resolved_by  String?   @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+
+  // Relations
+  resolved_by_user users? @relation("security_alerts_resolved_byTousers", fields: [resolved_by], references: [id], onDelete: SetNull)
+
+  @@index([created_at])
+  @@index([resolved])
+  @@index([severity])
 }

@@ -7,7 +7,13 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:audit-fix": "npm audit fix",
+    "security:headers-test": "node scripts/test-security-headers.js",
+    "security:env-check": "node -e \"require('./app/lib/env-check.js').logEnvironmentSecurityCheck()\"",
+    "security:full-scan": "npm run security:audit && npm run security:env-check",
+    "security:monitor": "node scripts/security-monitor-test.js"
   },
   "dependencies": {
     "@google-analytics/data": "^5.2.0",

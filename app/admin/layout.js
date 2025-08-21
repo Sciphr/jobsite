@@ -251,6 +251,13 @@ function AdminLayoutContent({ children }) {
       description: "View system activity logs",
     },
     {
+      name: "Security",
+      href: "/admin/security",
+      icon: Shield,
+      requiredPermission: { resource: "security", action: "view" },
+      description: "Security monitoring & alerts",
+    },
+    {
       name: "Settings",
       href: "/admin/settings",
       icon: Settings,
