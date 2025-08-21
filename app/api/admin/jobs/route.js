@@ -64,18 +64,9 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher for creating jobs)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "create");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   let body; // Declare body outside try block so it's accessible in catch
   try {

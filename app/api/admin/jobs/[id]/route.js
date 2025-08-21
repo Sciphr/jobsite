@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 import { sendJobPublishedNotification } from "../../../../lib/email";
 import { getSystemSetting } from "../../../../lib/settings";
@@ -11,18 +12,9 @@ import {
 import { extractRequestContext } from "../../../../lib/auditLog";
 
 export async function GET(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "view");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
 
@@ -83,18 +75,9 @@ export async function GET(req, { params }) {
 }
 
 export async function PATCH(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "edit");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
   let body;
@@ -400,18 +383,9 @@ export async function PATCH(req, { params }) {
 }
 
 export async function DELETE(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "delete");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
 

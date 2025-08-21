@@ -2,18 +2,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { NextResponse } from "next/server";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
   try {
-    // Get session
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const authResult = await protectRoute("analytics", "view");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     // For dashboard stats, if user has any admin permissions at all, show all data
     // The admin layout already checks for admin permissions before allowing access

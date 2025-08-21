@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { appPrisma } from "../../../../lib/prisma";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 export async function GET(request) {
   try {
+    const authResult = await protectRoute("emails", "view");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters for filtering

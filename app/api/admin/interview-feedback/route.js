@@ -2,20 +2,12 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { createInterviewFeedback, getInterviewFeedback } from "../../../lib/interviewFeedbackUtils";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function POST(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 1 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("interviews", "notes");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   try {
     const body = await req.json();
@@ -63,18 +55,9 @@ export async function POST(req) {
 }
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 1 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("interviews", "notes");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   try {
     const { searchParams } = new URL(req.url);

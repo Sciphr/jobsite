@@ -3,20 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../../lib/prisma";
 import { getSystemSetting } from "../../../../../lib/settings";
+import { protectRoute } from "../../../../../lib/middleware/apiProtection";
 
 export async function PATCH(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 2 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "feature");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
 
@@ -83,17 +75,9 @@ export async function PATCH(req, { params }) {
 
 // Get featured jobs status and limits
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 2
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("jobs", "view");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   try {
     const maxFeaturedJobs = await getSystemSetting("max_featured_jobs", 5);

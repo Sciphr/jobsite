@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import SetupWizard from "./components/SetupWizard";
 
-export default function SetupPage() {
+function SetupContent() {
   const [token, setToken] = useState(null);
   const [tokenValid, setTokenValid] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -83,4 +83,21 @@ export default function SetupPage() {
   }
 
   return null;
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading setup page...</p>
+          </div>
+        </div>
+      }
+    >
+      <SetupContent />
+    </Suspense>
+  );
 }

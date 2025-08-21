@@ -8,20 +8,12 @@ import {
 import { triggerStatusChangeAutomation } from "../../../../lib/emailAutomation";
 import { getSystemSetting } from "../../../../lib/settings";
 import { handleStatusChange } from "../../../../lib/statusChangeHandler";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 export async function PATCH(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 1 or higher - HR can update applications)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("applications", "edit");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
 
@@ -328,18 +320,9 @@ export async function PATCH(req, { params }) {
 }
 
 export async function GET(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 1 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("applications", "view");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   const { id } = await params;
 

@@ -3,20 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { getSystemSetting } from "../../../lib/settings";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(request) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is admin (privilege level 1 or higher)
-  if (
-    !session ||
-    !session.user.privilegeLevel ||
-    session.user.privilegeLevel < 1
-  ) {
-    return new Response(JSON.stringify({ message: "Unauthorized" }), {
-      status: 401,
-    });
-  }
+  const authResult = await protectRoute("analytics", "advanced");
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
 
   try {
     // Check if stage time tracking is enabled

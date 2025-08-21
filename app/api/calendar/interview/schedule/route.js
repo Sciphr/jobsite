@@ -6,6 +6,7 @@ import { appPrisma } from "@/app/lib/prisma";
 import { google } from "googleapis";
 import { emailService } from "@/app/lib/email";
 import crypto from "crypto";
+import { protectRoute } from "@/app/lib/middleware/apiProtection";
 
 async function refreshTokenIfNeeded(oauth2Client, user) {
   const now = new Date();
@@ -276,11 +277,9 @@ We look forward to speaking with you!
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("interviews", "create");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const {
       applicationId,

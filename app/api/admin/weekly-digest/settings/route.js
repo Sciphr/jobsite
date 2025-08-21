@@ -3,19 +3,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is admin (privilege level 1 or higher)
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("weekly_digest", "view");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     // Get all weekly digest settings
     const settings = await appPrisma.settings.findMany({
@@ -165,16 +159,9 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is admin (privilege level 1 or higher)
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("weekly_digest", "edit");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const body = await req.json();
     const { digestConfig } = body;

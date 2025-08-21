@@ -3,18 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../../lib/prisma";
 import { logAuditEvent } from "../../../../../../lib/auditMiddleware";
+import { protectRoute } from "../../../../../lib/middleware/apiProtection";
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("applications", "notes");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { id } = await params;
 
@@ -51,15 +46,9 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("applications", "notes");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { id } = await params;
     const { content, type = "note", metadata = null } = await request.json();

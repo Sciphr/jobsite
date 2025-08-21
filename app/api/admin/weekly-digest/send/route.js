@@ -2,19 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { weeklyDigestService } from "../../../../lib/weeklyDigest";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is admin (privilege level 1 or higher)
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("weekly_digest", "send");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     console.log("📧 Weekly digest requested by:", session.user.email);
 

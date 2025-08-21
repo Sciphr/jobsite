@@ -2,20 +2,13 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
+    const authResult = await protectRoute("settings", "edit_system");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { key } = await params;
     const { value, isPersonal } = await request.json();
@@ -166,17 +159,9 @@ export async function PATCH(request, { params }) {
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
-    }
+    const authResult = await protectRoute("settings", "view");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { key } = await params;
     const { searchParams } = new URL(request.url);

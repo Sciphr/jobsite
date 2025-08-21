@@ -3,14 +3,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
+import { protectRoute } from "../../../lib/middleware/apiProtection";
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("interviews", "view");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { searchParams } = new URL(request.url);
     const myOnly = searchParams.get('myOnly') === 'true';

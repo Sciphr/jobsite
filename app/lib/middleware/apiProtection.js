@@ -146,11 +146,10 @@ export async function protectRoute(resource, action, options = {}) {
       };
     }
 
-    // TODO: Implement proper system admin concept
-    // For now, disable super admin bypass to test permission system
-    // if (session.user.privilegeLevel >= 3) {
-    //   return { session };
-    // }
+    // Super admin bypass - privilege level 3+ has all permissions
+    if (session.user.privilegeLevel >= 3) {
+      return { session };
+    }
 
     // Custom check
     if (customCheck) {

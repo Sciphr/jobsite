@@ -4,18 +4,13 @@ import { authOptions } from "../../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../../lib/prisma";
 import ExcelJS from "exceljs";
 import * as XLSX from 'xlsx';
+import { protectRoute } from "../../../../../lib/middleware/apiProtection";
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !session.user.privilegeLevel ||
-      session.user.privilegeLevel < 1
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("analytics", "export");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     const { searchParams } = new URL(request.url);
     

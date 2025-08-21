@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@/app/generated/prisma";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 const prisma = new PrismaClient();
 
 export async function GET(request) {
   try {
+    const authResult = await protectRoute("emails", "templates");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
@@ -89,6 +93,9 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const authResult = await protectRoute("emails", "templates");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
     const { name, subject, content, type, category, tags, description, variables, isDefault, isActive, createdBy } = await request.json();
 
     // Validate required fields
@@ -185,6 +192,9 @@ export async function POST(request) {
 // Add a PUT endpoint to migrate template types
 export async function PUT(request) {
   try {
+    const authResult = await protectRoute("emails", "templates");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
     const { action } = await request.json();
     
     if (action === "migrate_types") {

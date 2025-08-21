@@ -4,15 +4,14 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { appPrisma } from "../../../../../lib/prisma";
 import { emailService } from "@/app/lib/email";
+import { protectRoute } from "../../../../../lib/middleware/apiProtection";
 
 export async function POST(request, { params }) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await protectRoute("interviews", "edit");
+    if (authResult.error) return authResult.error;
+    const { session } = authResult;
 
     // Find the interview
     const interview = await appPrisma.interview_tokens.findUnique({
