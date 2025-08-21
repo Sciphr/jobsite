@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Copy, Check, Heart, Loader2, UserPlus, Shield, Mail } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Heart,
+  Loader2,
+  UserPlus,
+  Shield,
+  Mail,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
 import { generateJobShareMailtoUrl } from "../../utils/emailTemplates";
@@ -175,7 +183,7 @@ export default function JobDetailsClient({
     try {
       const siteUrl = window.location.origin;
       const mailtoUrl = generateJobShareMailtoUrl(job, siteUrl);
-      window.open(mailtoUrl, '_blank');
+      window.open(mailtoUrl, "_blank");
     } catch (err) {
       console.error("Failed to generate email:", err);
     }
@@ -376,255 +384,427 @@ export default function JobDetailsClient({
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 border border-gray-200 dark:border-gray-700 transition-colors duration-200">
-              {/* Job Header */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {job.title}
-                    </h1>
-                    {job.featured && (
-                      <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-sm px-3 py-1 rounded-full transition-colors duration-200">
-                        Featured
-                      </span>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200 overflow-hidden">
+              {/* Job Header with gradient background */}
+              <div className="relative bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 p-8 border-b border-gray-200 dark:border-gray-600">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-600/10 dark:to-purple-600/10"></div>
+                <div className="relative">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h1 className="text-4xl font-bold text-gray-900 dark:text-white leading-tight">
+                          {job.title}
+                        </h1>
+                        {job.featured && (
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg blur opacity-75"></div>
+                            <span className="relative bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm px-3 py-1 rounded-lg font-medium shadow-lg">
+                              ⭐ Featured
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                          <svg
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m0 0h1m-1 0v3m-1 0h1m0-3h3m-1 3h1"
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                          {job.department}
+                        </span>
+                        <span className="text-gray-400 dark:text-gray-500">
+                          •
+                        </span>
+                        <span className="text-lg text-gray-600 dark:text-gray-400">
+                          {job.location}
+                        </span>
+                      </div>
+
+                      <div className="inline-flex items-center gap-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-lg px-4 py-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: "var(--site-primary)" }}
+                        ></span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {job.categories.name}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Save Job Button - Desktop */}
+                    {session && (
+                      <div className="hidden md:block">
+                        <button
+                          onClick={handleSaveJob}
+                          disabled={isLoading || checkingStatus}
+                          className={`group flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+                            isSaved
+                              ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50"
+                              : "text-white bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
+                          } ${
+                            isLoading || checkingStatus
+                              ? "opacity-50 cursor-not-allowed transform-none"
+                              : ""
+                          }`}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Heart
+                              className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${
+                                isSaved ? "fill-current animate-pulse" : ""
+                              }`}
+                            />
+                          )}
+                          <span className="font-medium">
+                            {isSaved ? "Saved" : "Save Job"}
+                          </span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Save Job Button - Desktop */}
-                  {session && (
-                    <div className="hidden md:block">
-                      <button
-                        onClick={handleSaveJob}
-                        disabled={isLoading || checkingStatus}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
-                          isSaved
-                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50"
-                            : "text-white"
-                        } ${
-                          isLoading || checkingStatus
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
-                        style={
-                          !isSaved
-                            ? { backgroundColor: "var(--site-primary)" }
-                            : {}
-                        }
-                        onMouseEnter={
-                          !isSaved
-                            ? (e) =>
-                                (e.target.style.backgroundColor =
-                                  "var(--site-primary-hover)")
-                            : undefined
-                        }
-                        onMouseLeave={
-                          !isSaved
-                            ? (e) =>
-                                (e.target.style.backgroundColor =
-                                  "var(--site-primary)")
-                            : undefined
-                        }
+                  {/* Job Key Details */}
+                  <div className="flex flex-wrap items-center gap-3 mt-6">
+                    <div className="inline-flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 rounded-lg px-4 py-2 border border-gray-200/50 dark:border-gray-600/50">
+                      <svg
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Heart
-                            className={`h-4 w-4 ${
-                              isSaved ? "fill-current" : ""
-                            }`}
-                          />
-                        )}
-                        {isSaved ? "Saved" : "Save Job"}
-                      </button>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 002 2H6a2 2 0 002-2V6"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {job.employmentType}
+                      </span>
                     </div>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-200">
-                  <span className="font-medium">{job.department}</span>
-                  <span className="text-gray-400 dark:text-gray-500">•</span>
-                  <span>{job.location}</span>
-                  <span className="text-gray-400 dark:text-gray-500">•</span>
-                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm px-2 py-1 rounded-full transition-colors duration-200">
-                    {job.categories.name}
-                  </span>
+                    <div className="inline-flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 rounded-lg px-4 py-2 border border-gray-200/50 dark:border-gray-600/50">
+                      <svg
+                        className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {job.experienceLevel}
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 rounded-lg px-4 py-2 border border-gray-200/50 dark:border-gray-600/50">
+                      <svg
+                        className="w-4 h-4 text-green-600 dark:text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {job.remotePolicy === "Remote"
+                          ? "Remote Work"
+                          : job.remotePolicy}
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-2 bg-white/60 dark:bg-gray-800/60 rounded-lg px-4 py-2 border border-gray-200/50 dark:border-gray-600/50">
+                      <svg
+                        className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Posted {formatDate(job.postedAt)}
+                      </span>
+                    </div>
+
+                    {job.applicationDeadline && (
+                      <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg px-4 py-2 border border-orange-200 dark:border-orange-700">
+                        <svg
+                          className="w-4 h-4 text-orange-600 dark:text-orange-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L4.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                          Deadline: {formatDate(job.applicationDeadline)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed transition-colors duration-200">
-                  {job.summary}
-                </p>
               </div>
 
-              {/* Job Details */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors duration-200">
+              {/* Main Content Area */}
+              <div className="p-8 space-y-8">
+                {/* Job Summary */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Employment Type
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {job.employmentType}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Experience Level
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {job.experienceLevel}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Years Experience
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {job.yearsExperienceRequired || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Remote Policy
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {job.remotePolicy}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Education Required
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {job.educationRequired || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Posted Date
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {formatDate(job.postedAt)}
-                  </p>
-                </div>
-                {job.startDate && (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      Start Date
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      {formatDate(job.startDate)}
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    Job Overview
+                  </h2>
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 p-6 rounded-xl border border-blue-100 dark:border-gray-600">
+                    <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
+                      {job.summary}
                     </p>
+                  </div>
+                </div>
+
+                {/* Job Description */}
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-green-600 dark:text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        />
+                      </svg>
+                    </div>
+                    Job Description
+                  </h2>
+                  <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                    <div
+                      className="text-gray-700 dark:text-gray-300 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: job.description }}
+                    />
+                  </div>
+                </div>
+
+                {/* Salary Information */}
+                {job.showSalary && job.salaryMin && job.salaryMax && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-green-600 dark:text-green-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                          />
+                        </svg>
+                      </div>
+                      Compensation
+                    </h2>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center">
+                          <svg
+                            className="w-6 h-6 text-green-600 dark:text-green-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                            Annual Salary Range
+                          </p>
+                          <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                            {job.salaryCurrency}{" "}
+                            {job.salaryMin?.toLocaleString()} -{" "}
+                            {job.salaryMax?.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Status
-                  </h3>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      job.status === "Active"
-                        ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
-                    } transition-colors duration-200`}
-                  >
-                    {job.status}
-                  </span>
-                </div>
+
+                {/* Requirements */}
+                {job.requirements && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                          />
+                        </svg>
+                      </div>
+                      Requirements
+                    </h2>
+                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                      <div
+                        className="text-gray-700 dark:text-gray-300 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: job.requirements }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Preferred Qualifications */}
+                {job.preferredQualifications && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                          />
+                        </svg>
+                      </div>
+                      Preferred Qualifications
+                    </h2>
+                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                      <div
+                        className="text-gray-700 dark:text-gray-300 leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html: job.preferredQualifications,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Benefits */}
+                {job.benefits && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                          />
+                        </svg>
+                      </div>
+                      Benefits & Perks
+                    </h2>
+                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                      <div
+                        className="text-gray-700 dark:text-gray-300 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: job.benefits }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* Salary Information */}
-              {job.showSalary && job.salaryMin && job.salaryMax && (
-                <div className="mb-8 p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 transition-colors duration-200">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                    Salary Range
-                  </h3>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">
-                    {job.salaryCurrency} ${formatNumber(job.salaryMin)}-
-                    {formatNumber(job.salaryMax)}
-                  </p>
-                  {job.salaryPeriod && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      per {job.salaryPeriod}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Job Description */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Job Description
-                </h2>
-                <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert">
-                  {job.description ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: job.description.replace(/\n/g, "<br />"),
-                      }}
-                    />
-                  ) : (
-                    <p>No detailed description available.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Requirements */}
-              {job.requirements && (
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                    Requirements
-                  </h2>
-                  <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: job.requirements.replace(/\n/g, "<br />"),
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Preferred Qualifications */}
-              {job.preferredQualifications && (
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                    Preferred Qualifications
-                  </h2>
-                  <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: job.preferredQualifications.replace(
-                          /\n/g,
-                          "<br />"
-                        ),
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Benefits */}
-              {job.benefits && (
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                    Benefits
-                  </h2>
-                  <div className="prose prose-lg max-w-none text-gray-700 dark:text-gray-300 dark:prose-invert">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: job.benefits.replace(/\n/g, "<br />"),
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Sidebar */}
           <div className="lg:col-span-1 mt-8 lg:mt-0">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 sticky top-8 border border-gray-200 dark:border-gray-700 transition-colors duration-200">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sticky top-8 border border-gray-200 dark:border-gray-700 transition-colors duration-200 space-y-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                      />
+                    </svg>
+                  </div>
                   Apply for this position
                 </h3>
                 {job.applicationDeadline && (
@@ -700,61 +880,88 @@ export default function JobDetailsClient({
 
               {/* Job Quick Info */}
               {!showApplicationForm && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-3 h-3 text-purple-600 dark:text-purple-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
                     Quick Info
                   </h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Job Slug:
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Department
                       </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {job.slug}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Department:
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {job.department}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Location:
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Location
                       </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {job.location}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Type:
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Type
                       </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {job.employmentType}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Experience
+                      </span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {job.experienceLevel}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Remote
+                      </span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {job.remotePolicy === "Remote"
+                          ? "Yes"
+                          : job.remotePolicy}
                       </span>
                     </div>
                     {/* Only show salary if job.showSalary is true */}
                     {job.showSalary && job.salaryMin && job.salaryMax && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Salary:
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {job.salaryCurrency} {formatNumber(job.salaryMin)}{" "}
-                          - {formatNumber(job.salaryMax)}
-                        </span>
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-center">
+                          <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">
+                            Salary Range
+                          </div>
+                          <div className="text-sm font-bold text-green-700 dark:text-green-300">
+                            {job.salaryCurrency} {formatNumber(job.salaryMin)} -{" "}
+                            {formatNumber(job.salaryMax)}
+                          </div>
+                        </div>
                       </div>
                     )}
                     {job.applicationDeadline && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Deadline:
+                      <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                          Deadline
                         </span>
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
                           {formatDate(job.applicationDeadline)}
                         </span>
                       </div>
@@ -777,7 +984,7 @@ export default function JobDetailsClient({
                       {copied ? <Check size={16} /> : <Copy size={16} />}
                       {copied ? "Copied!" : "Copy Link"}
                     </button>
-                    <button 
+                    <button
                       onClick={handleEmailShare}
                       className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center justify-center gap-2"
                     >
@@ -792,13 +999,13 @@ export default function JobDetailsClient({
         </div>
 
         {/* Back to Jobs Link */}
-        <div className="mt-8">
+        <div className="mt-8 text-center">
           <Link
             href="/jobs"
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 dark:hover:text-blue-500"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 dark:hover:text-blue-500 transition-colors duration-200 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 px-6 py-3 rounded-lg"
           >
             <svg
-              className="w-5 h-5 mr-2"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

@@ -1,6 +1,7 @@
 import { db } from "./lib/db";
 import Link from "next/link";
 import { ThemedLink } from "./components/ThemedButton";
+import HeroSection from "./components/HeroSection";
 
 // Disable static generation for this page since it needs database access
 export const dynamic = 'force-dynamic';
@@ -31,27 +32,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Hero Section */}
-      <section
-        className="text-white transition-colors duration-200 site-primary"
-        style={{ backgroundColor: "var(--site-primary)" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h2 className="text-4xl font-bold mb-4">Find Your Dream Job</h2>
-            <p className="text-xl mb-8 text-white/80">
-              Discover opportunities that match your skills and passion
-            </p>
-            <div className="flex justify-center">
-              <Link
-                href="/jobs"
-                className="bg-white px-8 py-3 rounded-md font-semibold hover:bg-gray-100 transition-colors duration-200 site-primary-text"
-              >
-                Browse {totalJobs} Jobs
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSection totalJobs={totalJobs} />
 
       {/* Featured Jobs Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

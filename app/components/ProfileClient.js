@@ -530,7 +530,7 @@ export default function ProfileClient({ session }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Skeleton */}
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 transition-colors duration-200">
@@ -590,19 +590,31 @@ export default function ProfileClient({ session }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 transition-colors duration-200">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl mb-8 overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+          <div className="px-6 py-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
             <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
-                  {profile?.firstName} {profile?.lastName}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
-                  {profile?.email}
-                </p>
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-2xl font-bold text-white">
+                    {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200 mb-1">
+                    {profile?.firstName} {profile?.lastName}
+                  </h1>
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
+                    <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                      {profile?.email}
+                    </p>
+                  </div>
+                </div>
               </div>
               <ThemedButton
                 onClick={() => signOut()}
@@ -736,13 +748,20 @@ export default function ProfileClient({ session }) {
         )}
 
         {/* Tab Content */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 transition-colors duration-200 overflow-hidden">
           {activeTab === "overview" && (
             <div className="px-6 py-4">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white transition-colors duration-200">
-                  Profile Information
-                </h2>
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+                    Profile Information
+                  </h2>
+                </div>
                 {!editMode ? (
                   <div className="flex space-x-2">
                     <button
@@ -881,43 +900,43 @@ export default function ProfileClient({ session }) {
               {!editMode ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Your existing profile display fields remain the same */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 transition-colors duration-200">
                       First Name
                     </label>
-                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.firstName || "Not provided"}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 transition-colors duration-200">
                       Last Name
                     </label>
-                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.lastName || "Not provided"}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
-                      Email
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 transition-colors duration-200">
+                      Email Address
                     </label>
-                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200 break-all">
                       {profile?.email}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
-                      Phone
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 transition-colors duration-200">
+                      Phone Number
                     </label>
-                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
                       {profile?.phone || "Not provided"}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800 transition-colors duration-200">
+                    <label className="block text-sm font-medium text-green-600 dark:text-green-400 mb-2 transition-colors duration-200">
                       Member Since
                     </label>
-                    <p className="text-gray-900 dark:text-white transition-colors duration-200">
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-300 transition-colors duration-200">
                       {formatDate(profile?.createdAt)}
                     </p>
                   </div>
@@ -991,10 +1010,17 @@ export default function ProfileClient({ session }) {
 
           {activeTab === "resume" && (
             <div className="px-6 py-4">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white transition-colors duration-200">
-                  My Resume
-                </h2>
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+                    My Resume
+                  </h2>
+                </div>
                 {(!resume || !resume.fileName || !resume.id) && (
                   <div className="flex items-center space-x-4">
                     <input
@@ -1218,9 +1244,16 @@ export default function ProfileClient({ session }) {
 
           {activeTab === "saved-jobs" && (
             <div className="px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-200">
-                Saved Jobs ({savedJobs.length})
-              </h2>
+              <div className="flex items-center space-x-3 mb-8">
+                <div className="w-8 h-8 bg-red-100 dark:bg-red-900/50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+                  Saved Jobs ({savedJobs.length})
+                </h2>
+              </div>
               {savedJobs.length === 0 ? (
                 <div className="text-center py-8">
                   <svg
@@ -1308,9 +1341,16 @@ export default function ProfileClient({ session }) {
 
           {activeTab === "applications" && (
             <div className="px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-200">
-                Job Applications ({applications.length})
-              </h2>
+              <div className="flex items-center space-x-3 mb-8">
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+                  Job Applications ({applications.length})
+                </h2>
+              </div>
               {applications.length === 0 ? (
                 <div className="text-center py-8">
                   <svg

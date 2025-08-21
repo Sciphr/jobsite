@@ -61,11 +61,22 @@ export default function JobsList({ jobs }) {
 
   return (
     <div className="space-y-6">
-      {jobs.map((job) => {
+      {jobs.map((job, index) => {
         const appStatus = applicationStatuses[job.id];
         console.log(`🎯 Job ${job.title} (${job.id}) status:`, appStatus);
 
-        return <JobCard key={job.id} job={job} applicationStatus={appStatus} />;
+        return (
+          <div
+            key={job.id}
+            className="opacity-0 animate-fadeInUp"
+            style={{
+              animationDelay: `${index * 100}ms`,
+              animationFillMode: 'forwards'
+            }}
+          >
+            <JobCard job={job} applicationStatus={appStatus} />
+          </div>
+        );
       })}
     </div>
   );

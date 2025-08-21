@@ -47,7 +47,8 @@ export function usePermissions() {
       }
 
       try {
-        if (isMounted) {
+        // Only show loading if we don't already have permissions
+        if (isMounted && permissions.size === 0) {
           setLoading(true);
           setPermissionsInitialized(false);
           
@@ -62,8 +63,21 @@ export function usePermissions() {
           }, 30000);
         }
 
-        // Check if permissions are available in session (from NextAuth)
+        // Check if permissions are available in session (from NextAuth)  
         if (session.user.permissions && session.user.permissions.length > 0) {
+          // If we already have the same permissions, don't reload
+          const newPermissionSet = new Set(session.user.permissions);
+          const currentPermissionsArray = Array.from(permissions);
+          const newPermissionsArray = Array.from(newPermissionSet);
+          
+          if (JSON.stringify(currentPermissionsArray.sort()) === JSON.stringify(newPermissionsArray.sort()) && 
+              permissions.size > 0) {
+            if (isMounted) {
+              clearTimeout(timeoutId);
+              setLoading(false);
+            }
+            return;
+          }
           const permissionSet = new Set(session.user.permissions);
           
           // Set primary role from session
@@ -73,8 +87,19 @@ export function usePermissions() {
           
           if (isMounted) {
             clearTimeout(timeoutId); // Clear timeout since we're done
-            setPermissions(permissionSet);
-            setUserRole(primaryRole);
+            
+            // Only update state if it's actually different to prevent unnecessary re-renders
+            const currentPermissionsArray = Array.from(permissions);
+            const newPermissionsArray = Array.from(permissionSet);
+            
+            if (JSON.stringify(currentPermissionsArray.sort()) !== JSON.stringify(newPermissionsArray.sort())) {
+              setPermissions(permissionSet);
+            }
+            
+            if (userRole?.name !== primaryRole?.name) {
+              setUserRole(primaryRole);
+            }
+            
             setLoading(false);
           }
           return;
@@ -122,7 +147,7 @@ export function usePermissions() {
       isMounted = false;
       clearTimeout(timeoutId); // Clean up timeout
     };
-  }, [session?.user?.id, session?.user?.permissions, session?.user?.permissionsLastUpdated, refreshTrigger]);
+  }, [session?.user?.id, refreshTrigger]); // Remove permissions and permissionsLastUpdated to prevent re-fetching
 
   // Core permission checking function
   const hasPermission = useMemo(() => {
