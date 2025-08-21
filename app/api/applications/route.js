@@ -316,10 +316,23 @@ export async function POST(request) {
             salaryMin: true,
             salaryMax: true,
             salaryCurrency: true,
-            employmentType: true,
-            remotePolicy: true,
             createdAt: true,
             slug: true,
+            employment_types: {
+              select: {
+                name: true
+              }
+            },
+            remote_policies: {
+              select: {
+                name: true
+              }
+            },
+            categories: {
+              select: {
+                name: true
+              }
+            }
           },
         },
       },
@@ -712,9 +725,22 @@ export async function GET(request) {
             title: true,
             department: true,
             location: true,
-            employmentType: true,
-            remotePolicy: true,
             slug: true,
+            employment_types: {
+              select: {
+                name: true
+              }
+            },
+            remote_policies: {
+              select: {
+                name: true
+              }
+            },
+            categories: {
+              select: {
+                name: true
+              }
+            }
           },
         },
       },

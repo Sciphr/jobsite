@@ -30,8 +30,13 @@ export default function JobForm({
     true
   );
 
-  // Add categories state
+  // Add categories and job attributes state
   const [categories, setCategories] = useState([]);
+  const [jobAttributes, setJobAttributes] = useState({
+    employmentTypes: [],
+    experienceLevels: [],
+    remotePolicies: []
+  });
 
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
@@ -39,10 +44,10 @@ export default function JobForm({
     description: initialData?.description || "",
     summary: initialData?.summary || "",
     department: initialData?.department || "",
-    employmentType: initialData?.employmentType || "Full-time",
-    experienceLevel: initialData?.experienceLevel || "Mid",
+    employment_type_id: initialData?.employment_type_id || initialData?.employment_types?.id || "",
+    experience_level_id: initialData?.experience_level_id || initialData?.experience_levels?.id || "",
     location: initialData?.location || "",
-    remotePolicy: initialData?.remotePolicy || "On-site",
+    remote_policy_id: initialData?.remote_policy_id || initialData?.remote_policies?.id || "",
     salaryMin: initialData?.salaryMin || "",
     salaryMax: initialData?.salaryMax || "",
     salaryCurrency: initialData?.salaryCurrency || defaultCurrency,
@@ -64,9 +69,10 @@ export default function JobForm({
 
   const [errors, setErrors] = useState({});
 
-  // Fetch categories
+  // Fetch categories and job attributes
   useEffect(() => {
     fetchCategories();
+    fetchJobAttributes();
   }, []);
 
   useEffect(() => {
@@ -84,6 +90,28 @@ export default function JobForm({
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchJobAttributes = async () => {
+    try {
+      const response = await fetch("/api/job-attributes");
+      if (response.ok) {
+        const data = await response.json();
+        setJobAttributes(data);
+        
+        // Set default values if not provided by initial data
+        if (!initialData) {
+          setFormData(prev => ({
+            ...prev,
+            employment_type_id: data.employmentTypes[0]?.id || "",
+            experience_level_id: data.experienceLevels[0]?.id || "",
+            remote_policy_id: data.remotePolicies[0]?.id || ""
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching job attributes:", error);
     }
   };
 
@@ -117,6 +145,9 @@ export default function JobForm({
     if (!formData.requirements)
       newErrors.requirements = "Requirements are required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
+    if (!formData.employment_type_id) newErrors.employment_type_id = "Employment type is required";
+    if (!formData.experience_level_id) newErrors.experience_level_id = "Experience level is required";
+    if (!formData.remote_policy_id) newErrors.remote_policy_id = "Remote policy is required";
 
     // Settings-based validation
     if (requireSalaryRange) {
@@ -307,16 +338,18 @@ export default function JobForm({
             Employment Type
           </label>
           <select
-            name="employmentType"
-            value={formData.employmentType}
+            name="employment_type_id"
+            value={formData.employment_type_id}
             onChange={handleChange}
             disabled={submitting}
             className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
-            <option value="Full-time">Full-time</option>
-            <option value="Part-time">Part-time</option>
-            <option value="Contract">Contract</option>
-            <option value="Internship">Internship</option>
+            <option value="">Select Employment Type</option>
+            {jobAttributes.employmentTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -325,16 +358,18 @@ export default function JobForm({
             Experience Level
           </label>
           <select
-            name="experienceLevel"
-            value={formData.experienceLevel}
+            name="experience_level_id"
+            value={formData.experience_level_id}
             onChange={handleChange}
             disabled={submitting}
             className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
-            <option value="Entry">Entry</option>
-            <option value="Mid">Mid</option>
-            <option value="Senior">Senior</option>
-            <option value="Executive">Executive</option>
+            <option value="">Select Experience Level</option>
+            {jobAttributes.experienceLevels.map((level) => (
+              <option key={level.id} value={level.id}>
+                {level.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -343,15 +378,18 @@ export default function JobForm({
             Remote Policy
           </label>
           <select
-            name="remotePolicy"
-            value={formData.remotePolicy}
+            name="remote_policy_id"
+            value={formData.remote_policy_id}
             onChange={handleChange}
             disabled={submitting}
             className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
           >
-            <option value="On-site">On-site</option>
-            <option value="Remote">Remote</option>
-            <option value="Hybrid">Hybrid</option>
+            <option value="">Select Remote Policy</option>
+            {jobAttributes.remotePolicies.map((policy) => (
+              <option key={policy.id} value={policy.id}>
+                {policy.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

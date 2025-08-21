@@ -28,6 +28,9 @@ export async function GET(request) {
       where: { status: "Active" },
       include: {
         categories: true,
+        employment_types: true,
+        experience_levels: true,
+        remote_policies: true,
       },
       orderBy: [
         { featured: "desc" },
@@ -53,23 +56,26 @@ export async function GET(request) {
         distinct: ["location"],
         orderBy: { location: "asc" },
       }),
-      appPrisma.jobs.findMany({
-        where: { status: "Active" },
-        select: { employmentType: true },
-        distinct: ["employmentType"],
-        orderBy: { employmentType: "asc" },
+      appPrisma.employment_types.findMany({
+        where: { is_active: true },
+        orderBy: [
+          { sort_order: "asc" },
+          { name: "asc" }
+        ],
       }),
-      appPrisma.jobs.findMany({
-        where: { status: "Active" },
-        select: { experienceLevel: true },
-        distinct: ["experienceLevel"],
-        orderBy: { experienceLevel: "asc" },
+      appPrisma.experience_levels.findMany({
+        where: { is_active: true },
+        orderBy: [
+          { sort_order: "asc" },
+          { name: "asc" }
+        ],
       }),
-      appPrisma.jobs.findMany({
-        where: { status: "Active" },
-        select: { remotePolicy: true },
-        distinct: ["remotePolicy"],
-        orderBy: { remotePolicy: "asc" },
+      appPrisma.remote_policies.findMany({
+        where: { is_active: true },
+        orderBy: [
+          { sort_order: "asc" },
+          { name: "asc" }
+        ],
       }),
     ]);
 
@@ -103,9 +109,9 @@ export async function GET(request) {
         filterOptions: {
           categories,
           locations: locations.map((l) => l.location),
-          employmentTypes: employmentTypes.map((e) => e.employmentType),
-          experienceLevels: experienceLevels.map((e) => e.experienceLevel),
-          remotePolicies: remotePolicies.map((r) => r.remotePolicy),
+          employmentTypes: employmentTypes.map((e) => e.name),
+          experienceLevels: experienceLevels.map((e) => e.name),
+          remotePolicies: remotePolicies.map((r) => r.name),
         },
       }),
       { status: 200 }

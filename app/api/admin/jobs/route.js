@@ -25,6 +25,24 @@ export async function GET(req) {
             name: true,
           },
         },
+        employment_types: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        experience_levels: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        remote_policies: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -95,10 +113,10 @@ export async function POST(req) {
       description,
       summary,
       department,
-      employmentType,
-      experienceLevel,
+      employment_type_id: employmentTypeId,
+      experience_level_id: experienceLevelId,
       location,
-      remotePolicy,
+      remote_policy_id: remotePolicyId,
       salaryMin,
       salaryMax,
       salaryCurrency,
@@ -236,10 +254,10 @@ export async function POST(req) {
         description,
         summary: summary || null,
         department,
-        employmentType: employmentType || "Full-time",
-        experienceLevel: experienceLevel || "Mid",
+        employment_type_id: employmentTypeId,
+        experience_level_id: experienceLevelId,
         location,
-        remotePolicy: remotePolicy || "On-site",
+        remote_policy_id: remotePolicyId,
         salaryMin: salaryMin ? parseInt(salaryMin, 10) : null,
         salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
         salaryCurrency: salaryCurrency || defaultCurrency,
@@ -268,6 +286,24 @@ export async function POST(req) {
       },
       include: {
         categories: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        employment_types: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        experience_levels: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        remote_policies: {
           select: {
             id: true,
             name: true,
@@ -310,7 +346,7 @@ export async function POST(req) {
           department: newJob.department,
           status: newJob.status,
           location: newJob.location,
-          employmentType: newJob.employmentType,
+          employment_type_id: newJob.employment_type_id,
         },
         relatedJobId: newJob.id,
         severity: "info",

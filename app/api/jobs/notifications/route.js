@@ -23,8 +23,21 @@ export async function POST(request) {
         title: true,
         department: true,
         location: true,
-        employmentType: true,
-        remotePolicy: true,
+        employment_types: {
+          select: {
+            name: true
+          }
+        },
+        remote_policies: {
+          select: {
+            name: true
+          }
+        },
+        categories: {
+          select: {
+            name: true
+          }
+        },
         description: true,
         requirements: true,
         salaryMin: true,
@@ -392,8 +405,8 @@ function generateJobAlertEmail(job, userName) {
 
         <div style="margin: 15px 0; color: #6b7280; font-size: 14px;">
           <div style="margin: 5px 0;">📍 ${job.location || 'Not specified'}</div>
-          <div style="margin: 5px 0;">💼 ${job.employmentType || 'Not specified'}</div>
-          <div style="margin: 5px 0;">🏠 ${job.remotePolicy || 'Not specified'}</div>
+          <div style="margin: 5px 0;">💼 ${job.employment_types?.name || 'Not specified'}</div>
+          <div style="margin: 5px 0;">🏠 ${job.remote_policies?.name || 'Not specified'}</div>
           ${job.salaryMin && job.salaryMax ? 
             `<div style="margin: 5px 0;">💰 ${job.salaryCurrency || '$'}${job.salaryMin.toLocaleString()} - ${job.salaryCurrency || '$'}${job.salaryMax.toLocaleString()}</div>` 
             : ''
@@ -443,7 +456,7 @@ function generateBatchedJobAlertEmail(jobs, userName) {
 
         <div style="margin: 8px 0; color: #6b7280; font-size: 13px;">
           <span style="margin-right: 15px;">📍 ${job.location || 'Not specified'}</span>
-          <span style="margin-right: 15px;">💼 ${job.employmentType || 'Not specified'}</span>
+          <span style="margin-right: 15px;">💼 ${job.employment_types?.name || 'Not specified'}</span>
           ${job.salaryMin && job.salaryMax ? 
             `<span>💰 ${job.salaryCurrency || '$'}${job.salaryMin.toLocaleString()}-${job.salaryMax.toLocaleString()}</span>` 
             : ''

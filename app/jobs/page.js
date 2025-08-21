@@ -79,18 +79,18 @@ export default function JobsPage() {
 
     if (employmentType) {
       filtered = filtered.filter(
-        (job) => job.employmentType === employmentType
+        (job) => job.employment_types?.name === employmentType || job.employmentType === employmentType
       );
     }
 
     if (experienceLevel) {
       filtered = filtered.filter(
-        (job) => job.experienceLevel === experienceLevel
+        (job) => job.experience_levels?.name === experienceLevel || job.experienceLevel === experienceLevel
       );
     }
 
     if (remotePolicy) {
-      filtered = filtered.filter((job) => job.remotePolicy === remotePolicy);
+      filtered = filtered.filter((job) => job.remote_policies?.name === remotePolicy || job.remotePolicy === remotePolicy);
     }
 
     return filtered;

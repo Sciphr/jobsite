@@ -88,7 +88,9 @@ export default function JobCard({ job, applicationStatus }) {
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Type</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{job.employmentType}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
+                  {job.employment_types?.name || job.employmentType}
+                </p>
               </div>
             </div>
             
@@ -100,7 +102,9 @@ export default function JobCard({ job, applicationStatus }) {
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Experience</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">{job.experienceLevel}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
+                  {job.experience_levels?.name || job.experienceLevel}
+                </p>
               </div>
             </div>
             
@@ -113,7 +117,7 @@ export default function JobCard({ job, applicationStatus }) {
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Remote</span>
                 <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
-                  {job.remotePolicy === "Remote" ? "Yes" : job.remotePolicy}
+                  {job.remote_policies?.name || (job.remotePolicy === "Remote" ? "Yes" : job.remotePolicy)}
                 </p>
               </div>
             </div>

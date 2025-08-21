@@ -29,6 +29,24 @@ export async function GET(req, { params }) {
             description: true,
           },
         },
+        employment_types: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        experience_levels: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        remote_policies: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         applications: {
           select: {
             id: true,
@@ -187,10 +205,10 @@ export async function PATCH(req, { params }) {
       "description",
       "summary",
       "department",
-      "employmentType",
-      "experienceLevel",
+      "employment_type_id",
+      "experience_level_id",
       "location",
-      "remotePolicy",
+      "remote_policy_id",
       "salaryMin",
       "salaryMax",
       "salaryCurrency",
@@ -209,6 +227,21 @@ export async function PATCH(req, { params }) {
         updateData[field] = body[field];
       }
     });
+
+    // Handle numeric fields properly - convert strings to integers
+    if (body.salaryMin !== undefined) {
+      updateData.salaryMin = body.salaryMin ? parseInt(body.salaryMin, 10) : null;
+    }
+    if (body.salaryMax !== undefined) {
+      updateData.salaryMax = body.salaryMax ? parseInt(body.salaryMax, 10) : null;
+    }
+    if (body.priority !== undefined) {
+      updateData.priority = body.priority ? parseInt(body.priority, 10) : 0;
+    }
+    if (body.yearsExperienceRequired !== undefined) {
+      updateData.yearsExperienceRequired = body.yearsExperienceRequired ? 
+        parseInt(body.yearsExperienceRequired, 10) : null;
+    }
 
     // Handle date fields properly - convert strings to Date objects
     if (body.applicationDeadline !== undefined) {
@@ -258,6 +291,24 @@ export async function PATCH(req, { params }) {
       data: updateData,
       include: {
         categories: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        employment_types: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        experience_levels: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        remote_policies: {
           select: {
             id: true,
             name: true,

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import JobForm from "../../components/JobForm";
-import { useJob } from "@/app/hooks/useAdminData";
+import { useJob, useUpdateJob } from "@/app/hooks/useAdminData";
 import {
   ArrowLeft,
   Loader2,
@@ -14,6 +15,7 @@ import {
 export default function EditJobPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const jobId = params.id;
 
   const {
@@ -22,8 +24,10 @@ export default function EditJobPage() {
     isError,
     error: queryError,
   } = useJob(jobId);
+
+  const updateJobMutation = useUpdateJob();
+
   const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -33,50 +37,32 @@ export default function EditJobPage() {
   }, [isError, queryError]);
 
   const handleSubmit = async (formData) => {
-    setSubmitting(true);
     setError(null);
 
     try {
       console.log("Updating job data:", formData);
 
-      const response = await fetch(`/api/admin/jobs/${jobId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      await updateJobMutation.mutateAsync({ 
+        jobId, 
+        jobData: formData 
       });
 
-      const result = await response.json();
+      console.log("Job updated successfully");
+      setSuccess(true);
 
-      if (response.ok) {
-        console.log("Job updated successfully:", result);
-        setSuccess(true);
-
-        // Redirect to jobs list after a short delay
-        setTimeout(() => {
-          router.push("/admin/jobs");
-        }, 2000);
-      } else {
-        console.error("Failed to update job:", result);
-        setError(
-          result.message ||
-            "Failed to update job. Please check the form and try again."
-        );
-
-        // Scroll to top to show error message
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      // Redirect to jobs list after a short delay
+      setTimeout(() => {
+        router.push("/admin/jobs");
+      }, 2000);
     } catch (error) {
       console.error("Error updating job:", error);
       setError(
+        error.message ||
         "An unexpected error occurred. Please check your internet connection and try again."
       );
 
       // Scroll to top to show error message
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -283,7 +269,7 @@ export default function EditJobPage() {
           initialData={jobData}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          submitting={submitting}
+          submitting={updateJobMutation.isPending}
         />
       </div>
     </div>

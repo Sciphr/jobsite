@@ -32,8 +32,21 @@ export async function GET(request, { params }) {
               department: true,
               location: true,
               status: true,
-              employmentType: true,
-              remotePolicy: true
+              employment_types: {
+                select: {
+                  name: true
+                }
+              },
+              remote_policies: {
+                select: {
+                  name: true
+                }
+              },
+              categories: {
+                select: {
+                  name: true
+                }
+              }
             }
           },
           users: {
@@ -70,8 +83,8 @@ export async function GET(request, { params }) {
           department: application.jobs.department,
           location: application.jobs.location,
           status: application.jobs.status,
-          employmentType: application.jobs.employmentType,
-          remotePolicy: application.jobs.remotePolicy
+          employmentType: application.jobs.employment_types?.name,
+          remotePolicy: application.jobs.remote_policies?.name
         } : null,
         application: {
           coverLetter: application.coverLetter,
@@ -213,8 +226,21 @@ export async function PUT(request, { params }) {
               department: true,
               location: true,
               status: true,
-              employmentType: true,
-              remotePolicy: true
+              employment_types: {
+                select: {
+                  name: true
+                }
+              },
+              remote_policies: {
+                select: {
+                  name: true
+                }
+              },
+              categories: {
+                select: {
+                  name: true
+                }
+              }
             }
           },
           users: {

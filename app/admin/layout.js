@@ -216,6 +216,13 @@ function AdminLayoutContent({ children }) {
       description: "Manage job postings",
     },
     {
+      name: "Job Attributes",
+      href: "/admin/job-attributes",
+      icon: Settings,
+      requiredPermission: { resource: "job_attributes", action: "read" },
+      description: "Configure job types & levels",
+    },
+    {
       name: "Users",
       href: "/admin/users",
       icon: Users,

@@ -21,6 +21,9 @@ async function getJob(slug) {
       },
       include: {
         categories: true,
+        employment_types: true,
+        experience_levels: true,
+        remote_policies: true,
         users: {
           select: {
             id: true,

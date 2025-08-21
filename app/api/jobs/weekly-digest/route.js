@@ -27,8 +27,21 @@ export async function POST(request) {
         title: true,
         department: true,
         location: true,
-        employmentType: true,
-        remotePolicy: true,
+        employment_types: {
+          select: {
+            name: true
+          }
+        },
+        remote_policies: {
+          select: {
+            name: true
+          }
+        },
+        categories: {
+          select: {
+            name: true
+          }
+        },
         description: true,
         salaryMin: true,
         salaryMax: true,
@@ -242,12 +255,12 @@ function generateWeeklyDigestEmail(jobs, userName, totalJobsThisWeek) {
               </div>
               <div style="display: flex; align-items: center;">
                 <span style="margin-right: 5px;">💼</span>
-                ${job.employmentType || 'Full-time'}
+                ${job.employment_types?.name || 'Full-time'}
               </div>
-              ${job.remotePolicy ? `
+              ${job.remote_policies?.name ? `
                 <div style="display: flex; align-items: center;">
                   <span style="margin-right: 5px;">🏠</span>
-                  ${job.remotePolicy}
+                  ${job.remote_policies.name}
                 </div>
               ` : ''}
               ${job.salaryMin && job.salaryMax ? `

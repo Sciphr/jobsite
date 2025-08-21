@@ -681,12 +681,21 @@ function AdminJobsContent() {
                       >
                         {job.status}
                       </span>
-                      <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-                        {job.employmentType}
-                      </span>
-                      <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-                        {job.experienceLevel}
-                      </span>
+                      {job.employment_types?.name && (
+                        <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                          {job.employment_types.name}
+                        </span>
+                      )}
+                      {job.experience_levels?.name && (
+                        <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                          {job.experience_levels.name}
+                        </span>
+                      )}
+                      {job.remote_policies?.name && (
+                        <span className="text-xs admin-text-light px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                          {job.remote_policies.name}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

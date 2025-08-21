@@ -107,6 +107,45 @@ model categories {
   jobs        jobs[]
 }
 
+model employment_types {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @default(now()) @db.Timestamp(6)
+  jobs        jobs[]
+
+  @@index([is_active, sort_order], map: "idx_employment_types_active_sort")
+}
+
+model experience_levels {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @default(now()) @db.Timestamp(6)
+  jobs        jobs[]
+
+  @@index([is_active, sort_order], map: "idx_experience_levels_active_sort")
+}
+
+model remote_policies {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @default(now()) @db.Timestamp(6)
+  jobs        jobs[]
+
+  @@index([is_active, sort_order], map: "idx_remote_policies_active_sort")
+}
+
 model communication_settings {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   key         String    @unique @db.VarChar(255)
@@ -316,10 +355,7 @@ model jobs {
   description             String
   summary                 String?
   department              String
-  employmentType          String
-  experienceLevel         String
   location                String
-  remotePolicy            String
   salaryMin               Int?
   salaryMax               Int?
   salaryCurrency          String                  @default("USD")
@@ -347,16 +383,26 @@ model jobs {
   auto_expires_at         DateTime?               @db.Timestamp(6)
   last_expired_check      DateTime?               @db.Timestamp(6)
   applicationCount        Int?                    @default(0)
+  employment_type_id      String?                 @db.Uuid
+  experience_level_id     String?                 @db.Uuid
+  remote_policy_id        String?                 @db.Uuid
   applications            applications[]
   audit_logs              audit_logs[]
   email_campaigns         email_campaigns[]
   emails                  emails[]
   interviews              interviews[]
   job_approval_requests   job_approval_requests[]
+  employment_types        employment_types?       @relation(fields: [employment_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_jobs_employment_type_id")
+  experience_levels       experience_levels?      @relation(fields: [experience_level_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_jobs_experience_level_id")
+  remote_policies         remote_policies?        @relation(fields: [remote_policy_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_jobs_remote_policy_id")
   categories              categories              @relation(fields: [categoryId], references: [id])
   users                   users?                  @relation(fields: [createdBy], references: [id])
   notification_logs       notification_logs[]
   saved_jobs              saved_jobs[]
+
+  @@index([employment_type_id], map: "idx_jobs_employment_type_id")
+  @@index([experience_level_id], map: "idx_jobs_experience_level_id")
+  @@index([remote_policy_id], map: "idx_jobs_remote_policy_id")
 }
 
 model permissions {
@@ -453,93 +499,92 @@ model user_resumes {
 }
 
 model users {
-  id                                           String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                        String                          @unique
-  password                                     String?
-  firstName                                    String?
-  lastName                                     String?
-  phone                                        String?
-  createdAt                                    DateTime                        @default(now())
-  updatedAt                                    DateTime
-  role                                         String?                         @default("user") @db.VarChar
-  privilegeLevel                               Int?                            @default(0)
-  isActive                                     Boolean?                        @default(true)
-  is_active                                    Boolean?                        @default(true)
-  google_access_token                          String?
-  google_refresh_token                         String?
-  google_token_expires_at                      DateTime?                       @db.Timestamp(6)
-  google_calendar_id                           String?                         @default("primary") @db.VarChar(255)
-  google_email                                 String?                         @db.VarChar(255)
-  calendar_integration_enabled                 Boolean?                        @default(false)
-  calendar_integration_connected_at            DateTime?                       @db.Timestamp(6)
-  calendar_timezone                            String?                         @default("America/Toronto") @db.VarChar(100)
-  zoom_access_token                            String?                         @db.VarChar(2000)
-  zoom_refresh_token                           String?                         @db.VarChar(2000)
-  zoom_token_expires_at                        DateTime?                       @db.Timestamp(6)
-  zoom_user_id                                 String?                         @db.VarChar(255)
-  zoom_email                                   String?                         @db.VarChar(255)
-  zoom_integration_enabled                     Boolean?                        @default(false)
-  zoom_integration_connected_at                DateTime?                       @db.Timestamp(6)
-  microsoft_access_token                       String?
-  microsoft_refresh_token                      String?
-  microsoft_token_expires_at                   DateTime?                       @db.Timestamp(6)
-  microsoft_user_id                            String?                         @db.VarChar(255)
-  microsoft_email                              String?                         @db.VarChar(255)
-  microsoft_tenant_id                          String?                         @db.VarChar(255)
-  microsoft_integration_enabled                Boolean?                        @default(false)
-  microsoft_integration_connected_at           DateTime?                       @db.Timestamp(6)
-  email_notifications_enabled                  Boolean?                        @default(true)
-  weekly_digest_enabled                        Boolean?                        @default(false)
-  instant_job_alerts_enabled                   Boolean?                        @default(false)
-  notification_email                           String?                         @db.VarChar(255)
-  max_daily_notifications                      Int?                            @default(5)
-  notification_batch_minutes                   Int?                            @default(30)
-  last_notification_sent_at                    DateTime?                       @db.Timestamp(6)
-  account_type                                 String?                         @default("local") @db.VarChar(20)
-  ldap_dn                                      String?                         @db.VarChar(500)
-  ldap_groups                                  String[]
-  ldap_synced_at                               DateTime?                       @db.Timestamptz(6)
-  mfa_enabled                                  Boolean?                        @default(false)
-  mfa_secret                                   String?
-  mfa_backup_codes                             String[]
-  mfa_phone_number                             String?                         @db.VarChar(20)
-  mfa_method                                   String?                         @default("disabled") @db.VarChar(20)
-  mfa_setup_at                                 DateTime?                       @db.Timestamptz(6)
-  mfa_last_used                                DateTime?                       @db.Timestamptz(6)
-  mfa_methods_enabled                          String[]                        @default([])
-  mfa_totp_secret                              String?
-  mfa_email_enabled                            Boolean?                        @default(false)
-  api_keys                                     api_keys?
-  application_stage_history                    application_stage_history[]
-  applications                                 applications[]
-  applications_applications_archived_byTousers applications[]                  @relation("applications_archived_byTousers")
-  audit_logs_audit_logs_actor_idTousers        audit_logs[]                    @relation("audit_logs_actor_idTousers")
-  audit_logs_audit_logs_related_user_idTousers audit_logs[]                    @relation("audit_logs_related_user_idTousers")
-  email_automation_rules                       email_automation_rules[]
-  email_campaigns                              email_campaigns[]
-  email_templates                              email_templates[]
-  emails                                       emails[]
-  hire_approval_requests_requested             hire_approval_requests[]        @relation("hire_requests_requested")
-  hire_approval_requests_reviewed              hire_approval_requests[]        @relation("hire_requests_reviewed")
-  interview_reschedule_requests                interview_reschedule_requests[]
-  interviews_interviews_created_byTousers      interviews[]                    @relation("interviews_created_byTousers")
-  interviews_interviews_interviewer_idTousers  interviews[]                    @relation("interviews_interviewer_idTousers")
-  job_alert_subscriptions                      job_alert_subscriptions[]
-  job_approval_requests_requested              job_approval_requests[]         @relation("job_requests_requested")
-  job_approval_requests_reviewed               job_approval_requests[]         @relation("job_requests_reviewed")
-  jobs                                         jobs[]
-  mfa_codes                                    mfa_codes[]
-  notification_logs                            notification_logs[]
-  role_permissions                             role_permissions[]
-  roles_roles_created_byTousers                roles[]                         @relation("roles_created_byTousers")
-  saved_jobs                                   saved_jobs[]
-  settings                                     settings[]
-  user_resumes                                 user_resumes[]
-  user_roles                                   user_roles[]
-  weekly_digests                               weekly_digests[]
-
-  security_events_security_events_user_idTousers        security_events[] @relation("security_events_user_idTousers")
-security_alerts_security_alerts_resolved_byTousers    security_alerts[] @relation("security_alerts_resolved_byTousers")
+  id                                                 String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                              String                          @unique
+  password                                           String?
+  firstName                                          String?
+  lastName                                           String?
+  phone                                              String?
+  createdAt                                          DateTime                        @default(now())
+  updatedAt                                          DateTime
+  role                                               String?                         @default("user") @db.VarChar
+  privilegeLevel                                     Int?                            @default(0)
+  isActive                                           Boolean?                        @default(true)
+  is_active                                          Boolean?                        @default(true)
+  google_access_token                                String?
+  google_refresh_token                               String?
+  google_token_expires_at                            DateTime?                       @db.Timestamp(6)
+  google_calendar_id                                 String?                         @default("primary") @db.VarChar(255)
+  google_email                                       String?                         @db.VarChar(255)
+  calendar_integration_enabled                       Boolean?                        @default(false)
+  calendar_integration_connected_at                  DateTime?                       @db.Timestamp(6)
+  calendar_timezone                                  String?                         @default("America/Toronto") @db.VarChar(100)
+  zoom_access_token                                  String?                         @db.VarChar(2000)
+  zoom_refresh_token                                 String?                         @db.VarChar(2000)
+  zoom_token_expires_at                              DateTime?                       @db.Timestamp(6)
+  zoom_user_id                                       String?                         @db.VarChar(255)
+  zoom_email                                         String?                         @db.VarChar(255)
+  zoom_integration_enabled                           Boolean?                        @default(false)
+  zoom_integration_connected_at                      DateTime?                       @db.Timestamp(6)
+  microsoft_access_token                             String?
+  microsoft_refresh_token                            String?
+  microsoft_token_expires_at                         DateTime?                       @db.Timestamp(6)
+  microsoft_user_id                                  String?                         @db.VarChar(255)
+  microsoft_email                                    String?                         @db.VarChar(255)
+  microsoft_tenant_id                                String?                         @db.VarChar(255)
+  microsoft_integration_enabled                      Boolean?                        @default(false)
+  microsoft_integration_connected_at                 DateTime?                       @db.Timestamp(6)
+  email_notifications_enabled                        Boolean?                        @default(true)
+  weekly_digest_enabled                              Boolean?                        @default(false)
+  instant_job_alerts_enabled                         Boolean?                        @default(false)
+  notification_email                                 String?                         @db.VarChar(255)
+  max_daily_notifications                            Int?                            @default(5)
+  notification_batch_minutes                         Int?                            @default(30)
+  last_notification_sent_at                          DateTime?                       @db.Timestamp(6)
+  account_type                                       String?                         @default("local") @db.VarChar(20)
+  ldap_dn                                            String?                         @db.VarChar(500)
+  ldap_groups                                        String[]
+  ldap_synced_at                                     DateTime?                       @db.Timestamptz(6)
+  mfa_enabled                                        Boolean?                        @default(false)
+  mfa_secret                                         String?
+  mfa_backup_codes                                   String[]
+  mfa_phone_number                                   String?                         @db.VarChar(20)
+  mfa_method                                         String?                         @default("disabled") @db.VarChar(20)
+  mfa_setup_at                                       DateTime?                       @db.Timestamptz(6)
+  mfa_last_used                                      DateTime?                       @db.Timestamptz(6)
+  mfa_methods_enabled                                String[]                        @default([])
+  mfa_totp_secret                                    String?
+  mfa_email_enabled                                  Boolean?                        @default(false)
+  api_keys                                           api_keys?
+  application_stage_history                          application_stage_history[]
+  applications                                       applications[]
+  applications_applications_archived_byTousers       applications[]                  @relation("applications_archived_byTousers")
+  audit_logs_audit_logs_actor_idTousers              audit_logs[]                    @relation("audit_logs_actor_idTousers")
+  audit_logs_audit_logs_related_user_idTousers       audit_logs[]                    @relation("audit_logs_related_user_idTousers")
+  email_automation_rules                             email_automation_rules[]
+  email_campaigns                                    email_campaigns[]
+  email_templates                                    email_templates[]
+  emails                                             emails[]
+  hire_approval_requests_requested                   hire_approval_requests[]        @relation("hire_requests_requested")
+  hire_approval_requests_reviewed                    hire_approval_requests[]        @relation("hire_requests_reviewed")
+  interview_reschedule_requests                      interview_reschedule_requests[]
+  interviews_interviews_created_byTousers            interviews[]                    @relation("interviews_created_byTousers")
+  interviews_interviews_interviewer_idTousers        interviews[]                    @relation("interviews_interviewer_idTousers")
+  job_alert_subscriptions                            job_alert_subscriptions[]
+  job_approval_requests_requested                    job_approval_requests[]         @relation("job_requests_requested")
+  job_approval_requests_reviewed                     job_approval_requests[]         @relation("job_requests_reviewed")
+  jobs                                               jobs[]
+  mfa_codes                                          mfa_codes[]
+  notification_logs                                  notification_logs[]
+  role_permissions                                   role_permissions[]
+  roles_roles_created_byTousers                      roles[]                         @relation("roles_created_byTousers")
+  saved_jobs                                         saved_jobs[]
+  security_alerts_security_alerts_resolved_byTousers security_alerts[]               @relation("security_alerts_resolved_byTousers")
+  security_events_security_events_user_idTousers     security_events[]               @relation("security_events_user_idTousers")
+  settings                                           settings[]
+  user_resumes                                       user_resumes[]
+  user_roles                                         user_roles[]
+  weekly_digests                                     weekly_digests[]
 
   @@index([account_type], map: "idx_users_account_type")
   @@index([mfa_methods_enabled], map: "idx_users_mfa_methods", type: Gin)
@@ -797,9 +842,7 @@ model security_events {
   user_agent String?
   details    Json     @default("{}")
   created_at DateTime @default(now()) @db.Timestamp(6)
-
-  // Relations
-  users      users?   @relation("security_events_user_idTousers", fields: [user_id], references: [id], onDelete: SetNull)
+  users      users?   @relation("security_events_user_idTousers", fields: [user_id], references: [id])
 
   @@index([created_at])
   @@index([event_type])
@@ -809,19 +852,17 @@ model security_events {
 }
 
 model security_alerts {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  alert_type   String    @db.VarChar(50)
-  severity     String    @default("medium") @db.VarChar(20)
-  ip_address   String?   @db.Inet
-  event_count  Int       @default(1)
-  details      Json      @default("{}")
-  resolved     Boolean   @default(false)
-  resolved_at  DateTime? @db.Timestamp(6)
-  resolved_by  String?   @db.Uuid
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
-
-  // Relations
-  resolved_by_user users? @relation("security_alerts_resolved_byTousers", fields: [resolved_by], references: [id], onDelete: SetNull)
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alert_type       String    @db.VarChar(50)
+  severity         String    @default("medium") @db.VarChar(20)
+  ip_address       String?   @db.Inet
+  event_count      Int       @default(1)
+  details          Json      @default("{}")
+  resolved         Boolean   @default(false)
+  resolved_at      DateTime? @db.Timestamp(6)
+  resolved_by      String?   @db.Uuid
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  resolved_by_user users?    @relation("security_alerts_resolved_byTousers", fields: [resolved_by], references: [id])
 
   @@index([created_at])
   @@index([resolved])

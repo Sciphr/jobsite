@@ -339,9 +339,26 @@ export async function GET(req, { params }) {
             description: true,
             requirements: true,
             location: true,
-            employmentType: true,
-            experienceLevel: true,
-            remotePolicy: true,
+            employment_types: {
+              select: {
+                name: true
+              }
+            },
+            experience_levels: {
+              select: {
+                name: true
+              }
+            },
+            remote_policies: {
+              select: {
+                name: true
+              }
+            },
+            categories: {
+              select: {
+                name: true
+              }
+            },
           },
         },
         users: {

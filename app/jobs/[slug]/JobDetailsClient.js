@@ -493,7 +493,7 @@ export default function JobDetailsClient({
                         />
                       </svg>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {job.employmentType}
+                        {job.employment_types?.name || job.employmentType}
                       </span>
                     </div>
 
@@ -512,7 +512,7 @@ export default function JobDetailsClient({
                         />
                       </svg>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {job.experienceLevel}
+                        {job.experience_levels?.name || job.experienceLevel}
                       </span>
                     </div>
 
@@ -531,9 +531,9 @@ export default function JobDetailsClient({
                         />
                       </svg>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {job.remotePolicy === "Remote"
+                        {job.remote_policies?.name || (job.remotePolicy === "Remote"
                           ? "Remote Work"
-                          : job.remotePolicy}
+                          : job.remotePolicy)}
                       </span>
                     </div>
 
@@ -921,7 +921,7 @@ export default function JobDetailsClient({
                         Type
                       </span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {job.employmentType}
+                        {job.employment_types?.name || job.employmentType}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -929,7 +929,7 @@ export default function JobDetailsClient({
                         Experience
                       </span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {job.experienceLevel}
+                        {job.experience_levels?.name || job.experienceLevel}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -937,9 +937,9 @@ export default function JobDetailsClient({
                         Remote
                       </span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {job.remotePolicy === "Remote"
+                        {job.remote_policies?.name || (job.remotePolicy === "Remote"
                           ? "Yes"
-                          : job.remotePolicy}
+                          : job.remotePolicy)}
                       </span>
                     </div>
                     {/* Only show salary if job.showSalary is true */}

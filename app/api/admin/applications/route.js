@@ -22,10 +22,27 @@ export async function GET(req) {
             title: true,
             department: true,
             slug: true,
-            employmentType: true,
-            experienceLevel: true,
             location: true,
-            remotePolicy: true,
+            employment_types: {
+              select: {
+                name: true
+              }
+            },
+            experience_levels: {
+              select: {
+                name: true
+              }
+            },
+            remote_policies: {
+              select: {
+                name: true
+              }
+            },
+            categories: {
+              select: {
+                name: true
+              }
+            },
             salaryMin: true,
             salaryMax: true,
             salaryCurrency: true,
