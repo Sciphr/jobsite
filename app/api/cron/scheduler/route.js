@@ -2,15 +2,23 @@
 import { NextResponse } from 'next/server';
 import { appPrisma } from '../../../lib/prisma';
 
-// Security: Simple bearer token check
+// Security: Vercel Cron authentication or bearer token check
 function verifyAuth(request) {
+  // Check if this is a Vercel cron request (has the special header)
+  const cronSecret = request.headers.get('authorization');
+  if (cronSecret === `Bearer ${process.env.CRON_SECRET}`) {
+    return true;
+  }
+  
+  // Also support manual calls with bearer token
   const authHeader = request.headers.get('authorization');
   const expectedToken = process.env.CRON_SECRET || 'your-secure-random-token';
   
-  if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
-    return false;
+  if (authHeader && authHeader === `Bearer ${expectedToken}`) {
+    return true;
   }
-  return true;
+  
+  return false;
 }
 
 // Helper to check if enough time has passed since last run

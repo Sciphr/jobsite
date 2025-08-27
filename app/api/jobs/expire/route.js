@@ -8,12 +8,21 @@ export async function POST(req) {
   const requestContext = extractRequestContext(req);
   
   try {
-    // Simple API key check (optional - you can skip this for now)
+    // Check for Vercel cron authentication or API key
+    const authHeader = req.headers.get("authorization");
     const apiKey = req.headers.get("x-api-key");
     const expectedApiKey = process.env.CRON_API_KEY;
+    const cronSecret = process.env.CRON_SECRET;
 
-    // If you set CRON_API_KEY in env, check it. Otherwise, allow access.
-    if (expectedApiKey && apiKey !== expectedApiKey) {
+    // Allow if:
+    // 1. Vercel cron with proper auth header
+    // 2. Manual call with correct API key
+    // 3. No security configured (for testing)
+    const isVercelCron = authHeader === `Bearer ${cronSecret}`;
+    const isValidApiKey = expectedApiKey && apiKey === expectedApiKey;
+    const noSecurityConfigured = !expectedApiKey && !cronSecret;
+
+    if (!isVercelCron && !isValidApiKey && !noSecurityConfigured) {
       // Log unauthorized job expiration attempt
       await logAuditEvent({
         eventType: "ERROR",
