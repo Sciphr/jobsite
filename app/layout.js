@@ -102,6 +102,7 @@ export default async function RootLayout({ children }) {
               <Header />
               <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                 {children}
+                <SpeedInsights />
               </main>
             </Providers>
           </ThemeProvider>
