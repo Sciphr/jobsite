@@ -122,7 +122,7 @@ export async function POST(request) {
       },
     });
 
-    // Upload new favicon to MinIO first
+    // Upload new favicon to supabase first
     console.log("Uploading new favicon to storage...");
     const { data: uploadData, error: uploadError } = await uploadToSupabase(
       file,
@@ -254,7 +254,7 @@ export async function DELETE() {
 
     console.log("Favicon setting deleted from database successfully");
 
-    // Then delete from MinIO storage
+    // Then delete from supabase storage
     if (storagePath) {
       console.log("Deleting favicon file from storage:", storagePath);
       const { error: deleteError } = await deleteFromSupabase(storagePath);

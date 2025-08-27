@@ -31,7 +31,9 @@ function getFileExtension(filename) {
 export async function GET() {
   try {
     // Use protectRoute for consistent authentication
-    const authResult = await protectRoute("settings", "view", { minPrivilegeLevel: 2 });
+    const authResult = await protectRoute("settings", "view", {
+      minPrivilegeLevel: 2,
+    });
     if (authResult.error) return authResult.error;
 
     // Get current logo setting
@@ -120,7 +122,7 @@ export async function POST(request) {
       },
     });
 
-    // Upload new logo to MinIO first
+    // Upload new logo to supabase first
     console.log("Uploading new logo to storage...");
     const { data: uploadData, error: uploadError } = await uploadToSupabase(
       file,
@@ -252,7 +254,7 @@ export async function DELETE() {
 
     console.log("Logo setting deleted from database successfully");
 
-    // Then delete from MinIO storage
+    // Then delete from supabase storage
     if (storagePath) {
       console.log("Deleting logo file from storage:", storagePath);
       const { error: deleteError } = await deleteFromSupabase(storagePath);

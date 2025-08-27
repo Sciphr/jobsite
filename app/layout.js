@@ -30,7 +30,7 @@ export async function generateMetadata() {
   ]);
 
   // Note: Favicon will be handled client-side by DynamicFavicon component
-  // due to the need for signed URLs from MinIO storage
+  // due to the need for signed URLs from supabase storage
 
   return {
     title: {
