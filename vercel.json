@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/jobs/expire",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/scheduler",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
+{}
