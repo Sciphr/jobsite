@@ -52,6 +52,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "prisma": "^6.11.1",
+    "supabase": "^2.39.2",
     "tailwindcss": "^4"
   },
   "prisma": {
