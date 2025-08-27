@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
-import { uploadToMinio, deleteFromMinio } from "../../lib/minio-storage";
+import { uploadToSupabase, deleteFromSupabase } from "../../lib/supabase-storage";
 import { getSystemSetting } from "../../lib/settings";
 import { logAuditEvent } from "../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../lib/auditLog";
@@ -207,9 +207,9 @@ export async function POST(request) {
       );
     }
 
-    // Upload new file to  Storage FIRST
-    ("Uploading new file to storage...");
-    const { data: uploadData, error: uploadError } = await uploadToMinio(
+    // Upload new file to Supabase Storage FIRST
+    console.log("Uploading new file to storage...");
+    const { data: uploadData, error: uploadError } = await uploadToSupabase(
       file,
       filePath
     );
@@ -244,14 +244,14 @@ export async function POST(request) {
         oldStoragePath = existingResume.storage_path;
 
         // Update existing resume in database
-        ("Updating existing resume record...");
+        console.log("Updating existing resume record...");
         resume = await appPrisma.user_resumes.update({
           where: { id: existingResume.id },
           data: resumeData,
         });
       } else {
         // Create new resume
-        ("Creating new resume record...");
+        console.log("Creating new resume record...");
         resume = await appPrisma.user_resumes.create({
           data: resumeData,
         });
@@ -259,8 +259,8 @@ export async function POST(request) {
 
       // If we had an old resume, delete it from storage AFTER successful database update
       if (oldStoragePath) {
-        ("Deleting old file from storage:", oldStoragePath);
-        const { error: deleteError } = await deleteFromMinio(oldStoragePath);
+        console.log("Deleting old file from storage:", oldStoragePath);
+        const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
 
         if (deleteError) {
           console.error(
@@ -270,7 +270,7 @@ export async function POST(request) {
           // Don't fail the request if storage cleanup fails
           // The new file is already uploaded and database is updated
         } else {
-          ("Old file deleted successfully from storage");
+          console.log("Old file deleted successfully from storage");
         }
       }
 
@@ -339,7 +339,7 @@ export async function POST(request) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded file:", dbError);
 
-      const { error: cleanupError } = await deleteFromMinio(filePath);
+      const { error: cleanupError } = await deleteFromSupabase(filePath);
       if (cleanupError) {
         console.error("Failed to cleanup uploaded file:", cleanupError);
       }
@@ -395,16 +395,16 @@ export async function DELETE(request) {
     const storagePath = resume.storage_path;
 
     // Delete from database first
-    ("Deleting resume from database...");
+    console.log("Deleting resume from database...");
     await appPrisma.user_resumes.delete({
       where: { id: resume.id },
     });
 
-    ("Resume deleted from database successfully");
+    console.log("Resume deleted from database successfully");
 
-    // Then delete from MinIO Storage
-    ("Deleting file from storage:", storagePath);
-    const { error: deleteError } = await deleteFromMinio(storagePath);
+    // Then delete from Supabase Storage
+    console.log("Deleting file from storage:", storagePath);
+    const { error: deleteError } = await deleteFromSupabase(storagePath);
 
     if (deleteError) {
       console.error(
@@ -418,7 +418,7 @@ export async function DELETE(request) {
       });
     }
 
-    ("File deleted successfully from storage");
+    console.log("File deleted successfully from storage");
 
     // Log successful resume deletion
     await logAuditEvent({
@@ -498,7 +498,7 @@ export async function cleanupOrphanedFiles() {
 
     // This would require listing files in storage and comparing with database
     // Implementation depends on your specific cleanup needs
-    ("Manual cleanup function - implement based on your needs");
+    console.log("Manual cleanup function - implement based on your needs");
 
     return NextResponse.json({ message: "Cleanup completed" });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
-import { deleteFromMinio } from "../../../../lib/minio-storage";
+import { deleteFromSupabase } from "../../../../lib/supabase-storage";
 import bcrypt from "bcryptjs";
 import {
   logAuditEvent,
@@ -438,7 +438,7 @@ export async function DELETE(req, { params }) {
     const resumeDeletionPromises = userToDelete.user_resumes.map(async (resume) => {
       try {
         console.log(`Deleting resume file: ${resume.storagePath}`);
-        const { error } = await deleteFromMinio(resume.storagePath);
+        const { error } = await deleteFromSupabase(resume.storagePath);
         if (error) {
           console.error(
             `Failed to delete resume file ${resume.storagePath}:`,

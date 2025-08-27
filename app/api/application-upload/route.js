@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { uploadToMinio } from "../../lib/minio-storage";
+import { uploadToSupabase } from "../../lib/supabase-storage";
 import { getSystemSetting } from "../../lib/settings";
 
 export async function POST(request) {
@@ -63,7 +63,7 @@ export async function POST(request) {
     const filePath = `applications/${jobId}/${userId}/${fileName}`;
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await uploadToMinio(
+    const { data: uploadData, error: uploadError } = await uploadToSupabase(
       file,
       filePath
     );

@@ -1,7 +1,7 @@
 // app/api/favicon/route.js - Public favicon endpoint
 import { NextResponse } from "next/server";
 import { appPrisma } from "../../lib/prisma";
-import { getMinioDownloadUrl } from "../../lib/minio-storage";
+import { getMinioDownloadUrl } from "../../lib/supabase-storage";
 
 export async function GET() {
   try {

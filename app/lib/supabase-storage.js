@@ -1,25 +1,41 @@
-// lib/supabase-storage.js - Updated to use MinIO instead of Supabase
-// This file keeps the same name and function signatures for easy migration
-import { Client } from "minio";
+// lib/supabase-storage.js - Supabase Storage implementation
+import { createClient } from '@supabase/supabase-js';
 
-// MinIO client configuration
-const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT || "localhost",
-  port: parseInt(process.env.MINIO_PORT) || 9000,
-  useSSL: process.env.MINIO_USE_SSL === "true" || false,
-  accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
-  secretKey: process.env.MINIO_SECRET_KEY || "minioadmin",
+// Supabase client configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  throw new Error("Missing Supabase environment variables");
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
 });
 
-const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || "resumes";
+const BUCKET_NAME = "resumes";
 
 // Ensure bucket exists
 async function ensureBucketExists() {
   try {
-    const exists = await minioClient.bucketExists(BUCKET_NAME);
-    if (!exists) {
-      await minioClient.makeBucket(BUCKET_NAME);
+    const { data, error } = await supabase.storage.getBucket(BUCKET_NAME);
+    
+    if (error && error.message === 'Bucket not found') {
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: false,
+        allowedMimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        fileSizeLimit: 5242880 // 5MB
+      });
+      
+      if (createError) {
+        throw createError;
+      }
       console.log(`✅ Created bucket: ${BUCKET_NAME}`);
+    } else if (error) {
+      throw error;
     }
   } catch (error) {
     console.error("❌ Error ensuring bucket exists:", error);
@@ -27,107 +43,117 @@ async function ensureBucketExists() {
   }
 }
 
-// Replace uploadToSupabase with MinIO implementation
+// Upload file to Supabase Storage
 export async function uploadToSupabase(file, filePath) {
   try {
-    console.log("📤 Uploading to MinIO:", filePath);
+    console.log("📤 Uploading to Supabase Storage:", filePath);
 
     await ensureBucketExists();
 
     // Convert file to buffer - handle different file types
     let fileBuffer;
-    let fileSize;
     let contentType;
 
     if (file instanceof File) {
       // Browser File object
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
-      fileSize = file.size;
       contentType = file.type;
     } else if (file.stream && typeof file.stream === "function") {
       // Next.js FormData file with stream
       const bytes = await file.bytes();
       fileBuffer = Buffer.from(bytes);
-      fileSize = file.size;
       contentType = file.type;
     } else if (file.arrayBuffer && typeof file.arrayBuffer === "function") {
       // File with arrayBuffer method
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
-      fileSize = file.size || fileBuffer.length;
       contentType = file.type;
     } else if (Buffer.isBuffer(file)) {
       // Already a buffer
       fileBuffer = file;
-      fileSize = file.length;
       contentType = "application/octet-stream";
     } else {
       throw new Error("Unsupported file type for upload");
     }
 
-    // Upload to MinIO
-    const result = await minioClient.putObject(
-      BUCKET_NAME,
-      filePath,
-      fileBuffer,
-      fileSize,
-      {
-        "Content-Type": contentType || "application/octet-stream",
-      }
-    );
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, fileBuffer, {
+        contentType: contentType || "application/octet-stream",
+        upsert: true
+      });
 
-    console.log("✅ MinIO upload success:", result);
+    if (error) {
+      throw error;
+    }
+
+    console.log("✅ Supabase Storage upload success:", data);
 
     return {
       data: {
-        path: filePath,
-        etag: result.etag,
+        path: data.path,
+        id: data.id,
+        fullPath: data.fullPath
       },
       error: null,
     };
   } catch (error) {
-    console.error("❌ MinIO upload error:", error);
+    console.error("❌ Supabase Storage upload error:", error);
     return { data: null, error };
   }
 }
 
-// Replace deleteFromSupabase with MinIO implementation
+// Delete file from Supabase Storage
 export async function deleteFromSupabase(filePath) {
   try {
-    console.log("🗑️ Deleting from MinIO:", filePath);
+    console.log("🗑️ Deleting from Supabase Storage:", filePath);
 
-    await minioClient.removeObject(BUCKET_NAME, filePath);
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove([filePath]);
 
-    console.log("✅ MinIO delete success:", filePath);
+    if (error) {
+      throw error;
+    }
+
+    console.log("✅ Supabase Storage delete success:", filePath);
     return { data: { path: filePath }, error: null };
   } catch (error) {
-    console.error("❌ MinIO delete error:", error);
+    console.error("❌ Supabase Storage delete error:", error);
     return { data: null, error };
   }
 }
 
 // Helper function to generate download URLs
-export async function getMinioDownloadUrl(filePath, expiryInSeconds = 3600) {
+export async function getSupabaseDownloadUrl(filePath, expiryInSeconds = 3600) {
   try {
-    console.log("🔗 Generating MinIO download URL:", filePath);
+    console.log("🔗 Generating Supabase Storage download URL:", filePath);
 
-    // Generate presigned URL (valid for 1 hour by default)
-    const url = await minioClient.presignedGetObject(
-      BUCKET_NAME,
-      filePath,
-      expiryInSeconds
-    );
+    // Generate signed URL (valid for 1 hour by default)
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(filePath, expiryInSeconds);
 
-    console.log("✅ MinIO download URL generated");
+    if (error) {
+      throw error;
+    }
+
+    console.log("✅ Supabase Storage download URL generated");
     return {
-      data: { signedUrl: url },
+      data: { signedUrl: data.signedUrl },
       error: null,
     };
   } catch (error) {
-    console.error("❌ MinIO download URL error:", error);
+    console.error("❌ Supabase Storage download URL error:", error);
     return { data: null, error };
   }
+}
+
+// Keep MinIO function name for backward compatibility
+export async function getMinioDownloadUrl(filePath, expiryInSeconds = 3600) {
+  return getSupabaseDownloadUrl(filePath, expiryInSeconds);
 }
 
 // Get user's single resume (updated to use Prisma instead of Supabase DB)
@@ -330,8 +356,8 @@ export async function getResumeDownloadUrl(userId) {
       throw new Error("No resume found");
     }
 
-    // Generate signed URL from MinIO (valid for 1 hour)
-    const { data: urlData, error: urlError } = await getMinioDownloadUrl(
+    // Generate signed URL from Supabase Storage (valid for 1 hour)
+    const { data: urlData, error: urlError } = await getSupabaseDownloadUrl(
       resume.storagePath,
       3600
     );
@@ -354,31 +380,45 @@ export async function getResumeDownloadUrl(userId) {
   }
 }
 
-// Test MinIO connection
-export async function testMinioConnection() {
+// Test Supabase Storage connection
+export async function testSupabaseConnection() {
   try {
     await ensureBucketExists();
-    console.log("✅ MinIO connection successful");
+    console.log("✅ Supabase Storage connection successful");
     return { success: true };
   } catch (error) {
-    console.error("❌ MinIO connection failed:", error);
+    console.error("❌ Supabase Storage connection failed:", error);
     return { success: false, error: error.message };
   }
 }
 
-// Helper function to list files (useful for debugging)
-export async function listMinioFiles(prefix = "") {
-  try {
-    const objectsStream = minioClient.listObjects(BUCKET_NAME, prefix, true);
-    const objects = [];
+// Keep MinIO function name for backward compatibility
+export async function testMinioConnection() {
+  return testSupabaseConnection();
+}
 
-    return new Promise((resolve, reject) => {
-      objectsStream.on("data", (obj) => objects.push(obj));
-      objectsStream.on("end", () => resolve({ data: objects, error: null }));
-      objectsStream.on("error", (err) => reject({ data: null, error: err }));
-    });
+// Helper function to list files (useful for debugging)
+export async function listSupabaseFiles(prefix = "") {
+  try {
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(prefix, {
+        limit: 100,
+        offset: 0
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    return { data: data, error: null };
   } catch (error) {
-    console.error("❌ MinIO list error:", error);
+    console.error("❌ Supabase Storage list error:", error);
     return { data: null, error };
   }
+}
+
+// Keep MinIO function name for backward compatibility
+export async function listMinioFiles(prefix = "") {
+  return listSupabaseFiles(prefix);
 }
