@@ -3,13 +3,13 @@ import { PrismaClient } from "../../app/generated/prisma";
 
 const globalForPrisma = globalThis;
 
-// For auth operations (direct connection)
+// For auth operations (use same connection as app)
 export const authDb =
   globalForPrisma.authPrisma ||
   new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL,
+        url: process.env.DATABASE_URL,
       },
     },
   });
