@@ -3,11 +3,18 @@ import { emailService } from "@/app/lib/email";
 import { PrismaClient } from "@/app/generated/prisma";
 import { logAuditEvent } from "../../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../../lib/auditLog";
+import { protectRoute } from "../../../../lib/middleware/apiProtection";
 
 const prisma = new PrismaClient();
 
 export async function POST(request) {
   try {
+    // Check if user has permission to send emails
+    const authResult = await protectRoute("emails", "send");
+    if (authResult.error) return authResult.error;
+
+    const { session } = authResult;
+
     const { recipients, subject, content, templateId, sentBy } =
       await request.json();
     const requestContext = extractRequestContext(request);

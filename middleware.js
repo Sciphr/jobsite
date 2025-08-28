@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { rateLimit } from './app/lib/redis'
 
-// Rate limiting store (in production, use Redis or database)
+// Rate limiting store (fallback for when Redis is unavailable)
 const rateLimitStore = new Map()
 
 // Rate limiting configuration (excludes /api/auth/* routes)
@@ -19,8 +20,8 @@ function getClientIP(request) {
   return clientIP || 'unknown'
 }
 
-// Rate limiting logic
-function isRateLimited(request, pathname) {
+// Rate limiting logic with Redis fallback
+async function isRateLimited(request, pathname) {
   const clientIP = getClientIP(request)
   
   // Determine rate limit config
@@ -32,27 +33,38 @@ function isRateLimited(request, pathname) {
     }
   }
   
-  const key = `${clientIP}-${pathname.split('/')[1]}`
-  const now = Date.now()
+  const identifier = `${clientIP}-${pathname.split('/')[1]}`
   
-  if (!rateLimitStore.has(key)) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + config.windowMs })
+  try {
+    // Try Redis first
+    const result = await rateLimit.checkLimit(identifier, config.max, config.windowMs / 1000)
+    return !result.allowed
+  } catch (error) {
+    // Fallback to in-memory store
+    console.warn('Redis rate limiting failed, using fallback:', error.message)
+    
+    const key = `${clientIP}-${pathname.split('/')[1]}`
+    const now = Date.now()
+    
+    if (!rateLimitStore.has(key)) {
+      rateLimitStore.set(key, { count: 1, resetTime: now + config.windowMs })
+      return false
+    }
+    
+    const data = rateLimitStore.get(key)
+    
+    if (now > data.resetTime) {
+      rateLimitStore.set(key, { count: 1, resetTime: now + config.windowMs })
+      return false
+    }
+    
+    if (data.count >= config.max) {
+      return true
+    }
+    
+    data.count++
     return false
   }
-  
-  const data = rateLimitStore.get(key)
-  
-  if (now > data.resetTime) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + config.windowMs })
-    return false
-  }
-  
-  if (data.count >= config.max) {
-    return true
-  }
-  
-  data.count++
-  return false
 }
 
 // Security checks
@@ -105,7 +117,7 @@ export async function middleware(request) {
   // Apply rate limiting (skip for all NextAuth routes)
   const skipRateLimit = pathname.startsWith('/api/auth/')
   
-  if (!skipRateLimit && isRateLimited(request, pathname)) {
+  if (!skipRateLimit && await isRateLimited(request, pathname)) {
     return new NextResponse('Too Many Requests', { 
       status: 429,
       headers: {

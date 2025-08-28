@@ -3,8 +3,9 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { NextResponse } from "next/server";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
+import { withCache, cacheKeys, CACHE_DURATION } from "../../../lib/serverCache";
 
-export async function GET(req) {
+async function getDashboardStats(req) {
   try {
     const authResult = await protectRoute("analytics", "view");
     if (authResult.error) return authResult.error;
@@ -93,3 +94,6 @@ export async function GET(req) {
     );
   }
 }
+
+// Export cached version of the handler
+export const GET = withCache(getDashboardStats, cacheKeys.dashboardStats(), CACHE_DURATION.SHORT)

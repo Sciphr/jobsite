@@ -1,0 +1,65 @@
+id,resource,action,description,category
+05c0b6e7-4f87-42f4-b1f8-893cafb751d5,job_attributes,create,"Create new job attributes - employment types, experience levels, remote policies",Admin
+c1541eec-4a11-4d57-b46e-f7ce6ee028b5,job_attributes,delete,"Delete job attributes - employment types, experience levels, remote policies",Admin
+e27fc095-36d8-4f4f-a9a3-2c651940d8a8,job_attributes,read,"View job attributes - employment types, experience levels, remote policies",Admin
+981a866d-01af-4122-8985-bbda7a299522,job_attributes,update,"Update existing job attributes - employment types, experience levels, remote policies",Admin
+81938305-7893-44ac-977a-961ddcba265a,google-analytics,view,View Google Analytics data and reports,analytics
+9fb75690-63da-469b-8e1e-1ef29a84de94,analytics,advanced,Access advanced analytics features,Analytics & Reports
+621e2c26-67f3-4479-8f70-17d6bf468c26,analytics,export,Export analytics data,Analytics & Reports
+eaabbfb0-b80d-465e-bcdd-d8115b3f942a,analytics,view,View analytics dashboard,Analytics & Reports
+c42f8e7c-8b97-416a-94c0-6c44568eccb7,applications,assign,Assign applications to reviewers,Applications
+b97a66dd-6b21-49a2-b07a-469548bfc208,applications,bulk_actions,Perform bulk operations on applications,Applications
+ed009b99-f1c6-4c20-8833-20504f2752a2,applications,create,Create applications (for users),Applications
+c8b5d1ae-197e-4e1e-a5e0-57f078e6c371,applications,delete,Delete applications,Applications
+9560537b-8c22-4ad4-ad3a-703293c91260,applications,edit,Edit application details,Applications
+370fc43c-1cb1-4bbb-be77-9c106efef484,applications,export,Export application data,Applications
+51c06227-2a0c-4836-8aa9-1ca3d80436e3,applications,notes,Add/edit application notes,Applications
+8da1ffd2-b839-4003-8b7e-77ccb9267de3,applications,status_change,Change application status,Applications
+e7ba654a-1ffe-4c29-b21c-80b5420ab8fe,applications,view,View job applications,Applications
+f38d983e-1ec1-4a4a-bfa3-220dd3b61d4a,emails,automation,Set up email automation rules,Email Management
+77d38fb6-cb59-4df3-b7d5-65f741030330,emails,create,Create email campaigns,Email Management
+be0c0179-c4c9-4e66-9a0d-675de83b3d1a,emails,send,Send emails to applicants,Email Management
+e21b9376-03ba-4651-93b1-7a3a908b0d40,emails,templates,Manage email templates,Email Management
+1d4f63e2-02ed-44d1-b307-4b4b621925d9,emails,view,View email campaigns and history,Email Management
+093e0609-be1d-4952-bf7d-94ebec1a2e4b,applications,approve_hire,Approve hiring decisions for applications,Hiring
+98fd2fb7-e476-4fcb-8673-3d76ee0cb4f0,interviews,calendar,Manage interview calendar integration,Interviews
+8200be89-87a1-4b5c-b031-b865d56424cb,interviews,create,Schedule new interviews,Interviews
+1a492cc2-b91a-49fa-aa38-81764a9cc948,interviews,delete,Cancel/delete interviews,Interviews
+3a661a57-04be-42e6-81f5-f14bcb393f0c,interviews,edit,Modify interview details,Interviews
+cea1513a-a70b-46ce-9dcf-506e52e723ba,interviews,notes,Add interview feedback/notes,Interviews
+32fae31e-bfb8-428b-b4e2-ea8bed62a752,interviews,reschedule,Reschedule interviews,Interviews
+8fff3cde-31b0-4ab6-8940-e8443d87ecb8,interviews,view,View interview schedules,Interviews
+65a4343d-8c1e-47d9-81a5-e23d2b35dd63,jobs,approve,Approve jobs for publishing,Jobs Management
+0fe8b316-d158-4ae8-b105-c915b89d316e,jobs,clone,Duplicate existing jobs,Jobs Management
+39136903-45de-406f-9183-3754df62ea9a,jobs,create,Create new job postings,Jobs Management
+927ea639-5f21-48f7-93bc-09929c9fc5f1,jobs,delete,Delete job postings,Jobs Management
+79c124dd-371c-448d-a8d1-54a9a43b67d4,jobs,edit,Edit existing jobs,Jobs Management
+6f05c0f4-522b-44e8-97b5-2c303888e990,jobs,export,Export job data,Jobs Management
+320990e9-146c-4406-966b-c85644835723,jobs,feature,Mark jobs as featured,Jobs Management
+23477590-0378-431e-9122-ebbd78bbde10,jobs,publish,Publish/unpublish jobs,Jobs Management
+61f5113d-1ec6-41c3-bdda-347710b4c286,jobs,view,View job listings and details,Jobs Management
+3d21aaae-64b7-4313-a3d8-01b7f2744f77,roles,assign,Assign roles to users,Role Management
+6128d6cf-93c5-4547-9e0c-16879697d03f,roles,create,Create new roles,Role Management
+2d972a7a-976d-4515-a0bc-2ad0f361d307,roles,delete,Delete roles,Role Management
+f4322f20-02ce-4554-b61b-1c8b37f0e6e7,roles,edit,Edit existing roles,Role Management
+870798b4-c693-4461-a060-8b6b164280da,roles,view,View roles and permissions,Role Management
+d7dfdcd0-8bb1-48db-b7f4-43131caf8980,security,export,Export security data and reports,Security
+7d8298f9-75b4-446d-b91e-313b00b19dc7,security,manage,Manage security alerts and resolve incidents,Security
+8296f3e6-8304-4985-b50b-cafc79ec01c4,security,view,"View security dashboard, events, and alerts",Security
+f68b27c2-2d5b-45f2-ae14-5d69a3a312a2,audit_logs,export,Export audit log data,Security & Auditing
+3526b1b6-1046-4059-abde-e9188d3acb4c,audit_logs,view,View system audit logs,Security & Auditing
+63768226-fc74-425c-9e11-2285e2a3d51d,settings,edit_branding,Edit branding and appearance,Settings
+5a8977ad-87a9-4113-aed1-15957b6ec5b5,settings,edit_notifications,Edit notification settings,Settings
+7d2a07a8-1d3f-4fb3-8098-b41cd8e7f0dd,settings,edit_system,Edit system-wide settings,Settings
+ed37e647-2977-4e47-88fb-0d19d5cdb393,settings,integrations,Manage third-party integrations,Settings
+3a1c536a-6c57-4ad7-840c-760b97ae553f,settings,view,View system settings,Settings
+c45319a6-9379-487b-915f-5d69d8e3cd58,users,create,Create new user accounts,User Management
+c67c1dd9-6c9d-4719-bf39-214a47c8b3e3,users,delete,Delete user accounts,User Management
+f48b18a0-4398-4dab-b315-1d5b9b315b5b,users,edit,Edit user information,User Management
+2e10a351-292f-4b8e-8a7d-cc77b0a9564c,users,export,Export user data,User Management
+a24940d9-4979-443a-9a2a-e6b5ac029d82,users,impersonate,Login as another user,User Management
+c28dcaaa-f2d2-4d49-aa9f-e72e2758e6ae,users,roles,Manage user roles and permissions,User Management
+a6f598e1-f6da-4768-a2b6-1a6bb134c73d,users,view,View user profiles and lists,User Management
+c87d662b-5ab4-4dde-b1aa-af75c8e581fd,weekly_digest,edit,Configure weekly digest,Weekly Digest
+98405ad3-ada8-4a2e-aa21-9416d05b5541,weekly_digest,send,Send test/manual weekly digests,Weekly Digest
+b2b85b18-ab7f-485d-875d-3d02d1836c5f,weekly_digest,view,View weekly digest settings,Weekly Digest

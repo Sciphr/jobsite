@@ -1155,7 +1155,7 @@ export default function ApplicationsManagerMain() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => router.push("/admin/settings")}
-                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
                       <Settings className="h-4 w-4" />
                       <span>Settings</span>
@@ -1265,7 +1265,7 @@ export default function ApplicationsManagerMain() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => router.push("/applications-manager/settings")}
-                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
                       <Settings className="h-4 w-4" />
                       <span>Settings</span>

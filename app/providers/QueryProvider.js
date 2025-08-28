@@ -21,6 +21,11 @@ export function QueryProvider({ children }) {
             refetchInterval: false,
             retry: 1, // Fail fast
             networkMode: "online",
+            // Enhanced performance options
+            refetchIntervalInBackground: false,
+            notifyOnChangeProps: ['data', 'error'], // Only re-render on data/error changes
+            structuralSharing: true, // Optimize re-renders
+            throwOnError: false, // Prevent error boundaries from breaking cache
           },
           mutations: {
             retry: 1,

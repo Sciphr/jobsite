@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
+import { withCache, cacheKeys, CACHE_DURATION, invalidateCache } from "../../../lib/serverCache";
 
 export async function GET(req) {
   // Check if user has permission to view applications
