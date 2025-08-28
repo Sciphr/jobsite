@@ -79,88 +79,6 @@ async function getRoles(request) {
     
     // Log server error
     await logAuditEvent({
-        eventType: "ERROR",
-        category: "SECURITY",
-        action: "Insufficient permissions for role access",
-        description: `User ${session.user.email} attempted to view roles without proper permissions`,
-        entityType: "user",
-        entityId: session.user.id,
-        entityName: session.user.email,
-        actorId: session.user.id,
-        actorType: "user",
-        actorName: session.user.name || session.user.email,
-        ipAddress: requestContext.ipAddress,
-        userAgent: requestContext.userAgent,
-        requestId: requestContext.requestId,
-        relatedUserId: session.user.id,
-        severity: "warning",
-        status: "failure",
-        tags: ["roles", "insufficient_permissions", "access_denied"]
-      }, request).catch(console.error);
-
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
-
-    // Fetch all roles with their permissions and user counts
-    const roles = await appPrisma.roles.findMany({
-      include: {
-        role_permissions: {
-          include: {
-            permissions: true,
-          },
-        },
-        _count: {
-          select: {
-            user_roles: {
-              where: {
-                is_active: true
-              }
-            },
-            role_permissions: true,
-          },
-        },
-      },
-      orderBy: [
-        { is_system_role: "desc" }, // System roles first
-        { name: "asc" },
-      ],
-    });
-
-    // Log successful role access
-    await logAuditEvent({
-      eventType: "VIEW",
-      category: "ADMIN",
-      action: "Roles accessed successfully",
-      description: `User ${session.user.email} accessed roles list`,
-      entityType: "roles",
-      actorId: session.user.id,
-      actorType: "user",
-      actorName: session.user.name || session.user.email,
-      ipAddress: requestContext.ipAddress,
-      userAgent: requestContext.userAgent,
-      requestId: requestContext.requestId,
-      relatedUserId: session.user.id,
-      severity: "info",
-      status: "success",
-      tags: ["roles", "access", "view", "admin"],
-      metadata: {
-        rolesCount: roles.length,
-        accessedBy: session.user.email
-      }
-    }, request).catch(console.error);
-
-    return NextResponse.json({
-      success: true,
-      roles,
-    });
-  } catch (error) {
-    console.error("Error fetching roles:", error);
-    
-    // Log server error
-    await logAuditEvent({
       eventType: "ERROR",
       category: "SYSTEM",
       action: "Role access failed - server error",
@@ -190,7 +108,7 @@ async function getRoles(request) {
 }
 
 // Export cached version of GET handler  
-export const GET = withCache(getRoles, cacheKeys.rolesList, CACHE_DURATION.LONG)
+export const GET = withCache(getRoles, cacheKeys.rolesList, CACHE_DURATION.LONG);
 
 // POST /api/roles - Create a new role
 export async function POST(request) {
@@ -203,12 +121,10 @@ export async function POST(request) {
     
     const { session } = authResult;
 
-    const { name, description, color, isActive, permissions } =
-      await request.json();
+    const { name, description, color, isActive, permissions } = await request.json();
 
     // Validate required fields
     if (!name || !name.trim()) {
-      // Log validation failure
       await logAuditEvent({
         eventType: "ERROR",
         category: "ADMIN",
@@ -232,12 +148,7 @@ export async function POST(request) {
       );
     }
 
-    if (
-      !permissions ||
-      !Array.isArray(permissions) ||
-      permissions.length === 0
-    ) {
-      // Log validation failure
+    if (!permissions || !Array.isArray(permissions) || permissions.length === 0) {
       await logAuditEvent({
         eventType: "ERROR",
         category: "ADMIN",
@@ -272,7 +183,6 @@ export async function POST(request) {
     });
 
     if (existingRole) {
-      // Log duplicate role name attempt
       await logAuditEvent({
         eventType: "ERROR",
         category: "ADMIN",
@@ -316,7 +226,6 @@ export async function POST(request) {
     });
 
     if (validPermissions.length !== permissionKeys.length) {
-      // Log invalid permissions
       await logAuditEvent({
         eventType: "ERROR",
         category: "ADMIN",
@@ -432,26 +341,23 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error creating role:", error);
     
-    // Log server error during role creation
     await logAuditEvent({
       eventType: "ERROR",
       category: "SYSTEM",
       action: "Role creation failed - server error",
-      description: `Server error during role creation for user: ${session?.user?.email || 'unknown'}`,
+      description: `Server error during role creation`,
       actorId: session?.user?.id,
       actorType: "user",
       actorName: session?.user?.name || session?.user?.email,
       ipAddress: requestContext.ipAddress,
       userAgent: requestContext.userAgent,
       requestId: requestContext.requestId,
-      relatedUserId: session?.user?.id,
       severity: "error",
       status: "failure",
       tags: ["roles", "create", "server_error", "system"],
       metadata: {
         error: error.message,
-        stack: error.stack,
-        attemptedRoleName: name?.trim() || 'unknown'
+        stack: error.stack
       }
     }, request).catch(console.error);
 
