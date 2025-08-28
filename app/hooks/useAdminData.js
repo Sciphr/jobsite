@@ -386,7 +386,6 @@ export const usePrefetchAdminData = () => {
     const existingAnalytics = queryClient.getQueryData(["admin", "analytics", "30d"]);
     const existingSettings = queryClient.getQueryData(["admin", "settings"]);
     const existingAuditLogs = queryClient.getQueryData(["admin", "audit-logs"]);
-    const existingRoles = queryClient.getQueryData(["admin", "roles"]);
     const existingSystemStatus = queryClient.getQueryData(["admin", "system-status"]);
     const existingWeeklyDigestSettings = queryClient.getQueryData(["admin", "weekly-digest", "settings"]);
 

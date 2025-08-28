@@ -197,61 +197,11 @@ export async function POST(request) {
   const requestContext = extractRequestContext(request);
   
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      // Log unauthorized role creation attempt
-      await logAuditEvent({
-        eventType: "ERROR",
-        category: "SECURITY",
-        action: "Unauthorized role creation attempt",
-        description: "Attempted to create role without valid session",
-        actorType: "user",
-        actorName: "unauthenticated",
-        ipAddress: requestContext.ipAddress,
-        userAgent: requestContext.userAgent,
-        requestId: requestContext.requestId,
-        severity: "warning",
-        status: "failure",
-        tags: ["roles", "create", "unauthorized", "security"]
-      }, request).catch(console.error);
-
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user has permission to create roles
-    const canCreateRoles = await userHasPermission(
-      session.user.id,
-      "roles",
-      "create"
-    );
-    if (!canCreateRoles) {
-      // Log insufficient permissions for role creation
-      await logAuditEvent({
-        eventType: "ERROR",
-        category: "SECURITY",
-        action: "Insufficient permissions for role creation",
-        description: `User ${session.user.email} attempted to create role without proper permissions`,
-        entityType: "user",
-        entityId: session.user.id,
-        entityName: session.user.email,
-        actorId: session.user.id,
-        actorType: "user",
-        actorName: session.user.name || session.user.email,
-        ipAddress: requestContext.ipAddress,
-        userAgent: requestContext.userAgent,
-        requestId: requestContext.requestId,
-        relatedUserId: session.user.id,
-        severity: "warning",
-        status: "failure",
-        tags: ["roles", "create", "insufficient_permissions", "access_denied"]
-      }, request).catch(console.error);
-
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
+    // Check if user has permission to create roles  
+    const authResult = await protectRoute("roles", "create");
+    if (authResult.error) return authResult.error;
+    
+    const { session } = authResult;
 
     const { name, description, color, isActive, permissions } =
       await request.json();
