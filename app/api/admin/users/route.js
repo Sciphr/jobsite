@@ -5,8 +5,9 @@ import bcrypt from "bcryptjs";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
 import { logAuditEvent } from "../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../lib/auditLog";
+import { withCache, cacheKeys, CACHE_DURATION } from "../../../lib/serverCache";
 
-export async function GET(req) {
+async function getUsers(req) {
   const requestContext = extractRequestContext(req);
   
   // Check if user has permission to view users
@@ -16,6 +17,7 @@ export async function GET(req) {
   const { session } = authResult;
 
   try {
+    // ✅ OPTIMIZED: Simplified users query without expensive _count operations
     const users = await appPrisma.users.findMany({
       select: {
         id: true,
@@ -23,7 +25,7 @@ export async function GET(req) {
         firstName: true,
         lastName: true,
         phone: true,
-        role: true, // Keep for backward compatibility
+        role: true,
         privilegeLevel: true,
         isActive: true,
         createdAt: true,
@@ -44,13 +46,8 @@ export async function GET(req) {
           },
           orderBy: { assigned_at: "asc" },
         },
-        _count: {
-          select: {
-            jobs: true,
-            applications: true,
-            saved_jobs: true,
-          },
-        },
+        // ✅ REMOVED: Expensive _count operations that slow the query
+        // These can be fetched separately if needed for specific users
       },
       orderBy: {
         createdAt: "desc",
@@ -112,6 +109,9 @@ export async function GET(req) {
     });
   }
 }
+
+// Export cached version of GET handler
+export const GET = withCache(getUsers, 'admin:users', CACHE_DURATION.MEDIUM)
 
 export async function POST(req) {
   const requestContext = extractRequestContext(req);

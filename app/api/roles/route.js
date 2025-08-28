@@ -1,47 +1,84 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { userHasPermission } from "@/app/lib/permissions";
+import { protectRoute } from "../../lib/middleware/apiProtection";
 import { appPrisma } from "../../lib/prisma";
+import { withCache, cacheKeys, CACHE_DURATION } from "../../lib/serverCache";
 import { logAuditEvent } from "../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../lib/auditLog";
 
-// GET /api/roles - Fetch all roles
-export async function GET(request) {
+// GET /api/roles - Fetch all roles (OPTIMIZED)
+async function getRoles(request) {
   const requestContext = extractRequestContext(request);
   
   try {
-    const session = await getServerSession(authOptions);
+    // ✅ FAST: Use new permission system instead of slow userHasPermission
+    const authResult = await protectRoute("roles", "view");
+    if (authResult.error) return authResult.error;
+    
+    const { session } = authResult;
 
-    if (!session?.user?.id) {
-      // Log unauthorized access attempt
-      await logAuditEvent({
-        eventType: "ERROR",
-        category: "SECURITY",
-        action: "Unauthorized role access attempt",
-        description: "Attempted to access roles without valid session",
-        actorType: "user",
-        actorName: "unauthenticated",
-        ipAddress: requestContext.ipAddress,
-        userAgent: requestContext.userAgent,
-        requestId: requestContext.requestId,
-        severity: "warning",
-        status: "failure",
-        tags: ["roles", "unauthorized", "security", "access_denied"]
-      }, request).catch(console.error);
+    // ✅ OPTIMIZED: Fetch roles with streamlined query
+    const roles = await appPrisma.roles.findMany({
+      include: {
+        role_permissions: {
+          include: {
+            permissions: {
+              select: {
+                id: true,
+                resource: true,
+                action: true,
+                description: true,
+                category: true
+              }
+            },
+          },
+        },
+        _count: {
+          select: {
+            user_roles: {
+              where: { is_active: true }
+            },
+            role_permissions: true,
+          },
+        },
+      },
+      orderBy: [
+        { is_system_role: "desc" },
+        { name: "asc" },
+      ],
+    });
 
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Log successful role access
+    await logAuditEvent({
+      eventType: "VIEW",
+      category: "ADMIN",
+      action: "Roles accessed successfully",
+      description: `User ${session.user.email} accessed roles list`,
+      entityType: "roles",
+      actorId: session.user.id,
+      actorType: "user",
+      actorName: session.user.name || session.user.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      requestId: requestContext.requestId,
+      relatedUserId: session.user.id,
+      severity: "info",
+      status: "success",
+      tags: ["roles", "access", "view", "admin"],
+      metadata: {
+        rolesCount: roles.length,
+        accessedBy: session.user.email
+      }
+    }, request).catch(console.error);
 
-    // Check if user has permission to view roles
-    const canViewRoles = await userHasPermission(
-      session.user.id,
-      "roles",
-      "view"
-    );
-    if (!canViewRoles) {
-      // Log insufficient permissions
-      await logAuditEvent({
+    return NextResponse.json({
+      success: true,
+      roles,
+    });
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    
+    // Log server error
+    await logAuditEvent({
         eventType: "ERROR",
         category: "SECURITY",
         action: "Insufficient permissions for role access",
@@ -151,6 +188,9 @@ export async function GET(request) {
     );
   }
 }
+
+// Export cached version of GET handler  
+export const GET = withCache(getRoles, cacheKeys.rolesList, CACHE_DURATION.LONG)
 
 // POST /api/roles - Create a new role
 export async function POST(request) {

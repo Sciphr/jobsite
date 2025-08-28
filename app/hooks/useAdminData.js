@@ -360,18 +360,21 @@ export const useApplication = (applicationId) => {
 export const usePrefetchAdminData = () => {
   const queryClient = useQueryClient();
 
-  // ✅ TEMPORARILY DISABLED to stop infinite loop
+  // ✅ SAFE PREFETCHING: Only prefetch if not already cached or loading
   const prefetchAll = async () => {
-    console.log("🚫 Prefetch disabled to prevent infinite loop");
-    return; // Early return to stop prefetching
+    console.log("🚀 Safe prefetch starting...");
+    
+    // Check if already prefetching to prevent loops
+    if (queryClient.isFetching({ queryKey: ["admin"] }) > 2) {
+      console.log("🚫 Already prefetching, skipping to prevent loop");
+      return;
+    }
 
     // Check what's already cached
     const existingJobs = queryClient.getQueryData(["admin", "jobs"]);
-    const existingApplications = queryClient.getQueryData([
-      "admin",
-      "applications",
-    ]);
+    const existingApplications = queryClient.getQueryData(["admin", "applications"]);
     const existingUsers = queryClient.getQueryData(["admin", "users"]);
+    const existingRoles = queryClient.getQueryData(["admin", "roles"]);
     const existingDashboard = queryClient.getQueryData([
       "admin",
       "dashboard-stats",
