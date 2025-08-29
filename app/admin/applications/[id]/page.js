@@ -300,8 +300,8 @@ function ApplicationDetailsContent() {
     }
 
     try {
-      const url = `/api/resume-download?path=${encodeURIComponent(storagePath)}`;
-      const response = await fetch(url);
+      const apiUrl = `/api/resume-download?path=${encodeURIComponent(storagePath)}`;
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -312,16 +312,16 @@ function ApplicationDetailsContent() {
       const blob = await response.blob();
 
       // Create download link
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.download = `${applicantName || "applicant"}_resume.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
       // Clean up the URL object
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Download error:", error);
       alert(`Failed to download resume: ${error.message}`);

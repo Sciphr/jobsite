@@ -443,10 +443,10 @@ function AdminApplicationsContent() {
     }
 
     try {
-      const url = `/api/resume-download?path=${encodeURIComponent(storagePath)}`;
-      console.log("🌐 Calling API:", url);
+      const apiUrl = `/api/resume-download?path=${encodeURIComponent(storagePath)}`;
+      console.log("🌐 Calling API:", apiUrl);
 
-      const response = await fetch(url);
+      const response = await fetch(apiUrl);
       console.log("📡 Response:", response.status, response.statusText);
 
       if (!response.ok) {
@@ -460,16 +460,16 @@ function AdminApplicationsContent() {
       console.log("✅ Got file blob, size:", blob.size);
 
       // Create download link
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.download = `${applicantName || "applicant"}_resume.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
       // Clean up the URL object
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("❌ Download error:", error);
       alert(`Failed to download resume: ${error.message}`);
