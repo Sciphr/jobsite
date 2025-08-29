@@ -1,24 +1,28 @@
 // app/jobs/page.js
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import JobsFilter from "../components/JobsFilter";
 import JobsList from "../components/JobsList";
 import Pagination from "../admin/jobs/components/ui/Pagination";
+import { usePublicJobs, usePrefetchJob } from "../hooks/usePublicJobsData";
 
 export default function JobsPage() {
-  // State for jobs data and loading
-  const [jobs, setJobs] = useState([]);
-  const [filterOptions, setFilterOptions] = useState({
+  // Use React Query for jobs data with aggressive caching
+  const { data, isLoading, error, isError } = usePublicJobs();
+  const prefetchJob = usePrefetchJob();
+  
+  // Extract data with fallbacks
+  const jobs = data?.jobs || [];
+  const filterOptions = data?.filterOptions || {
     categories: [],
     locations: [],
     employmentTypes: [],
     experienceLevels: [],
     remotePolicies: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,26 +37,12 @@ export default function JobsPage() {
   const experienceLevel = searchParams.get("experienceLevel") || "";
   const remotePolicy = searchParams.get("remotePolicy") || "";
 
-  // Fetch jobs data
-  useEffect(() => {
-    const fetchJobsData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch("/api/jobs");
-        if (response.ok) {
-          const data = await response.json();
-          setJobs(data.jobs);
-          setFilterOptions(data.filterOptions);
-        }
-      } catch (error) {
-        console.error("Error fetching jobs:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchJobsData();
-  }, []);
+  // Job prefetching handler for better UX
+  const handleJobHover = (job) => {
+    if (job.slug) {
+      prefetchJob(job.slug);
+    }
+  };
 
   // Client-side filtering
   const filteredJobs = useMemo(() => {
@@ -123,7 +113,7 @@ export default function JobsPage() {
   }, [filteredJobs.length, currentPage, itemsPerPage]);
 
   // Reset page when filters change
-  useEffect(() => {
+  useMemo(() => {
     setCurrentPage(1);
   }, [
     search,
@@ -134,8 +124,8 @@ export default function JobsPage() {
     remotePolicy,
   ]);
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - only show on initial load, not on cache hits
+  if (isLoading && jobs.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -157,6 +147,31 @@ export default function JobsPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="text-red-400 text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Unable to load jobs
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {error?.message || "Something went wrong while fetching jobs. Please try again."}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-block bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -202,7 +217,7 @@ export default function JobsPage() {
           <div className="lg:col-span-3 mt-8 lg:mt-0">
             {paginatedJobs.length > 0 ? (
               <>
-                <JobsList jobs={paginatedJobs} />
+                <JobsList jobs={paginatedJobs} onJobHover={handleJobHover} />
 
                 {/* Pagination */}
                 {filteredJobs.length > itemsPerPage && (

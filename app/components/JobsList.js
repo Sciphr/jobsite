@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import JobCard from "./JobCard";
 
-export default function JobsList({ jobs }) {
+export default function JobsList({ jobs, onJobHover }) {
   const { data: session } = useSession();
   const [applicationStatuses, setApplicationStatuses] = useState({});
   const [loading, setLoading] = useState(false);
@@ -73,6 +73,7 @@ export default function JobsList({ jobs }) {
               animationDelay: `${index * 100}ms`,
               animationFillMode: 'forwards'
             }}
+            onMouseEnter={onJobHover ? () => onJobHover(job) : undefined}
           >
             <JobCard job={job} applicationStatus={appStatus} />
           </div>

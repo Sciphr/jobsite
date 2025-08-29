@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Copy,
   Check,
@@ -15,38 +15,64 @@ import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
 import { generateJobShareMailtoUrl } from "../../utils/emailTemplates";
 import { formatDate, formatNumber } from "../../utils/dateFormat";
+import {
+  usePublicJob,
+  useSavedJobStatus,
+  useApplicationStatus,
+  useSaveJobMutation,
+} from "../../hooks/usePublicJobsData";
+import { useQuery } from "@tanstack/react-query";
 
 export default function JobDetailsClient({
-  job,
+  job: initialJob,
   allowGuestApplications,
   siteConfig,
 }) {
   const [copied, setCopied] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const [userResumes, setUserResumes] = useState([]);
-  const [loadingResumes, setLoadingResumes] = useState(false);
   const { data: session, status } = useSession();
-  const [userProfile, setUserProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [hasApplied, setHasApplied] = useState(false);
-  const [checkingApplication, setCheckingApplication] = useState(false);
-  const [applicationStatus, setApplicationStatus] = useState(null);
 
-  // Check if job is already saved when component mounts
-  useEffect(() => {
-    if (session?.user?.id && job.id) {
-      checkSavedStatus();
-    }
-  }, [session, job.id]);
+  // Use React Query to get job data (with SSR fallback)
+  const { data: job } = usePublicJob(initialJob?.slug, {
+    initialData: initialJob,
+  });
 
-  useEffect(() => {
-    if (session?.user?.id && job.id) {
-      checkApplicationStatus();
-    }
-  }, [session, job.id]);
+  // Use React Query for user-specific data
+  const { data: savedData, isLoading: loadingSaved } = useSavedJobStatus(job?.id);
+  const { data: applicationData, isLoading: loadingApplication } = useApplicationStatus(job?.id);
+  
+  // Use React Query for user profile (only if authenticated and showing application form)
+  const { data: userProfile, isLoading: loadingProfile } = useQuery({
+    queryKey: ["user", "profile"],
+    queryFn: async () => {
+      const response = await fetch("/api/profile");
+      if (!response.ok) throw new Error("Failed to fetch profile");
+      return response.json();
+    },
+    enabled: !!session?.user?.id && showApplicationForm,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Use React Query for user resumes (only if authenticated and showing application form)
+  const { data: resumesData, isLoading: loadingResumes } = useQuery({
+    queryKey: ["user", "resumes"],
+    queryFn: async () => {
+      const response = await fetch("/api/resumes");
+      if (!response.ok) throw new Error("Failed to fetch resumes");
+      return response.json();
+    },
+    enabled: !!session?.user?.id && showApplicationForm,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+  });
+
+  // Extract data with fallbacks
+  const isSaved = savedData?.isSaved || false;
+  const hasApplied = applicationData?.hasApplied || false;
+  const applicationStatus = applicationData?.status || null;
+  const userResumes = resumesData?.resumes || [];
+
+  // Use optimistic mutation for save/unsave
+  const saveJobMutation = useSaveJobMutation();
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -141,31 +167,17 @@ export default function JobDetailsClient({
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      const response = await fetch("/api/saved-jobs", {
-        method: isSaved ? "DELETE" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          jobId: job.id,
-        }),
+      await saveJobMutation.mutateAsync({
+        jobId: job.id,
+        action: isSaved ? "unsave" : "save",
       });
-
-      if (response.ok) {
-        setIsSaved(!isSaved);
-        const action = isSaved ? "removed from" : "added to";
-        `Job ${action} saved jobs`;
-      } else {
-        const error = await response.json();
-        console.error("Error saving job:", error);
-      }
+      
+      const action = isSaved ? "removed from" : "added to";
+      console.log(`Job ${action} saved jobs`);
     } catch (error) {
       console.error("Error saving job:", error);
-    } finally {
-      setIsLoading(false);
+      alert("Failed to save job. Please try again.");
     }
   };
 
@@ -212,21 +224,17 @@ export default function JobDetailsClient({
 
   const handleApplicationSuccess = () => {
     setShowApplicationForm(false);
-    setHasApplied(true);
-    setApplicationStatus("Applied");
 
     // Show success message
     alert("Application submitted successfully!");
 
-    // Optional: Re-check application status from server to ensure consistency
-    setTimeout(() => {
-      checkApplicationStatus();
-    }, 1000);
+    // Invalidate application status to refresh from server
+    // This will be handled automatically by React Query when the component re-renders
   };
 
   const renderApplyButton = () => {
     const isUserLoggedIn = !!session?.user?.id;
-    const isLoading = loadingResumes || loadingProfile || checkingApplication;
+    const isLoading = loadingResumes || loadingProfile || loadingApplication;
 
     // If user is logged in and has already applied
     if (isUserLoggedIn && hasApplied) {
@@ -448,18 +456,18 @@ export default function JobDetailsClient({
                       <div className="hidden md:block">
                         <button
                           onClick={handleSaveJob}
-                          disabled={isLoading || checkingStatus}
+                          disabled={saveJobMutation.isPending || loadingSaved}
                           className={`group flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
                             isSaved
                               ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50"
                               : "text-white bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
                           } ${
-                            isLoading || checkingStatus
+                            saveJobMutation.isPending || loadingSaved
                               ? "opacity-50 cursor-not-allowed transform-none"
                               : ""
                           }`}
                         >
-                          {isLoading ? (
+                          {saveJobMutation.isPending ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
                           ) : (
                             <Heart
@@ -838,13 +846,13 @@ export default function JobDetailsClient({
                 {session && !showApplicationForm && (
                   <button
                     onClick={handleSaveJob}
-                    disabled={isLoading || checkingStatus}
+                    disabled={saveJobMutation.isPending || loadingSaved}
                     className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-colors duration-200 font-medium ${
                       isSaved
                         ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50"
                         : "text-white"
                     } ${
-                      isLoading || checkingStatus
+                      saveJobMutation.isPending || loadingSaved
                         ? "opacity-50 cursor-not-allowed"
                         : ""
                     }`}
@@ -866,7 +874,7 @@ export default function JobDetailsClient({
                         : undefined
                     }
                   >
-                    {isLoading ? (
+                    {saveJobMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Heart
