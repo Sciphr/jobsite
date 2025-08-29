@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { uploadToSupabase } from "../../lib/supabase-storage";
+import { fileStorage } from "../../lib/minio";
 import { getSystemSetting } from "../../lib/settings";
 
 export async function POST(request) {
@@ -62,16 +62,29 @@ export async function POST(request) {
     const fileName = `application-${timestamp}-${randomId}.${extension}`;
     const filePath = `applications/${jobId}/${userId}/${fileName}`;
 
-    // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await uploadToSupabase(
-      file,
-      filePath
-    );
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+    // Upload file to MinIO Storage
+    try {
+      // Convert file to buffer for MinIO
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      
+      const uploadResult = await fileStorage.uploadFile(
+        filePath,
+        fileBuffer,
+        file.type,
+        {
+          'User-ID': userId,
+          'Job-ID': jobId,
+          'Original-Name': file.name,
+          'Upload-Date': new Date().toISOString(),
+          'File-Type': 'application'
+        }
+      );
+      
+      console.log("✅ Application file uploaded to MinIO:", uploadResult);
+    } catch (uploadError) {
+      console.error("❌ MinIO upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { error: "Failed to upload file to storage" },
         { status: 500 }
       );
     }

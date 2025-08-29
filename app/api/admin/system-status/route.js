@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
-import { createClient } from '@supabase/supabase-js';
+import { fileStorage } from "../../../lib/minio";
 // import { weeklyDigestScheduler } from "../../../lib/weeklyDigestScheduler";
 // import { autoArchiveScheduler } from "../../../lib/autoArchiveScheduler";
 // import { autoProgressScheduler } from "../../../lib/autoProgressScheduler";
@@ -105,94 +105,53 @@ export async function GET(req) {
       };
     }
 
-    // 3. Storage Usage Check (Supabase Storage)
+    // 3. Storage Usage Check (MinIO Storage)
     try {
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const minioEndpoint = process.env.MINIO_ENDPOINT;
+      const minioPort = process.env.MINIO_PORT;
+      const minioAccessKey = process.env.MINIO_ACCESS_KEY;
+      const minioSecretKey = process.env.MINIO_SECRET_KEY;
 
-      if (!supabaseUrl || !supabaseServiceRoleKey) {
+      if (!minioEndpoint || !minioAccessKey || !minioSecretKey) {
         status.storage = {
           status: "Not Configured",
           healthy: false,
-          details: "Missing Supabase environment variables",
+          details: "Missing MinIO environment variables",
           fileCount: 0,
           sizeInMB: 0,
         };
       } else {
-        const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
+        try {
+          // List files in MinIO to get count and size
+          const files = await fileStorage.listFiles('');
+          
+          let totalSize = 0;
+          for (const file of files) {
+            totalSize += file.size || 0;
           }
-        });
-
-        const bucketName = "resumes";
-
-        // Check if bucket exists
-        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket(bucketName);
-
-        if (bucketError && bucketError.message === 'Bucket not found') {
+          
           status.storage = {
-            status: "Bucket not found",
+            status: "Connected",
+            healthy: true,
+            details: `MinIO storage at ${minioEndpoint}:${minioPort || 9000}`,
+            fileCount: files.length,
+            sizeInMB: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
+          };
+        } catch (minioError) {
+          status.storage = {
+            status: "Connection Failed",
             healthy: false,
-            details: `Bucket '${bucketName}' does not exist`,
+            details: `MinIO connection error: ${minioError.message}`,
             fileCount: 0,
             sizeInMB: 0,
           };
-        } else if (bucketError) {
-          status.storage = {
-            status: "Check Failed",
-            healthy: false,
-            details: `Bucket check error: ${bucketError.message}`,
-            fileCount: 0,
-            sizeInMB: 0,
-          };
-        } else {
-          // List objects to get count and estimate size
-          const { data: files, error: listError } = await supabase.storage
-            .from(bucketName)
-            .list('', {
-              limit: 1000, // Supabase has limits, so we'll get a sample
-              sortBy: { column: 'created_at', order: 'desc' }
-            });
-
-          if (listError) {
-            status.storage = {
-              status: "List Failed",
-              healthy: false,
-              details: `Could not list files: ${listError.message}`,
-              fileCount: 0,
-              sizeInMB: 0,
-            };
-          } else {
-            let fileCount = files ? files.length : 0;
-            let totalSize = 0;
-
-            // Sum up file sizes (if available in metadata)
-            if (files) {
-              for (const file of files) {
-                totalSize += file.metadata?.size || 0;
-              }
-            }
-
-            const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
-
-            status.storage = {
-              status: `${fileCount} files (${sizeInMB} MB)`,
-              healthy: true,
-              details: `Supabase Storage operational`,
-              fileCount,
-              sizeInMB: parseFloat(sizeInMB),
-              note: fileCount >= 1000 ? "Showing first 1000 files" : null
-            };
-          }
         }
       }
     } catch (error) {
       status.storage = {
         status: "Check Failed",
         healthy: false,
-        details: `Could not connect to Supabase Storage: ${error.message}`,
+        details: `Could not connect to MinIO Storage: ${error.message}`,
         fileCount: 0,
         sizeInMB: 0,
       };

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../../lib/prisma";
-import { deleteFromSupabase } from "../../../../lib/supabase-storage";
+import { fileStorage } from "../../../../lib/minio";
 import bcrypt from "bcryptjs";
 import {
   logAuditEvent,
@@ -437,24 +437,15 @@ export async function DELETE(req, { params }) {
     // Step 1: Delete resume files from storage
     const resumeDeletionPromises = userToDelete.user_resumes.map(async (resume) => {
       try {
-        console.log(`Deleting resume file: ${resume.storagePath}`);
-        const { error } = await deleteFromSupabase(resume.storagePath);
-        if (error) {
-          console.error(
-            `Failed to delete resume file ${resume.storagePath}:`,
-            error
-          );
-          // Don't throw here - we want to continue with user deletion even if storage cleanup fails
-        } else {
-          console.log(
-            `Successfully deleted resume file: ${resume.storagePath}`
-          );
-        }
-      } catch (error) {
+        console.log(`Deleting resume file from MinIO: ${resume.storagePath}`);
+        await fileStorage.deleteFile(resume.storagePath);
+        console.log(`✅ Successfully deleted resume file: ${resume.storagePath}`);
+      } catch (deleteError) {
         console.error(
-          `Error deleting resume file ${resume.storagePath}:`,
-          error
+          `⚠️ Failed to delete resume file ${resume.storagePath}:`,
+          deleteError
         );
+        // Don't throw here - we want to continue with user deletion even if storage cleanup fails
       }
     });
 

@@ -415,7 +415,7 @@ export async function DELETE(request) {
 
     console.log("Resume deleted from database successfully");
 
-    // Then delete from Supabase Storage
+    // Then delete from MinIO Storage
     console.log("Deleting file from storage:", storagePath);
     try {
       await fileStorage.deleteFile(storagePath);

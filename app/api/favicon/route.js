@@ -1,7 +1,7 @@
 // app/api/favicon/route.js - Public favicon endpoint
 import { NextResponse } from "next/server";
 import { appPrisma } from "../../lib/prisma";
-import { getMinioDownloadUrl } from "../../lib/supabase-storage";
+import { fileStorage } from "../../lib/minio";
 
 export async function GET() {
   try {
@@ -18,20 +18,17 @@ export async function GET() {
     }
 
     // Generate download URL for the current favicon
-    const { data, error } = await getMinioDownloadUrl(
-      faviconSetting.value,
-      86400
-    ); // 24 hours
+    try {
+      const downloadUrl = await fileStorage.getPresignedUrl(
+        faviconSetting.value,
+        86400
+      ); // 24 hours
 
-    if (error) {
+      return NextResponse.json({ faviconUrl: downloadUrl });
+    } catch (error) {
       console.error("Error generating favicon download URL:", error);
       return NextResponse.json({ faviconUrl: null }, { status: 500 });
     }
-
-    return NextResponse.json({
-      faviconUrl: data.signedUrl,
-      storagePath: faviconSetting.value,
-    });
   } catch (error) {
     console.error("Error fetching favicon:", error);
     return NextResponse.json(

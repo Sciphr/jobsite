@@ -4,11 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
 import { protectRoute } from "../../../lib/middleware/apiProtection";
-import {
-  uploadToSupabase,
-  deleteFromSupabase,
-  getMinioDownloadUrl,
-} from "../../../lib/supabase-storage";
+import { fileStorage } from "../../../lib/minio";
 
 // Helper function to validate image types
 function isValidImageType(fileType) {
@@ -49,17 +45,20 @@ export async function GET() {
     }
 
     // Generate download URL for the current logo
-    const { data, error } = await getMinioDownloadUrl(logoSetting.value, 86400); // 24 hours
+    try {
+      const downloadUrl = await fileStorage.getPresignedUrl(
+        logoSetting.value,
+        86400
+      ); // 24 hours
 
-    if (error) {
+      return NextResponse.json({
+        logoUrl: downloadUrl,
+        storagePath: logoSetting.value,
+      });
+    } catch (error) {
       console.error("Error generating logo download URL:", error);
       return NextResponse.json({ logoUrl: null });
     }
-
-    return NextResponse.json({
-      logoUrl: data.signedUrl,
-      storagePath: logoSetting.value,
-    });
   } catch (error) {
     console.error("Error fetching logo:", error);
     return NextResponse.json(
@@ -122,22 +121,34 @@ export async function POST(request) {
       },
     });
 
-    // Upload new logo to supabase first
-    console.log("Uploading new logo to storage...");
-    const { data: uploadData, error: uploadError } = await uploadToSupabase(
-      file,
-      filePath
-    );
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+    // Upload new logo to MinIO storage
+    console.log("Uploading new logo to MinIO storage...");
+    
+    try {
+      // Convert file to buffer for MinIO
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      
+      const uploadResult = await fileStorage.uploadFile(
+        filePath,
+        fileBuffer,
+        file.type,
+        {
+          'User-ID': session.user.id,
+          'User-Email': session.user.email,
+          'Original-Name': file.name,
+          'Upload-Date': new Date().toISOString(),
+          'File-Type': 'logo'
+        }
+      );
+      
+      console.log("✅ Logo uploaded to MinIO:", uploadResult);
+    } catch (uploadError) {
+      console.error("❌ MinIO upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload logo" },
+        { error: "Failed to upload logo to storage" },
         { status: 500 }
       );
     }
-
-    console.log("Logo uploaded successfully to storage");
 
     let oldStoragePath = null;
 
@@ -172,43 +183,42 @@ export async function POST(request) {
 
       // If we had an old logo, delete it from storage AFTER successful database update
       if (oldStoragePath && oldStoragePath !== filePath) {
-        console.log("Deleting old logo from storage:", oldStoragePath);
-        const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
-
-        if (deleteError) {
+        console.log("Deleting old logo from MinIO storage:", oldStoragePath);
+        try {
+          await fileStorage.deleteFile(oldStoragePath);
+          console.log("✅ Old logo deleted from MinIO");
+        } catch (deleteError) {
           console.error(
-            "Warning: Failed to delete old logo from storage:",
+            "⚠️ Warning: Failed to delete old logo from MinIO:",
             deleteError
           );
           // Don't fail the request if storage cleanup fails
-        } else {
-          console.log("Old logo deleted successfully from storage");
         }
       }
 
       // Generate download URL for the new logo
-      const { data: urlData, error: urlError } = await getMinioDownloadUrl(
-        filePath,
-        86400
-      );
-
-      if (urlError) {
+      let logoUrl = null;
+      try {
+        logoUrl = await fileStorage.getPresignedUrl(filePath, 86400);
+      } catch (urlError) {
         console.error("Error generating download URL:", urlError);
         // Don't fail - the upload was successful
       }
 
       return NextResponse.json({
         message: "Logo uploaded successfully",
-        logoUrl: urlData?.signedUrl || null,
+        logoUrl: logoUrl,
         storagePath: filePath,
       });
     } catch (dbError) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded logo:", dbError);
 
-      const { error: cleanupError } = await deleteFromSupabase(filePath);
-      if (cleanupError) {
-        console.error("Failed to cleanup uploaded logo:", cleanupError);
+      try {
+        await fileStorage.deleteFile(filePath);
+        console.log("✅ Cleanup: Uploaded logo deleted from MinIO");
+      } catch (cleanupError) {
+        console.error("❌ Failed to cleanup uploaded logo:", cleanupError);
       }
 
       throw dbError; // Re-throw the original error
@@ -254,14 +264,15 @@ export async function DELETE() {
 
     console.log("Logo setting deleted from database successfully");
 
-    // Then delete from supabase storage
+    // Then delete from MinIO storage
     if (storagePath) {
-      console.log("Deleting logo file from storage:", storagePath);
-      const { error: deleteError } = await deleteFromSupabase(storagePath);
-
-      if (deleteError) {
+      console.log("Deleting logo file from MinIO storage:", storagePath);
+      try {
+        await fileStorage.deleteFile(storagePath);
+        console.log("✅ Logo file deleted from MinIO");
+      } catch (deleteError) {
         console.error(
-          "Warning: Failed to delete logo file from storage:",
+          "⚠️ Warning: Failed to delete logo file from MinIO:",
           deleteError
         );
         // Don't fail the request if storage cleanup fails
@@ -269,8 +280,6 @@ export async function DELETE() {
           message: "Logo deleted successfully (storage cleanup failed)",
         });
       }
-
-      console.log("Logo file deleted successfully from storage");
     }
 
     return NextResponse.json({ message: "Logo deleted successfully" });

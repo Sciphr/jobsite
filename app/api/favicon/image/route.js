@@ -1,7 +1,7 @@
 // app/api/favicon/image/route.js - Proxy endpoint to serve favicon through the app domain
 import { NextResponse } from "next/server";
 import { appPrisma } from "../../../lib/prisma";
-import { getMinioDownloadUrl } from "../../../lib/supabase-storage";
+import { fileStorage } from "../../../lib/minio";
 
 export async function GET() {
   try {
@@ -18,18 +18,19 @@ export async function GET() {
     }
 
     // Generate download URL for the current favicon
-    const { data, error } = await getMinioDownloadUrl(
-      faviconSetting.value,
-      86400
-    );
-
-    if (error || !data?.signedUrl) {
+    let downloadUrl;
+    try {
+      downloadUrl = await fileStorage.getPresignedUrl(
+        faviconSetting.value,
+        86400
+      );
+    } catch (error) {
       console.error("Error generating favicon download URL:", error);
       return new NextResponse(null, { status: 500 });
     }
 
     // Fetch the actual image from MinIO
-    const imageResponse = await fetch(data.signedUrl);
+    const imageResponse = await fetch(downloadUrl);
 
     if (!imageResponse.ok) {
       console.error("Error fetching favicon from MinIO:", imageResponse.status);

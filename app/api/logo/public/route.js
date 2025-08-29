@@ -1,7 +1,7 @@
 // app/api/logo/public/route.js
 import { NextResponse } from "next/server";
 import { appPrisma } from "../../../lib/prisma";
-import { getMinioDownloadUrl } from "../../../lib/supabase-storage";
+import { fileStorage } from "../../../lib/minio";
 
 export async function GET() {
   try {
@@ -18,17 +18,17 @@ export async function GET() {
     }
 
     // Generate download URL for the current logo
-    const { data, error } = await getMinioDownloadUrl(logoSetting.value, 86400); // 24 hours
-
-    if (error) {
+    try {
+      const downloadUrl = await fileStorage.getPresignedUrl(logoSetting.value, 86400); // 24 hours
+      
+      return NextResponse.json({
+        logoUrl: downloadUrl,
+        storagePath: logoSetting.value,
+      });
+    } catch (error) {
       console.error("Error generating logo download URL:", error);
       return NextResponse.json({ logoUrl: null });
     }
-
-    return NextResponse.json({
-      logoUrl: data.signedUrl,
-      storagePath: logoSetting.value,
-    });
 
   } catch (error) {
     console.error("Error fetching public logo:", error);
