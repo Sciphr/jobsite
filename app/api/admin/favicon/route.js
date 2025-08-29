@@ -3,11 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { appPrisma } from "../../../lib/prisma";
-import {
-  uploadToSupabase,
-  deleteFromSupabase,
-  getMinioDownloadUrl,
-} from "../../../lib/supabase-storage";
+import { fileStorage } from "../../../lib/minio";
 
 // Helper function to validate favicon types
 function isValidFaviconType(fileType) {
@@ -46,20 +42,20 @@ export async function GET() {
     }
 
     // Generate download URL for the current favicon
-    const { data, error } = await getMinioDownloadUrl(
-      faviconSetting.value,
-      86400
-    ); // 24 hours
+    try {
+      const downloadUrl = await fileStorage.getPresignedUrl(
+        faviconSetting.value,
+        86400
+      ); // 24 hours
 
-    if (error) {
+      return NextResponse.json({
+        faviconUrl: downloadUrl,
+        storagePath: faviconSetting.value,
+      });
+    } catch (error) {
       console.error("Error generating favicon download URL:", error);
       return NextResponse.json({ faviconUrl: null });
     }
-
-    return NextResponse.json({
-      faviconUrl: data.signedUrl,
-      storagePath: faviconSetting.value,
-    });
   } catch (error) {
     console.error("Error fetching favicon:", error);
     return NextResponse.json(
@@ -122,22 +118,34 @@ export async function POST(request) {
       },
     });
 
-    // Upload new favicon to supabase first
-    console.log("Uploading new favicon to storage...");
-    const { data: uploadData, error: uploadError } = await uploadToSupabase(
-      file,
-      filePath
-    );
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+    // Upload new favicon to MinIO storage
+    console.log("Uploading new favicon to MinIO storage...");
+    
+    try {
+      // Convert file to buffer for MinIO
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      
+      const uploadResult = await fileStorage.uploadFile(
+        filePath,
+        fileBuffer,
+        file.type,
+        {
+          'User-ID': session.user.id,
+          'User-Email': session.user.email,
+          'Original-Name': file.name,
+          'Upload-Date': new Date().toISOString(),
+          'File-Type': 'favicon'
+        }
+      );
+      
+      console.log("✅ Favicon uploaded to MinIO:", uploadResult);
+    } catch (uploadError) {
+      console.error("❌ MinIO upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload favicon" },
+        { error: "Failed to upload favicon to storage" },
         { status: 500 }
       );
     }
-
-    console.log("Favicon uploaded successfully to storage");
 
     let oldStoragePath = null;
 
@@ -172,43 +180,42 @@ export async function POST(request) {
 
       // If we had an old favicon, delete it from storage AFTER successful database update
       if (oldStoragePath && oldStoragePath !== filePath) {
-        console.log("Deleting old favicon from storage:", oldStoragePath);
-        const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
-
-        if (deleteError) {
+        console.log("Deleting old favicon from MinIO storage:", oldStoragePath);
+        try {
+          await fileStorage.deleteFile(oldStoragePath);
+          console.log("✅ Old favicon deleted from MinIO");
+        } catch (deleteError) {
           console.error(
-            "Warning: Failed to delete old favicon from storage:",
+            "⚠️ Warning: Failed to delete old favicon from MinIO:",
             deleteError
           );
           // Don't fail the request if storage cleanup fails
-        } else {
-          console.log("Old favicon deleted successfully from storage");
         }
       }
 
       // Generate download URL for the new favicon
-      const { data: urlData, error: urlError } = await getMinioDownloadUrl(
-        filePath,
-        86400
-      );
-
-      if (urlError) {
+      let faviconUrl = null;
+      try {
+        faviconUrl = await fileStorage.getPresignedUrl(filePath, 86400);
+      } catch (urlError) {
         console.error("Error generating download URL:", urlError);
         // Don't fail - the upload was successful
       }
 
       return NextResponse.json({
         message: "Favicon uploaded successfully",
-        faviconUrl: urlData?.signedUrl || null,
+        faviconUrl: faviconUrl,
         storagePath: filePath,
       });
     } catch (dbError) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded favicon:", dbError);
 
-      const { error: cleanupError } = await deleteFromSupabase(filePath);
-      if (cleanupError) {
-        console.error("Failed to cleanup uploaded favicon:", cleanupError);
+      try {
+        await fileStorage.deleteFile(filePath);
+        console.log("✅ Cleanup: Uploaded favicon deleted from MinIO");
+      } catch (cleanupError) {
+        console.error("❌ Failed to cleanup uploaded favicon:", cleanupError);
       }
 
       throw dbError; // Re-throw the original error
@@ -254,14 +261,15 @@ export async function DELETE() {
 
     console.log("Favicon setting deleted from database successfully");
 
-    // Then delete from supabase storage
+    // Then delete from MinIO storage
     if (storagePath) {
-      console.log("Deleting favicon file from storage:", storagePath);
-      const { error: deleteError } = await deleteFromSupabase(storagePath);
-
-      if (deleteError) {
+      console.log("Deleting favicon file from MinIO storage:", storagePath);
+      try {
+        await fileStorage.deleteFile(storagePath);
+        console.log("✅ Favicon file deleted from MinIO");
+      } catch (deleteError) {
         console.error(
-          "Warning: Failed to delete favicon file from storage:",
+          "⚠️ Warning: Failed to delete favicon file from MinIO:",
           deleteError
         );
         // Don't fail the request if storage cleanup fails
@@ -269,8 +277,6 @@ export async function DELETE() {
           message: "Favicon deleted successfully (storage cleanup failed)",
         });
       }
-
-      console.log("Favicon file deleted successfully from storage");
     }
 
     return NextResponse.json({ message: "Favicon deleted successfully" });
