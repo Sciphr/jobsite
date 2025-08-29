@@ -380,17 +380,23 @@ export default function PipelineView() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to generate download URL");
+        throw new Error("Failed to download resume");
       }
 
-      const data = await response.json();
-
-      if (data.downloadUrl) {
-        // Open download in a new tab
-        window.open(data.downloadUrl, "_blank");
-      } else {
-        throw new Error("No download URL received");
-      }
+      // The response is now the file itself, not JSON with URL
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${application.applicantName || "applicant"}_resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error downloading resume:", error);
       // You could add a toast notification here for better UX

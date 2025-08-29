@@ -455,17 +455,21 @@ function AdminApplicationsContent() {
         throw new Error(`API Error: ${errorData.error}`);
       }
 
-      const { downloadUrl } = await response.json();
-      console.log("✅ Got download URL");
+      // The response is now the file itself, not JSON with URL
+      const blob = await response.blob();
+      console.log("✅ Got file blob, size:", blob.size);
 
       // Create download link
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = url;
       link.download = `${applicantName || "applicant"}_resume.pdf`;
-      link.target = "_blank";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("❌ Download error:", error);
       alert(`Failed to download resume: ${error.message}`);

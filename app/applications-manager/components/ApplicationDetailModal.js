@@ -268,11 +268,24 @@ export default function ApplicationDetailModal({
       );
 
       if (!response.ok) {
-        throw new Error("Failed to get resume URL");
+        throw new Error("Failed to download resume");
       }
 
-      const data = await response.json();
-      window.open(data.downloadUrl, "_blank");
+      // The response is now the file itself, not JSON with URL
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${application.applicantName || "applicant"}_resume.pdf`;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error viewing resume:", error);
     }

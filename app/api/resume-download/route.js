@@ -23,17 +23,34 @@ export async function GET(request) {
 
     console.log("Attempting to download file from path:", storagePath);
 
-    // Generate presigned URL for file download (valid for 1 hour)
+    // Directly stream the file through the application instead of using presigned URLs
     try {
-      const downloadUrl = await fileStorage.getPresignedUrl(storagePath, 3600);
-      console.log("✅ Generated MinIO presigned URL");
+      const fileStream = await fileStorage.downloadFile(storagePath);
+      console.log("✅ Got file stream from MinIO");
       
-      return NextResponse.json({
-        success: true,
-        downloadUrl
+      // Get file stats for headers
+      const stats = await fileStorage.getFileStats(storagePath);
+      
+      // Extract filename from path
+      const fileName = storagePath.split('/').pop();
+      
+      // Convert stream to buffer
+      const chunks = [];
+      for await (const chunk of fileStream) {
+        chunks.push(chunk);
+      }
+      const fileBuffer = Buffer.concat(chunks);
+      
+      // Return the file directly
+      return new NextResponse(fileBuffer, {
+        headers: {
+          'Content-Type': stats.metaData['content-type'] || 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="${fileName}"`,
+          'Content-Length': fileBuffer.length.toString(),
+        },
       });
     } catch (error) {
-      console.error("Error generating download URL:", error);
+      console.error("Error downloading file from MinIO:", error);
       return NextResponse.json(
         {
           error: "File not found in storage",

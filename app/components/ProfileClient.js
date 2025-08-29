@@ -451,21 +451,31 @@ export default function ProfileClient({ session }) {
       ("Download response status:", response.status);
 
       if (response.ok) {
-        const data = await response.json();
-        ("Download URL received:", data.downloadUrl);
+        // The response is now the file itself, not a JSON with URL
+        const blob = await response.blob();
+        console.log("File blob received, size:", blob.size);
 
         // Create a temporary link element for download
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = data.downloadUrl;
+        link.href = url;
         link.download = fileName;
-        link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up the URL object
+        window.URL.revokeObjectURL(url);
       } else {
-        const errorData = await response.json();
-        console.error("Download failed:", errorData);
-        alert(`Failed to download resume: ${errorData.error}`);
+        // For error responses, try to parse JSON
+        try {
+          const errorData = await response.json();
+          console.error("Download failed:", errorData);
+          alert(`Failed to download resume: ${errorData.error}`);
+        } catch {
+          console.error("Download failed with status:", response.status);
+          alert(`Failed to download resume: ${response.status}`);
+        }
       }
     } catch (error) {
       console.error("Error downloading resume:", error);
