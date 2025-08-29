@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { appPrisma } from "../../lib/prisma";
-import { uploadToSupabase, deleteFromSupabase } from "../../lib/supabase-storage";
+import { fileStorage } from "../../lib/minio";
 import { getSystemSetting } from "../../lib/settings";
 import { logAuditEvent } from "../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../lib/auditLog";
@@ -207,22 +207,34 @@ export async function POST(request) {
       );
     }
 
-    // Upload new file to Supabase Storage FIRST
-    console.log("Uploading new file to storage...");
-    const { data: uploadData, error: uploadError } = await uploadToSupabase(
-      file,
-      filePath
-    );
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+    // Upload new file to MinIO FIRST
+    console.log("Uploading new file to MinIO storage...");
+    
+    // Convert file to buffer for MinIO
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    
+    try {
+      const uploadResult = await fileStorage.uploadFile(
+        filePath,
+        fileBuffer,
+        file.type,
+        {
+          'User-ID': session.user.id,
+          'User-Email': session.user.email,
+          'Original-Name': file.name,
+          'Upload-Date': new Date().toISOString()
+        }
+      );
+      
+      console.log("✅ File uploaded to MinIO:", uploadResult);
+      
+    } catch (uploadError) {
+      console.error("❌ MinIO upload failed:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { error: "Failed to upload file to MinIO storage" },
         { status: 500 }
       );
     }
-
-    ("File uploaded successfully to storage");
 
     // Create or update resume record with safe values
     const resumeData = {
@@ -260,17 +272,16 @@ export async function POST(request) {
       // If we had an old resume, delete it from storage AFTER successful database update
       if (oldStoragePath) {
         console.log("Deleting old file from storage:", oldStoragePath);
-        const { error: deleteError } = await deleteFromSupabase(oldStoragePath);
-
-        if (deleteError) {
+        try {
+          await fileStorage.deleteFile(oldStoragePath);
+          console.log("✅ Old file deleted from MinIO");
+        } catch (deleteError) {
           console.error(
-            "Warning: Failed to delete old file from storage:",
+            "⚠️ Warning: Failed to delete old file from MinIO:",
             deleteError
           );
           // Don't fail the request if storage cleanup fails
           // The new file is already uploaded and database is updated
-        } else {
-          console.log("Old file deleted successfully from storage");
         }
       }
 
@@ -339,9 +350,11 @@ export async function POST(request) {
       // If database operation fails, clean up the newly uploaded file
       console.error("Database error, cleaning up uploaded file:", dbError);
 
-      const { error: cleanupError } = await deleteFromSupabase(filePath);
-      if (cleanupError) {
-        console.error("Failed to cleanup uploaded file:", cleanupError);
+      try {
+        await fileStorage.deleteFile(filePath);
+        console.log("✅ Cleanup: Uploaded file deleted from MinIO");
+      } catch (cleanupError) {
+        console.error("❌ Failed to cleanup uploaded file:", cleanupError);
       }
 
       throw dbError; // Re-throw the original error
@@ -404,11 +417,12 @@ export async function DELETE(request) {
 
     // Then delete from Supabase Storage
     console.log("Deleting file from storage:", storagePath);
-    const { error: deleteError } = await deleteFromSupabase(storagePath);
-
-    if (deleteError) {
+    try {
+      await fileStorage.deleteFile(storagePath);
+      console.log("✅ File deleted from MinIO");
+    } catch (deleteError) {
       console.error(
-        "Warning: Failed to delete file from storage:",
+        "⚠️ Warning: Failed to delete file from MinIO:",
         deleteError
       );
       // Don't fail the request if storage cleanup fails

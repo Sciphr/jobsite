@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { getMinioDownloadUrl } from "../../lib/supabase-storage";
+import { fileStorage } from "../../lib/minio";
 
 export async function GET(request) {
   try {
@@ -24,10 +24,16 @@ export async function GET(request) {
 
     console.log("Attempting to download file from path:", storagePath);
 
-    // Generate signed URL for file download (valid for 1 hour)
-    const { data, error } = await getMinioDownloadUrl(storagePath, 3600);
-
-    if (error) {
+    // Generate presigned URL for file download (valid for 1 hour)
+    try {
+      const downloadUrl = await fileStorage.getPresignedUrl(storagePath, 3600);
+      console.log("✅ Generated MinIO presigned URL");
+      
+      return NextResponse.json({
+        success: true,
+        downloadUrl
+      });
+    } catch (error) {
       console.error("Error generating download URL:", error);
       return NextResponse.json(
         {
@@ -37,14 +43,6 @@ export async function GET(request) {
         },
         { status: 404 }
       );
-    }
-
-    console.log("Download URL generated successfully");
-
-    return NextResponse.json({
-      downloadUrl: data.signedUrl,
-      message: "Download URL generated successfully",
-    });
   } catch (error) {
     console.error("Error in resume download:", error);
     return NextResponse.json(
