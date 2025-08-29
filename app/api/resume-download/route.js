@@ -1,4 +1,3 @@
-// Replace the entire file with:
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
@@ -43,6 +42,7 @@ export async function GET(request) {
         },
         { status: 404 }
       );
+    }
   } catch (error) {
     console.error("Error in resume download:", error);
     return NextResponse.json(
