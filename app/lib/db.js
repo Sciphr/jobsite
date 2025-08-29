@@ -14,7 +14,7 @@ export const authDb =
     },
   });
 
-// For general operations (pooled connection)
+// For general operations (pooled connection with retry)
 export const db =
   globalForPrisma.appPrisma ||
   new PrismaClient({
@@ -23,6 +23,13 @@ export const db =
         url: process.env.DATABASE_URL,
       },
     },
+    // Add connection resilience
+    __internal: {
+      engine: {
+        connectionTimeout: 20000, // 20 seconds
+      },
+    },
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
 if (process.env.NODE_ENV !== "production") {
