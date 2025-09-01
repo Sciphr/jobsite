@@ -44,6 +44,8 @@ import {
   Trash2,
   Home,
   ChevronRight,
+  Sparkles,
+  Bot,
 } from "lucide-react";
 
 export default function CandidateDetailsPage() {
@@ -54,6 +56,9 @@ export default function CandidateDetailsPage() {
   const [notes, setNotes] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [rating, setRating] = useState(0);
+  const [ratingType, setRatingType] = useState(null);
+  const [aiRating, setAiRating] = useState(null);
+  const [isRatingAI, setIsRatingAI] = useState(false);
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState("");
   const [showQuickEmail, setShowQuickEmail] = useState(false);
@@ -106,11 +111,34 @@ export default function CandidateDetailsPage() {
   // Initialize state when component mounts
   useEffect(() => {
     if (applicationId) {
-      setRating(3); // Default rating
+      fetchApplicationRating();
       setTags(["Remote OK", "Senior Level"]);
       fetchInterviews();
     }
   }, [applicationId]);
+
+  // Fetch existing rating from database
+  const fetchApplicationRating = async () => {
+    try {
+      const response = await fetch(`/api/admin/applications/${applicationId}/rating`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.rating.current) {
+          setRating(data.rating.current);
+          setRatingType(data.rating.type);
+          setAiRating(data.rating.aiRating);
+        } else {
+          // No existing rating, set defaults
+          setRating(0);
+          setRatingType(null);
+          setAiRating(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch rating:", error);
+      setRating(0);
+    }
+  };
 
   if (applicationsLoading) {
     return (
@@ -197,6 +225,68 @@ export default function CandidateDetailsPage() {
       setIsAddingNote(false);
     } catch (error) {
       console.error("Failed to add note:", error);
+    }
+  };
+
+  // Handle manual rating update
+  const handleManualRating = async (newRating) => {
+    try {
+      const response = await fetch(`/api/admin/applications/${applicationId}/rating`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rating: newRating,
+          ratingType: 'manual'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRating(data.rating);
+        setRatingType(data.ratingType);
+        // Keep AI rating for reference
+      } else {
+        console.error('Failed to update rating');
+        alert('Failed to update rating. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating rating:', error);
+      alert('Error updating rating. Please try again.');
+    }
+  };
+
+  // Handle AI rating
+  const handleAIRating = async () => {
+    setIsRatingAI(true);
+    try {
+      const response = await fetch('/api/admin/ai-rating', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          applicationId: applicationId
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setRating(data.rating);
+        setRatingType(data.ratingType);
+        setAiRating(data.rating);
+        alert(`AI rated this application: ${data.rating}/5 stars`);
+      } else {
+        console.error('AI rating failed:', data.error);
+        alert(data.error || 'AI rating failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error with AI rating:', error);
+      alert('Error with AI rating. Please ensure OpenAI API is configured.');
+    } finally {
+      setIsRatingAI(false);
     }
   };
 
@@ -358,24 +448,113 @@ export default function CandidateDetailsPage() {
 
           {/* Rating */}
           <div className="admin-card rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold admin-text mb-4">Rating</h3>
-            <div className="flex items-center space-x-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => setRating(star)}
-                  className="p-1"
-                >
-                  <Star
-                    className={`h-6 w-6 ${
-                      star <= rating
-                        ? "text-yellow-400 fill-current"
-                        : "text-gray-300"
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold admin-text">Rating</h3>
+              {ratingType && (
+                <div className="flex items-center space-x-1">
+                  {ratingType === 'ai' ? (
+                    <Bot className="h-4 w-4 text-blue-500" />
+                  ) : (
+                    <User className="h-4 w-4 text-green-500" />
+                  )}
+                  <span className="text-xs admin-text-light capitalize">
+                    {ratingType}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              {/* Current Rating Display */}
+              <div className="flex items-center space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleManualRating(star)}
+                    className="p-1 transition-transform hover:scale-110"
+                    title={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                  >
+                    <Star
+                      className={`h-6 w-6 transition-colors ${
+                        star <= rating
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300 hover:text-yellow-200"
+                      }`}
+                    />
+                  </button>
+                ))}
+                <span className="ml-2 text-sm admin-text-light">
+                  ({rating || 'Not rated'}/5)
+                </span>
+              </div>
+
+              {/* AI Rating Section */}
+              <div className="border-t admin-border pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium admin-text">AI Rating</span>
+                  <button
+                    onClick={handleAIRating}
+                    disabled={isRatingAI}
+                    className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                      isRatingAI
+                        ? "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                        : "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/30"
                     }`}
-                  />
-                </button>
-              ))}
-              <span className="ml-2 text-sm admin-text-light">({rating}/5)</span>
+                  >
+                    {isRatingAI ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    <span>{isRatingAI ? 'Rating...' : 'AI Rate'}</span>
+                  </button>
+                </div>
+                
+                {aiRating && (
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star <= aiRating
+                              ? "text-blue-400 fill-current"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm admin-text-light">
+                      AI suggested: {aiRating}/5
+                    </span>
+                    {ratingType === 'manual' && (
+                      <button
+                        onClick={() => handleManualRating(aiRating)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Use AI rating
+                      </button>
+                    )}
+                  </div>
+                )}
+                
+                {!aiRating && !isRatingAI && (
+                  <p className="text-sm admin-text-light">
+                    Click "AI Rate" to get an AI-powered assessment
+                  </p>
+                )}
+              </div>
+              
+              {/* Rating Info */}
+              {ratingType && (
+                <div className="text-xs admin-text-light bg-gray-50 dark:bg-gray-800 rounded p-2">
+                  {ratingType === 'ai' ? (
+                    <span>This rating was generated by AI. Click any star to override with manual rating.</span>
+                  ) : (
+                    <span>This is a manual rating. AI suggestion preserved above.</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -41,10 +41,16 @@ model applications {
   current_stage_entered_at              DateTime?                       @db.Timestamp(6)
   time_in_current_stage_seconds         Int?                            @default(0)
   total_application_time_seconds        Int?                            @default(0)
+  rating                                Int?
+  rating_type                           String?                         @db.VarChar(20)
+  ai_rating                             Int?
+  rating_updated_at                     DateTime?                       @db.Timestamp(6)
+  rated_by                              String?                         @db.Uuid
   application_stage_history             application_stage_history[]
   jobs                                  jobs                            @relation(fields: [jobId], references: [id])
   users                                 users?                          @relation(fields: [userId], references: [id])
   users_applications_archived_byTousers users?                          @relation("applications_archived_byTousers", fields: [archived_by], references: [id], onUpdate: NoAction, map: "fk_applications_archived_by")
+  users_applications_rated_byTousers    users?                          @relation("applications_rated_byTousers", fields: [rated_by], references: [id], onUpdate: NoAction, map: "fk_applications_rated_by")
   audit_logs                            audit_logs[]
   emails                                emails[]
   hire_approval_requests                hire_approval_requests[]
@@ -55,6 +61,9 @@ model applications {
   @@unique([userId, jobId])
   @@index([is_archived, status], map: "idx_applications_archived_status")
   @@index([is_archived], map: "idx_applications_is_archived")
+  @@index([rating], map: "idx_applications_rating")
+  @@index([rating_type], map: "idx_applications_rating_type")
+  @@index([rating_updated_at], map: "idx_applications_rating_updated_at")
 }
 
 model audit_logs {
@@ -559,6 +568,7 @@ model users {
   application_stage_history                          application_stage_history[]
   applications                                       applications[]
   applications_applications_archived_byTousers       applications[]                  @relation("applications_archived_byTousers")
+  applications_applications_rated_byTousers          applications[]                  @relation("applications_rated_byTousers")
   audit_logs_audit_logs_actor_idTousers              audit_logs[]                    @relation("audit_logs_actor_idTousers")
   audit_logs_audit_logs_related_user_idTousers       audit_logs[]                    @relation("audit_logs_related_user_idTousers")
   email_automation_rules                             email_automation_rules[]
