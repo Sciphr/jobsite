@@ -71,6 +71,11 @@ function AdminJobsContent() {
 
   // ✅ REPLACE WITH THIS:
   const filteredJobs = useMemo(() => {
+    // Ensure jobs is an array before filtering
+    if (!jobs || !Array.isArray(jobs)) {
+      return [];
+    }
+    
     let filtered = jobs;
 
     // Search filter

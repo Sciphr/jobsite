@@ -180,6 +180,11 @@ function AdminApplicationsContent() {
 
   // ✅ FIXED: Use useMemo instead of useEffect to prevent unnecessary calls
   const filteredApplications = useMemo(() => {
+    // Ensure applications is an array before filtering
+    if (!applications || !Array.isArray(applications)) {
+      return [];
+    }
+    
     let filtered = applications;
 
     if (searchTerm) {

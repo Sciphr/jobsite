@@ -10,12 +10,29 @@ import {
 const fetcher = async (url) => {
   console.log(`🔄 API Call: ${url}`); // Add logging to track actual calls
   const response = await fetch(url);
+  
+  const data = await response.json();
+  
   if (!response.ok) {
+    // For users endpoint, return empty array on error to prevent filter issues
+    if (url.includes('/admin/users') && data.users) {
+      return data.users;
+    }
+    // For applications endpoint, return empty array on error
+    if (url.includes('/admin/applications') && data.applications) {
+      return data.applications;
+    }
+    // For jobs endpoint, return empty array on error  
+    if (url.includes('/admin/jobs') && data.jobs) {
+      return data.jobs;
+    }
+    
     throw new Error(
-      `Failed to fetch: ${response.status} ${response.statusText}`
+      data.error || data.message || `Failed to fetch: ${response.status} ${response.statusText}`
     );
   }
-  return response.json();
+  
+  return data;
 };
 
 // ✅ FIXED: More aggressive caching to prevent refetches

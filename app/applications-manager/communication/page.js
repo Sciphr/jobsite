@@ -153,6 +153,12 @@ export default function CommunicationHub() {
             jobTitle: application.job?.title || 'Unknown Position',
             status: application.status
           }]);
+          
+          // Pre-select job filter for single recipient too
+          if (application.jobId && !selectedJob) {
+            setSelectedJob(application.jobId);
+          }
+          
           setActiveTab("compose");
           console.log('📧 Pre-filled recipient from quick action:', application.name || application.email);
         }

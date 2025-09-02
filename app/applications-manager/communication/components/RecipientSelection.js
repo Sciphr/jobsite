@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, X, Users } from "lucide-react";
 
 export default function RecipientSelection({
   jobs,
@@ -18,6 +18,49 @@ export default function RecipientSelection({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold admin-text">Select Recipients</h3>
+
+      {/* Selected Recipients Display */}
+      {recipients.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <Users className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Selected Recipients ({recipients.length})
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                // Clear all recipients
+                recipients.forEach(recipient => {
+                  onRecipientToggle(recipient);
+                });
+              }}
+              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+            >
+              Clear All
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {recipients.map((recipient) => (
+              <div
+                key={recipient.id}
+                className="bg-white dark:bg-gray-700 border border-blue-200 dark:border-blue-700 rounded-full px-3 py-1 flex items-center space-x-2 text-sm"
+              >
+                <span className="text-blue-800 dark:text-blue-200">
+                  {recipient.name || "Anonymous"}
+                </span>
+                <button
+                  onClick={() => onRecipientToggle(recipient)}
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="space-y-3">
@@ -90,50 +133,67 @@ export default function RecipientSelection({
         </div>
 
         <div className="divide-y divide-gray-200 dark:divide-gray-600">
-          {filteredApplications.map((application) => (
-            <div
-              key={application.id}
-              className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-              onClick={() => onRecipientToggle(application)}
-            >
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={isRecipientSelected(application.id)}
-                  onChange={(e) => {
-                    e.stopPropagation(); // Prevent row click
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent row click
-                    onRecipientToggle(application);
-                  }}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium admin-text truncate">
-                    {application.name || "Anonymous"}
-                  </p>
-                  <p className="text-xs admin-text-light truncate">{application.email}</p>
-                  <p className="text-xs admin-text-light">{application.job?.title}</p>
+          {filteredApplications.map((application) => {
+            const isSelected = isRecipientSelected(application.id);
+            return (
+              <div
+                key={application.id}
+                className={`p-3 cursor-pointer transition-all ${
+                  isSelected
+                    ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                }`}
+                onClick={() => onRecipientToggle(application)}
+              >
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      e.stopPropagation(); // Prevent row click
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent row click
+                      onRecipientToggle(application);
+                    }}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 w-4 h-4"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${
+                      isSelected ? "text-blue-800 dark:text-blue-200" : "admin-text"
+                    }`}>
+                      {application.name || "Anonymous"}
+                    </p>
+                    <p className={`text-xs truncate ${
+                      isSelected ? "text-blue-600 dark:text-blue-300" : "admin-text-light"
+                    }`}>
+                      {application.email}
+                    </p>
+                    <p className={`text-xs ${
+                      isSelected ? "text-blue-600 dark:text-blue-300" : "admin-text-light"
+                    }`}>
+                      {application.job?.title}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      application.status === "Applied"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
+                        : application.status === "Reviewing"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200"
+                          : application.status === "Interview"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+                            : application.status === "Hired"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                    }`}
+                  >
+                    {application.status}
+                  </span>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    application.status === "Applied"
-                      ? "bg-blue-100 text-blue-800"
-                      : application.status === "Reviewing"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : application.status === "Interview"
-                          ? "bg-green-100 text-green-800"
-                          : application.status === "Hired"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {application.status}
-                </span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

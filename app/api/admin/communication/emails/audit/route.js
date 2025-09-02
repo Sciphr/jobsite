@@ -147,16 +147,20 @@ export async function GET(request) {
 
             emailDetails = await appPrisma.emails.findFirst({
               where: emailQuery,
-              include: {
-                email_templates: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
-                },
-              },
             });
+
+            // If email found, fetch template separately if needed
+            if (emailDetails && emailDetails.template_id) {
+              const template = await appPrisma.email_templates.findUnique({
+                where: { id: emailDetails.template_id },
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
+                },
+              });
+              emailDetails.template = template;
+            }
           } catch (error) {
             console.warn(
               "Could not fetch email details for audit log:",
@@ -211,7 +215,7 @@ export async function GET(request) {
                 openedAt: emailDetails.opened_at,
                 clickedAt: emailDetails.clicked_at,
                 sentAt: emailDetails.sent_at,
-                template: emailDetails.email_templates,
+                template: emailDetails.template,
               }
             : null,
           // Computed fields for UI
@@ -233,7 +237,7 @@ export async function GET(request) {
             (log.status === "success" ? "sent" : "failed"),
           sentAt: emailDetails?.sent_at || log.created_at,
           templateInfo:
-            emailDetails?.email_templates ||
+            emailDetails?.template ||
             (log.metadata?.templateId
               ? {
                   id: log.metadata.templateId,

@@ -86,6 +86,15 @@ function AdminUsersContent() {
 
   // ✅ Enhanced filtering with advanced options
   const filteredUsers = useMemo(() => {
+    // Debug logging to understand the data structure
+    console.log('filteredUsers useMemo - users:', users, 'type:', typeof users, 'isArray:', Array.isArray(users));
+    
+    // Ensure users is an array before filtering
+    if (!users || !Array.isArray(users)) {
+      console.log('filteredUsers - returning empty array because users is not array');
+      return [];
+    }
+    
     let filtered = users;
 
     // Search filter
@@ -697,7 +706,7 @@ function AdminUsersContent() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {roleOptions.map((role, index) => {
           // Count users with this role in new multiple roles system
-          const count = users.filter((user) => {
+          const count = (users && Array.isArray(users) ? users : []).filter((user) => {
             // Check both old role field and new user_roles
             if (user.role === role.value) return true;
             if (user.user_roles?.some(ur => ur.roles.name.toLowerCase().replace(' ', '_') === role.value)) return true;
@@ -909,7 +918,7 @@ function AdminUsersContent() {
           {/* Filter Results Summary */}
           <div className="flex items-center justify-end text-sm admin-text-light">
             <span>
-              Showing {filteredUsers.length} of {users.length} users
+              Showing {filteredUsers.length} of {users && Array.isArray(users) ? users.length : 0} users
               {(searchTerm || roleFilter.length > 0 || statusFilter !== 'all' || roleCountFilter !== 'all' || accountTypeFilter !== 'all') && 
                 <span className="ml-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
                   Filtered

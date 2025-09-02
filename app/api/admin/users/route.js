@@ -30,6 +30,7 @@ async function getUsers(req) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        account_type: true,
         user_roles: {
           where: { is_active: true },
           select: {
@@ -104,7 +105,7 @@ async function getUsers(req) {
       }
     }, req).catch(console.error);
 
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
+    return new Response(JSON.stringify({ error: "Internal server error", users: [] }), {
       status: 500,
     });
   }

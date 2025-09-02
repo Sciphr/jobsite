@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
   AlertTriangle,
 } from "lucide-react";
+import { highlightText } from "@/app/components/SmartSearch";
 
 export default function ApplicationsTableView({
   filteredApplications,
@@ -24,6 +25,7 @@ export default function ApplicationsTableView({
   getButtonClasses,
   staleData,
   trackTimeInStage,
+  searchTerm = "",
 }) {
   const [sortField, setSortField] = useState("appliedAt");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -191,11 +193,11 @@ export default function ApplicationsTableView({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium admin-text truncate">
-                          {application.name || "Anonymous"}
+                          {highlightText(application.name || "Anonymous", searchTerm)}
                         </p>
                         <div className="flex items-center space-x-1 text-xs admin-text-light">
                           <Mail className="h-3 w-3" />
-                          <span className="truncate">{application.email}</span>
+                          <span className="truncate">{highlightText(application.email, searchTerm)}</span>
                         </div>
                         {application.phone && (
                           <div className="flex items-center space-x-1 text-xs admin-text-light">
@@ -211,7 +213,7 @@ export default function ApplicationsTableView({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <p className="text-sm font-medium admin-text">
-                        {application.job?.title}
+                        {highlightText(application.job?.title, searchTerm)}
                       </p>
                       <p className="text-xs admin-text-light">
                         {application.job?.department}

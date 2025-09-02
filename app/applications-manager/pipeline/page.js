@@ -13,14 +13,23 @@ import {
   useStaleApplications,
 } from "@/app/hooks/useAdminData";
 import { useRequireNotesOnRejection } from "@/app/hooks/useRequireNotesOnRejection";
-import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
+import {
+  useHireApprovalStatus,
+  getHireApprovalForApplication,
+} from "@/app/hooks/useHireApprovalStatus";
 import { useSettings } from "@/app/hooks/useAdminData";
 import QuickActions from "../components/QuickActions";
 import RejectionNotesModal from "../components/RejectionNotesModal";
 import HireApprovalStatusModal from "../../components/HireApprovalStatusModal";
-import { HireApprovalBadge, HireApprovalIconIndicator } from "../../components/HireApprovalIndicator";
-import StageDurationBadge, { StageDurationTooltip } from "../components/StageDurationBadge";
+import {
+  HireApprovalBadge,
+  HireApprovalIconIndicator,
+} from "../../components/HireApprovalIndicator";
+import StageDurationBadge, {
+  StageDurationTooltip,
+} from "../components/StageDurationBadge";
 import ApplicationsTableView from "../components/ApplicationsTableView";
+import SmartSearch from "@/app/components/SmartSearch";
 import {
   User,
   Mail,
@@ -54,8 +63,8 @@ export default function PipelineView() {
   // Data fetching
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
-  const [viewType, setViewType] = useState('kanban'); // 'kanban' or 'table'
-  const [ratingFilter, setRatingFilter] = useState('all'); // 'all', '1', '2', '3', '4', '5', 'unrated'
+  const [viewType, setViewType] = useState("kanban"); // 'kanban' or 'table'
+  const [ratingFilter, setRatingFilter] = useState("all"); // 'all', '1', '2', '3', '4', '5', 'unrated'
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications(showArchived);
   const [hireApprovalModal, setHireApprovalModal] = useState({
@@ -67,16 +76,17 @@ export default function PipelineView() {
   });
 
   // Get hire approval status for all applications
-  const applicationIds = applications.map(app => app.id);
+  const applicationIds = applications.map((app) => app.id);
   const { hireApprovalStatus } = useHireApprovalStatus(applicationIds);
   const { data: jobs = [] } = useJobsSimple();
   const { data: settingsData } = useSettings();
-  const { data: staleData } = useStaleApplications('full');
+  const { data: staleData } = useStaleApplications("full");
 
   // Check if stage time tracking is enabled
-  const trackTimeInStage = settingsData?.settings?.find(
-    (setting) => setting.key === "track_time_in_stage"
-  )?.parsedValue || false;
+  const trackTimeInStage =
+    settingsData?.settings?.find(
+      (setting) => setting.key === "track_time_in_stage"
+    )?.parsedValue || false;
 
   // Notes on rejection functionality
   const {
@@ -175,6 +185,44 @@ export default function PipelineView() {
     },
   ];
 
+  // Quick filters configuration
+  const quickFilters = [
+    {
+      key: "ratingFilter-unrated",
+      value: "unrated",
+      label: "Unrated",
+      filterKey: "ratingFilter",
+    },
+    {
+      key: "ratingFilter-4",
+      value: "4",
+      label: "4+ Stars",
+      filterKey: "ratingFilter",
+    },
+    {
+      key: "ratingFilter-5",
+      value: "5",
+      label: "5 Stars",
+      filterKey: "ratingFilter",
+    },
+  ];
+
+  // Active filters object
+  const activeFilters = {
+    ratingFilter,
+    showStaleOnly,
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (key, value, filterKey) => {
+    const actualKey = filterKey || key;
+    if (actualKey === "ratingFilter") {
+      setRatingFilter(value === ratingFilter ? "all" : value);
+    } else if (actualKey === "showStaleOnly") {
+      setShowStaleOnly(value === showStaleOnly ? false : value);
+    }
+  };
+
   // Debounce search term
   useEffect(() => {
     setIsSearching(true);
@@ -198,19 +246,25 @@ export default function PipelineView() {
       filtered = filtered.filter(
         (app) =>
           app.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-          app.email?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-          app.job?.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+          app.email
+            ?.toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          app.job?.title
+            ?.toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase())
       );
     }
 
     if (showStaleOnly) {
-      const staleIds = new Set(staleData?.applications?.map(app => app.id) || []);
+      const staleIds = new Set(
+        staleData?.applications?.map((app) => app.id) || []
+      );
       filtered = filtered.filter((app) => staleIds.has(app.id));
     }
 
     // Filter by rating
-    if (ratingFilter !== 'all') {
-      if (ratingFilter === 'unrated') {
+    if (ratingFilter !== "all") {
+      if (ratingFilter === "unrated") {
         filtered = filtered.filter((app) => !app.rating || app.rating === 0);
       } else {
         const targetRating = parseInt(ratingFilter);
@@ -224,7 +278,14 @@ export default function PipelineView() {
     }
 
     return filtered;
-  }, [applications, selectedJob, debouncedSearchTerm, showStaleOnly, staleData, ratingFilter]);
+  }, [
+    applications,
+    selectedJob,
+    debouncedSearchTerm,
+    showStaleOnly,
+    staleData,
+    ratingFilter,
+  ]);
 
   // Group applications by status with counts
   const applicationsByStatus = useMemo(() => {
@@ -275,23 +336,26 @@ export default function PipelineView() {
 
           if (response.ok) {
             const updatedData = await response.json();
-            
+
             // Check if this was a hire approval request
             if (updatedData.requiresApproval) {
               // Revert optimistic update since status didn't actually change
-              queryClient.setQueryData(["admin", "applications"], currentApplications);
+              queryClient.setQueryData(
+                ["admin", "applications"],
+                currentApplications
+              );
               setHireApprovalModal({
                 isOpen: true,
-                type: 'success',
+                type: "success",
                 message: updatedData.message,
                 hireRequestId: updatedData.hireRequestId,
                 existingRequestId: null,
               });
               // Invalidate hire approval status to show the new pending request
-              queryClient.invalidateQueries(['hire-approval-status']);
+              queryClient.invalidateQueries(["hire-approval-status"]);
               return { statusUnchanged: true };
             }
-            
+
             return updatedData;
           } else {
             queryClient.setQueryData(
@@ -299,19 +363,19 @@ export default function PipelineView() {
               currentApplications
             );
             const errorData = await response.json();
-            
+
             // Check if it's a hire approval conflict
             if (response.status === 409 && errorData.alreadyPending) {
               setHireApprovalModal({
                 isOpen: true,
-                type: 'already-pending',
+                type: "already-pending",
                 message: errorData.message,
                 hireRequestId: null,
                 existingRequestId: errorData.existingRequestId,
               });
               return { statusUnchanged: true };
             }
-            
+
             throw new Error(errorData.message || "Failed to update status");
           }
         } catch (error) {
@@ -355,11 +419,19 @@ export default function PipelineView() {
     }, 100);
   };
 
-  const handleDrag = (e) => {
-    if (e.clientX !== 0 && e.clientY !== 0) {
-      setDragPosition({ x: e.clientX, y: e.clientY });
-    }
-  };
+  // Throttled drag handler for better performance
+  const handleDrag = useMemo(() => {
+    let lastUpdate = 0;
+    return (e) => {
+      if (e.clientX !== 0 && e.clientY !== 0) {
+        const now = Date.now();
+        if (now - lastUpdate > 16) { // ~60fps throttling
+          setDragPosition({ x: e.clientX, y: e.clientY });
+          lastUpdate = now;
+        }
+      }
+    };
+  }, []);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -415,7 +487,7 @@ export default function PipelineView() {
 
       // The response is now the file itself, not JSON with URL
       const blob = await response.blob();
-      
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -424,7 +496,7 @@ export default function PipelineView() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the URL object
       window.URL.revokeObjectURL(url);
     } catch (error) {
@@ -435,9 +507,9 @@ export default function PipelineView() {
   };
 
   const handleEmailApplication = (application) => {
-    // Navigate to communication page with pre-filled recipient
+    // Navigate to communication page with pre-filled recipient and job
     router.push(
-      `/applications-manager/communication?recipient=${application.id}`
+      `/applications-manager/communication?recipient=${application.id}&jobId=${application.jobId}`
     );
   };
 
@@ -555,7 +627,7 @@ export default function PipelineView() {
             />
             <Clock className="h-4 w-4 admin-text-light" />
             <span className="text-sm admin-text">
-              Stale Only {staleData?.count ? `(${staleData.count})` : ''}
+              Stale Only {staleData?.count ? `(${staleData.count})` : ""}
             </span>
           </motion.label>
 
@@ -564,11 +636,11 @@ export default function PipelineView() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setViewType('kanban')}
+              onClick={() => setViewType("kanban")}
               className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
-                viewType === 'kanban'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700'
+                viewType === "kanban"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700"
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
@@ -577,11 +649,11 @@ export default function PipelineView() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setViewType('table')}
+              onClick={() => setViewType("table")}
               className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
-                viewType === 'table'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700'
+                viewType === "table"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700"
               }`}
             >
               <Table className="h-4 w-4" />
@@ -720,36 +792,28 @@ export default function PipelineView() {
               </AnimatePresence>
             </div>
 
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              {isSearching ? (
-                <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500 animate-spin" />
-              ) : (
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-              )}
-              <motion.input
-                whileFocus={{ scale: 1.02 }}
-                type="text"
-                placeholder="Search applicants..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card"
+            {/* Smart Search */}
+            <div className="flex-1">
+              <SmartSearch
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                placeholder="Search applicants by name, email, job title..."
+                quickFilters={quickFilters}
+                activeFilters={activeFilters}
+                onFilterChange={handleFilterChange}
+                isSearching={isSearching}
+                showResultCount={true}
+                resultCount={filteredApplications.length}
+                layout="horizontal"
               />
             </div>
           </div>
 
-          <div className="text-sm admin-text-light">
-            {selectedJob ? (
-              <>
-                Showing {filteredApplications.length} applications
-                {selectedJob !== "all" && selectedJobData && (
-                  <span> for {selectedJobData.title}</span>
-                )}
-              </>
-            ) : (
-              "Select a job to view applications"
-            )}
-          </div>
+          {!selectedJob && (
+            <div className="text-sm admin-text-light">
+              Select a job to view applications
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -785,15 +849,14 @@ export default function PipelineView() {
             <span>Select Job</span>
           </motion.button>
         </motion.div>
-      ) : (
-        /* Pipeline Board */
-        viewType === 'kanban' ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
-          >
+      ) : /* Pipeline Board */
+      viewType === "kanban" ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
+        >
           {applicationsByStatus.stages.map((stage, stageIndex) => (
             <motion.div
               key={stage.id}
@@ -846,22 +909,20 @@ export default function PipelineView() {
                         initial="hidden"
                         animate="show"
                         exit="exit"
-                        layout
-                        layoutId={`application-${application.id}`}
+                        layout={!draggedApplication} // Disable layout animations while dragging
+                        layoutId={draggedApplication ? undefined : `application-${application.id}`}
                         draggable
                         onDragStart={(e) => handleDragStart(e, application)}
                         onDrag={handleDrag}
                         onDragEnd={handleDragEnd}
-                        whileHover={{
+                        whileHover={!draggedApplication ? {
                           scale: 1.02,
                           y: -2,
-                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
-                        }}
+                        } : undefined} // Disable hover animations while dragging
                         whileDrag={{
                           scale: 1.02,
                           rotate: 2,
                           zIndex: 1000,
-                          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
                         }}
                         className={`admin-card border border-gray-200 dark:border-gray-700 rounded-lg p-2 md:p-3 lg:p-4 transition-all cursor-move group ${
                           draggedApplication?.id === application.id
@@ -873,7 +934,7 @@ export default function PipelineView() {
                         <div className="flex items-start space-x-2 md:space-x-3">
                           <div className="relative">
                             <motion.div
-                              whileHover={{ scale: 1.1 }}
+                              whileHover={!draggedApplication ? { scale: 1.1 } : undefined}
                               className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getButtonClasses("primary")}`}
                             >
                               {application.name?.charAt(0)?.toUpperCase() ||
@@ -881,32 +942,43 @@ export default function PipelineView() {
                                 "A"}
                             </motion.div>
                             {/* Stale Indicator */}
-                            {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
-                              <motion.div 
+                            {staleData?.applications?.some(
+                              (staleApp) => staleApp.id === application.id
+                            ) && (
+                              <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 whileHover={{ scale: 1.1 }}
                                 className="absolute -top-0.5 -right-0.5 bg-orange-500 rounded-full p-0.5 border border-white dark:border-gray-800"
-                                title={`Stale application (${staleData.applications.find(staleApp => staleApp.id === application.id)?.daysSinceStageChange || 0} days in current stage)`}
+                                title={`Stale application (${staleData.applications.find((staleApp) => staleApp.id === application.id)?.daysSinceStageChange || 0} days in current stage)`}
                               >
                                 <Clock className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
                               </motion.div>
                             )}
                             {/* Hire Approval Icon Indicator - Only show if no stale indicator */}
-                            {!staleData?.applications?.some(staleApp => staleApp.id === application.id) && (() => {
-                              const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
-                              return hireStatus.hasPendingRequest && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  whileHover={{ scale: 1.1 }}
-                                  className="absolute -top-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5 border border-white dark:border-gray-800"
-                                  title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ''}`}
-                                >
-                                  <Clock className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
-                                </motion.div>
-                              );
-                            })()}
+                            {!staleData?.applications?.some(
+                              (staleApp) => staleApp.id === application.id
+                            ) &&
+                              (() => {
+                                const hireStatus =
+                                  getHireApprovalForApplication(
+                                    hireApprovalStatus,
+                                    application.id
+                                  );
+                                return (
+                                  hireStatus.hasPendingRequest && (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      whileHover={{ scale: 1.1 }}
+                                      className="absolute -top-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5 border border-white dark:border-gray-800"
+                                      title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ""}`}
+                                    >
+                                      <Clock className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
+                                    </motion.div>
+                                  )
+                                );
+                              })()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-1">
@@ -914,8 +986,10 @@ export default function PipelineView() {
                                 {application.name || "Anonymous"}
                               </h4>
                               {/* Stale Badge for better visibility */}
-                              {staleData?.applications?.some(staleApp => staleApp.id === application.id) && (
-                                <motion.span 
+                              {staleData?.applications?.some(
+                                (staleApp) => staleApp.id === application.id
+                              ) && (
+                                <motion.span
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
                                   className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 flex-shrink-0"
@@ -926,17 +1000,23 @@ export default function PipelineView() {
                               )}
                               {/* Hire Approval Badge */}
                               {(() => {
-                                const hireStatus = getHireApprovalForApplication(hireApprovalStatus, application.id);
-                                return hireStatus.hasPendingRequest && (
-                                  <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex-shrink-0"
-                                    title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ''}`}
-                                  >
-                                    <Clock className="h-2.5 w-2.5 mr-0.5" />
-                                    Hire Pending
-                                  </motion.span>
+                                const hireStatus =
+                                  getHireApprovalForApplication(
+                                    hireApprovalStatus,
+                                    application.id
+                                  );
+                                return (
+                                  hireStatus.hasPendingRequest && (
+                                    <motion.span
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 flex-shrink-0"
+                                      title={`Hire approval requested by ${hireStatus.requestedBy}${hireStatus.requestedAt ? ` on ${new Date(hireStatus.requestedAt).toLocaleDateString()}` : ""}`}
+                                    >
+                                      <Clock className="h-2.5 w-2.5 mr-0.5" />
+                                      Hire Pending
+                                    </motion.span>
+                                  )
                                 );
                               })()}
                             </div>
@@ -993,12 +1073,18 @@ export default function PipelineView() {
                               <StageDurationTooltip
                                 applicationId={application.id}
                                 currentStage={application.status}
-                                stageEnteredAt={application.current_stage_entered_at || application.updatedAt}
+                                stageEnteredAt={
+                                  application.current_stage_entered_at ||
+                                  application.updatedAt
+                                }
                               >
                                 <StageDurationBadge
                                   applicationId={application.id}
                                   currentStage={application.status}
-                                  stageEnteredAt={application.current_stage_entered_at || application.updatedAt}
+                                  stageEnteredAt={
+                                    application.current_stage_entered_at ||
+                                    application.updatedAt
+                                  }
                                   size="xs"
                                   showIcon={true}
                                   className="ml-2 flex-shrink-0"
@@ -1010,9 +1096,8 @@ export default function PipelineView() {
 
                         {/* Enhanced Quick Actions - Always visible on mobile */}
                         <motion.div
-                          initial={{ opacity: 0 }}
-                          whileHover={{ opacity: 1 }}
-                          className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity"
+                          initial={{ opacity: 1 }}
+                          className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100 dark:border-gray-700 opacity-100 transition-opacity"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <QuickActions
@@ -1070,12 +1155,14 @@ export default function PipelineView() {
         <ApplicationsTableView
           filteredApplications={filteredApplications}
           onStatusChange={handleStatusChange}
-          onViewApplication={(applicationId) => router.push(`/applications-manager/candidate/${applicationId}`)}
+          onViewApplication={(applicationId) =>
+            router.push(`/applications-manager/candidate/${applicationId}`)
+          }
           getButtonClasses={getButtonClasses}
           staleData={staleData}
           trackTimeInStage={trackTimeInStage}
+          searchTerm={searchTerm}
         />
-      )
       )}
 
       {/* Floating Ghost Card */}
@@ -1114,8 +1201,8 @@ export default function PipelineView() {
               </div>
             </div>
           </motion.div>
-          )}
-        </AnimatePresence>
+        )}
+      </AnimatePresence>
 
       {/* Pipeline Stats - Only show when job is selected */}
       {selectedJob && (
@@ -1192,13 +1279,15 @@ export default function PipelineView() {
       {/* Hire Approval Status Modal */}
       <HireApprovalStatusModal
         isOpen={hireApprovalModal.isOpen}
-        onClose={() => setHireApprovalModal({
-          isOpen: false,
-          type: null,
-          message: null,
-          hireRequestId: null,
-          existingRequestId: null,
-        })}
+        onClose={() =>
+          setHireApprovalModal({
+            isOpen: false,
+            type: null,
+            message: null,
+            hireRequestId: null,
+            existingRequestId: null,
+          })
+        }
         type={hireApprovalModal.type}
         message={hireApprovalModal.message}
         applicationName="this application"
