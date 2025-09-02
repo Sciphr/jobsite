@@ -215,7 +215,6 @@ export async function getBulkHireApprovalStatus(applicationIds) {
         application_id: {
           in: applicationIds,
         },
-        status: 'pending', // Only get pending requests for performance
       },
       include: {
         requested_by_user: {
@@ -231,29 +230,20 @@ export async function getBulkHireApprovalStatus(applicationIds) {
       },
     });
 
-    // Group requests by application ID
+    // Group requests by application ID, getting the most recent request per application
     const statusMap = {};
     for (const request of requests) {
-      if (!statusMap[request.application_id]) {
+      if (!statusMap[request.application_id] || 
+          new Date(request.requested_at) > new Date(statusMap[request.application_id].requestedAt)) {
         statusMap[request.application_id] = {
-          hasPendingRequest: true,
-          pendingRequest: request,
+          status: request.status, // 'pending', 'approved', 'rejected'
           requestedBy: request.requested_by_user 
             ? `${request.requested_by_user.firstName} ${request.requested_by_user.lastName}`.trim()
             : 'Unknown',
           requestedAt: request.requested_at,
-        };
-      }
-    }
-
-    // Fill in missing applications with no pending requests
-    for (const appId of applicationIds) {
-      if (!statusMap[appId]) {
-        statusMap[appId] = {
-          hasPendingRequest: false,
-          pendingRequest: null,
-          requestedBy: null,
-          requestedAt: null,
+          approvedAt: request.approved_at,
+          rejectedAt: request.rejected_at,
+          id: request.id,
         };
       }
     }

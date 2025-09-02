@@ -96,12 +96,27 @@ export async function PUT(request) {
     let applications;
 
     if (rateAll) {
-      // Rate all unrated applications
+      // Rate all unrated applications that have resumes
       applications = await db.applications.findMany({
         where: {
-          OR: [
-            { rating: null },
-            { rating_type: null }
+          AND: [
+            {
+              OR: [
+                { rating: null },
+                { rating: 0 },
+                { rating_type: null }
+              ]
+            },
+            {
+              resumeUrl: {
+                not: null
+              }
+            },
+            {
+              resumeUrl: {
+                not: ''
+              }
+            }
           ]
         },
         include: {

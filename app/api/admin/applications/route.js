@@ -88,6 +88,16 @@ export async function GET(req) {
       jobId: app.jobId,
       userId: app.userId,
       job: app.jobs, // Alias for frontend compatibility
+      // Rating fields
+      rating: app.rating,
+      rating_type: app.rating_type,
+      ai_rating: app.ai_rating,
+      rating_updated_at: app.rating_updated_at,
+      rated_by: app.rated_by,
+      // Time tracking fields
+      current_stage_entered_at: app.current_stage_entered_at,
+      time_in_current_stage_seconds: app.time_in_current_stage_seconds,
+      total_application_time_seconds: app.total_application_time_seconds,
       // Archive fields
       is_archived: app.is_archived,
       archived_at: app.archived_at,

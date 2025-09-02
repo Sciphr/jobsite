@@ -1,7 +1,7 @@
 // app/applications-manager/pipeline/page.js - Enhanced with advanced drag feedback
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,7 @@ import RejectionNotesModal from "../components/RejectionNotesModal";
 import HireApprovalStatusModal from "../../components/HireApprovalStatusModal";
 import { HireApprovalBadge, HireApprovalIconIndicator } from "../../components/HireApprovalIndicator";
 import StageDurationBadge, { StageDurationTooltip } from "../components/StageDurationBadge";
+import ApplicationsTableView from "../components/ApplicationsTableView";
 import {
   User,
   Mail,
@@ -40,6 +41,10 @@ import {
   Archive,
   ArchiveRestore,
   Trash2,
+  LayoutGrid,
+  Table,
+  Star,
+  Loader2,
 } from "lucide-react";
 
 export default function PipelineView() {
@@ -49,6 +54,8 @@ export default function PipelineView() {
   // Data fetching
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [viewType, setViewType] = useState('kanban'); // 'kanban' or 'table'
+  const [ratingFilter, setRatingFilter] = useState('all'); // 'all', '1', '2', '3', '4', '5', 'unrated'
   const { data: applications = [], isLoading: applicationsLoading } =
     useApplications(showArchived);
   const [hireApprovalModal, setHireApprovalModal] = useState({
@@ -105,6 +112,8 @@ export default function PipelineView() {
   // Local state with enhanced drag tracking
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const [showJobFilter, setShowJobFilter] = useState(false);
   const [showStaleOnly, setShowStaleOnly] = useState(false);
   const [draggedApplication, setDraggedApplication] = useState(null);
@@ -166,6 +175,17 @@ export default function PipelineView() {
     },
   ];
 
+  // Debounce search term
+  useEffect(() => {
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setIsSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Filter applications
   const filteredApplications = useMemo(() => {
     let filtered = applications;
@@ -174,12 +194,12 @@ export default function PipelineView() {
       filtered = filtered.filter((app) => app.jobId === selectedJob);
     }
 
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       filtered = filtered.filter(
         (app) =>
-          app.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          app.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          app.job?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+          app.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          app.email?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          app.job?.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
     }
 
@@ -188,13 +208,23 @@ export default function PipelineView() {
       filtered = filtered.filter((app) => staleIds.has(app.id));
     }
 
+    // Filter by rating
+    if (ratingFilter !== 'all') {
+      if (ratingFilter === 'unrated') {
+        filtered = filtered.filter((app) => !app.rating || app.rating === 0);
+      } else {
+        const targetRating = parseInt(ratingFilter);
+        filtered = filtered.filter((app) => app.rating === targetRating);
+      }
+    }
+
     // If no job is selected, return empty array
     if (!selectedJob) {
       return [];
     }
 
     return filtered;
-  }, [applications, selectedJob, searchTerm, showStaleOnly, staleData]);
+  }, [applications, selectedJob, debouncedSearchTerm, showStaleOnly, staleData, ratingFilter]);
 
   // Group applications by status with counts
   const applicationsByStatus = useMemo(() => {
@@ -529,6 +559,51 @@ export default function PipelineView() {
             </span>
           </motion.label>
 
+          {/* View Toggle */}
+          <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setViewType('kanban')}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
+                viewType === 'kanban'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span>Kanban</span>
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setViewType('table')}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${
+                viewType === 'table'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'admin-text-light hover:admin-text hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <Table className="h-4 w-4" />
+              <span>Table</span>
+            </motion.button>
+          </div>
+
+          {/* Rating Filter */}
+          <select
+            value={ratingFilter}
+            onChange={(e) => setRatingFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 admin-text admin-card text-sm"
+          >
+            <option value="all">All Ratings</option>
+            <option value="unrated">Unrated</option>
+            <option value="5">★★★★★ (5 stars)</option>
+            <option value="4">★★★★☆ (4 stars)</option>
+            <option value="3">★★★☆☆ (3 stars)</option>
+            <option value="2">★★☆☆☆ (2 stars)</option>
+            <option value="1">★☆☆☆☆ (1 star)</option>
+          </select>
+
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -647,7 +722,11 @@ export default function PipelineView() {
 
             {/* Search */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+              {isSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500 animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+              )}
               <motion.input
                 whileFocus={{ scale: 1.02 }}
                 type="text"
@@ -708,12 +787,13 @@ export default function PipelineView() {
         </motion.div>
       ) : (
         /* Pipeline Board */
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
-        >
+        viewType === 'kanban' ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6 min-h-[400px] lg:min-h-[600px]"
+          >
           {applicationsByStatus.stages.map((stage, stageIndex) => (
             <motion.div
               key={stage.id}
@@ -985,6 +1065,17 @@ export default function PipelineView() {
             </motion.div>
           ))}
         </motion.div>
+      ) : (
+        /* Table View */
+        <ApplicationsTableView
+          filteredApplications={filteredApplications}
+          onStatusChange={handleStatusChange}
+          onViewApplication={(applicationId) => router.push(`/applications-manager/candidate/${applicationId}`)}
+          getButtonClasses={getButtonClasses}
+          staleData={staleData}
+          trackTimeInStage={trackTimeInStage}
+        />
+      )
       )}
 
       {/* Floating Ghost Card */}
@@ -1023,8 +1114,8 @@ export default function PipelineView() {
               </div>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
       {/* Pipeline Stats - Only show when job is selected */}
       {selectedJob && (

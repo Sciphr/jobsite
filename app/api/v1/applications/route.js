@@ -298,6 +298,29 @@ export async function POST(request) {
           applicationCount: { increment: 1 }
         }
       });
+
+      // Auto-rate the application if AI rating is enabled
+      try {
+        const { rateApplicationWithAI } = await import('../../../lib/aiRatingService.js');
+        const aiRating = await rateApplicationWithAI(newApplication, job, '');
+        
+        if (aiRating && aiRating > 0) {
+          await prisma.applications.update({
+            where: { id: newApplication.id },
+            data: {
+              rating: aiRating,
+              ai_rating: aiRating,
+              rating_type: 'ai',
+              rating_updated_at: new Date()
+            }
+          });
+          
+          console.log(`Auto-rated application ${newApplication.id} with rating: ${aiRating}`);
+        }
+      } catch (error) {
+        // Don't fail the application creation if AI rating fails
+        console.error('Failed to auto-rate application:', error);
+      }
       
       // Format response
       const formattedApplication = {

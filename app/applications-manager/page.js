@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useApplications, useJobsSimple, useArchiveApplications, useAutoArchive, useAutoArchivePreview, useAutoProgress, useAutoProgressPreview } from "@/app/hooks/useAdminData";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import BulkAIRating from "./components/BulkAIRating";
 import {
   TrendingUp,
   Users,
@@ -28,11 +30,13 @@ import {
   Archive,
   ArchiveRestore,
   Settings,
+  Sparkles,
   ArrowUpRight,
 } from "lucide-react";
 
 export default function ApplicationsManagerMain() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
 
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
@@ -1060,6 +1064,40 @@ export default function ApplicationsManagerMain() {
               </div>
             </motion.button>
           ))}
+        </motion.div>
+
+        {/* AI Rating Section */}
+        <motion.div variants={itemVariants}>
+          <div className="admin-card rounded-lg shadow overflow-hidden">
+            <div className="p-4 lg:p-6 border-b admin-border">
+              <h3 className="text-base lg:text-lg font-semibold admin-text flex items-center space-x-2">
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
+                </motion.div>
+                <span>AI Rating Management</span>
+              </h3>
+              <p className="text-sm admin-text-light mt-1">
+                Automatically rate applications using AI analysis
+              </p>
+            </div>
+            <div className="p-4 lg:p-6">
+              <BulkAIRating 
+                applications={applications}
+                onRatingComplete={(summary) => {
+                  // Refresh applications data after rating
+                  queryClient.invalidateQueries(['applications']);
+                  console.log(`Bulk rating completed: ${summary.successful} successful, ${summary.failed} failed`);
+                }}
+              />
+            </div>
+          </div>
         </motion.div>
 
         {/* Auto-Archive Admin Section */}

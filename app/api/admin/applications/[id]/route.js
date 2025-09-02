@@ -232,7 +232,7 @@ export async function PATCH(req, { params }) {
             SET 
               current_stage_entered_at = NOW(),
               time_in_current_stage_seconds = 0,
-              updated_at = NOW()
+              "updatedAt" = NOW()
             WHERE id = ${updatedApplication.id}::uuid
           `;
 

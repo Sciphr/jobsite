@@ -35,7 +35,9 @@
       "WebSearch",
       "Bash(rg:*)",
       "Bash(npx prisma migrate dev:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
