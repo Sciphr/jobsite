@@ -628,7 +628,7 @@ export default function ProfileClient({ session }) {
               </div>
               <ThemedButton
                 onClick={() => signOut()}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white"
+                className="px-3 py-2 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white whitespace-nowrap"
                 variant="primary"
               >
                 Sign Out
@@ -638,13 +638,13 @@ export default function ProfileClient({ session }) {
 
           {/* Navigation Tabs */}
           <div className="px-6">
-            <nav className="flex space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
+            <nav className="flex space-x-1 sm:space-x-2 md:space-x-4 lg:space-x-6 overflow-x-auto scrollbar-hide">
               {["overview", "resume", "saved-jobs", "applications", "notifications"].map(
                 (tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-shrink-0 py-4 px-2 sm:px-3 lg:px-1 border-b-2 font-medium text-xs sm:text-sm capitalize transition-colors duration-200 whitespace-nowrap ${
+                    className={`flex-shrink-0 py-4 px-2 sm:px-3 md:px-4 border-b-2 font-medium text-xs sm:text-sm capitalize transition-colors duration-200 whitespace-nowrap min-w-0 ${
                       activeTab === tab
                         ? "site-primary-text hover:site-primary-text"
                         : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
@@ -1088,10 +1088,10 @@ export default function ProfileClient({ session }) {
                   </p>
                 </div>
               ) : (
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-6 bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
-                  <div className="flex items-start space-x-4">
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 sm:p-6 bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
                     {/* File Icon */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex justify-center sm:block">
                       <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center transition-colors duration-200">
                         <svg
                           className="w-6 h-6 text-red-600 dark:text-red-400 transition-colors duration-200"
@@ -1110,11 +1110,11 @@ export default function ProfileClient({ session }) {
                     </div>
 
                     {/* File Details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate transition-colors duration-200">
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200 break-words">
                         {resume.fileName}
                       </h3>
-                      <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start space-y-1 sm:space-y-0 sm:space-x-4 mt-2">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 transition-colors duration-200">
                           {resume.fileType?.includes("pdf")
                             ? "PDF"
@@ -1126,62 +1126,63 @@ export default function ProfileClient({ session }) {
                           {formatFileSize(resume.fileSize)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-200">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 transition-colors duration-200">
                         Uploaded on {formatDate(resume.uploadedAt)}
                       </p>
                     </div>
+                  </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex-shrink-0 flex flex-col space-y-2 sm:space-y-2">
-                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <button
-                          onClick={() => handleDownloadResume(resume.fileName)}
-                          className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white w-full sm:w-auto"
-                          style={{
-                            backgroundColor: 'var(--site-primary)',
-                            borderColor: 'var(--site-primary)'
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+                  {/* Action Buttons - Moved below content */}
+                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                      <button
+                        onClick={() => handleDownloadResume(resume.fileName)}
+                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white flex-1 sm:flex-none"
+                        style={{
+                          backgroundColor: 'var(--site-primary)',
+                          borderColor: 'var(--site-primary)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--site-primary-hover)'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--site-primary)'}
+                      >
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
                         >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          Download
-                        </button>
-                        <button
-                          onClick={handleDeleteResume}
-                          className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200 w-full sm:w-auto"
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Download
+                      </button>
+                      
+                      <button
+                        onClick={handleDeleteResume}
+                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200 flex-1 sm:flex-none"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
                         >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                        Delete
+                      </button>
 
                       {/* Replace Button */}
-                      <div className="relative">
+                      <div className="relative flex-1 sm:flex-none">
                         <input
                           type="file"
                           accept={allowedFileTypes
@@ -1194,14 +1195,14 @@ export default function ProfileClient({ session }) {
                         />
                         <label
                           htmlFor="resume-replace"
-                          className={`inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer transition-colors duration-200 w-full ${
+                          className={`inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer transition-colors duration-200 ${
                             uploading ? "opacity-50 cursor-not-allowed" : ""
                           }`}
                         >
                           {uploading ? (
                             <>
                               <svg
-                                className="animate-spin w-4 h-4 mr-1"
+                                className="animate-spin w-4 h-4 mr-2"
                                 fill="none"
                                 viewBox="0 0 24 24"
                               >
@@ -1224,7 +1225,7 @@ export default function ProfileClient({ session }) {
                           ) : (
                             <>
                               <svg
-                                className="w-4 h-4 mr-1"
+                                className="w-4 h-4 mr-2"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1240,12 +1241,11 @@ export default function ProfileClient({ session }) {
                             </>
                           )}
                         </label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center transition-colors duration-200">
-                          Max: {maxResumeSize}MB, Types:{" "}
-                          {allowedFileTypes.join(", ").toUpperCase()}
-                        </p>
                       </div>
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center transition-colors duration-200">
+                      Max: {maxResumeSize}MB, Types: {allowedFileTypes.join(", ").toUpperCase()}
+                    </p>
                   </div>
                 </div>
               )}
@@ -1293,34 +1293,36 @@ export default function ProfileClient({ session }) {
                       key={savedJob.id}
                       className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200">
+                      <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200 break-words">
                             {savedJob.jobs?.title || "Job Title Not Available"}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200 mt-1">
                             {savedJob.jobs?.department ||
                               "Department Not Available"}
                           </p>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
-                            <span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200 space-y-1 sm:space-y-0">
+                            <span className="truncate">
                               {savedJob.jobs?.location ||
                                 "Location Not Available"}
                             </span>
-                            <span>•</span>
-                            <span>
-                              {savedJob.jobs?.employmentType ||
-                                "Type Not Available"}
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {savedJob.jobs?.remotePolicy ||
-                                "Policy Not Available"}
-                            </span>
+                            <div className="flex items-center space-x-2 sm:space-x-4">
+                              <span className="hidden sm:inline">•</span>
+                              <span className="truncate">
+                                {savedJob.jobs?.employmentType ||
+                                  "Type Not Available"}
+                              </span>
+                              <span>•</span>
+                              <span className="truncate">
+                                {savedJob.jobs?.remotePolicy ||
+                                  "Policy Not Available"}
+                              </span>
+                            </div>
                           </div>
                           {savedJob.jobs?.salaryMin &&
                             savedJob.jobs?.salaryMax && (
-                              <p className="text-green-600 dark:text-green-400 text-sm mt-1 transition-colors duration-200">
+                              <p className="text-green-600 dark:text-green-400 text-sm mt-2 font-medium transition-colors duration-200">
                                 ${savedJob.jobs.salaryMin.toLocaleString()} - $
                                 {savedJob.jobs.salaryMax.toLocaleString()}{" "}
                                 {savedJob.jobs.salaryCurrency}
@@ -1330,12 +1332,12 @@ export default function ProfileClient({ session }) {
                             Saved on {formatDate(savedJob.savedAt)}
                           </p>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex-shrink-0 flex justify-center sm:justify-end mt-2 sm:mt-0">
                           <ThemedButton
                             onClick={() =>
                               router.push(`/jobs/${savedJob.jobs?.slug}`)
                             }
-                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-auto"
                             variant="primary"
                           >
                             View Job
@@ -1390,49 +1392,53 @@ export default function ProfileClient({ session }) {
                       key={application.id}
                       className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200">
-                            {application.job?.title ||
-                              "Job Title Not Available"}
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                      <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200 break-words">
+                              {application.job?.title ||
+                                "Job Title Not Available"}
+                            </h3>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 sm:mt-0 sm:ml-3 self-start ${getStatusColor(
+                                application.status
+                              )}`}
+                            >
+                              {application.status || "Applied"}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200 mt-1">
                             {application.job?.department ||
                               "Department Not Available"}
                           </p>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
-                            <span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200 space-y-1 sm:space-y-0">
+                            <span className="truncate">
                               {application.job?.location ||
                                 "Location Not Available"}
                             </span>
-                            <span>•</span>
-                            <span>
-                              {application.job?.employmentType ||
-                                "Type Not Available"}
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {application.job?.remotePolicy ||
-                                "Policy Not Available"}
-                            </span>
+                            <div className="flex items-center space-x-2 sm:space-x-4">
+                              <span className="hidden sm:inline">•</span>
+                              <span className="truncate">
+                                {application.job?.employmentType ||
+                                  "Type Not Available"}
+                              </span>
+                              <span>•</span>
+                              <span className="truncate">
+                                {application.job?.remotePolicy ||
+                                  "Policy Not Available"}
+                              </span>
+                            </div>
                           </div>
                           <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 transition-colors duration-200">
                             Applied on {formatDate(application.appliedAt)}
                           </p>
                         </div>
-                        <div className="flex flex-col items-end space-y-2">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                              application.status
-                            )}`}
-                          >
-                            {application.status || "Applied"}
-                          </span>
+                        <div className="flex-shrink-0 flex justify-center sm:justify-end mt-2 sm:mt-0">
                           <ThemedButton
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="px-3 py-1 rounded text-sm font-medium text-white"
+                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-auto"
                             variant="primary"
                           >
                             View Job
