@@ -605,22 +605,22 @@ export default function ProfileClient({ session }) {
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl mb-8 overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors duration-200">
           <div className="px-6 py-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-bold text-white">
+            <div className="flex justify-between items-center gap-3">
+              <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <span className="text-lg sm:text-2xl font-bold text-white">
                     {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
                   </span>
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200 mb-1">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-200 mb-1 truncate">
                     {profile?.firstName} {profile?.lastName}
                   </h1>
                   <div className="flex items-center space-x-2">
-                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                    <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200 truncate text-sm sm:text-base">
                       {profile?.email}
                     </p>
                   </div>
@@ -628,7 +628,7 @@ export default function ProfileClient({ session }) {
               </div>
               <ThemedButton
                 onClick={() => signOut()}
-                className="px-3 py-2 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white whitespace-nowrap"
+                className="px-3 py-2 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white whitespace-nowrap flex-shrink-0"
                 variant="primary"
               >
                 Sign Out
@@ -1134,10 +1134,10 @@ export default function ProfileClient({ session }) {
 
                   {/* Action Buttons - Moved below content */}
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <div className="flex flex-col sm:flex-row sm:justify-start space-y-2 sm:space-y-0 sm:space-x-3">
                       <button
                         onClick={() => handleDownloadResume(resume.fileName)}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white flex-1 sm:flex-none"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 text-white w-full sm:w-auto"
                         style={{
                           backgroundColor: 'var(--site-primary)',
                           borderColor: 'var(--site-primary)'
@@ -1163,7 +1163,7 @@ export default function ProfileClient({ session }) {
                       
                       <button
                         onClick={handleDeleteResume}
-                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200 flex-1 sm:flex-none"
+                        className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors duration-200 w-full sm:w-auto"
                       >
                         <svg
                           className="w-4 h-4 mr-2"
@@ -1182,7 +1182,7 @@ export default function ProfileClient({ session }) {
                       </button>
 
                       {/* Replace Button */}
-                      <div className="relative flex-1 sm:flex-none">
+                      <div className="relative w-full sm:w-auto">
                         <input
                           type="file"
                           accept={allowedFileTypes
@@ -1293,7 +1293,7 @@ export default function ProfileClient({ session }) {
                       key={savedJob.id}
                       className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
-                      <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200 break-words">
                             {savedJob.jobs?.title || "Job Title Not Available"}
@@ -1337,7 +1337,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${savedJob.jobs?.slug}`)
                             }
-                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-auto"
+                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-24"
                             variant="primary"
                           >
                             View Job
@@ -1392,7 +1392,7 @@ export default function ProfileClient({ session }) {
                       key={application.id}
                       className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-500 transition-colors duration-200"
                     >
-                      <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white transition-colors duration-200 break-words">
@@ -1438,7 +1438,7 @@ export default function ProfileClient({ session }) {
                             onClick={() =>
                               router.push(`/jobs/${application.job?.slug}`)
                             }
-                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-auto"
+                            className="px-4 py-2 rounded-md text-sm font-medium text-white w-full sm:w-24"
                             variant="primary"
                           >
                             View Job
