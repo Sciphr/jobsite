@@ -2,7 +2,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import ThemeScript from "./components/ThemeScript";
 import DynamicFavicon from "./components/DynamicFavicon";
 import { Providers } from "./providers";
@@ -102,7 +101,6 @@ export default async function RootLayout({ children }) {
               <Header />
               <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                 {children}
-                <SpeedInsights />
               </main>
             </Providers>
           </ThemeProvider>

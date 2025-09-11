@@ -43,14 +43,26 @@ export function withCache(handler, cacheKey, duration = CACHE_DURATION.SHORT) {
       const cached = await cache.get(key)
       if (cached) {
         const data = JSON.parse(cached)
-        return new Response(JSON.stringify({
-          ...data,
-          _cached: true,
-          _cacheKey: key
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        })
+        // Handle array responses properly - don't wrap arrays in objects
+        if (Array.isArray(data)) {
+          return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Cache': 'HIT',
+              'X-Cache-Key': key
+            }
+          })
+        } else {
+          return new Response(JSON.stringify({
+            ...data,
+            _cached: true,
+            _cacheKey: key
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
       }
 
       // Execute original handler
