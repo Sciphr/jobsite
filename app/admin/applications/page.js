@@ -15,6 +15,7 @@ import {
   usePrefetchAdminData,
   useUpdateApplicationStatus,
   useDeleteApplication,
+  useBulkApplicationOperation,
   useAutoArchive,
   useAutoArchivePreview,
   useAutoProgress,
@@ -65,6 +66,7 @@ function AdminApplicationsContent() {
   const queryClient = useQueryClient();
   const updateApplicationMutation = useUpdateApplicationStatus();
   const deleteApplicationMutation = useDeleteApplication();
+  const bulkOperationMutation = useBulkApplicationOperation();
 
   // Notes on rejection functionality
   const {
@@ -353,20 +355,18 @@ function AdminApplicationsContent() {
     deleteApplicationMutation.mutate(applicationId);
   };
 
-  // ✅ OPTIMIZED: Bulk actions with notes validation for rejection
+  // ✅ OPTIMIZED: Efficient bulk actions with React Query and optimistic updates
   const handleBulkAction = async (action) => {
     if (selectedApplications.length === 0) return;
 
     // Special handling for bulk rejection - check if notes are required
     if (action === "Rejected") {
-      // Get the setting to check if notes are required
       const requireNotesOnRejection =
         settingsData?.settings?.find(
           (setting) => setting.key === "require_notes_on_rejection"
         )?.parsedValue || false;
 
       if (requireNotesOnRejection) {
-        // Check if any of the selected applications don't have notes and aren't already rejected
         const selectedApps = applications.filter(
           (app) =>
             selectedApplications.includes(app.id) &&
@@ -386,51 +386,43 @@ function AdminApplicationsContent() {
     const confirmMessage =
       action === "delete"
         ? `Are you sure you want to delete ${selectedApplications.length} application(s)? This cannot be undone.`
-        : `Are you sure you want to ${action} ${selectedApplications.length} application(s)?`;
+        : `Are you sure you want to change ${selectedApplications.length} application(s) to "${action}" status?`;
 
     if (!confirm(confirmMessage)) return;
 
+    // Prepare mutation parameters
+    const mutationParams = {
+      applicationIds: selectedApplications,
+      action: action === "delete" ? "delete" : "status_change",
+      ...(action !== "delete" && { status: action }),
+    };
+
+    // Execute the bulk operation with optimistic updates
     try {
-      if (action === "delete") {
-        // Optimistically remove from cache
-        queryClient.setQueryData(["admin", "applications"], (oldData) => {
-          if (!oldData) return oldData;
-          return oldData.filter(
-            (app) => !selectedApplications.includes(app.id)
-          );
-        });
-
-        await Promise.all(
-          selectedApplications.map((id) =>
-            fetch(`/api/admin/applications/${id}`, { method: "DELETE" })
-          )
-        );
-      } else {
-        // Optimistically update status in cache
-        queryClient.setQueryData(["admin", "applications"], (oldData) => {
-          if (!oldData) return oldData;
-          return oldData.map((app) =>
-            selectedApplications.includes(app.id)
-              ? { ...app, status: action }
-              : app
-          );
-        });
-
-        await Promise.all(
-          selectedApplications.map((id) =>
-            fetch(`/api/admin/applications/${id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: action }),
-            })
-          )
-        );
+      const result = await bulkOperationMutation.mutateAsync(mutationParams);
+      
+      // Show detailed success message
+      let message = '';
+      if (result.results.successful.length > 0) {
+        message += `✅ Successfully ${action === 'delete' ? 'deleted' : 'updated'} ${result.results.successful.length} application${result.results.successful.length !== 1 ? 's' : ''}.\n`;
       }
+      if (result.results.skipped.length > 0) {
+        message += `ℹ️ Skipped ${result.results.skipped.length} application${result.results.skipped.length !== 1 ? 's' : ''} (already in "${action}" status).\n`;
+      }
+      if (result.results.failed.length > 0) {
+        message += `❌ Failed to ${action === 'delete' ? 'delete' : 'update'} ${result.results.failed.length} application${result.results.failed.length !== 1 ? 's' : ''}.`;
+      }
+
+      if (message) {
+        alert(message);
+      }
+
+      // Clear selection after successful operation
       setSelectedApplications([]);
+      
     } catch (error) {
-      console.error("Error performing bulk action:", error);
-      // Revert optimistic update on error
-      refetch();
+      console.error("Bulk operation failed:", error);
+      alert(`Failed to ${action === 'delete' ? 'delete' : 'update'} applications: ${error.message}`);
     }
   };
 
@@ -831,33 +823,64 @@ function AdminApplicationsContent() {
       {/* Bulk Actions */}
       {selectedApplications.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <span className="text-blue-800 dark:text-blue-200 font-medium">
               {selectedApplications.length} application
               {selectedApplications.length !== 1 ? "s" : ""} selected
             </span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleBulkAction("Reviewing")}
-                className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
-              >
-                Mark as Reviewing
-              </button>
-              <button
-                onClick={() => handleBulkAction("Interview")}
-                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-              >
-                Schedule Interview
-              </button>
-              <button
-                onClick={() => handleBulkAction("Rejected")}
-                className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-              >
-                Reject
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Status Change Dropdown */}
+              <div className="relative group">
+                <button 
+                  disabled={bulkOperationMutation.isLoading}
+                  className={`px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center space-x-1 ${bulkOperationMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {bulkOperationMutation.isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Change Status</span>
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+                <div className="absolute right-0 top-8 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
+                  <div className="p-2">
+                    {statusOptions.map((status) => {
+                      const statusConfig = {
+                        Applied: { color: "text-blue-600", bgColor: "hover:bg-blue-50" },
+                        Reviewing: { color: "text-yellow-600", bgColor: "hover:bg-yellow-50" },
+                        Interview: { color: "text-green-600", bgColor: "hover:bg-green-50" },
+                        Hired: { color: "text-emerald-600", bgColor: "hover:bg-emerald-50" },
+                        Rejected: { color: "text-red-600", bgColor: "hover:bg-red-50" },
+                      }[status];
+
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => handleBulkAction(status)}
+                          className={`w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text ${statusConfig.bgColor} rounded-lg transition-colors duration-200`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${statusConfig.color.replace('text-', 'bg-')}`}></div>
+                          <span>Change to {status}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Delete Action */}
               <button
                 onClick={() => handleBulkAction("delete")}
-                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                disabled={bulkOperationMutation.isLoading}
+                className={`px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors duration-200 ${bulkOperationMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title="Delete selected applications permanently"
               >
                 Delete
               </button>

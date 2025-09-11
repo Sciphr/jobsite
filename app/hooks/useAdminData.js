@@ -929,6 +929,69 @@ export const useDeleteApplication = () => {
   });
 };
 
+// ✅ NEW: Bulk operations with optimistic updates
+export const useBulkApplicationOperation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ applicationIds, action, status }) => {
+      const response = await fetch('/api/admin/applications/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationIds, action, status }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || error.message || 'Bulk operation failed');
+      }
+
+      return response.json();
+    },
+    onMutate: async ({ applicationIds, action, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin", "applications"] });
+
+      // Snapshot the previous value
+      const previousApplications = queryClient.getQueryData(["admin", "applications"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["admin", "applications"], (old) => {
+        if (!old || !Array.isArray(old)) return old;
+
+        if (action === 'delete') {
+          // Remove deleted applications
+          return old.filter(app => !applicationIds.includes(app.id));
+        } else if (action === 'status_change') {
+          // Update status for applications
+          return old.map(app => 
+            applicationIds.includes(app.id) 
+              ? { ...app, status, updatedAt: new Date().toISOString() }
+              : app
+          );
+        }
+        
+        return old;
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousApplications };
+    },
+    onError: (err, { applicationIds, action, status }, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousApplications) {
+        queryClient.setQueryData(["admin", "applications"], context.previousApplications);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure server state
+      queryClient.invalidateQueries({ queryKey: ["admin", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "stale-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+  });
+};
+
 // ✅ NEW: User mutation hooks
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
