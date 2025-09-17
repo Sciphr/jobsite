@@ -20,18 +20,27 @@ import {
   Code,
   ArrowRight,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Info
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import APIKeyRevealModal from './APIKeyRevealModal';
 
 export default function APIKeyManagement({ getButtonClasses }) {
   const { data: session } = useSession();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [newApiKeyData, setNewApiKeyData] = useState(null);
-  const [showRevealModal, setShowRevealModal] = useState(false);
+  const [showKeyReveal, setShowKeyReveal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    permissions: [],
+    rateLimit: 1000,
+    expiresAt: ''
+  });
+
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch API keys
@@ -62,9 +71,16 @@ export default function APIKeyManagement({ getButtonClasses }) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['api-keys']);
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       setNewApiKeyData(data.apiKey);
-      setShowRevealModal(true);
+      setShowKeyReveal(true);
+      // Reset form
+      setCreateFormData({
+        name: '',
+        permissions: [],
+        rateLimit: 1000,
+        expiresAt: ''
+      });
     }
   });
 
@@ -104,8 +120,35 @@ export default function APIKeyManagement({ getButtonClasses }) {
 
   const apiKeys = apiKeysData?.apiKeys || [];
 
-  const handleCreateKey = (keyData) => {
-    createKeyMutation.mutate(keyData);
+  const handleCreateKey = () => {
+    createKeyMutation.mutate(createFormData);
+  };
+
+  const handleFormInputChange = (field, value) => {
+    setCreateFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handlePermissionChange = (permission) => {
+    setCreateFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permission)
+        ? prev.permissions.filter(p => p !== permission)
+        : [...prev.permissions, permission]
+    }));
+  };
+
+  const handleCategoryDoubleClick = (group, perms) => {
+    const allSelected = perms.every(perm => createFormData.permissions.includes(perm));
+
+    setCreateFormData(prev => ({
+      ...prev,
+      permissions: allSelected
+        ? prev.permissions.filter(p => !perms.includes(p)) // Deselect all if all are selected
+        : [...prev.permissions.filter(p => !perms.includes(p)), ...perms] // Select all if not all are selected
+    }));
   };
 
   const handleRevokeKey = (keyId) => {
@@ -185,11 +228,11 @@ export default function APIKeyManagement({ getButtonClasses }) {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold admin-text">Your API Keys</h3>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowCreateForm(!showCreateForm)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${getButtonClasses("primary")}`}
           >
             <Plus className="h-4 w-4" />
-            <span>Generate New Key</span>
+            <span>{showCreateForm ? 'Cancel' : 'Generate New Key'}</span>
           </button>
         </div>
 
@@ -201,7 +244,7 @@ export default function APIKeyManagement({ getButtonClasses }) {
               Create your first API key to start integrating with external systems
             </p>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowCreateForm(true)}
               className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg ${getButtonClasses("primary")}`}
             >
               <Plus className="h-4 w-4" />
@@ -226,7 +269,194 @@ export default function APIKeyManagement({ getButtonClasses }) {
             ))}
           </div>
         )}
+
+        {/* Inline Create Form */}
+        {showCreateForm && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                <Plus className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold admin-text">Create New API Key</h4>
+                <p className="text-sm admin-text-light">Configure your new API key with the appropriate permissions</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium admin-text mb-2">
+                    Key Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={createFormData.name}
+                    onChange={(e) => handleFormInputChange('name', e.target.value)}
+                    placeholder="e.g., CRM Integration"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg admin-bg admin-text focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium admin-text mb-2">
+                    Rate Limit (requests/hour)
+                  </label>
+                  <input
+                    type="number"
+                    value={createFormData.rateLimit}
+                    onChange={(e) => handleFormInputChange('rateLimit', parseInt(e.target.value))}
+                    min="100"
+                    max="10000"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg admin-bg admin-text focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Permissions */}
+              <div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <label className="block text-sm font-medium admin-text">
+                    Permissions <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Info
+                      className="h-4 w-4 admin-text-light cursor-help"
+                      onMouseEnter={() => setShowInfoTooltip(true)}
+                      onMouseLeave={() => setShowInfoTooltip(false)}
+                    />
+                    {showInfoTooltip && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs rounded px-3 py-2 whitespace-nowrap z-20 shadow-lg">
+                        <div className="text-center">
+                          <div className="font-medium mb-1">Quick Selection Tip</div>
+                          <div>Double-click any category name (Jobs, Applications, Users)</div>
+                          <div>to select or deselect all permissions in that group</div>
+                        </div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    { group: 'Jobs', perms: ['jobs:read', 'jobs:create', 'jobs:update', 'jobs:delete'] },
+                    { group: 'Applications', perms: ['applications:read', 'applications:create', 'applications:update', 'applications:delete'] },
+                    { group: 'Users', perms: ['users:read', 'users:create', 'users:update', 'users:delete'] }
+                  ].map(({ group, perms }) => (
+                    <div key={group} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                      <h5
+                        className="font-medium admin-text mb-3 cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        onDoubleClick={() => handleCategoryDoubleClick(group, perms)}
+                      >
+                        {group}
+                      </h5>
+                      <div className="space-y-2">
+                        {perms.map(perm => (
+                          <label key={perm} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={createFormData.permissions.includes(perm)}
+                              onChange={() => handlePermissionChange(perm)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm admin-text">{perm.split(':')[1]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Expiration */}
+              <div>
+                <label className="block text-sm font-medium admin-text mb-2">
+                  Expiration Date (optional)
+                </label>
+                <input
+                  type="date"
+                  value={createFormData.expiresAt}
+                  onChange={(e) => handleFormInputChange('expiresAt', e.target.value)}
+                  className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg admin-bg admin-text focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Error Display */}
+              {createKeyMutation.error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-800 dark:text-red-200">Error</span>
+                  </div>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-2">{createKeyMutation.error.message}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateKey}
+                  disabled={createKeyMutation.isLoading || !createFormData.name || createFormData.permissions.length === 0}
+                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                >
+                  {createKeyMutation.isLoading ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Key className="h-4 w-4" />
+                  )}
+                  <span>{createKeyMutation.isLoading ? 'Creating...' : 'Create API Key'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Key Reveal Section */}
+      {showKeyReveal && newApiKeyData && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-green-800 dark:text-green-200">API Key Created Successfully!</h4>
+              <p className="text-sm text-green-700 dark:text-green-300">Save this key securely - it won't be shown again</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <code className="text-sm font-mono admin-text break-all">{newApiKeyData.apiKey}</code>
+              <button
+                onClick={() => copyToClipboard(newApiKeyData.apiKey)}
+                className="ml-2 p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                title="Copy to clipboard"
+              >
+                <Copy className="h-4 w-4 admin-text" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                setShowKeyReveal(false);
+                setNewApiKeyData(null);
+              }}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* API Documentation Link */}
       <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
@@ -240,23 +470,17 @@ export default function APIKeyManagement({ getButtonClasses }) {
               </p>
             </div>
           </div>
-          <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+          <a
+            href="/api-docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+          >
             <span>View Docs</span>
             <ExternalLink className="h-4 w-4" />
-          </button>
+          </a>
         </div>
       </div>
-
-      {/* Create API Key Modal */}
-      {showCreateModal && (
-        <CreateAPIKeyModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateKey}
-          isLoading={createKeyMutation.isLoading}
-          error={createKeyMutation.error}
-          getButtonClasses={getButtonClasses}
-        />
-      )}
 
       {/* Usage Modal */}
       {showUsageModal && selectedKey && (
@@ -266,18 +490,6 @@ export default function APIKeyManagement({ getButtonClasses }) {
             setShowUsageModal(false);
             setSelectedKey(null);
           }}
-        />
-      )}
-
-      {/* API Key Reveal Modal */}
-      {showRevealModal && newApiKeyData && (
-        <APIKeyRevealModal
-          apiKeyData={newApiKeyData}
-          onClose={() => {
-            setShowRevealModal(false);
-            setNewApiKeyData(null);
-          }}
-          getButtonClasses={getButtonClasses}
         />
       )}
     </div>
@@ -323,26 +535,13 @@ function APIKeyCard({ apiKey, onRevoke, onDelete, onViewUsage, onCopy, getButton
 
       <div className="space-y-3">
         {/* API Key Display */}
-        <div className="flex items-center space-x-2">
-          <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded border p-2 font-mono text-sm">
+        <div>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded border p-2 font-mono text-sm">
             {apiKey.key_prefix}
           </div>
-          <button
-            onClick={() => {
-              onCopy(apiKey.key_prefix);
-              setCopyFeedback('Copied!');
-              setTimeout(() => setCopyFeedback(''), 2000);
-            }}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 relative"
-            title={copyFeedback || "Copy to clipboard"}
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-          {copyFeedback && (
-            <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-              {copyFeedback}
-            </span>
-          )}
+          <p className="text-xs admin-text-light mt-1">
+            Key prefix shown for identification only
+          </p>
         </div>
 
         {/* Stats */}

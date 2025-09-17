@@ -4,6 +4,13 @@
 import { useState, useEffect } from "react";
 import { useSetting } from "../../../hooks/useSettings";
 import { useThemeClasses } from "../../../contexts/AdminThemeContext";
+import dynamic from "next/dynamic";
+
+// Dynamically import react-simple-wysiwyg
+const Editor = dynamic(() => import("react-simple-wysiwyg"), {
+  ssr: false,
+  loading: () => <div className="w-full h-32 border admin-border rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center admin-text">Loading editor...</div>
+});
 
 export default function JobForm({
   initialData = null,
@@ -132,17 +139,26 @@ export default function JobForm({
     }
   }, [autoPublishJobs, initialData]);
 
+  // Helper function to check if HTML content is empty
+  const isContentEmpty = (content) => {
+    if (!content) return true;
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    return textContent === '' || textContent === '&nbsp;';
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
     // Basic required fields
     if (!formData.title) newErrors.title = "Title is required";
     if (!formData.slug) newErrors.slug = "Slug is required";
-    if (!formData.description)
+    if (isContentEmpty(formData.summary))
+      newErrors.summary = "Job overview is required";
+    if (isContentEmpty(formData.description))
       newErrors.description = "Description is required";
     if (!formData.department) newErrors.department = "Department is required";
     if (!formData.location) newErrors.location = "Location is required";
-    if (!formData.requirements)
+    if (isContentEmpty(formData.requirements))
       newErrors.requirements = "Requirements are required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
     if (!formData.employment_type_id) newErrors.employment_type_id = "Employment type is required";
@@ -216,6 +232,19 @@ export default function JobForm({
         .replace(/-+/g, "-")
         .trim("-");
       setFormData((prev) => ({ ...prev, slug }));
+    }
+  };
+
+  // Handle markdown editor content changes
+  const handleEditorChange = (content, fieldName) => {
+    setFormData((prev) => ({
+      ...prev,
+      [fieldName]: content || '',
+    }));
+
+    // Clear error when user starts typing
+    if (errors[fieldName]) {
+      setErrors((prev) => ({ ...prev, [fieldName]: null }));
     }
   };
 
@@ -394,22 +423,50 @@ export default function JobForm({
         </div>
       </div>
 
+      {/* Job Overview/Summary */}
+      <div>
+        <label className="block text-sm font-medium admin-text mb-2">
+          Job Overview *
+        </label>
+        <div className={`${errors.summary ? "border border-red-500 rounded-lg" : "border admin-border rounded-lg"}`}>
+          <Editor
+            value={formData.summary}
+            onChange={(e) => handleEditorChange(e.target.value, 'summary')}
+            placeholder="Brief overview of the role and key responsibilities (2-3 sentences)"
+            containerProps={{
+              style: {
+                height: '120px',
+                fontSize: '14px'
+              }
+            }}
+          />
+        </div>
+        {errors.summary && (
+          <p className="theme-danger text-sm mt-1">{errors.summary}</p>
+        )}
+        <p className="text-xs admin-text-light mt-1">
+          This appears as a highlighted summary at the top of the job posting
+        </p>
+      </div>
+
       {/* Description */}
       <div>
         <label className="block text-sm font-medium admin-text mb-2">
           Job Description *
         </label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          disabled={submitting}
-          rows={6}
-          placeholder="Provide a detailed description of the role..."
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
-            errors.description ? "border-red-500" : "admin-border"
-          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
-        />
+        <div className={`${errors.description ? "border border-red-500 rounded-lg" : "border admin-border rounded-lg"}`}>
+          <Editor
+            value={formData.description}
+            onChange={(e) => handleEditorChange(e.target.value, 'description')}
+            placeholder="Provide a detailed description of the role..."
+            containerProps={{
+              style: {
+                height: '200px',
+                fontSize: '14px'
+              }
+            }}
+          />
+        </div>
         {errors.description && (
           <p className="theme-danger text-sm mt-1">{errors.description}</p>
         )}
@@ -420,17 +477,19 @@ export default function JobForm({
         <label className="block text-sm font-medium admin-text mb-2">
           Requirements *
         </label>
-        <textarea
-          name="requirements"
-          value={formData.requirements}
-          onChange={handleChange}
-          disabled={submitting}
-          rows={4}
-          placeholder="List the key requirements for this position..."
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text ${
-            errors.requirements ? "border-red-500" : "admin-border"
-          } ${submitting ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : "admin-card"}`}
-        />
+        <div className={`${errors.requirements ? "border border-red-500 rounded-lg" : "border admin-border rounded-lg"}`}>
+          <Editor
+            value={formData.requirements}
+            onChange={(e) => handleEditorChange(e.target.value, 'requirements')}
+            placeholder="List the key requirements for this position..."
+            containerProps={{
+              style: {
+                height: '150px',
+                fontSize: '14px'
+              }
+            }}
+          />
+        </div>
         {errors.requirements && (
           <p className="theme-danger text-sm mt-1">{errors.requirements}</p>
         )}

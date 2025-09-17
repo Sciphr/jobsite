@@ -253,16 +253,10 @@ export class WeeklyDigestService {
     // Get active users if customization is enabled
     let activeUsers = 0;
     if (customizations.activeUsers) {
-      // Users who logged in or performed actions this week
+      // Users who performed actions this week (applied to jobs or saved jobs)
       activeUsers = await appPrisma.users.count({
         where: {
           OR: [
-            {
-              lastLoginAt: {
-                gte: this.weekStart,
-                lte: this.weekEnd,
-              },
-            },
             {
               applications: {
                 some: {
@@ -274,7 +268,7 @@ export class WeeklyDigestService {
               },
             },
             {
-              savedJobs: {
+              saved_jobs: {
                 some: {
                   savedAt: {
                     gte: this.weekStart,
@@ -337,13 +331,13 @@ export class WeeklyDigestService {
         department: job.department,
         weeklyApplications: job.applications.length,
         totalApplications: job.applicationCount,
-        totalViews: job.viewCount,
+        totalViews: job.viewCount || 0,
         conversionRate:
           job.viewCount > 0
             ? ((job.applicationCount / job.viewCount) * 100).toFixed(1)
-            : "0",
+            : "0.0",
       }))
-      .filter((job) => job.weeklyApplications > 0);
+      .filter((job) => job.totalApplications > 0); // Show jobs with total applications, not just weekly
   }
 
   /**
@@ -396,9 +390,19 @@ export class WeeklyDigestService {
   }
 
   /**
-   * Get department statistics
+   * Get department statistics (applications by department this week)
    */
   async getDepartmentStats() {
+    // Get all active jobs grouped by department
+    const allJobs = await appPrisma.jobs.groupBy({
+      by: ["department"],
+      where: {
+        status: "Active",
+      },
+      _count: { id: true },
+    });
+
+    // Get applications this week by job, then group by department
     const departmentData = await appPrisma.applications.groupBy({
       by: ["jobId"],
       where: {
@@ -418,11 +422,19 @@ export class WeeklyDigestService {
     });
 
     const jobDeptMap = jobs.reduce((map, job) => {
-      map[job.id] = job.department;
+      map[job.id] = job.department || "Unknown";
       return map;
     }, {});
 
     const deptStats = {};
+
+    // Initialize all departments with 0 applications
+    allJobs.forEach((dept) => {
+      const departmentName = dept.department || "Unknown";
+      deptStats[departmentName] = 0;
+    });
+
+    // Add application counts
     departmentData.forEach((item) => {
       const dept = jobDeptMap[item.jobId] || "Unknown";
       deptStats[dept] = (deptStats[dept] || 0) + item._count.id;
@@ -430,20 +442,22 @@ export class WeeklyDigestService {
 
     return Object.entries(deptStats)
       .map(([department, applications]) => ({ department, applications }))
+      .filter((item) => item.department !== "Unknown" || item.applications > 0) // Hide Unknown unless it has applications
       .sort((a, b) => b.applications - a.applications);
   }
 
   /**
-   * Get users by role breakdown
+   * Get users by role breakdown (all active users, not just new this week)
    */
   async getUsersByRole() {
     const usersByRole = await appPrisma.users.groupBy({
       by: ["role"],
       where: {
-        createdAt: {
-          gte: this.weekStart,
-          lte: this.weekEnd,
-        },
+        OR: [
+          { isActive: true },
+          { is_active: true },
+          { AND: [{ isActive: null }, { is_active: null }] } // Include users where both are null (likely active)
+        ]
       },
       _count: {
         id: true,
@@ -451,9 +465,9 @@ export class WeeklyDigestService {
     });
 
     return usersByRole.map((role) => ({
-      role: role.role,
+      role: role.role || "user", // Default to "user" if role is null
       count: role._count.id,
-    }));
+    })).filter(role => role.count > 0); // Only return roles that have users
   }
 
   /**
@@ -617,9 +631,9 @@ export class WeeklyDigestService {
         successRate:
           totalEmails > 0
             ? ((successfulEmails / totalEmails) * 100).toFixed(1)
-            : 100,
+            : "100.0",
         failureRate:
-          totalEmails > 0 ? ((failedEmails / totalEmails) * 100).toFixed(1) : 0,
+          totalEmails > 0 ? ((failedEmails / totalEmails) * 100).toFixed(1) : "0.0",
       };
     }
 
@@ -687,7 +701,7 @@ export class WeeklyDigestService {
             orderBy: {
               created_at: "desc",
             },
-            take: 10,
+            take: 3,
           })
         : [];
 
@@ -970,16 +984,40 @@ export class WeeklyDigestService {
         (sum, j) => sum + j.applicationCount,
         0
       ),
-      totalViews: customizations.jobViews
-        ? thisWeekJobs.reduce((sum, j) => sum + j.viewCount, 0)
-        : 0,
+      totalViews: 0, // Will be calculated separately for all jobs if needed
     };
+
+    // Get current active featured jobs count (not just new ones)
+    if (customizations.featuredJobs) {
+      const currentFeaturedJobs = await appPrisma.jobs.count({
+        where: {
+          status: "Active",
+          featured: true,
+        },
+      });
+
+      thisWeekStats.activeFeaturedJobs = currentFeaturedJobs;
+    }
 
     const previousWeekStats = {
       total: previousWeekJobs.length,
       active: previousWeekJobs.filter((j) => j.status === "Active").length,
       featured: previousWeekJobs.filter((j) => j.featured).length,
     };
+
+    // Calculate total views for ALL active jobs if job views are enabled
+    if (customizations.jobViews) {
+      const allActiveJobs = await appPrisma.jobs.findMany({
+        where: {
+          status: "Active",
+        },
+        select: {
+          viewCount: true,
+        },
+      });
+
+      thisWeekStats.totalViews = allActiveJobs.reduce((sum, job) => sum + (job.viewCount || 0), 0);
+    }
 
     return {
       thisWeek: thisWeekStats,

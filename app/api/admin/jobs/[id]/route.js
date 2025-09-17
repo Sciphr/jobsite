@@ -8,6 +8,7 @@ import { getSystemSetting } from "../../../../lib/settings";
 import {
   logAuditEvent,
   calculateChanges,
+  truncateForDb,
 } from "../../../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../../../lib/auditLog";
 
@@ -338,20 +339,20 @@ export async function PATCH(req, { params }) {
               : null,
         entityType: "job",
         entityId: id,
-        entityName: currentJob.title,
-        action: `Job updated: ${changedFields.join(", ")}`,
-        description: `Updated job posting: ${currentJob.title}. Changed fields: ${changedFields.join(", ")}`,
+        entityName: truncateForDb(currentJob.title, 255),
+        action: `Job updated: ${changedFields.length} field${changedFields.length !== 1 ? 's' : ''}`,
+        description: truncateForDb(`Updated job posting: ${currentJob.title}. Changed fields: ${changedFields.join(", ")}`, 500),
         oldValues: currentJob,
         newValues: updateData,
         changes,
         relatedJobId: id,
         severity: changedFields.includes("status") ? "warning" : "info",
         status: "success",
-        tags: ["job", "update", "admin_action", ...changedFields],
+        tags: ["job", "update", "admin_action", ...changedFields.slice(0, 10)],
         metadata: {
           changedFields,
+          changedFieldsList: changedFields.join(", "),
           wasJustPublished,
-
           category: updatedJob.categories?.name,
         },
         ...requestContext,
@@ -408,7 +409,7 @@ export async function PATCH(req, { params }) {
         entityType: "job",
         entityId: id,
         action: "Failed to update job",
-        description: `Job update failed: ${error.message}`,
+        description: `Job update failed: ${error.message}`.substring(0, 500),
         severity: "error",
         status: "failure",
         tags: ["job", "update", "error"],

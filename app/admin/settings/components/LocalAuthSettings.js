@@ -1,52 +1,47 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Key, 
-  Shield, 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Loader,
-  Settings,
-  UserCheck
+import {
+  Key,
+  Shield,
+  Users,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Loader
 } from "lucide-react";
+import { useAuthSettings, useUpdateAuthSettings } from "@/app/hooks/useAdminData";
 
 export default function LocalAuthSettings() {
+  // Use React Query hooks for data fetching and mutations
+  const { data: authSettings, isLoading, error } = useAuthSettings();
+  const updateAuthSettings = useUpdateAuthSettings();
+
   const [settings, setSettings] = useState({
     local_auth_enabled: true
   });
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
 
-  // Load settings on component mount
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Update local state when React Query data loads
   useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/admin/settings/local-auth');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setSettings(data);
-      } else {
-        console.error('Failed to fetch local auth settings:', data.error);
-        // Use defaults on error
-        setSettings({ local_auth_enabled: true });
-      }
-    } catch (error) {
-      console.error('Error fetching local auth settings:', error);
-      setSettings({ local_auth_enabled: true });
-    } finally {
-      setIsLoading(false);
+    if (authSettings) {
+      setSettings({ local_auth_enabled: authSettings.local_auth_enabled });
     }
-  };
+  }, [authSettings]);
+
+  // Handle success message timing
+  useEffect(() => {
+    if (updateAuthSettings.isSuccess) {
+      setShowSuccessMessage(true);
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+        updateAuthSettings.reset(); // Reset the mutation state
+      }, 4000); // Show for 4 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [updateAuthSettings.isSuccess]);
 
   const handleToggleLocalAuth = async (enabled) => {
     if (!enabled) {
@@ -58,43 +53,28 @@ export default function LocalAuthSettings() {
       if (!confirmed) return;
     }
 
-    setIsSaving(true);
-    setSaveStatus(null);
+    // Update local state immediately for optimistic UI
+    setSettings(prev => ({ ...prev, local_auth_enabled: enabled }));
 
-    try {
-      const response = await fetch('/api/admin/settings/local-auth', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          local_auth_enabled: enabled 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSettings(prev => ({ ...prev, local_auth_enabled: enabled }));
-        setSaveStatus('success');
-        
-        // Show success message
-        setTimeout(() => setSaveStatus(null), 3000);
-      } else {
-        setSaveStatus('error');
-        console.error('Failed to update local auth setting:', data.error);
-      }
-    } catch (error) {
-      console.error('Error updating local auth setting:', error);
-      setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
-    }
+    // Use React Query mutation
+    updateAuthSettings.mutate({ local_auth_enabled: enabled });
   };
+
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-6">
         <Loader className="h-6 w-6 animate-spin admin-text" />
         <span className="ml-2 admin-text">Loading local authentication settings...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-6 text-red-600">
+        <XCircle className="h-6 w-6 mr-2" />
+        <span>Error loading authentication settings: {error.message}</span>
       </div>
     );
   }
@@ -125,17 +105,17 @@ export default function LocalAuthSettings() {
         
         <div className="flex items-center space-x-3">
           {/* Save Status */}
-          {saveStatus === 'success' && (
-            <div className="flex items-center space-x-1 text-green-600">
+          {showSuccessMessage && (
+            <div className="flex items-center space-x-1 text-green-600 animate-fade-in">
               <CheckCircle className="h-4 w-4" />
               <span className="text-sm">Saved</span>
             </div>
           )}
-          
-          {saveStatus === 'error' && (
+
+          {updateAuthSettings.isError && (
             <div className="flex items-center space-x-1 text-red-600">
               <XCircle className="h-4 w-4" />
-              <span className="text-sm">Error</span>
+              <span className="text-sm">Error: {updateAuthSettings.error?.message || 'Failed to save'}</span>
             </div>
           )}
 
@@ -146,17 +126,17 @@ export default function LocalAuthSettings() {
               className="sr-only"
               checked={settings.local_auth_enabled}
               onChange={(e) => handleToggleLocalAuth(e.target.checked)}
-              disabled={isSaving}
+              disabled={updateAuthSettings.isPending}
             />
             <div className={`w-11 h-6 rounded-full transition-colors ${
-              settings.local_auth_enabled 
-                ? 'bg-green-600' 
+              settings.local_auth_enabled
+                ? 'bg-green-600'
                 : 'bg-gray-200 dark:bg-gray-700'
-            } ${isSaving ? 'opacity-50' : ''}`}>
+            } ${updateAuthSettings.isPending ? 'opacity-50' : ''}`}>
               <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
                 settings.local_auth_enabled ? 'translate-x-5' : 'translate-x-0'
               } mt-0.5 ml-0.5`}>
-                {isSaving && (
+                {updateAuthSettings.isPending && (
                   <Loader className="h-3 w-3 animate-spin text-gray-400 m-1" />
                 )}
               </div>
@@ -199,6 +179,7 @@ export default function LocalAuthSettings() {
         </div>
       </div>
 
+
       {/* Security Recommendations */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div className="flex items-start space-x-3">
@@ -209,15 +190,15 @@ export default function LocalAuthSettings() {
             </h5>
             <div className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-2">
               <p>
-                <strong>For Enterprise Organizations:</strong> Consider disabling local authentication 
+                <strong>For Enterprise Organizations:</strong> Consider disabling local authentication
                 if you have LDAP or SAML configured. This centralizes user management and improves security.
               </p>
               <p>
-                <strong>Before Disabling:</strong> Ensure your LDAP/SAML configuration is working correctly 
+                <strong>Before Disabling:</strong> Ensure your LDAP/SAML configuration is working correctly
                 and test with a few users first.
               </p>
               <p>
-                <strong>Account Linking:</strong> Existing local accounts will automatically be linked 
+                <strong>Account Linking:</strong> Existing local accounts will automatically be linked
                 when users log in via LDAP/SAML with the same email address.
               </p>
             </div>

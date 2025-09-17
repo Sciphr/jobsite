@@ -8,7 +8,6 @@ import {
 
 // Generic fetcher function
 const fetcher = async (url) => {
-  console.log(`🔄 API Call: ${url}`); // Add logging to track actual calls
   const response = await fetch(url);
   
   const data = await response.json();
@@ -44,6 +43,15 @@ const commonQueryOptions = {
   refetchOnReconnect: false, // ✅ Prevent refetch on reconnect
   refetchInterval: false, // ✅ Disable polling
   networkMode: "online",
+};
+
+// Authentication settings hook
+export const useAuthSettings = () => {
+  return useQuery({
+    queryKey: ["auth-settings"],
+    queryFn: () => fetcher("/api/admin/settings/local-auth"),
+    ...commonQueryOptions,
+  });
 };
 
 // Individual hooks with optimized cache settings
@@ -273,6 +281,43 @@ export const useAutoProgressPreview = () => {
     queryFn: () => fetcher("/api/admin/applications/auto-progress"),
     ...commonQueryOptions,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Authentication settings update mutation
+export const useUpdateAuthSettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settings) => {
+      const response = await fetch("/api/admin/settings/local-auth", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update authentication settings");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Update the cache directly with the new values instead of invalidating
+      queryClient.setQueryData(["auth-settings"], (oldData) => ({
+        ...oldData,
+        ...variables
+      }));
+
+      // Optional: Invalidate after a delay to ensure data consistency, but don't refetch immediately
+      setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["auth-settings"],
+          refetchType: 'none' // Don't trigger immediate refetch
+        });
+      }, 2000);
+    },
   });
 };
 
@@ -785,14 +830,55 @@ export const useUpdateJob = () => {
 
       return response.json();
     },
+    // Optimistic update for instant UI feedback
+    onMutate: async ({ jobId, jobData }) => {
+      // Cancel any outgoing refetches to prevent them from overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["admin", "jobs"] });
+
+      // Snapshot the previous value
+      const previousJobs = queryClient.getQueryData(["admin", "jobs"]);
+
+      // Optimistically update the jobs list
+      if (previousJobs && Array.isArray(previousJobs)) {
+        queryClient.setQueryData(["admin", "jobs"], (old) => {
+          return old.map(job =>
+            job.id === jobId
+              ? { ...job, ...jobData }
+              : job
+          );
+        });
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousJobs };
+    },
     onSuccess: (data, variables) => {
-      // Update the specific job in cache
+      // Update the specific job in cache with the actual server response
       queryClient.setQueryData(["admin", "job", variables.jobId], data);
 
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ["admin", "jobs"] });
+      // Update the jobs list with the real data
+      queryClient.setQueryData(["admin", "jobs"], (old) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map(job =>
+          job.id === variables.jobId
+            ? data
+            : job
+        );
+      });
+
+      // Invalidate other related queries
       queryClient.invalidateQueries({ queryKey: ["admin", "jobs-simple"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard-stats"] });
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousJobs) {
+        queryClient.setQueryData(["admin", "jobs"], context.previousJobs);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["admin", "jobs"] });
     },
   });
 };

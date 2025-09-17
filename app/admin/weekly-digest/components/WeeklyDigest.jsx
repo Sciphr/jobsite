@@ -30,7 +30,6 @@ const WeeklyDigest = () => {
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewDateRange, setPreviewDateRange] = useState("");
-  const [previewBlobUrl, setPreviewBlobUrl] = useState("");
 
   const [digestConfig, setDigestConfig] = useState({
     enabled: true,
@@ -645,12 +644,6 @@ const WeeklyDigest = () => {
     setPreviewLoading(true);
     setShowPreview(true);
     setPreviewHtml("");
-    
-    // Clean up any existing blob URL
-    if (previewBlobUrl) {
-      URL.revokeObjectURL(previewBlobUrl);
-      setPreviewBlobUrl("");
-    }
 
     try {
       console.log("🚀 Starting preview generation...");
@@ -712,14 +705,9 @@ const WeeklyDigest = () => {
             </html>
           `);
         } else {
-          // Set the actual HTML content and create blob URL
+          // Set the actual HTML content
           setPreviewHtml(data.html);
-          
-          // Create blob URL for iframe
-          const blob = new Blob([data.html], { type: 'text/html' });
-          const blobUrl = URL.createObjectURL(blob);
-          setPreviewBlobUrl(blobUrl);
-          console.log("🔗 Created blob URL:", blobUrl);
+          console.log("✅ HTML content set for direct iframe writing");
         }
         setPreviewDateRange(data.dateRange);
       } else {
@@ -747,11 +735,6 @@ const WeeklyDigest = () => {
 
   const closePreview = () => {
     setShowPreview(false);
-    // Clean up blob URL when closing
-    if (previewBlobUrl) {
-      URL.revokeObjectURL(previewBlobUrl);
-      setPreviewBlobUrl("");
-    }
   };
 
   // Show loading state until settings are loaded
@@ -1012,30 +995,64 @@ const WeeklyDigest = () => {
                     </div>
                   ) : previewHtml ? (
                     <div>
-                      <div className="text-xs text-gray-500 p-2 border-b">
-                        HTML Length: {previewHtml.length} characters
+                      <div className="text-xs text-gray-500 p-2 border-b flex items-center justify-between">
+                        <span>HTML Length: {previewHtml.length} characters</span>
+                        <span className="text-blue-600 cursor-pointer" onClick={() => {
+                          const newWindow = window.open('', '_blank');
+                          if (newWindow) {
+                            newWindow.document.write(previewHtml);
+                            newWindow.document.close();
+                          }
+                        }}>
+                          Open in new tab if preview is blocked
+                        </span>
                       </div>
                       <iframe
-                        src={previewBlobUrl || `data:text/html;charset=utf-8,${encodeURIComponent(previewHtml)}`}
-                        className="w-full h-[500px] sm:h-[700px] lg:h-[800px]"
-                        title="Email Preview"
-                        style={{ minHeight: "700px", border: "1px solid #ccc", background: "white" }}
-                        onLoad={(e) => {
-                          console.log("🖼️ Iframe loaded successfully");
-                          console.log("🔍 Iframe src:", e.target.src?.substring(0, 100));
-                          console.log("🔍 Using blob URL:", !!previewBlobUrl);
-                          try {
-                            if (e.target.contentDocument) {
-                              console.log("✅ Can access iframe content");
-                              console.log("🔍 Iframe body content:", e.target.contentDocument?.body?.innerHTML?.substring(0, 200));
-                            } else {
-                              console.log("❌ Cannot access iframe contentDocument (still null)");
+                        ref={(iframe) => {
+                          if (iframe && previewHtml) {
+                            // Write content directly to iframe to avoid CSP issues
+                            try {
+                              const doc = iframe.contentDocument || iframe.contentWindow.document;
+                              doc.open();
+                              doc.write(previewHtml);
+                              doc.close();
+                              console.log("✅ HTML written directly to iframe");
+                            } catch (err) {
+                              console.error("❌ Error writing to iframe:", err);
+                              // Fallback to srcdoc if direct write fails
+                              iframe.srcdoc = previewHtml;
                             }
-                          } catch (err) {
-                            console.log("❌ Cannot access iframe content (security):", err.message);
                           }
                         }}
-                        onError={(e) => console.error("🖼️ Iframe error:", e)}
+                        className="w-full h-[500px] sm:h-[700px] lg:h-[800px]"
+                        title="Email Preview"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                        style={{
+                          minHeight: "700px",
+                          border: "1px solid #ccc",
+                          background: "white",
+                          borderRadius: "4px"
+                        }}
+                        onLoad={(e) => {
+                          console.log("🖼️ Iframe loaded successfully");
+                        }}
+                        onError={(e) => {
+                          console.error("🖼️ Iframe error:", e);
+                          // Show a user-friendly message when iframe fails
+                          e.target.style.display = 'none';
+                          const errorDiv = document.createElement('div');
+                          errorDiv.innerHTML = `
+                            <div style="padding: 40px; text-align: center; background: #f9f9f9;">
+                              <h3 style="color: #666; margin-bottom: 10px;">Preview Blocked</h3>
+                              <p style="color: #888; margin-bottom: 20px;">The preview cannot be displayed in this iframe due to security restrictions.</p>
+                              <button onclick="window.open('', '_blank').document.write(\`${previewHtml.replace(/`/g, '\\`')}\`)"
+                                      style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">
+                                Open in New Tab
+                              </button>
+                            </div>
+                          `;
+                          e.target.parentNode.appendChild(errorDiv);
+                        }}
                       />
                     </div>
                   ) : (
@@ -1054,12 +1071,35 @@ const WeeklyDigest = () => {
                   <button
                     onClick={() => {
                       const newWindow = window.open('', '_blank');
-                      newWindow.document.write(previewHtml);
-                      newWindow.document.close();
+                      if (newWindow) {
+                        newWindow.document.write(previewHtml);
+                        newWindow.document.close();
+                      } else {
+                        alert('Please allow popups to open the preview in a new tab');
+                      }
                     }}
                     className="inline-flex items-center justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    disabled={!previewHtml}
                   >
                     Open in New Tab
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Alternative: Create a downloadable HTML file
+                      const blob = new Blob([previewHtml], { type: 'text/html' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `weekly-digest-preview-${new Date().toISOString().split('T')[0]}.html`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    disabled={!previewHtml}
+                  >
+                    Download HTML
                   </button>
                   <button
                     onClick={() => setShowPreview(false)}

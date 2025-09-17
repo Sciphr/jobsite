@@ -17,11 +17,14 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { highlightText } from "@/app/components/SmartSearch";
+import QuickActions from "./QuickActions";
 
 export default function ApplicationsTableView({
   filteredApplications,
   onStatusChange,
   onViewApplication,
+  onEmailApplication,
+  onArchiveApplication,
   getButtonClasses,
   staleData,
   trackTimeInStage,
@@ -285,25 +288,15 @@ export default function ApplicationsTableView({
 
                   {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => onViewApplication(application.id)}
-                        className="p-1.5 admin-text-light hover:admin-text hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="p-1.5 admin-text-light hover:admin-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
-                        title="More Actions"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </motion.button>
-                    </div>
+                    <QuickActions
+                      application={application}
+                      onStatusChange={onStatusChange}
+                      onEmail={onEmailApplication}
+                      onView={() => onViewApplication(application.id)}
+                      onArchive={onArchiveApplication}
+                      compact={true}
+                      showLabels={false}
+                    />
                   </td>
                 </motion.tr>
               ))}

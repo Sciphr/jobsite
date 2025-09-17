@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
 import { generateJobShareMailtoUrl } from "../../utils/emailTemplates";
 import { formatDate, formatNumber } from "../../utils/dateFormat";
+import { cleanHtmlForDisplay } from "../../utils/htmlSanitizer";
 import {
   usePublicJob,
   useSavedJobStatus,
@@ -308,10 +309,9 @@ export default function JobDetailsClient({
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200 overflow-hidden">
-              {/* Job Header with gradient background */}
-              <div className="relative bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 p-8 border-b border-gray-200 dark:border-gray-600">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-blue-600/10 dark:to-purple-600/10"></div>
-                <div className="relative">
+              {/* Job Header */}
+              <div className="p-8 border-b border-gray-200 dark:border-gray-600">
+                <div>
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
@@ -507,55 +507,23 @@ export default function JobDetailsClient({
               <div className="p-8 space-y-8">
                 {/* Job Summary */}
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
-                      <svg
-                        className="w-4 h-4 text-blue-600 dark:text-blue-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     Job Overview
                   </h2>
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 p-6 rounded-xl border border-blue-100 dark:border-gray-600">
-                    <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
-                      {job.summary}
-                    </p>
+                  <div className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed prose prose-lg dark:prose-invert max-w-none">
+                    <div dangerouslySetInnerHTML={{ __html: cleanHtmlForDisplay(job.summary) }} />
                   </div>
                 </div>
 
                 {/* Job Description */}
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
-                      <svg
-                        className="w-4 h-4 text-green-600 dark:text-green-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                        />
-                      </svg>
-                    </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     Job Description
                   </h2>
-                  <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                  <div className="prose prose-lg dark:prose-invert max-w-none">
                     <div
                       className="text-gray-700 dark:text-gray-300 leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: job.description }}
+                      dangerouslySetInnerHTML={{ __html: cleanHtmlForDisplay(job.description) }}
                     />
                   </div>
                 </div>
@@ -616,28 +584,13 @@ export default function JobDetailsClient({
                 {/* Requirements */}
                 {job.requirements && (
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-purple-600 dark:text-purple-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                          />
-                        </svg>
-                      </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                       Requirements
                     </h2>
-                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
                       <div
                         className="text-gray-700 dark:text-gray-300 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: job.requirements }}
+                        dangerouslySetInnerHTML={{ __html: cleanHtmlForDisplay(job.requirements) }}
                       />
                     </div>
                   </div>
@@ -646,25 +599,10 @@ export default function JobDetailsClient({
                 {/* Preferred Qualifications */}
                 {job.preferredQualifications && (
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                          />
-                        </svg>
-                      </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                       Preferred Qualifications
                     </h2>
-                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
                       <div
                         className="text-gray-700 dark:text-gray-300 leading-relaxed"
                         dangerouslySetInnerHTML={{
@@ -678,25 +616,10 @@ export default function JobDetailsClient({
                 {/* Benefits */}
                 {job.benefits && (
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                          />
-                        </svg>
-                      </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                       Benefits & Perks
                     </h2>
-                    <div className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
                       <div
                         className="text-gray-700 dark:text-gray-300 leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: job.benefits }}

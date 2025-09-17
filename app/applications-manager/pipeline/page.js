@@ -1158,6 +1158,8 @@ export default function PipelineView() {
           onViewApplication={(applicationId) =>
             router.push(`/applications-manager/candidate/${applicationId}`)
           }
+          onEmailApplication={handleEmailApplication}
+          onArchiveApplication={handleArchiveApplication}
           getButtonClasses={getButtonClasses}
           staleData={staleData}
           trackTimeInStage={trackTimeInStage}

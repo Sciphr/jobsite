@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { PrismaClient } from "@/app/generated/prisma";
-
-const prisma = new PrismaClient();
+import { db } from "@/app/lib/db";
 
 async function refreshMicrosoftToken(user) {
   if (!user.microsoftRefreshToken) {
@@ -32,7 +30,7 @@ async function refreshMicrosoftToken(user) {
   const expiresAt = new Date();
   expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
 
-  await prisma.user.update({
+  await db.user.update({
     where: { id: user.id },
     data: {
       microsoftAccessToken: tokens.access_token,
@@ -54,7 +52,7 @@ export async function POST(request) {
 
     const { startTime, endTime } = await request.json();
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
@@ -122,7 +120,5 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error fetching Microsoft calendar events:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -12,14 +12,16 @@ import MicrosoftIntegration from "./components/MicrosoftIntegration";
 import LDAPIntegration from "./components/LDAPIntegration";
 import SAMLIntegration from "./components/SAMLIntegration";
 import LocalAuthSettings from "./components/LocalAuthSettings";
+import AuthenticationLabels from "./components/AuthenticationLabels";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
-import { useSettings, usePrefetchAdminData, useAutoArchive, useAutoArchivePreview } from "@/app/hooks/useAdminData";
+import { useSettings, usePrefetchAdminData, useAutoArchive, useAutoArchivePreview, useAuthSettings } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
 } from "@/app/components/WeeklyDigestTester";
 import APIKeyManagement from "./components/APIKeyManagement";
+import APIClientInterface from "./components/APIClientInterface";
 import SupportTickets from "./components/SupportTickets";
 import {
   Settings,
@@ -51,6 +53,8 @@ import {
   Archive,
   HelpCircle,
   Code,
+  Tags,
+  Key,
 } from "lucide-react";
 
 export default function AdminSettings() {
@@ -66,6 +70,8 @@ export default function AdminSettings() {
 
   const { prefetchAll } = usePrefetchAdminData();
   const { data: settingsData, isLoading, refetch } = useSettings();
+  // Prefetch authentication settings to ensure they're available when auth sections are opened
+  useAuthSettings();
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -91,13 +97,13 @@ export default function AdminSettings() {
     // Check if we need to refresh the session after OAuth callback
     const shouldRefreshSession = searchParams.get('refresh_session');
     if (shouldRefreshSession === 'true') {
-      // Use NextAuth's update method to refresh the session
-      update().then(() => {
-        // Clean up the URL by removing the refresh_session parameter
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('refresh_session');
-        router.replace(newUrl.pathname + newUrl.search, { scroll: false });
-      });
+      // Clean up the URL immediately to prevent re-triggering
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.delete('refresh_session');
+      router.replace(newUrl.pathname + newUrl.search, { scroll: false });
+
+      // Then refresh the session
+      update();
     }
   }, [searchParams, update, router]);
 
@@ -376,6 +382,47 @@ export default function AdminSettings() {
       ...prev,
       [sectionId]: !prev[sectionId],
     }));
+  };
+
+  // Collapsible section component
+  const CollapsibleSection = ({ id, title, description, icon: Icon, color, bgColor, borderColor, children, defaultCollapsed = false }) => {
+    const isCollapsed = collapsedSections[id] ?? defaultCollapsed;
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border-2 shadow-sm hover:shadow-md transition-all duration-200" style={{ borderColor }}>
+        <button
+          onClick={() => toggleSection(id)}
+          className="w-full px-6 py-4 rounded-t-xl border-b transition-all duration-200 hover:opacity-90"
+          style={{ backgroundColor: bgColor, borderBottomColor: borderColor }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: color }}>
+                <Icon className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-lg font-semibold transition-colors duration-200" style={{ color }}>
+                  {title}
+                </h3>
+                <p className="text-sm admin-text-light">{description}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isCollapsed ? (
+                <ChevronRight className="h-5 w-5 admin-text-light" />
+              ) : (
+                <ChevronDown className="h-5 w-5 admin-text-light" />
+              )}
+            </div>
+          </div>
+        </button>
+        {!isCollapsed && (
+          <div className="p-6">
+            {children}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Function to organize notification settings into sections
@@ -1126,69 +1173,81 @@ export default function AdminSettings() {
         <div className="p-6">
           {/* Special handling for Authentication tab */}
           {activeTab === "authentication" ? (
-            <div className="space-y-8">
-              {/* Local Authentication Container */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/30 dark:to-gray-800/30 px-6 py-4 rounded-t-xl border-b border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gray-500 rounded-lg">
-                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Local Authentication</h3>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">Traditional username and password authentication</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <LocalAuthSettings />
-                </div>
-              </div>
+            <div className="space-y-6">
+              {/* Authentication Labels Section */}
+              <CollapsibleSection
+                id="auth-labels"
+                title="Authentication Labels"
+                description="Customize how authentication methods appear on your sign-in page"
+                icon={Tags}
+                color="#8B5CF6"
+                bgColor="rgb(245 243 255)"
+                borderColor="rgb(196 181 253)"
+              >
+                <AuthenticationLabels />
+              </CollapsibleSection>
 
-              {/* LDAP Authentication Container */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 px-6 py-4 rounded-t-xl border-b border-blue-200 dark:border-blue-700">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-500 rounded-lg">
-                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">LDAP Directory Authentication</h3>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">Connect to your organization's LDAP directory for user authentication</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <LDAPIntegration />
-                </div>
-              </div>
+              {/* Local Authentication Section */}
+              <CollapsibleSection
+                id="local-auth"
+                title="Local Authentication"
+                description="Traditional username and password authentication"
+                icon={Key}
+                color="#6B7280"
+                bgColor="rgb(249 250 251)"
+                borderColor="rgb(209 213 219)"
+              >
+                <LocalAuthSettings />
+              </CollapsibleSection>
 
-              {/* SAML SSO Container */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 px-6 py-4 rounded-t-xl border-b border-green-200 dark:border-green-700">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-500 rounded-lg">
-                      <Shield className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">SAML Single Sign-On</h3>
-                      <p className="text-sm text-green-700 dark:text-green-300">Enable web-based SSO with your Identity Provider (Okta, Azure AD, Google)</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <SAMLIntegration />
-                </div>
-              </div>
+              {/* LDAP Authentication Section */}
+              <CollapsibleSection
+                id="ldap-auth"
+                title="LDAP Directory Authentication"
+                description="Connect to your organization's LDAP directory for user authentication"
+                icon={Users}
+                color="#3B82F6"
+                bgColor="rgb(239 246 255)"
+                borderColor="rgb(147 197 253)"
+              >
+                <LDAPIntegration />
+              </CollapsibleSection>
+
+              {/* SAML SSO Section */}
+              <CollapsibleSection
+                id="saml-auth"
+                title="SAML Single Sign-On"
+                description="Enable web-based SSO with your Identity Provider (Okta, Azure AD, Google)"
+                icon={Shield}
+                color="#10B981"
+                bgColor="rgb(236 253 245)"
+                borderColor="rgb(167 243 208)"
+              >
+                <SAMLIntegration />
+              </CollapsibleSection>
             </div>
           ) : /* Special handling for Developer tab - show API key management */
           activeTab === "developer" ? (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <APIKeyManagement getButtonClasses={getButtonClasses} />
+
+              {/* API Client Interface */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 px-6 py-4 rounded-t-xl border-b border-indigo-200 dark:border-indigo-600">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-indigo-500 rounded-lg">
+                      <Code className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-100">API Testing Interface</h3>
+                      <p className="text-sm text-indigo-700 dark:text-indigo-300">Test your API endpoints directly from the admin panel</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <APIClientInterface />
+                </div>
+              </div>
             </div>
           ) : /* Special handling for Support tab - show support tickets */
           activeTab === "support" ? (

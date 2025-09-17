@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  CheckCircle, 
-  Clock, 
-  Calendar, 
-  UserCheck, 
-  X, 
+import {
+  CheckCircle,
+  Clock,
+  Calendar,
+  UserCheck,
+  X,
   Mail,
   MoreHorizontal,
   Eye,
@@ -25,17 +26,62 @@ const QUICK_ACTIONS = [
   { id: "Rejected", icon: X, color: "red", label: "Reject" },
 ];
 
-export default function QuickActions({ 
-  application, 
-  onStatusChange, 
-  onEmail, 
+// Custom hook for dropdown positioning
+function useDropdownPosition(isOpen, triggerRef, compact = true) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const dropdownWidth = compact ? 128 : 192; // w-32 = 128px, w-48 = 192px
+      const dropdownHeight = compact ? 200 : 120; // estimated height
+
+      let top = rect.bottom + 8; // mt-2 = 8px
+      let left;
+
+      if (compact) {
+        // For compact (kanban), center the dropdown
+        left = rect.left + (rect.width / 2) - (dropdownWidth / 2);
+      } else {
+        // For table view, align to the right of the button but ensure it doesn't go off screen
+        left = rect.right - dropdownWidth;
+      }
+
+      // Prevent dropdown from going off screen
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Adjust horizontal position if needed
+      if (left < 8) left = 8;
+      if (left + dropdownWidth > viewportWidth - 8) {
+        left = viewportWidth - dropdownWidth - 8;
+      }
+
+      // Adjust vertical position if needed (show above if no space below)
+      if (top + dropdownHeight > viewportHeight - 8) {
+        top = rect.top - dropdownHeight - 8;
+      }
+
+      setPosition({ top, left });
+    }
+  }, [isOpen, triggerRef, compact]);
+
+  return position;
+}
+
+export default function QuickActions({
+  application,
+  onStatusChange,
+  onEmail,
   onView,
   onArchive,
   compact = false,
-  showLabels = true 
+  showLabels = true
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const triggerRef = useRef(null);
+  const dropdownPosition = useDropdownPosition(showDropdown, triggerRef, compact);
 
   const handleStatusChange = async (statusId) => {
     if (application.status === statusId) return;
@@ -60,6 +106,30 @@ export default function QuickActions({
 
   const handleView = () => {
     onView(application);
+  };
+
+  // Portal dropdown component
+  const PortalDropdown = ({ children, position, width = "w-32" }) => {
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -5 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -5 }}
+        transition={{ duration: compact ? 0.1 : 0.15 }}
+        className={`fixed ${width} admin-card rounded-lg shadow-xl border border-gray-200 dark:border-gray-600`}
+        style={{
+          top: position.top,
+          left: position.left,
+          zIndex: 999999
+        }}
+        onMouseLeave={() => setShowDropdown(false)}
+      >
+        {children}
+      </motion.div>,
+      document.body
+    );
   };
 
   if (compact) {
@@ -88,6 +158,7 @@ export default function QuickActions({
 
         <div className="relative">
           <motion.button
+            ref={triggerRef}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowDropdown(!showDropdown)}
@@ -99,19 +170,12 @@ export default function QuickActions({
 
           <AnimatePresence>
             {showDropdown && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                transition={{ duration: 0.1 }}
-                className="absolute right-0 top-full mt-1 w-32 admin-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50"
-                onMouseLeave={() => setShowDropdown(false)}
-              >
+              <PortalDropdown position={dropdownPosition}>
                 <div className="py-1">
                   {QUICK_ACTIONS.map((action) => {
                     const Icon = action.icon;
                     const isCurrentStatus = application.status === action.id;
-                    
+
                     return (
                       <motion.button
                         key={action.id}
@@ -122,8 +186,8 @@ export default function QuickActions({
                         }}
                         disabled={isCurrentStatus || isLoading}
                         className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center space-x-2 ${
-                          isCurrentStatus 
-                            ? 'bg-gray-50 dark:bg-gray-700 admin-text-light cursor-not-allowed' 
+                          isCurrentStatus
+                            ? 'bg-gray-50 dark:bg-gray-700 admin-text-light cursor-not-allowed'
                             : 'hover:bg-gray-50 dark:hover:bg-gray-700 admin-text'
                         }`}
                       >
@@ -132,7 +196,7 @@ export default function QuickActions({
                       </motion.button>
                     );
                   })}
-                  
+
                   {/* Archive/Unarchive Button */}
                   {onArchive && (
                     <>
@@ -160,7 +224,7 @@ export default function QuickActions({
                     </>
                   )}
                 </div>
-              </motion.div>
+              </PortalDropdown>
             )}
           </AnimatePresence>
         </div>
@@ -246,6 +310,7 @@ export default function QuickActions({
       {/* More Actions Dropdown */}
       <div className="relative">
         <motion.button
+          ref={triggerRef}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowDropdown(!showDropdown)}
@@ -257,14 +322,7 @@ export default function QuickActions({
 
         <AnimatePresence>
           {showDropdown && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -5 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -5 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-              onMouseLeave={() => setShowDropdown(false)}
-            >
+            <PortalDropdown position={dropdownPosition} width="w-48">
               <div className="py-2">
                 <motion.button
                   whileHover={{ x: 2 }}
@@ -272,12 +330,12 @@ export default function QuickActions({
                     handleView();
                     setShowDropdown(false);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-2"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 admin-text"
                 >
-                  <Eye className="h-4 w-4 text-gray-400" />
+                  <Eye className="h-4 w-4 admin-text-light" />
                   <span>View Full Details</span>
                 </motion.button>
-                
+
                 <motion.button
                   whileHover={{ x: 2 }}
                   onClick={() => {
@@ -285,13 +343,13 @@ export default function QuickActions({
                     setShowDropdown(false);
                   }}
                   disabled={application.status === "Rejected" || isLoading}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed admin-text"
                 >
                   <X className="h-4 w-4 text-red-500" />
                   <span>Reject Application</span>
                 </motion.button>
               </div>
-            </motion.div>
+            </PortalDropdown>
           )}
         </AnimatePresence>
       </div>

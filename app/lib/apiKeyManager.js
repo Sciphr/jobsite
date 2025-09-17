@@ -40,14 +40,7 @@ export async function createAPIKey({
     // Extract prefix for display
     const keyPrefix = apiKey.substring(0, 15) + '...';
     
-    // Check if user already has an API key (due to unique constraint)
-    const existingKey = await prisma.api_keys.findUnique({
-      where: { user_id: userId }
-    });
-
-    if (existingKey) {
-      throw new Error('User already has an API key. Please delete the existing key before creating a new one.');
-    }
+    // Note: We allow multiple API keys per user (up to 5 as checked in the route)
 
     // Create the database record
     const apiKeyRecord = await prisma.api_keys.create({

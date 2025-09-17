@@ -23,6 +23,16 @@ export default function SignIn() {
   const [isSAMLEnabled, setIsSAMLEnabled] = useState(false);
   const [isLocalAuthEnabled, setIsLocalAuthEnabled] = useState(true);
   const [isLoadingAuthStatus, setIsLoadingAuthStatus] = useState(true);
+  const [authLabels, setAuthLabels] = useState({
+    local_auth_label: 'Local Login',
+    local_auth_description: 'For external candidates and contractors',
+    ldap_auth_label: 'Employee Login',
+    ldap_auth_description: 'Use your company credentials',
+    saml_auth_label: 'Company Login',
+    saml_auth_description: 'Use your single sign-on account',
+    auth_show_descriptions: true,
+    auth_default_method: 'local'
+  });
   const router = useRouter();
   const [callbackUrl, setCallbackUrl] = useState("/profile");
   const [isProcessingSAML, setIsProcessingSAML] = useState(false);
@@ -61,35 +71,55 @@ export default function SignIn() {
     }
   };
 
-  // Check if LDAP, SAML, and local auth are enabled
+  // Check if LDAP, SAML, and local auth are enabled and fetch custom labels
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const [ldapResponse, samlResponse, localAuthResponse] = await Promise.all([
+        const [ldapResponse, samlResponse, localAuthResponse, authLabelsResponse] = await Promise.all([
           fetch('/api/auth/ldap-status'),
           fetch('/api/auth/saml-status'),
-          fetch('/api/auth/local-status')
+          fetch('/api/auth/local-status'),
+          fetch('/api/auth/labels')
         ]);
-        
+
         const ldapData = await ldapResponse.json();
         const samlData = await samlResponse.json();
         const localAuthData = await localAuthResponse.json();
-        
+        const authLabelsData = await authLabelsResponse.json();
+
         setIsLDAPEnabled(ldapData.ldap_enabled);
         setIsSAMLEnabled(samlData.saml_enabled);
         setIsLocalAuthEnabled(localAuthData.local_auth_enabled);
-        
-        // Auto-select first available auth method
-        if (!localAuthData.local_auth_enabled && ldapData.ldap_enabled) {
+
+        // Set custom labels if API call was successful
+        if (authLabelsResponse.ok) {
+          setAuthLabels(authLabelsData);
+        }
+
+        // Auto-select method based on default setting or availability
+        const defaultMethod = authLabelsData.auth_default_method || 'local';
+        if (defaultMethod === 'local' && localAuthData.local_auth_enabled) {
+          setAuthMethod('credentials');
+        } else if (defaultMethod === 'ldap' && ldapData.ldap_enabled) {
           setAuthMethod('ldap');
-        } else if (!localAuthData.local_auth_enabled && samlData.saml_enabled) {
+        } else if (defaultMethod === 'saml' && samlData.saml_enabled) {
           setAuthMethod('saml');
+        } else {
+          // Fallback to first available method
+          if (localAuthData.local_auth_enabled) {
+            setAuthMethod('credentials');
+          } else if (ldapData.ldap_enabled) {
+            setAuthMethod('ldap');
+          } else if (samlData.saml_enabled) {
+            setAuthMethod('saml');
+          }
         }
       } catch (error) {
         console.error('Failed to check auth status:', error);
         setIsLDAPEnabled(false);
         setIsSAMLEnabled(false);
         setIsLocalAuthEnabled(true);
+        // Keep default auth labels on error
       } finally {
         setIsLoadingAuthStatus(false);
       }
@@ -151,8 +181,8 @@ export default function SignIn() {
       }
 
       if (result?.error) {
-        const errorMessage = 
-          authMethod === "ldap" && isLDAPEnabled ? "Invalid LDAP credentials" : 
+        const errorMessage =
+          authMethod === "ldap" && isLDAPEnabled ? `Invalid ${authLabels.ldap_auth_label.toLowerCase()} credentials` :
           "Invalid email or password";
         setError(errorMessage);
       } else {
@@ -194,7 +224,7 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-2xl w-full space-y-8">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-6 transition-colors duration-200" style={{backgroundColor: 'var(--site-primary)'}}>
@@ -211,54 +241,104 @@ export default function SignIn() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8 space-y-6 transition-colors duration-200">
-          {/* Authentication Method Selector - Show if multiple auth methods available */}
-          {!isLoadingAuthStatus && (isLDAPEnabled || isSAMLEnabled || !isLocalAuthEnabled) && (
-            <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              {isLocalAuthEnabled && (
-                <button
-                  type="button"
-                  onClick={() => setAuthMethod("credentials")}
-                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
-                    authMethod === "credentials"
-                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                >
-                  Local Account
-                </button>
-              )}
-              {isLDAPEnabled && (
-                <button
-                  type="button"
-                  onClick={() => setAuthMethod("ldap")}
-                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
-                    authMethod === "ldap"
-                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                >
-                  LDAP Login
-                </button>
-              )}
-              {isSAMLEnabled && (
-                <button
-                  type="button"
-                  onClick={() => setAuthMethod("saml")}
-                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-colors duration-200 ${
-                    authMethod === "saml"
-                      ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                >
-                  SSO Login
-                </button>
-              )}
-            </div>
-          )}
+        <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8 transition-colors duration-200 min-h-[600px] flex flex-col">
+          {/* Authentication Method Selector - Always reserve space */}
+          <div className="mb-6">
+            {!isLoadingAuthStatus && (isLDAPEnabled || isSAMLEnabled || !isLocalAuthEnabled) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {isLocalAuthEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setAuthMethod("credentials")}
+                    className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200 ${
+                      authMethod === "credentials"
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                      authMethod === "credentials"
+                        ? "bg-indigo-100 dark:bg-indigo-800"
+                        : "bg-gray-100 dark:bg-gray-600"
+                    }`}>
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{authLabels.local_auth_label}</div>
+                      {authLabels.auth_show_descriptions && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {authLabels.local_auth_description}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )}
+                {isLDAPEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setAuthMethod("ldap")}
+                    className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200 ${
+                      authMethod === "ldap"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                      authMethod === "ldap"
+                        ? "bg-blue-100 dark:bg-blue-800"
+                        : "bg-gray-100 dark:bg-gray-600"
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.47a3.176 3.176 0 013.176-3.176h.344a3.176 3.176 0 013.176 3.176v.47M9.75 8.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{authLabels.ldap_auth_label}</div>
+                      {authLabels.auth_show_descriptions && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {authLabels.ldap_auth_description}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )}
+                {isSAMLEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setAuthMethod("saml")}
+                    className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200 ${
+                      authMethod === "saml"
+                        ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                      authMethod === "saml"
+                        ? "bg-green-100 dark:bg-green-800"
+                        : "bg-gray-100 dark:bg-gray-600"
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">{authLabels.saml_auth_label}</div>
+                      {authLabels.auth_show_descriptions && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {authLabels.saml_auth_description}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-          {/* No Auth Methods Available Warning */}
-          {!isLoadingAuthStatus && !isLocalAuthEnabled && !isLDAPEnabled && !isSAMLEnabled && (
+          {/* Main Content Area - Flex grow to maintain consistent height */}
+          <div className="flex-1 flex flex-col justify-center">
+            {/* No Auth Methods Available Warning */}
+            {!isLoadingAuthStatus && !isLocalAuthEnabled && !isLDAPEnabled && !isSAMLEnabled && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
               <div className="mx-auto h-12 w-12 text-red-400 mb-4">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,9 +364,9 @@ export default function SignIn() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Single Sign-On</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{authLabels.saml_auth_label}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Click below to sign in with your organization's SAML Identity Provider
+                    {authLabels.saml_auth_description}
                   </p>
                 </div>
                 
@@ -309,7 +389,7 @@ export default function SignIn() {
                       <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
-                      Continue with SSO
+                      Continue with {authLabels.saml_auth_label}
                     </>
                   )}
                 </button>
@@ -337,14 +417,14 @@ export default function SignIn() {
                   type={authMethod === "ldap" && isLDAPEnabled ? "text" : "email"}
                   required
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors duration-200"
-                  placeholder={authMethod === "ldap" && isLDAPEnabled ? "Enter your LDAP username" : "Enter your email"}
+                  placeholder={authMethod === "ldap" && isLDAPEnabled ? `Enter your ${authLabels.ldap_auth_label.toLowerCase()} username` : "Enter your email"}
                   value={authMethod === "ldap" && isLDAPEnabled ? formData.username : formData.email}
                   onChange={handleChange}
                 />
               </div>
               {authMethod === "ldap" && isLDAPEnabled && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Enter your LDAP username
+                  {authLabels.ldap_auth_description}
                 </p>
               )}
             </div>
@@ -459,6 +539,7 @@ export default function SignIn() {
               </div>
             )
           )}
+          </div>
 
           {/* Footer */}
           <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">
