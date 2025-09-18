@@ -37,7 +37,9 @@
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx prisma:*)",
       "Bash(sed:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(git restore:*)",
+      "Read(//f/CODING/JobSite/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

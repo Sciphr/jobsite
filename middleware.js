@@ -73,10 +73,13 @@ function performSecurityChecks(request) {
   const userAgent = headers.get('user-agent') || ''
   const pathname = request.nextUrl.pathname
   
-  // Block suspicious user agents
+  // Block suspicious user agents (except for webhooks, subscription API, and websocket)
   const suspiciousUAs = ['curl', 'wget', 'python-requests', 'bot', 'crawler']
-  if (suspiciousUAs.some(ua => userAgent.toLowerCase().includes(ua)) && 
-      !pathname.startsWith('/api/v1')) { // Allow legitimate API access
+  if (suspiciousUAs.some(ua => userAgent.toLowerCase().includes(ua)) &&
+      !pathname.startsWith('/api/v1') &&
+      !pathname.startsWith('/api/webhook') &&
+      !pathname.startsWith('/api/subscription') &&
+      !pathname.startsWith('/api/websocket')) { // Allow webhooks, subscription API, and websocket
     return new NextResponse('Forbidden', { status: 403 })
   }
   
@@ -114,11 +117,11 @@ export async function middleware(request) {
   const securityCheck = performSecurityChecks(request)
   if (securityCheck) return securityCheck
   
-  // Apply rate limiting (skip for all NextAuth routes)
-  const skipRateLimit = pathname.startsWith('/api/auth/')
-  
+  // Apply rate limiting (skip for NextAuth routes and websocket)
+  const skipRateLimit = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/websocket')
+
   if (!skipRateLimit && await isRateLimited(request, pathname)) {
-    return new NextResponse('Too Many Requests', { 
+    return new NextResponse('Too Many Requests', {
       status: 429,
       headers: {
         'Retry-After': '60'
@@ -128,19 +131,35 @@ export async function middleware(request) {
   
   // Admin route protection
   if (pathname.startsWith('/admin') || pathname.startsWith('/app/admin')) {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET 
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
     })
-    
+
     if (!token) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
-    
+
     // Check if user has admin privileges
     if (!token.privilegeLevel || token.privilegeLevel < 1) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
+  }
+
+  // Applications manager route protection (Enterprise tier required)
+  if (pathname.startsWith('/applications-manager')) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
+    })
+
+    if (!token) {
+      return NextResponse.redirect(new URL('/auth/signin', request.url))
+    }
+
+    // Redirect to a server component that can check subscription tier
+    // The layout will handle the tier check using Node.js runtime
+    return NextResponse.next()
   }
   
   // API route protection

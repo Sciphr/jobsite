@@ -9,6 +9,7 @@ import { getSystemSetting } from "./lib/settings";
 import { QueryProvider } from "./providers/QueryProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import SubscriptionNotifications from "./components/SubscriptionNotifications";
 // import "./lib/startup"; // Cron services moved to external system cron
 
 const geistSans = Geist({
@@ -102,6 +103,7 @@ export default async function RootLayout({ children }) {
               <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                 {children}
               </main>
+              <SubscriptionNotifications />
             </Providers>
           </ThemeProvider>
         </QueryProvider>

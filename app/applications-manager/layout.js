@@ -11,6 +11,7 @@ import {
 } from "@/app/contexts/AdminThemeContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import SubscriptionGate from "@/app/components/SubscriptionGate";
 import { useJobsSimple } from "@/app/hooks/useAdminData";
 import {
   LayoutGrid,
@@ -617,9 +618,11 @@ export default function ApplicationsManagerLayout({ children }) {
   return (
     <ThemeProvider>
       <AdminThemeProvider>
-        <ApplicationsManagerLayoutContent>
-          {children}
-        </ApplicationsManagerLayoutContent>
+        <SubscriptionGate requiredTier="enterprise">
+          <ApplicationsManagerLayoutContent>
+            {children}
+          </ApplicationsManagerLayoutContent>
+        </SubscriptionGate>
       </AdminThemeProvider>
     </ThemeProvider>
   );
