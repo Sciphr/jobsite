@@ -112,7 +112,12 @@ function performSecurityChecks(request) {
 
 export async function middleware(request) {
   const pathname = request.nextUrl.pathname
-  
+
+  // Skip all middleware for health check endpoint
+  if (pathname === '/api/health') {
+    return NextResponse.next()
+  }
+
   // Perform security checks
   const securityCheck = performSecurityChecks(request)
   if (securityCheck) return securityCheck
