@@ -39,7 +39,8 @@
       "Bash(sed:*)",
       "Bash(awk:*)",
       "Bash(git restore:*)",
-      "Read(//f/CODING/JobSite/**)"
+      "Read(//f/CODING/JobSite/**)",
+      "Bash(python -c \"\nwith open(''app/asari/pricing/page.tsx.new'', ''w'', encoding=''utf-8'') as f:\n    f.write(''File written successfully'')\n\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

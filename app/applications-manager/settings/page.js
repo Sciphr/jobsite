@@ -27,6 +27,8 @@ import {
   Info,
 } from "lucide-react";
 import AnalyticsConfigurationCard from "./components/AnalyticsConfigurationCard";
+import CertnIntegration from "./components/CertnIntegration";
+import BambooHRIntegration from "./components/BambooHRIntegration";
 
 export default function ApplicationsManagerSettings() {
   const router = useRouter();
@@ -185,10 +187,10 @@ export default function ApplicationsManagerSettings() {
     setSettings((prevSettings) =>
       prevSettings.map((setting) =>
         setting.id === settingId
-          ? { 
-              ...setting, 
-              parsedValue: newValue, 
-              value: newValue === "" ? "" : newValue.toString() 
+          ? {
+              ...setting,
+              parsedValue: newValue,
+              value: newValue === "" ? "" : newValue.toString()
             }
           : setting
       )
@@ -289,7 +291,7 @@ export default function ApplicationsManagerSettings() {
       }
 
       // Reload settings
-      await loadSettings();
+      await refetch();
       setSaveStatus({
         type: "success",
         message: `${category.replace("hiring_", "")} settings reset successfully!`,
@@ -309,18 +311,18 @@ export default function ApplicationsManagerSettings() {
 
   const renderSettingField = (setting) => {
     const { id, key, parsedValue, dataType } = setting;
-    
+
     // Check if workflow automation is enabled
     const workflowAutomationSetting = settings.find(s => s.key === 'enable_workflow_automation');
     const workflowAutomationEnabled = workflowAutomationSetting?.parsedValue === true || workflowAutomationSetting?.parsedValue === 'true';
-    
+
     // Define automation settings that should be disabled when workflow automation is off
     const automationSettings = [
       'auto_archive_rejected_days',
-      'auto_progress_delay_days', 
+      'auto_progress_delay_days',
       'auto_reject_after_days'
     ];
-    
+
     const isAutomationSetting = automationSettings.includes(key);
     const isDisabled = isAutomationSetting && !workflowAutomationEnabled;
 
@@ -497,6 +499,11 @@ export default function ApplicationsManagerSettings() {
   const getFilteredSettings = () => {
     let filtered = settings.filter((setting) => setting.category === activeTab);
 
+    // Exclude analytics_tracking from general list (we show it as custom component)
+    if (activeTab === "hiring_integrations") {
+      filtered = filtered.filter(s => s.key !== 'analytics_tracking');
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(
         (setting) =>
@@ -512,23 +519,23 @@ export default function ApplicationsManagerSettings() {
       const workflowSettingsOrder = [
         'enable_workflow_automation', // Master toggle first
         'auto_archive_rejected_days',
-        'auto_progress_delay_days', 
+        'auto_progress_delay_days',
         'auto_reject_after_days'
       ];
-      
+
       filtered.sort((a, b) => {
         const aIndex = workflowSettingsOrder.indexOf(a.key);
         const bIndex = workflowSettingsOrder.indexOf(b.key);
-        
+
         // If both settings are in our custom order, sort by that
         if (aIndex !== -1 && bIndex !== -1) {
           return aIndex - bIndex;
         }
-        
+
         // If only one is in custom order, put it first
         if (aIndex !== -1) return -1;
         if (bIndex !== -1) return 1;
-        
+
         // Otherwise, sort alphabetically by key
         return a.key.localeCompare(b.key);
       });
@@ -755,7 +762,70 @@ export default function ApplicationsManagerSettings() {
 
               {/* Settings List */}
               <div className="p-6">
-                {filteredSettings.length === 0 ? (
+                {activeTab === "hiring_integrations" ? (
+                  // Special handling for integrations tab - show custom integration components
+                  <div className="space-y-6">
+                    {/* CERTN Integration */}
+                    <motion.div
+                      variants={settingCardVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <CertnIntegration />
+                    </motion.div>
+
+                    {/* BambooHR Integration */}
+                    <motion.div
+                      variants={settingCardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.05 }}
+                    >
+                      <BambooHRIntegration />
+                    </motion.div>
+
+                    {/* Google Analytics Integration */}
+                    {settings.find(s => s.key === 'analytics_tracking') && (
+                      <motion.div
+                        variants={settingCardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.1 }}
+                      >
+                        <AnalyticsConfigurationCard />
+                      </motion.div>
+                    )}
+
+                    {/* Show any other integration settings below */}
+                    {filteredSettings.length > 0 && (
+                      <div className="mt-8">
+                        <h4 className="text-md font-semibold admin-text mb-4">Other Integration Settings</h4>
+                        <div className="space-y-4">
+                          {filteredSettings.map((setting, index) => (
+                            <motion.div
+                              key={setting.id}
+                              variants={settingCardVariants}
+                              initial="hidden"
+                              animate="visible"
+                              transition={{ delay: (index + 2) * 0.05 }}
+                              whileHover={{ scale: 1.01, y: -2 }}
+                              className="border admin-border rounded-lg p-6 admin-card"
+                            >
+                              <div className="flex items-start justify-between mb-4">
+                                <div>
+                                  <h4 className="text-base font-medium admin-text mb-1">
+                                    {setting.description || setting.key.replace(/_/g, " ")}
+                                  </h4>
+                                </div>
+                              </div>
+                              <div>{renderSettingField(setting)}</div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : filteredSettings.length === 0 ? (
                   <div className="text-center py-12">
                     <Settings className="h-12 w-12 admin-text-light mx-auto mb-4" />
                     <h3 className="text-lg font-medium admin-text mb-2">
@@ -772,21 +842,6 @@ export default function ApplicationsManagerSettings() {
                 ) : (
                   <div className="space-y-6">
                     {filteredSettings.map((setting, index) => {
-                      // Special handling for analytics_tracking setting
-                      if (setting.key === 'analytics_tracking') {
-                        return (
-                          <motion.div
-                            key={setting.id}
-                            variants={settingCardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: index * 0.05 }}
-                          >
-                            <AnalyticsConfigurationCard />
-                          </motion.div>
-                        );
-                      }
-
                       // Regular setting rendering
                       return (
                         <motion.div

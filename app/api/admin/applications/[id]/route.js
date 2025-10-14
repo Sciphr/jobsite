@@ -82,6 +82,58 @@ export async function PATCH(req, { params }) {
     // Handle status change (including hire approval workflow)
     let result;
     if (status && status !== currentApplication.status) {
+      // Background check validation when hiring
+      if (status === "Hired") {
+        const validationMode = await getSystemSetting("background_check_validation_mode", "none");
+
+        if (validationMode !== "none") {
+          const backgroundCheck = await appPrisma.background_checks.findFirst({
+            where: {
+              application_id: id,
+              is_active: true,
+            },
+            orderBy: { initiated_at: "desc" },
+          });
+
+          // Check if validation should trigger
+          const shouldValidate = backgroundCheck &&
+            (backgroundCheck.status === "pending" || backgroundCheck.status === "consider");
+
+          if (shouldValidate) {
+            const message = backgroundCheck.status === "pending"
+              ? "Background check is still in progress. Cannot mark as Hired until check is complete."
+              : "Background check flagged for review. Please review the background check report before hiring.";
+
+            if (validationMode === "block") {
+              // Hard block - prevent hiring
+              return new Response(
+                JSON.stringify({
+                  error: message,
+                  code: "BACKGROUND_CHECK_INCOMPLETE",
+                  backgroundCheckStatus: backgroundCheck.status,
+                  backgroundCheckId: backgroundCheck.id,
+                }),
+                { status: 400 }
+              );
+            } else if (validationMode === "warning") {
+              // Soft warning - add to response but allow if override is sent
+              if (body.overrideBackgroundCheck !== true) {
+                return new Response(
+                  JSON.stringify({
+                    warning: message,
+                    code: "BACKGROUND_CHECK_WARNING",
+                    backgroundCheckStatus: backgroundCheck.status,
+                    backgroundCheckId: backgroundCheck.id,
+                    requiresOverride: true,
+                  }),
+                  { status: 409 } // Conflict
+                );
+              }
+            }
+          }
+        }
+      }
+
       const userName = session.user.firstName && session.user.lastName
         ? `${session.user.firstName} ${session.user.lastName}`.trim()
         : session.user.email || "System";
@@ -264,6 +316,39 @@ export async function PATCH(req, { params }) {
       } catch (automationError) {
         console.error("Error in email automation:", automationError);
         // Don't fail the status update if automation fails
+      }
+
+      // Trigger HRIS auto-sync if enabled and status changed to "Hired"
+      if (status === "Hired") {
+        try {
+          const autoSyncSetting = await appPrisma.settings.findFirst({
+            where: { key: "bamboohr_auto_sync" },
+          });
+
+          if (autoSyncSetting?.value === "true") {
+            // Check if not already synced
+            if (!updatedApplication.hris_synced) {
+              console.log(`🔄 Auto-sync enabled: Triggering HRIS sync for application ${updatedApplication.id}`);
+
+              // Trigger sync asynchronously (fire and forget)
+              fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/admin/applications/${updatedApplication.id}/hris-sync`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }).catch(err => {
+                console.error("❌ HRIS auto-sync failed:", err);
+              });
+
+              console.log("✅ HRIS auto-sync triggered");
+            } else {
+              console.log("ℹ️  Candidate already synced to HRIS, skipping auto-sync");
+            }
+          }
+        } catch (autoSyncError) {
+          console.error("Error in HRIS auto-sync:", autoSyncError);
+          // Don't fail the status update if auto-sync fails
+        }
       }
     }
 

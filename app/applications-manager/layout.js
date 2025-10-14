@@ -28,6 +28,7 @@ import {
   Menu,
   X,
   Globe,
+  Users,
 } from "lucide-react";
 
 function ApplicationsManagerLayoutContent({ children }) {
@@ -44,6 +45,9 @@ function ApplicationsManagerLayoutContent({ children }) {
   
   // Analytics tracking setting and configuration
   const [analyticsTrackingEnabled, setAnalyticsTrackingEnabled] = useState(false);
+
+  // HRIS integration status
+  const [hrisIntegrationActive, setHrisIntegrationActive] = useState(false);
 
   // Mobile detection effect
   useEffect(() => {
@@ -68,7 +72,7 @@ function ApplicationsManagerLayoutContent({ children }) {
         // Check if analytics tracking is enabled
         const settingsResponse = await fetch("/api/settings/public?key=analytics_tracking");
         const settingsData = await settingsResponse.json();
-        const trackingEnabled = settingsResponse.ok && !settingsData.error && 
+        const trackingEnabled = settingsResponse.ok && !settingsData.error &&
           (settingsData.parsedValue === true || settingsData.parsedValue === "true");
 
         if (trackingEnabled) {
@@ -76,7 +80,7 @@ function ApplicationsManagerLayoutContent({ children }) {
           const configResponse = await fetch("/api/admin/analytics/configure");
           const configData = await configResponse.json();
           const hasValidConfig = configResponse.ok && configData.success && configData.configured;
-          
+
           // Only enable analytics navigation if both tracking is enabled AND configured
           setAnalyticsTrackingEnabled(hasValidConfig);
         } else {
@@ -89,16 +93,43 @@ function ApplicationsManagerLayoutContent({ children }) {
     };
 
     fetchAnalyticsStatus();
-    
+
     // Listen for analytics configuration changes
     const handleConfigurationChange = () => {
       fetchAnalyticsStatus();
     };
-    
+
     window.addEventListener('analyticsConfigurationChanged', handleConfigurationChange);
-    
+
     return () => {
       window.removeEventListener('analyticsConfigurationChanged', handleConfigurationChange);
+    };
+  }, []);
+
+  // Fetch HRIS integration status
+  useEffect(() => {
+    const fetchHrisStatus = async () => {
+      try {
+        const response = await fetch("/api/admin/integrations/hris/status");
+        const data = await response.json();
+        setHrisIntegrationActive(data.hasActiveIntegration || false);
+      } catch (error) {
+        console.error("Error fetching HRIS status:", error);
+        setHrisIntegrationActive(false);
+      }
+    };
+
+    fetchHrisStatus();
+
+    // Listen for HRIS integration changes
+    const handleHrisChange = () => {
+      fetchHrisStatus();
+    };
+
+    window.addEventListener('hrisIntegrationChanged', handleHrisChange);
+
+    return () => {
+      window.removeEventListener('hrisIntegrationChanged', handleHrisChange);
     };
   }, []);
 
@@ -218,22 +249,44 @@ function ApplicationsManagerLayoutContent({ children }) {
     },
   ];
 
-  // Conditionally add Google Analytics tab if tracking is enabled
-  const navigationItems = analyticsTrackingEnabled 
-    ? [
-        ...baseNavigationItems.slice(0, 3), // Overview, Pipeline, Analytics
-        {
-          id: "google-analytics",
-          label: "Website Analytics",
-          icon: Globe,
-          path: "/applications-manager/google-analytics",
-          active: pathname === "/applications-manager/google-analytics",
-          description: "Google Analytics insights",
-          color: "emerald",
-        },
-        ...baseNavigationItems.slice(3), // Rest of the items
-      ]
-    : baseNavigationItems;
+  // Build navigation items conditionally
+  let navigationItems = [...baseNavigationItems];
+
+  // Add Google Analytics tab if tracking is enabled
+  if (analyticsTrackingEnabled) {
+    navigationItems = [
+      ...navigationItems.slice(0, 3), // Overview, Pipeline, Analytics
+      {
+        id: "google-analytics",
+        label: "Website Analytics",
+        icon: Globe,
+        path: "/applications-manager/google-analytics",
+        active: pathname === "/applications-manager/google-analytics",
+        description: "Google Analytics insights",
+        color: "emerald",
+      },
+      ...navigationItems.slice(3), // Rest of the items
+    ];
+  }
+
+  // Add HRIS tab if integration is active
+  if (hrisIntegrationActive) {
+    // Insert HRIS after Interviews (or after Analytics if no Google Analytics)
+    const insertIndex = analyticsTrackingEnabled ? 5 : 4; // After Interviews
+    navigationItems = [
+      ...navigationItems.slice(0, insertIndex),
+      {
+        id: "hris",
+        label: "HRIS",
+        icon: Users,
+        path: "/applications-manager/hris",
+        active: pathname === "/applications-manager/hris",
+        description: "HRIS integration and syncing",
+        color: "green",
+      },
+      ...navigationItems.slice(insertIndex),
+    ];
+  }
 
   // Determine current context
   const isJobSpecific = pathname.includes("/jobs/");

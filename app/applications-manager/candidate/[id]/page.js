@@ -11,6 +11,9 @@ import {
   useDeleteInterview,
 } from "@/app/hooks/useAdminData";
 import QuickEmailModal from "../../components/QuickEmailModal";
+import BackgroundCheckBadge from "@/app/components/BackgroundCheckBadge";
+import HRISStatusBadge from "@/app/components/HRISStatusBadge";
+import BackgroundCheckStatus from "@/app/components/BackgroundCheckStatus";
 import {
   ArrowLeft,
   User,
@@ -67,6 +70,8 @@ export default function CandidateDetailsPage() {
   const [interviews, setInterviews] = useState([]);
   const [interviewsLoading, setInterviewsLoading] = useState(false);
   const [deletingInterviewId, setDeletingInterviewId] = useState(null);
+  const [backgroundCheck, setBackgroundCheck] = useState(null);
+  const [backgroundCheckLoading, setBackgroundCheckLoading] = useState(false);
 
   // Get application data and mutations
   const { data: allApplications = [], isLoading: applicationsLoading } =
@@ -108,12 +113,30 @@ export default function CandidateDetailsPage() {
     }
   };
 
+  // Fetch background check for this application
+  const fetchBackgroundCheck = async () => {
+    if (!applicationId) return;
+    setBackgroundCheckLoading(true);
+    try {
+      const response = await fetch(`/api/admin/background-checks?applicationId=${applicationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBackgroundCheck(data.backgroundCheck);
+      }
+    } catch (error) {
+      console.error("Error fetching background check:", error);
+    } finally {
+      setBackgroundCheckLoading(false);
+    }
+  };
+
   // Initialize state when component mounts
   useEffect(() => {
     if (applicationId) {
       fetchApplicationRating();
       setTags(["Remote OK", "Senior Level"]);
       fetchInterviews();
+      fetchBackgroundCheck();
     }
   }, [applicationId]);
 
@@ -364,6 +387,11 @@ export default function CandidateDetailsPage() {
                 <p className="text-blue-200 text-sm">
                   {application.job?.department}
                 </p>
+                {backgroundCheck && !backgroundCheckLoading && (
+                  <div className="mt-2">
+                    <BackgroundCheckBadge status={backgroundCheck.status} />
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -408,6 +436,13 @@ export default function CandidateDetailsPage() {
                 <span>Schedule Interview</span>
               </button>
               <button
+                onClick={() => router.push(`/applications-manager/candidate/${applicationId}/background-check`)}
+                className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/30 transition-colors"
+              >
+                <Shield className="h-4 w-4" />
+                <span>{backgroundCheck ? 'View' : 'Run'} Background Check</span>
+              </button>
+              <button
                 onClick={() => {
                   if (application.phone) {
                     window.location.href = `tel:${application.phone}`;
@@ -445,6 +480,37 @@ export default function CandidateDetailsPage() {
               ))}
             </select>
           </div>
+
+          {/* Background Check Status */}
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">
+              Background Check
+            </h3>
+            <BackgroundCheckStatus
+              applicationId={applicationId}
+              onRefresh={(updatedCheck) => {
+                setBackgroundCheck(updatedCheck);
+                fetchBackgroundCheck();
+              }}
+            />
+          </div>
+
+          {/* HRIS Sync Status - Only shows for Hired candidates */}
+          {application.status === "Hired" && (
+            <div className="admin-card rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold admin-text mb-4">
+                HRIS Integration
+              </h3>
+              <HRISStatusBadge
+                applicationId={applicationId}
+                status={application.status}
+                onSyncComplete={() => {
+                  // Optionally refetch application data or show success message
+                  console.log("Candidate synced to HRIS successfully");
+                }}
+              />
+            </div>
+          )}
 
           {/* Rating */}
           <div className="admin-card rounded-lg shadow p-6">

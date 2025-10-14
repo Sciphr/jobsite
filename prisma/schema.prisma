@@ -46,12 +46,17 @@ model applications {
   ai_rating                             Int?
   rating_updated_at                     DateTime?                       @db.Timestamp(6)
   rated_by                              String?                         @db.Uuid
+  hris_synced                           Boolean?                        @default(false)
+  hris_synced_at                        DateTime?                       @db.Timestamp(6)
+  hris_sync_error                       String?
+  hris_employee_id                      String?                         @db.VarChar(255)
   application_stage_history             application_stage_history[]
   jobs                                  jobs                            @relation(fields: [jobId], references: [id])
   users                                 users?                          @relation(fields: [userId], references: [id])
   users_applications_archived_byTousers users?                          @relation("applications_archived_byTousers", fields: [archived_by], references: [id], onUpdate: NoAction, map: "fk_applications_archived_by")
   users_applications_rated_byTousers    users?                          @relation("applications_rated_byTousers", fields: [rated_by], references: [id], onUpdate: NoAction, map: "fk_applications_rated_by")
   audit_logs                            audit_logs[]
+  background_checks                     background_checks[]
   emails                                emails[]
   hire_approval_requests                hire_approval_requests[]
   interview_reschedule_requests         interview_reschedule_requests[]
@@ -64,6 +69,8 @@ model applications {
   @@index([rating], map: "idx_applications_rating")
   @@index([rating_type], map: "idx_applications_rating_type")
   @@index([rating_updated_at], map: "idx_applications_rating_updated_at")
+  @@index([hris_employee_id], map: "idx_applications_hris_employee_id")
+  @@index([hris_synced], map: "idx_applications_hris_synced")
 }
 
 model audit_logs {
@@ -571,6 +578,7 @@ model users {
   applications_applications_rated_byTousers          applications[]                  @relation("applications_rated_byTousers")
   audit_logs_audit_logs_actor_idTousers              audit_logs[]                    @relation("audit_logs_actor_idTousers")
   audit_logs_audit_logs_related_user_idTousers       audit_logs[]                    @relation("audit_logs_related_user_idTousers")
+  background_checks                                  background_checks[]
   email_automation_rules                             email_automation_rules[]
   email_campaigns                                    email_campaigns[]
   email_templates                                    email_templates[]
@@ -877,4 +885,32 @@ model security_alerts {
   @@index([created_at])
   @@index([resolved])
   @@index([severity])
+}
+
+model background_checks {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id       String       @db.Uuid
+  certn_applicant_id   String?      @db.VarChar(255)
+  certn_application_id String?      @db.VarChar(255)
+  package_type         String       @db.VarChar(50)
+  status               String       @default("pending") @db.VarChar(20)
+  initiated_at         DateTime     @default(now()) @db.Timestamp(6)
+  completed_at         DateTime?    @db.Timestamp(6)
+  initiated_by         String       @db.Uuid
+  certn_report_url     String?      @db.VarChar(500)
+  metadata             Json?
+  created_at           DateTime     @default(now()) @db.Timestamp(6)
+  updated_at           DateTime     @default(now()) @db.Timestamp(6)
+  is_active            Boolean?     @default(true)
+  expired_at           DateTime?    @db.Timestamp(6)
+  rerun_reason         String?
+  applications         applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                users        @relation(fields: [initiated_by], references: [id], onUpdate: NoAction)
+
+  @@index([application_id], map: "idx_background_checks_application_id")
+  @@index([status], map: "idx_background_checks_status")
+  @@index([initiated_by], map: "idx_background_checks_initiated_by")
+  @@index([created_at], map: "idx_background_checks_created_at")
+  @@index([certn_application_id], map: "idx_background_checks_certn_application_id")
+  @@index([is_active], map: "idx_background_checks_is_active")
 }
