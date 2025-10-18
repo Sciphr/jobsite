@@ -25,6 +25,8 @@ import {
 } from "@/app/hooks/useAdminData";
 import { useHireApprovalStatus, getHireApprovalForApplication } from "@/app/hooks/useHireApprovalStatus";
 import { HireApprovalBadge, HireApprovalIconIndicator } from "@/app/components/HireApprovalIndicator";
+import Breadcrumb from "@/app/components/Breadcrumb";
+import PageHelp from "@/app/components/PageHelp";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
@@ -52,6 +54,7 @@ import {
   Archive,
   ArrowUpRight,
   Clock,
+  Kanban,
 } from "lucide-react";
 import {
   exportApplicationsToExcel,

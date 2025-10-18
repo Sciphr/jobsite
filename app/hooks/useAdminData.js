@@ -90,10 +90,16 @@ export const useUsers = () => {
   });
 };
 
-export const useAnalytics = (timeRange = "30d") => {
+export const useAnalytics = (timeRange = "30d", department = "all") => {
   return useQuery({
-    queryKey: ["admin", "analytics", timeRange],
-    queryFn: () => fetcher(`/api/admin/analytics?range=${timeRange}`),
+    queryKey: ["admin", "analytics", timeRange, department],
+    queryFn: () => {
+      const params = new URLSearchParams({ range: timeRange });
+      if (department && department !== "all") {
+        params.append("department", department);
+      }
+      return fetcher(`/api/admin/analytics?${params.toString()}`);
+    },
     ...commonQueryOptions,
     staleTime: 15 * 60 * 1000, // 15 minutes for analytics
     // Enable background refetching to keep current data visible

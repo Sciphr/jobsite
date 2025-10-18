@@ -188,7 +188,7 @@ function AdminJobsContent() {
 
   // ✅ NEW: View applications for a specific job
   const viewJobApplications = (jobId) => {
-    router.push(`/admin/applications?job=${jobId}`);
+    router.push(`/applications-manager/jobs/${jobId}`);
   };
 
   // ✅ NEW: Clone and edit job (open create page with pre-filled data)

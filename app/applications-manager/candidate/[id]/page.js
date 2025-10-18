@@ -401,9 +401,18 @@ export default function CandidateDetailsPage() {
               >
                 {application.status}
               </div>
+              {/* Quick Actions View Button */}
+              <button
+                onClick={() => router.push(`/admin/applications/${applicationId}`)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-white border-opacity-30 bg-white bg-opacity-15 hover:bg-opacity-25 hover:border-opacity-70 hover:shadow-lg hover:scale-105 transition-all duration-300 text-white font-medium backdrop-blur-md shadow-md"
+                title="View quick actions for status updates and approvals"
+              >
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Quick Actions</span>
+              </button>
               <button
                 onClick={() => router.back()}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-white border-opacity-30 bg-white bg-opacity-15 hover:bg-opacity-25 hover:border-opacity-70 hover:shadow-lg hover:scale-105 transition-all duration-300 text-gray-800 font-medium backdrop-blur-md shadow-md"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-white border-opacity-30 bg-white bg-opacity-15 hover:bg-opacity-25 hover:border-opacity-70 hover:shadow-lg hover:scale-105 transition-all duration-300 text-white font-medium backdrop-blur-md shadow-md"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>

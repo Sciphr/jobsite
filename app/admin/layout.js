@@ -35,6 +35,7 @@ import {
   useHireApprovalRequests,
 } from "../hooks/useAdminData";
 import { usePermissions } from "../hooks/usePermissions";
+import CommandPalette from "../components/CommandPalette";
 
 function AdminLayoutContent({ children }) {
   const { data: session, status } = useSession();
@@ -331,6 +332,9 @@ function AdminLayoutContent({ children }) {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden flex flex-col">
+      {/* Command Palette - Global Keyboard Navigation */}
+      <CommandPalette />
+
       {/* Mobile Header */}
       {isMobile && (
         <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-30 relative">

@@ -13,6 +13,7 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const range = searchParams.get("range") || "30d";
+    const department = searchParams.get("department"); // New: department filter
 
     // Calculate date range
     const now = new Date();
@@ -40,6 +41,9 @@ export async function GET(req) {
     const previousPeriodStart = new Date(startDate.getTime() - periodLength);
     const previousPeriodEnd = new Date(startDate.getTime());
 
+    // Build department filter
+    const departmentFilter = department && department !== "all" ? { department } : {};
+
     // Get current period totals
     const [
       totalJobs,
@@ -57,6 +61,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...departmentFilter,
         },
       }),
       appPrisma.applications.count({
@@ -65,6 +70,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
         },
       }),
       appPrisma.users.count({
@@ -88,6 +94,7 @@ export async function GET(req) {
             gte: previousPeriodStart,
             lt: previousPeriodEnd,
           },
+          ...departmentFilter,
         },
       }),
       appPrisma.applications.count({
@@ -96,6 +103,7 @@ export async function GET(req) {
             gte: previousPeriodStart,
             lt: previousPeriodEnd,
           },
+          ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
         },
       }),
       appPrisma.users.count({
@@ -121,6 +129,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
       },
       select: {
         appliedAt: true,
@@ -140,6 +149,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...departmentFilter,
       },
       select: {
         createdAt: true,
@@ -195,6 +205,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...departmentFilter,
       },
     });
 
@@ -206,6 +217,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
       },
       select: {
         appliedAt: true,
@@ -251,6 +263,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...(department && department !== "all" ? { application: { jobs: departmentFilter } } : {}),
         },
       }),
       appPrisma.jobs.count({
@@ -260,6 +273,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...departmentFilter,
         },
       }),
       appPrisma.jobs.count({
@@ -269,6 +283,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...departmentFilter,
         },
       }),
       appPrisma.saved_jobs.count({
@@ -277,6 +292,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
         },
       }),
       appPrisma.jobs.count({
@@ -286,6 +302,7 @@ export async function GET(req) {
             gte: startDate,
             lte: now,
           },
+          ...departmentFilter,
         },
       }),
       appPrisma.email_campaigns.count({
@@ -325,6 +342,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
       },
     });
 
@@ -339,6 +357,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...departmentFilter,
       },
       orderBy: {
         applicationCount: "desc", // Use the actual field from your schema
@@ -367,6 +386,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
       },
     });
     const hired = await appPrisma.applications.count({
@@ -376,6 +396,7 @@ export async function GET(req) {
           gte: startDate,
           lte: now,
         },
+        ...(department && department !== "all" ? { jobs: departmentFilter } : {}),
       },
     });
 

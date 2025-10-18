@@ -466,6 +466,16 @@ function ApplicationDetailsContent() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
+          {/* View Full Profile Button */}
+          <button
+            onClick={() => router.push(`/applications-manager/candidate/${applicationId}`)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("accent")}`}
+            title="View comprehensive candidate profile with timeline, interviews, and notes"
+          >
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">View Full Profile</span>
+          </button>
+
           {application?.job?.slug && (
             <a
               href={`/jobs/${application.job.slug}`}

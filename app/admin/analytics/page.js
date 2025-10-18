@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useThemeClasses } from "@/app/contexts/AdminThemeContext";
 import { useAnimationSettings } from "@/app/hooks/useAnimationSettings";
 import {
   useAnalytics,
   usePrefetchAdminData,
+  useJobsSimple,
 } from "@/app/hooks/useAdminData";
 import { useQueryClient } from "@tanstack/react-query";
 import { ResourcePermissionGuard } from "@/app/components/guards/PagePermissionGuard";
+import Breadcrumb from "@/app/components/Breadcrumb";
+import PageHelp from "@/app/components/PageHelp";
 import {
   BarChart3,
   TrendingUp,
@@ -58,7 +61,18 @@ function AdminAnalyticsContent() {
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
   const { prefetchAll } = usePrefetchAdminData();
+
+  // Fetch jobs to get departments
+  const { data: jobs = [] } = useJobsSimple();
+
+  // Get unique departments
+  const departments = useMemo(() => {
+    const depts = [...new Set(jobs.map((job) => job.department).filter(Boolean))];
+    return depts.sort();
+  }, [jobs]);
+
   const {
     data: analytics,
     isLoading,
@@ -66,7 +80,7 @@ function AdminAnalyticsContent() {
     isError,
     error,
     refetch,
-  } = useAnalytics(timeRange);
+  } = useAnalytics(timeRange, selectedDepartment);
 
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
@@ -169,17 +183,48 @@ function AdminAnalyticsContent() {
 
   return (
     <div className="space-y-8">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/admin/dashboard" },
+          { label: "Analytics", current: true },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
-        <div>
+        <div className="flex items-center space-x-2">
           <h1 className="text-2xl sm:text-3xl font-bold admin-text">
             Analytics Dashboard
           </h1>
-          <p className="admin-text-light mt-2 text-sm sm:text-base">
-            Track performance metrics and insights across your job board
-          </p>
+          <PageHelp
+            title="Analytics Dashboard"
+            description="Comprehensive analytics and reporting for all jobs and applications across your organization."
+            whenToUse="Use this page to track performance metrics, monitor conversion rates, analyze trends, and make data-driven decisions about your hiring process."
+            relatedPages={[
+              { label: "Jobs", href: "/admin/jobs", description: "Manage job postings" },
+              { label: "Applications", href: "/admin/applications", description: "View all applications" },
+              { label: "Pipeline", href: "/applications-manager/pipeline", description: "Kanban workflow management" }
+            ]}
+          />
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+          {/* Department Filter */}
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
+            title="Filter by department"
+          >
+            <option value="all">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
+          </select>
+
+          {/* Time Range Filter */}
           <div className="relative">
             <select
               value={timeRange}

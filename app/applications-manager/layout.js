@@ -12,6 +12,7 @@ import {
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import SubscriptionGate from "@/app/components/SubscriptionGate";
+import CommandPalette from "@/app/components/CommandPalette";
 import { useJobsSimple } from "@/app/hooks/useAdminData";
 import {
   LayoutGrid,
@@ -358,6 +359,9 @@ function ApplicationsManagerLayoutContent({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Command Palette - Global Keyboard Navigation */}
+      <CommandPalette />
+
       {/* Top Navigation Bar */}
       <motion.div
         initial={{ y: -10, opacity: 0 }}
