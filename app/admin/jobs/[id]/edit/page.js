@@ -272,6 +272,32 @@ export default function EditJobPage() {
           submitting={updateJobMutation.isPending}
         />
       </div>
+
+      {/* Screening Questions Section - Only show for "full" application type */}
+      {jobData?.application_type === "full" && (
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Screening Questions
+              </h2>
+              <p className="text-gray-600 mt-1">
+                Manage custom screening questions for this job
+              </p>
+            </div>
+            <button
+              onClick={() => router.push(`/admin/jobs/${jobId}/screening-questions`)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Manage Questions
+            </button>
+          </div>
+          <p className="text-sm text-gray-600">
+            Click "Manage Questions" to add, edit, or reorder screening questions for this job.
+            Applicants will be required to answer these questions when applying.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

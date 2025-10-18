@@ -14,6 +14,7 @@ import QuickEmailModal from "../../components/QuickEmailModal";
 import BackgroundCheckBadge from "@/app/components/BackgroundCheckBadge";
 import HRISStatusBadge from "@/app/components/HRISStatusBadge";
 import BackgroundCheckStatus from "@/app/components/BackgroundCheckStatus";
+import ScreeningAnswers from "@/app/components/ScreeningAnswers";
 import {
   ArrowLeft,
   User,
@@ -479,6 +480,14 @@ export default function CandidateDetailsPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Screening Answers */}
+          <div className="admin-card rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold admin-text mb-4">
+              Screening Questions
+            </h3>
+            <ScreeningAnswers applicationId={applicationId} />
           </div>
 
           {/* Background Check Status */}

@@ -72,6 +72,8 @@ export default function JobForm({
     showSalary: initialData?.showSalary ?? showSalaryByDefault, // Use ?? to handle false values
     priority: initialData?.priority || 0,
     categoryId: initialData?.categoryId || "",
+    application_type: initialData?.application_type || "quick", // New field for screening questions
+    visibility: initialData?.visibility || "external", // New field for job visibility (internal/external/both)
   });
 
   const [errors, setErrors] = useState({});
@@ -657,6 +659,51 @@ export default function JobForm({
             automatically
           </p>
         )}
+      </div>
+
+      {/* Application Type */}
+      <div>
+        <label className="block text-sm font-medium admin-text mb-2">
+          Application Type
+        </label>
+        <select
+          name="application_type"
+          value={formData.application_type}
+          onChange={handleChange}
+          disabled={submitting}
+          className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
+        >
+          <option value="quick">Quick Apply (Basic info only)</option>
+          <option value="full">Full Application (With screening questions)</option>
+        </select>
+        <p className="text-sm admin-text-light mt-1">
+          {formData.application_type === "quick"
+            ? "Applicants fill out a simple form with basic information"
+            : "Applicants will be redirected to a dedicated page with screening questions"}
+        </p>
+      </div>
+
+      {/* Job Visibility */}
+      <div>
+        <label className="block text-sm font-medium admin-text mb-2">
+          Job Visibility
+        </label>
+        <select
+          name="visibility"
+          value={formData.visibility}
+          onChange={handleChange}
+          disabled={submitting}
+          className="w-full px-3 py-2 border admin-border rounded-lg focus:ring-2 theme-primary theme-primary-border admin-text admin-card"
+        >
+          <option value="external">External Only (Public job board)</option>
+          <option value="internal">Internal Only (Authenticated company users only)</option>
+          <option value="both">Both (Internal and external candidates)</option>
+        </select>
+        <p className="text-sm admin-text-light mt-1">
+          {formData.visibility === "external" && "This job will be visible to everyone on the public job board"}
+          {formData.visibility === "internal" && "This job will only be visible to authenticated internal users (LDAP accounts or company email domains)"}
+          {formData.visibility === "both" && "This job will be visible to both internal users and external candidates"}
+        </p>
       </div>
 
       {/* Settings Information Panel */}

@@ -93,49 +93,53 @@ export async function POST(request) {
       const encryptedClientId = encrypt(clientId);
       const encryptedClientSecret = encrypt(clientSecret);
 
+      // Helper function to upsert system settings (where userId is null)
+      const upsertSystemSetting = async (key, value, description, dataType = "string") => {
+        const existing = await appPrisma.settings.findFirst({
+          where: { key, userId: null },
+        });
+
+        if (existing) {
+          await appPrisma.settings.update({
+            where: { id: existing.id },
+            data: { value, updatedAt: new Date() },
+          });
+        } else {
+          await appPrisma.settings.create({
+            data: {
+              key,
+              value,
+              category: "hiring_integrations",
+              privilegeLevel: 2,
+              dataType,
+              description,
+              userId: null,
+            },
+          });
+        }
+      };
+
       // Store in settings
-      await appPrisma.settings.upsert({
-        where: { key: "certn_client_id" },
-        update: { value: encryptedClientId },
-        create: {
-          key: "certn_client_id",
-          value: encryptedClientId,
-          category: "hiring_integrations",
-          type: "string",
-          label: "CERTN Client ID",
-          description: "Encrypted Client ID for CERTN integration",
-          isPersonal: false,
-        },
-      });
+      await upsertSystemSetting(
+        "certn_client_id",
+        encryptedClientId,
+        "Encrypted Client ID for CERTN integration",
+        "string"
+      );
 
-      await appPrisma.settings.upsert({
-        where: { key: "certn_client_secret" },
-        update: { value: encryptedClientSecret },
-        create: {
-          key: "certn_client_secret",
-          value: encryptedClientSecret,
-          category: "hiring_integrations",
-          type: "string",
-          label: "CERTN Client Secret",
-          description: "Encrypted Client Secret for CERTN integration",
-          isPersonal: false,
-        },
-      });
+      await upsertSystemSetting(
+        "certn_client_secret",
+        encryptedClientSecret,
+        "Encrypted Client Secret for CERTN integration",
+        "string"
+      );
 
-      await appPrisma.settings.upsert({
-        where: { key: "certn_environment" },
-        update: { value: environment },
-        create: {
-          key: "certn_environment",
-          value: environment,
-          category: "hiring_integrations",
-          type: "select",
-          label: "CERTN Environment",
-          description: "Demo or Production environment",
-          options: ["demo", "production"],
-          isPersonal: false,
-        },
-      });
+      await upsertSystemSetting(
+        "certn_environment",
+        environment,
+        "Demo or Production environment",
+        "string"
+      );
 
       // Log audit event
       await logAuditEvent({

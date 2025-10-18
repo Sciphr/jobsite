@@ -56,8 +56,9 @@ async function getJob(slug) {
   }
 }
 
-export default async function JobDetailsPage({ params }) {
+export default async function JobDetailsPage({ params, searchParams }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const job = await getJob(resolvedParams.slug);
 
   if (!job) {
@@ -71,11 +72,15 @@ export default async function JobDetailsPage({ params }) {
   );
   const siteConfig = await getSystemSetting("site_name", "Job Board");
 
+  // Extract invitation token if present
+  const invitationToken = resolvedSearchParams?.invitation || null;
+
   return (
     <JobDetailsClient
       job={job}
       allowGuestApplications={allowGuestApplications}
       siteConfig={siteConfig}
+      invitationToken={invitationToken}
     />
   );
 }

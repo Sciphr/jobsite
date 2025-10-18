@@ -441,6 +441,200 @@ View application: ${process.env.NEXTAUTH_URL || "http://localhost:3000"}/admin/a
       text: "Test Email\n\nIf you receive this, email is working!",
     });
   }
+
+  /**
+   * Send job invitation to a candidate
+   */
+  async sendJobInvitation({
+    candidateEmail,
+    candidateName,
+    jobTitle,
+    jobSlug,
+    invitationToken,
+    customMessage,
+    invitedByName,
+    companyName,
+    expiresAt,
+  }) {
+    const subject = `You're invited to apply: ${jobTitle}`;
+
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const invitationUrl = `${baseUrl}/jobs/${jobSlug}?invitation=${invitationToken}`;
+    const expirationDate = new Date(expiresAt).toLocaleDateString();
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">You've Been Invited!</h1>
+        </div>
+
+        <div style="background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+            Hi ${candidateName || "there"},
+          </p>
+
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+            ${invitedByName} from ${companyName || "our team"} thinks you'd be a great fit for our <strong>${jobTitle}</strong> position.
+          </p>
+
+          ${customMessage ? `
+            <div style="background: #f3f4f6; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #4b5563; font-style: italic;">
+                "${customMessage}"
+              </p>
+            </div>
+          ` : ''}
+
+          <p style="font-size: 16px; color: #374151; margin-bottom: 25px;">
+            We'd love for you to review the opportunity and apply if you're interested.
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${invitationUrl}"
+               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+              View Job & Apply
+            </a>
+          </div>
+
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 6px; margin-top: 25px;">
+            <p style="margin: 0; font-size: 14px; color: #92400e;">
+              <strong>⏰ This invitation expires on ${expirationDate}</strong>
+            </p>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280; margin-top: 25px;">
+            If you have any questions, feel free to reach out to us.
+          </p>
+
+          <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+            Best regards,<br>
+            ${companyName || "The Hiring Team"}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; padding: 20px;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            This is a personalized invitation. If you're not interested, you can simply ignore this email.
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 5px 0 0 0;">
+            Invitation link: <a href="${invitationUrl}" style="color: #667eea;">${invitationUrl}</a>
+          </p>
+        </div>
+      </div>
+    `;
+
+    const text = `
+You've Been Invited to Apply!
+
+Hi ${candidateName || "there"},
+
+${invitedByName} from ${companyName || "our team"} thinks you'd be a great fit for our ${jobTitle} position.
+
+${customMessage ? `Personal message from ${invitedByName}:\n"${customMessage}"\n\n` : ''}
+
+We'd love for you to review the opportunity and apply if you're interested.
+
+View the job and apply here:
+${invitationUrl}
+
+⏰ This invitation expires on ${expirationDate}
+
+If you have any questions, feel free to reach out to us.
+
+Best regards,
+${companyName || "The Hiring Team"}
+
+---
+This is a personalized invitation. If you're not interested, you can simply ignore this email.
+    `;
+
+    return await this.sendEmail({
+      to: candidateEmail,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send notification to candidate that they were added to a job pipeline
+   */
+  async sendSourcedToPipelineNotification({
+    candidateEmail,
+    candidateName,
+    jobTitle,
+    companyName,
+    sourcedByName,
+  }) {
+    const subject = `You're being considered for: ${jobTitle}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #374151;">We're considering you for a position!</h2>
+
+        <p style="font-size: 16px; color: #374151;">
+          Hi ${candidateName || "there"},
+        </p>
+
+        <p style="font-size: 16px; color: #374151;">
+          Great news! ${sourcedByName} from ${companyName || "our team"} has added you to the candidate pipeline for our <strong>${jobTitle}</strong> position.
+        </p>
+
+        <p style="font-size: 16px; color: #374151;">
+          We've reviewed your background and think you could be a great fit. Our hiring team will be evaluating your profile and will reach out if we'd like to move forward with next steps.
+        </p>
+
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #1e40af; font-size: 14px;">
+            <strong>What happens next?</strong><br>
+            Our hiring team will review your profile. If there's a good match, we'll reach out to discuss the opportunity further.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #6b7280;">
+          No action is required from you at this time. We'll be in touch if we need any additional information.
+        </p>
+
+        <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+          Best regards,<br>
+          ${companyName || "The Hiring Team"}
+        </p>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #9ca3af; font-size: 12px;">
+          This is an automated notification. Please do not reply to this email.
+        </p>
+      </div>
+    `;
+
+    const text = `
+We're considering you for a position!
+
+Hi ${candidateName || "there"},
+
+Great news! ${sourcedByName} from ${companyName || "our team"} has added you to the candidate pipeline for our ${jobTitle} position.
+
+We've reviewed your background and think you could be a great fit. Our hiring team will be evaluating your profile and will reach out if we'd like to move forward with next steps.
+
+What happens next?
+Our hiring team will review your profile. If there's a good match, we'll reach out to discuss the opportunity further.
+
+No action is required from you at this time. We'll be in touch if we need any additional information.
+
+Best regards,
+${companyName || "The Hiring Team"}
+
+---
+This is an automated notification. Please do not reply to this email.
+    `;
+
+    return await this.sendEmail({
+      to: candidateEmail,
+      subject,
+      html,
+      text,
+    });
+  }
 }
 
 // Export singleton instance
@@ -463,6 +657,9 @@ export const sendTestEmail = (email) => emailService.sendTestEmail(email);
 export const testEmailConfiguration = () =>
   emailService.testEmailConfiguration();
 export const forceEmailReinitialize = () => emailService.forceReinitialize();
+export const sendJobInvitation = (params) => emailService.sendJobInvitation(params);
+export const sendSourcedToPipelineNotification = (params) =>
+  emailService.sendSourcedToPipelineNotification(params);
 
 /**
  * Send email using a template with variable substitution

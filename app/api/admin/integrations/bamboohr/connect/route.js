@@ -60,90 +60,60 @@ export async function POST(request) {
       // Encrypt and store the credentials
       const encryptedApiKey = encrypt(apiKey);
 
+      // Helper function to upsert system settings (where userId is null)
+      const upsertSystemSetting = async (key, value, description, dataType = "string") => {
+        const existing = await appPrisma.settings.findFirst({
+          where: { key, userId: null },
+        });
+
+        if (existing) {
+          await appPrisma.settings.update({
+            where: { id: existing.id },
+            data: { value, updatedAt: new Date() },
+          });
+        } else {
+          await appPrisma.settings.create({
+            data: {
+              key,
+              value,
+              category: "hiring_integrations",
+              privilegeLevel: 2,
+              dataType,
+              description,
+              userId: null,
+            },
+          });
+        }
+      };
+
       // Store in settings table
-      await appPrisma.settings.upsert({
-        where: {
-          key_userId: {
-            key: "bamboohr_subdomain",
-            userId: null
-          }
-        },
-        update: {
-          value: subdomain,
-          updatedAt: new Date()
-        },
-        create: {
-          key: "bamboohr_subdomain",
-          value: subdomain,
-          category: "hiring_integrations",
-          privilegeLevel: 2,
-          dataType: "string",
-          description: "BambooHR company subdomain",
-        },
-      });
+      await upsertSystemSetting(
+        "bamboohr_subdomain",
+        subdomain,
+        "BambooHR company subdomain",
+        "string"
+      );
 
-      await appPrisma.settings.upsert({
-        where: {
-          key_userId: {
-            key: "bamboohr_api_key",
-            userId: null
-          }
-        },
-        update: {
-          value: encryptedApiKey,
-          updatedAt: new Date()
-        },
-        create: {
-          key: "bamboohr_api_key",
-          value: encryptedApiKey,
-          category: "hiring_integrations",
-          privilegeLevel: 2,
-          dataType: "string",
-          description: "Encrypted BambooHR API key",
-        },
-      });
+      await upsertSystemSetting(
+        "bamboohr_api_key",
+        encryptedApiKey,
+        "Encrypted BambooHR API key",
+        "string"
+      );
 
-      await appPrisma.settings.upsert({
-        where: {
-          key_userId: {
-            key: "bamboohr_connected",
-            userId: null
-          }
-        },
-        update: {
-          value: "true",
-          updatedAt: new Date()
-        },
-        create: {
-          key: "bamboohr_connected",
-          value: "true",
-          category: "hiring_integrations",
-          privilegeLevel: 2,
-          dataType: "boolean",
-          description: "Whether BambooHR integration is connected",
-        },
-      });
+      await upsertSystemSetting(
+        "bamboohr_connected",
+        "true",
+        "Whether BambooHR integration is connected",
+        "boolean"
+      );
 
-      await appPrisma.settings.upsert({
-        where: {
-          key_userId: {
-            key: "bamboohr_last_sync",
-            userId: null
-          }
-        },
-        update: {
-          value: new Date().toISOString(),
-          updatedAt: new Date()
-        },
-        create: {
-          key: "bamboohr_last_sync",
-          value: new Date().toISOString(),
-          category: "hiring_integrations",
-          privilegeLevel: 2,
-          dataType: "string",
-          description: "Timestamp of last sync with BambooHR",
-        },
-      });
+      await upsertSystemSetting(
+        "bamboohr_last_sync",
+        new Date().toISOString(),
+        "Timestamp of last sync with BambooHR",
+        "string"
+      );
 
       // Log audit event
       await logAuditEvent({

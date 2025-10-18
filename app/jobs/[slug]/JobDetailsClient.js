@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Copy,
   Check,
@@ -10,6 +10,8 @@ import {
   UserPlus,
   Shield,
   Mail,
+  Gift,
+  AlertCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
@@ -28,10 +30,75 @@ export default function JobDetailsClient({
   job: initialJob,
   allowGuestApplications,
   siteConfig,
+  invitationToken,
 }) {
   const [copied, setCopied] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const { data: session, status } = useSession();
+  const [invitation, setInvitation] = useState(null);
+  const [invitationLoading, setInvitationLoading] = useState(!!invitationToken);
+  const [invitationError, setInvitationError] = useState(null);
+  const [decliningInvitation, setDecliningInvitation] = useState(false);
+  const [invitationDeclined, setInvitationDeclined] = useState(false);
+
+  // Validate invitation token if present
+  useEffect(() => {
+    if (invitationToken) {
+      validateInvitation(invitationToken);
+    }
+  }, [invitationToken]);
+
+  const validateInvitation = async (token) => {
+    try {
+      setInvitationLoading(true);
+      setInvitationError(null);
+
+      const response = await fetch(`/api/invitations/${token}`);
+      const data = await response.json();
+
+      if (data.valid) {
+        setInvitation(data.invitation);
+        // Automatically show application form if invitation is valid
+        setShowApplicationForm(true);
+      } else {
+        setInvitationError(data.error || "Invalid invitation");
+      }
+    } catch (error) {
+      console.error("Error validating invitation:", error);
+      setInvitationError("Failed to validate invitation");
+    } finally {
+      setInvitationLoading(false);
+    }
+  };
+
+  const handleDeclineInvitation = async () => {
+    if (!confirm("Are you sure you want to decline this invitation?")) {
+      return;
+    }
+
+    try {
+      setDecliningInvitation(true);
+
+      const response = await fetch(`/api/invitations/${invitationToken}/decline`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to decline invitation");
+      }
+
+      setInvitationDeclined(true);
+      setInvitation(null);
+      setShowApplicationForm(false);
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+      alert(error.message || "Failed to decline invitation");
+    } finally {
+      setDecliningInvitation(false);
+    }
+  };
 
   // Use React Query to get job data (with SSR fallback)
   const { data: job } = usePublicJob(initialJob?.slug, {
@@ -134,7 +201,14 @@ export default function JobDetailsClient({
       return;
     }
 
-    // Allow application (both logged-in users and guests if allowed)
+    // Check if job has full application type (with screening questions)
+    if (job?.application_type === "full") {
+      // Redirect to dedicated application page
+      window.location.href = `/jobs/${job.slug}/apply`;
+      return;
+    }
+
+    // Quick apply - show inline form (both logged-in users and guests if allowed)
     setShowApplicationForm(true);
   };
 
@@ -305,6 +379,83 @@ export default function JobDetailsClient({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Invitation Banner */}
+        {invitationLoading && (
+          <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+            <p className="text-blue-800 dark:text-blue-300">Validating your invitation...</p>
+          </div>
+        )}
+
+        {invitationError && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="text-red-800 dark:text-red-300 font-medium">{invitationError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                You can still view this job and apply normally if you'd like.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {invitationDeclined && (
+          <div className="mb-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <div>
+              <p className="text-gray-800 dark:text-gray-300 font-medium">Invitation Declined</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                You've declined this invitation. You can still view this job and apply normally if you change your mind.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {invitation && !invitationError && !invitationDeclined && (
+          <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                  <Gift className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  You've Been Personally Invited!
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 mb-3">
+                  <strong>{invitation.invitedBy}</strong> thinks you'd be a great fit for this position.
+                </p>
+                {invitation.message && (
+                  <div className="bg-white/60 dark:bg-gray-800/60 rounded-md p-3 mb-3 border border-purple-200/50 dark:border-purple-700/50">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{invitation.message}"</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {!session && (
+                      <>
+                        <Link href="/auth/signin" className="text-purple-600 dark:text-purple-400 hover:underline font-medium">
+                          Sign in
+                        </Link>
+                        {" "}to apply or continue below as a guest.
+                      </>
+                    )}
+                    {session && "The application form is ready for you below."}
+                  </p>
+                  <button
+                    onClick={handleDeclineInvitation}
+                    disabled={decliningInvitation}
+                    className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-white/60 dark:hover:bg-gray-800/60 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {decliningInvitation ? "Declining..." : "Not Interested"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
@@ -675,6 +826,8 @@ export default function JobDetailsClient({
                     onSuccess={handleApplicationSuccess}
                     onCancel={() => setShowApplicationForm(false)}
                     allowGuestApplications={allowGuestApplications}
+                    invitationToken={invitation?.id || invitationToken}
+                    invitation={invitation}
                   />
                 ) : (
                   renderApplyButton()

@@ -2,19 +2,27 @@
 import { appPrisma } from "../../lib/prisma";
 import { logAuditEvent } from "../../../lib/auditMiddleware";
 import { extractRequestContext } from "../../lib/auditLog";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { getJobVisibilityFilter } from "../../lib/jobVisibility";
 
 export async function GET(request) {
   const requestContext = extractRequestContext(request);
-  
+
   try {
+    // Get session to determine user context
+    const session = await getServerSession(authOptions);
+    const user = session?.user || null;
+
     // Log jobs list access attempt
     await logAuditEvent({
       eventType: "VIEW",
       category: "JOB",
       action: "Jobs list accessed",
       description: "Public jobs list accessed",
-      actorType: "anonymous",
-      actorName: "Anonymous",
+      actorType: user ? "user" : "anonymous",
+      actorName: user ? (user.name || user.email) : "Anonymous",
+      actorId: user?.id,
       ipAddress: requestContext.ipAddress,
       userAgent: requestContext.userAgent,
       requestId: requestContext.requestId,
@@ -23,9 +31,15 @@ export async function GET(request) {
       tags: ["jobs", "list", "public", "access"]
     }, request).catch(console.error);
 
-    // Fetch active jobs
+    // Get visibility filter based on user authentication status
+    const visibilityFilter = await getJobVisibilityFilter(user);
+
+    // Fetch active jobs with visibility filtering
     const jobs = await appPrisma.jobs.findMany({
-      where: { status: "Active" },
+      where: {
+        status: "Active",
+        ...visibilityFilter,
+      },
       include: {
         categories: true,
         employment_types: true,
@@ -51,7 +65,10 @@ export async function GET(request) {
         orderBy: { name: "asc" },
       }),
       appPrisma.jobs.findMany({
-        where: { status: "Active" },
+        where: {
+          status: "Active",
+          ...visibilityFilter,
+        },
         select: { location: true },
         distinct: ["location"],
         orderBy: { location: "asc" },

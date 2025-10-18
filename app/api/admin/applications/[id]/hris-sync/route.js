@@ -27,7 +27,8 @@ export async function POST(request, { params }) {
     if (authResult.error) return authResult.error;
 
     const session = authResult.session;
-    const applicationId = params.id;
+    const resolvedParams = await params;
+    const applicationId = resolvedParams.id;
 
     // Get the application
     const application = await appPrisma.applications.findUnique({
@@ -102,33 +103,77 @@ export async function POST(request, { params }) {
     const subdomain = bamboohrSubdomain.value;
 
     // Prepare employee data for BambooHR
+    // Note: Don't include jobTitle in initial creation as it's a list-type field
     const employeeData = {
       firstName: application.name?.split(" ")[0] || "",
       lastName: application.name?.split(" ").slice(1).join(" ") || "",
       email: application.email,
       mobilePhone: application.phone,
-      jobTitle: application.jobs.title,
       department: application.jobs.department,
       hireDate: new Date().toISOString().split("T")[0], // Today's date in YYYY-MM-DD
     };
 
-    // TODO: Make actual API call to BambooHR to create employee
-    // This is a placeholder - you'll implement actual BambooHR employee creation here
-    // const response = await fetch(
-    //   `https://api.bamboohr.com/api/gateway.php/${subdomain}/v1/employees`,
-    //   {
-    //     method: "POST",
-    //     headers: {
-    //       Authorization: `Basic ${Buffer.from(`${apiKey}:x`).toString("base64")}`,
-    //       "Content-Type": "application/json",
-    //       Accept: "application/json",
-    //     },
-    //     body: JSON.stringify(employeeData),
-    //   }
-    // );
+    // Make actual API call to BambooHR to create employee
+    const response = await fetch(
+      `https://api.bamboohr.com/api/gateway.php/${subdomain}/v1/employees`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${apiKey}:x`).toString("base64")}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(employeeData),
+      }
+    );
 
-    // For now, simulate success
-    const simulatedEmployeeId = `EMP-${Date.now()}`;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("BambooHR API error:", errorText);
+
+      // Log the error to the application record
+      await appPrisma.applications.update({
+        where: { id: applicationId },
+        data: {
+          hris_sync_error: `BambooHR API error: ${response.status} - ${errorText}`,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: "Failed to sync candidate to BambooHR",
+          details: errorText,
+          status: response.status
+        },
+        { status: 500 }
+      );
+    }
+
+    // BambooHR returns the employee ID in the Location header
+    const locationHeader = response.headers.get("Location");
+    let employeeId = null;
+
+    if (locationHeader) {
+      // Location header format: https://api.bamboohr.com/api/gateway.php/{subdomain}/v1/employees/{id}
+      const matches = locationHeader.match(/\/employees\/(\d+)/);
+      if (matches && matches[1]) {
+        employeeId = matches[1];
+      }
+    }
+
+    // If we couldn't get ID from Location header, try response body
+    if (!employeeId) {
+      try {
+        const responseData = await response.json();
+        employeeId = responseData.id || responseData.employeeId || `EMP-${Date.now()}`;
+      } catch (e) {
+        // If response body is empty or not JSON, use timestamp as fallback
+        employeeId = `EMP-${Date.now()}`;
+      }
+    }
+
+    // Note: Job titles are managed at the admin level in BambooHR
+    // We sync basic employee info, and BambooHR admins assign job titles manually
 
     // Update application with sync information
     await appPrisma.applications.update({
@@ -136,7 +181,7 @@ export async function POST(request, { params }) {
       data: {
         hris_synced: true,
         hris_synced_at: new Date(),
-        hris_employee_id: simulatedEmployeeId,
+        hris_employee_id: employeeId,
         hris_sync_error: null,
       },
     });
@@ -162,11 +207,11 @@ export async function POST(request, { params }) {
       actorName: session.user.name || session.user.email,
       actorType: "user",
       action: "Sync candidate to HRIS",
-      description: `Candidate ${application.name} synced to BambooHR as employee ${simulatedEmployeeId}`,
+      description: `Candidate ${application.name} synced to BambooHR as employee ${employeeId}`,
       relatedApplicationId: applicationId,
       metadata: {
         provider: "bamboohr",
-        employeeId: simulatedEmployeeId,
+        employeeId: employeeId,
         jobTitle: application.jobs.title,
         department: application.jobs.department,
         syncedAt: new Date().toISOString(),
@@ -176,7 +221,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({
       success: true,
       message: "Candidate successfully synced to BambooHR",
-      employeeId: simulatedEmployeeId,
+      employeeId: employeeId,
       syncedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -184,8 +229,9 @@ export async function POST(request, { params }) {
 
     // Log the error to the application record
     try {
+      const resolvedParams = await params;
       await appPrisma.applications.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: {
           hris_sync_error: error.message,
         },
@@ -207,8 +253,9 @@ export async function GET(request, { params }) {
     const authResult = await protectRoute("applications", "read");
     if (authResult.error) return authResult.error;
 
+    const resolvedParams = await params;
     const application = await appPrisma.applications.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: {
         hris_synced: true,
         hris_synced_at: true,

@@ -21,6 +21,7 @@ import {
   X,
   Clock,
   CheckCircle,
+  UserSearch,
 } from "lucide-react";
 import {
   AdminThemeProvider,
@@ -108,7 +109,8 @@ function AdminLayoutContent({ children }) {
       hasPermission("audit_logs", "view") ||
       hasPermission("weekly_digest", "view") ||
       hasPermission("emails", "view") ||
-      hasPermission("interviews", "view")
+      hasPermission("interviews", "view") ||
+      hasPermission("talent_pool", "read")
     );
   }, [session?.user, permissionsLoading, permissionsReady, hasPermission]);
 
@@ -221,6 +223,13 @@ function AdminLayoutContent({ children }) {
       icon: Settings,
       requiredPermission: { resource: "job_attributes", action: "read" },
       description: "Configure job types & levels",
+    },
+    {
+      name: "Talent Pool",
+      href: "/admin/talent-pool",
+      icon: UserSearch,
+      requiredPermission: { resource: "talent_pool", action: "read" },
+      description: "Search & invite candidates",
     },
     {
       name: "Users",

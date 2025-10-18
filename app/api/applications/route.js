@@ -15,7 +15,7 @@ export async function POST(request) {
   const userId = session?.user?.id || null;
 
   try {
-    const { jobId, name, email, phone, coverLetter, resumeUrl } =
+    const { jobId, name, email, phone, coverLetter, resumeUrl, screeningAnswers, invitationId } =
       await request.json();
     const requestContext = extractRequestContext(request);
 
@@ -63,6 +63,7 @@ export async function POST(request) {
         title: true,
         department: true,
         status: true,
+        application_type: true,
       },
     });
 
@@ -141,6 +142,8 @@ export async function POST(request) {
       jobId,
       coverLetter: coverLetter || null,
       resumeUrl,
+      source_type: invitationId ? "invited" : "applied",
+      invitation_id: invitationId || null,
     };
 
     let applicantName = name;
@@ -303,6 +306,46 @@ export async function POST(request) {
       applicantEmail = email;
     }
 
+    // Validate screening questions if job has full application type
+    if (job.application_type === "full") {
+      const screeningQuestions = await appPrisma.job_screening_questions.findMany({
+        where: { job_id: jobId },
+        select: {
+          id: true,
+          question_text: true,
+          is_required: true,
+        },
+      });
+
+      // Check if all required questions have answers
+      if (screeningQuestions.length > 0) {
+        if (!screeningAnswers || !Array.isArray(screeningAnswers)) {
+          return Response.json(
+            { message: "Screening questions are required for this job" },
+            { status: 400 }
+          );
+        }
+
+        const answeredQuestionIds = new Set(
+          screeningAnswers.map((a) => a.question_id)
+        );
+
+        const missingRequired = screeningQuestions
+          .filter((q) => q.is_required && !answeredQuestionIds.has(q.id))
+          .map((q) => q.question_text);
+
+        if (missingRequired.length > 0) {
+          return Response.json(
+            {
+              message: "Please answer all required screening questions",
+              missingQuestions: missingRequired,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Create the application
     const application = await appPrisma.applications.create({
       data: applicationData,
@@ -337,6 +380,50 @@ export async function POST(request) {
         },
       },
     });
+
+    // If this was from an invitation, update invitation status
+    if (invitationId) {
+      await appPrisma.job_invitations.update({
+        where: { id: invitationId },
+        data: {
+          status: "applied",
+          application_id: application.id,
+        },
+      }).catch(err => {
+        console.error("Error updating invitation status:", err);
+        // Don't fail the application if invitation update fails
+      });
+    }
+
+    // Save screening answers if provided
+    if (screeningAnswers && Array.isArray(screeningAnswers) && screeningAnswers.length > 0) {
+      const screeningQuestions = await appPrisma.job_screening_questions.findMany({
+        where: { job_id: jobId },
+        select: {
+          id: true,
+          question_text: true,
+        },
+      });
+
+      const questionMap = new Map(screeningQuestions.map((q) => [q.id, q]));
+
+      const answersToCreate = screeningAnswers.map((answer) => {
+        const question = questionMap.get(answer.question_id);
+        return {
+          application_id: application.id,
+          question_id: answer.question_id,
+          question_text: question?.question_text || "Question deleted",
+          answer_text: answer.answer_text || null,
+          answer_json: answer.answer_json ? JSON.stringify(answer.answer_json) : null,
+          file_url: answer.file_url || null,
+          file_name: answer.file_name || null,
+        };
+      });
+
+      await appPrisma.application_screening_answers.createMany({
+        data: answersToCreate,
+      });
+    }
 
     // Increment application count for the job
     await appPrisma.jobs.update({
