@@ -21,26 +21,17 @@ import {
   Briefcase,
   FileText,
   Eye,
-  Calendar,
-  DollarSign,
   Target,
   Award,
   Activity,
-  Download,
-  Filter,
   RefreshCw,
-  ChevronDown,
   ArrowUp,
   ArrowDown,
   Minus,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -48,30 +39,14 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  exportAnalyticsToExcel,
-  exportAnalyticsToCSV,
-} from "@/app/utils/analyticsExport";
 
 function AdminAnalyticsContent() {
   const { data: session } = useSession();
   const { getStatCardClasses, getButtonClasses } = useThemeClasses();
   const [timeRange, setTimeRange] = useState("30d");
   const [selectedMetric, setSelectedMetric] = useState("applications");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
-  const { prefetchAll } = usePrefetchAdminData();
-
-  // Fetch jobs to get departments
-  const { data: jobs = [] } = useJobsSimple();
-
-  // Get unique departments
-  const departments = useMemo(() => {
-    const depts = [...new Set(jobs.map((job) => job.department).filter(Boolean))];
-    return depts.sort();
-  }, [jobs]);
 
   const {
     data: analytics,
@@ -80,7 +55,7 @@ function AdminAnalyticsContent() {
     isError,
     error,
     refetch,
-  } = useAnalytics(timeRange, selectedDepartment);
+  } = useAnalytics(timeRange, "all");
 
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
@@ -128,16 +103,7 @@ function AdminAnalyticsContent() {
     return "text-gray-500";
   };
 
-  // ✅ NEW: Export functionality
-  const handleExport = (format) => {
-    if (!analytics) return;
-
-    if (format === "excel") {
-      exportAnalyticsToExcel(analytics, timeRange);
-    } else if (format === "csv") {
-      exportAnalyticsToCSV(analytics, timeRange);
-    }
-  };
+  // Export functionality removed - premium feature in applications-manager
 
   // Only show full loading skeleton on initial load without any data
   if (isLoading && !analytics) {
@@ -195,36 +161,20 @@ function AdminAnalyticsContent() {
       <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
         <div className="flex items-center space-x-2">
           <h1 className="text-2xl sm:text-3xl font-bold admin-text">
-            Analytics Dashboard
+            Analytics Overview
           </h1>
           <PageHelp
-            title="Analytics Dashboard"
-            description="Comprehensive analytics and reporting for all jobs and applications across your organization."
-            whenToUse="Use this page to track performance metrics, monitor conversion rates, analyze trends, and make data-driven decisions about your hiring process."
+            title="Analytics Overview"
+            description="Basic analytics and reporting for jobs and applications. Upgrade to Applications Manager for advanced features."
+            whenToUse="Use this page to view basic performance metrics and trends. For export, advanced filtering, and detailed analytics, upgrade to Applications Manager."
             relatedPages={[
               { label: "Jobs", href: "/admin/jobs", description: "Manage job postings" },
               { label: "Applications", href: "/admin/applications", description: "View all applications" },
-              { label: "Pipeline", href: "/applications-manager/pipeline", description: "Kanban workflow management" }
             ]}
           />
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-          {/* Department Filter */}
-          <select
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 admin-text bg-white dark:bg-gray-700"
-            title="Filter by department"
-          >
-            <option value="all">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-
-          {/* Time Range Filter */}
+          {/* Time Range Filter - Basic options only */}
           <div className="relative">
             <select
               value={timeRange}
@@ -244,49 +194,18 @@ function AdminAnalyticsContent() {
               </div>
             )}
           </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 admin-text bg-white dark:bg-gray-800"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              <span className="hidden sm:inline">
-                {refreshing ? "Refreshing..." : "Refresh"}
-              </span>
-            </button>
-            {/* ✅ NEW: Export Dropdown */}
-            <div className="relative group">
-              <button
-                className={`flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${getButtonClasses("primary")}`}
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
-              </button>
-              {/* Invisible bridge to prevent dropdown from disappearing */}
-              <div className="absolute right-0 top-10 w-48 h-4 invisible group-hover:visible z-10"></div>
-              <div className="absolute right-0 top-12 w-48 admin-card rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 border">
-                <div className="p-2">
-                  <button
-                    onClick={() => handleExport("excel")}
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
-                  >
-                    <span className="text-green-600">📊</span>
-                    <span>Export to Excel (.xlsx)</span>
-                  </button>
-                  <button
-                    onClick={() => handleExport("csv")}
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm admin-text hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
-                  >
-                    <span className="text-blue-600">📄</span>
-                    <span>Export to CSV</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 admin-text bg-white dark:bg-gray-800"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </span>
+          </button>
         </div>
       </div>
 

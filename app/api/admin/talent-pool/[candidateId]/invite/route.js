@@ -10,7 +10,7 @@ import crypto from "crypto";
 /**
  * POST /api/admin/talent-pool/[candidateId]/invite
  * Send a job invitation to a talent pool candidate
- * Body: { jobId, message }
+ * Body: { jobId, subject, content, customMessage, templateId }
  */
 export async function POST(request, { params }) {
   try {
@@ -20,7 +20,7 @@ export async function POST(request, { params }) {
     const session = authResult.session;
     const resolvedParams = await params;
     const candidateId = resolvedParams.candidateId;
-    const { jobId, message } = await request.json();
+    const { jobId, subject, content, customMessage, templateId } = await request.json();
 
     if (!jobId) {
       return NextResponse.json(
@@ -117,16 +117,17 @@ export async function POST(request, { params }) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    // Create invitation
+    // Create invitation with template info
     const invitation = await appPrisma.job_invitations.create({
       data: {
         job_id: jobId,
         candidate_id: candidateId,
         invited_by: session.user.id,
         invitation_token: invitationToken,
-        message: message || null,
+        message: customMessage || null,
         status: "sent",
         expires_at: expiresAt,
+        metadata: templateId ? { templateId, subject, content } : {},
       },
       include: {
         job: {
@@ -152,11 +153,12 @@ export async function POST(request, { params }) {
         candidate_id: candidateId,
         job_id: jobId,
         interaction_type: "sent_invitation",
-        notes: message || null,
+        notes: customMessage || null,
         metadata: {
           invitationId: invitation.id,
           invitationToken,
           expiresAt: expiresAt.toISOString(),
+          templateId: templateId || null,
         },
       },
     });
@@ -186,8 +188,12 @@ export async function POST(request, { params }) {
       },
     });
 
-    // Send email notification to candidate
+    // Send email notification to candidate with template content
     const companyName = await getSystemSetting("site_name", "Our Company");
+
+    // Use template subject and content if provided, otherwise use defaults
+    const emailSubject = subject || `You're invited to apply for ${job.title} at ${companyName}`;
+    const emailContent = content || `Hi ${candidate.name || 'there'},\n\nYou've been invited to apply for the ${job.title} position at ${companyName}.`;
 
     const emailResult = await sendJobInvitation({
       candidateEmail: candidate.email,
@@ -195,10 +201,12 @@ export async function POST(request, { params }) {
       jobTitle: job.title,
       jobSlug: job.slug,
       invitationToken,
-      customMessage: message,
+      customMessage: customMessage,
       invitedByName: session.user.name || session.user.email,
       companyName,
       expiresAt,
+      subject: emailSubject,
+      content: emailContent,
     });
 
     if (!emailResult.success) {

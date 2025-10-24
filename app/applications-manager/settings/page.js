@@ -29,6 +29,9 @@ import {
 import AnalyticsConfigurationCard from "./components/AnalyticsConfigurationCard";
 import CertnIntegration from "./components/CertnIntegration";
 import BambooHRIntegration from "./components/BambooHRIntegration";
+import CalendarIntegration from "@/app/admin/settings/components/CalendarIntegration";
+import ZoomIntegration from "@/app/admin/settings/components/ZoomIntegration";
+import MicrosoftIntegration from "@/app/admin/settings/components/MicrosoftIntegration";
 
 export default function ApplicationsManagerSettings() {
   const router = useRouter();
@@ -795,6 +798,30 @@ export default function ApplicationsManagerSettings() {
                         <AnalyticsConfigurationCard />
                       </motion.div>
                     )}
+
+                    {/* Calendar & Meeting Integrations */}
+                    <motion.div
+                      variants={settingCardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.15 }}
+                    >
+                      <div className="border admin-border rounded-lg p-6 admin-card">
+                        <h3 className="text-lg font-semibold admin-text mb-4">
+                          Calendar & Meeting Integrations
+                        </h3>
+                        <p className="text-sm admin-text-light mb-6">
+                          Connect your calendar and meeting platforms to enable seamless interview scheduling
+                        </p>
+
+                        {/* Three integrations side by side */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                          <CalendarIntegration />
+                          <ZoomIntegration />
+                          <MicrosoftIntegration />
+                        </div>
+                      </div>
+                    </motion.div>
 
                     {/* Show any other integration settings below */}
                     {filteredSettings.length > 0 && (

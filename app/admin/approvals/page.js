@@ -136,7 +136,7 @@ function ApprovalsContent() {
           <div className="flex items-center space-x-2">
             <button
               onClick={refreshPermissions}
-              className={`${getButtonClasses("secondary")} inline-flex items-center`}
+              className={`${getButtonClasses("secondary")} inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
               title="Refresh permissions"
             >
               <RefreshCw className="h-4 w-4 mr-2" />

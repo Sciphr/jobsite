@@ -597,6 +597,10 @@ model users {
   location                                                              String?                         @db.VarChar(255)
   available_for_opportunities                                           Boolean?                        @default(true)
   last_profile_update                                                   DateTime?                       @default(now()) @db.Timestamp(6)
+  facebook_url                                                          String?                         @db.VarChar(500)
+  twitter_url                                                           String?                         @db.VarChar(500)
+  instagram_url                                                         String?                         @db.VarChar(500)
+  bluesky_url                                                           String?                         @db.VarChar(500)
   api_keys                                                              api_keys?
   application_stage_history                                             application_stage_history[]
   applications_applications_sourced_byTousers                           applications[]                  @relation("applications_sourced_byTousers")

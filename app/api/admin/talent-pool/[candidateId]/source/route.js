@@ -33,11 +33,17 @@ export async function POST(request, { params }) {
       where: { id: candidateId },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
       },
     });
+
+    // Compute name for consistency
+    if (candidate) {
+      candidate.name = `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || candidate.email;
+    }
 
     if (!candidate) {
       return NextResponse.json(
@@ -80,8 +86,8 @@ export async function POST(request, { params }) {
     // Check if candidate already has an application for this job
     const existingApplication = await appPrisma.applications.findFirst({
       where: {
-        job_id: jobId,
-        user_id: candidateId,
+        jobId: jobId,
+        userId: candidateId,
       },
     });
 
@@ -95,13 +101,14 @@ export async function POST(request, { params }) {
     // Create sourced application
     const application = await appPrisma.applications.create({
       data: {
-        job_id: jobId,
-        user_id: candidateId,
-        status: status || "New",
+        jobId: jobId,
+        userId: candidateId,
+        status: status || "Applied",
         source_type: "sourced",
         sourced_by: session.user.id,
         sourced_at: new Date(),
-        applied_at: new Date(), // Set applied_at to now for sourced candidates
+        appliedAt: new Date(), // Set appliedAt to now for sourced candidates
+        updatedAt: new Date(),
         internal_notes: notes || null,
       },
       include: {
@@ -111,10 +118,11 @@ export async function POST(request, { params }) {
             title: true,
           },
         },
-        user: {
+        users: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -178,6 +186,11 @@ export async function POST(request, { params }) {
       // Just log the error for admin awareness
     }
 
+    // Compute candidate name for response
+    const candidateName = application.users
+      ? `${application.users.firstName || ''} ${application.users.lastName || ''}`.trim() || application.users.email
+      : null;
+
     return NextResponse.json({
       success: true,
       application: {
@@ -185,8 +198,11 @@ export async function POST(request, { params }) {
         status: application.status,
         sourceType: application.source_type,
         sourcedAt: application.sourced_at,
-        job: application.job,
-        candidate: application.user,
+        jobs: application.jobs,
+        candidate: {
+          ...application.users,
+          name: candidateName,
+        },
       },
       message: "Candidate sourced to job successfully",
     });

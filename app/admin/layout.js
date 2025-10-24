@@ -22,6 +22,8 @@ import {
   Clock,
   CheckCircle,
   UserSearch,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import {
   AdminThemeProvider,
@@ -331,13 +333,13 @@ function AdminLayoutContent({ children }) {
   const badge = getRoleBadge();
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden flex flex-col">
+    <div className="absolute inset-0 bg-gray-50 dark:bg-gray-800 transition-colors duration-200 overflow-hidden flex flex-col">
       {/* Command Palette - Global Keyboard Navigation */}
       <CommandPalette />
 
       {/* Mobile Header */}
       {isMobile && (
-        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-30 relative">
+        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-30 relative flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className={`p-2 rounded-lg ${getButtonClasses("primary")}`}>
               <Shield className="h-5 w-5" />
@@ -372,7 +374,7 @@ function AdminLayoutContent({ children }) {
         </div>
       )}
 
-      <div className={`flex flex-1 ${isMobile ? "min-h-0" : "h-full"}`}>
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar - Desktop: always visible, Mobile: overlay when open */}
         <AnimatePresence>
           {(!isMobile || isMobileMenuOpen) && (
@@ -398,11 +400,11 @@ function AdminLayoutContent({ children }) {
                   isMobile
                     ? "fixed left-0 top-0 h-full w-80 z-50"
                     : "w-64 flex-shrink-0"
-                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col ${isMobile ? "h-full" : "h-full"}`}
+                } shadow-lg admin-sidebar bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-colors duration-200 flex flex-col self-stretch`}
               >
                 {/* Desktop Header - only show on desktop */}
                 {!isMobile && (
-                  <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
+                  <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3">
                         <div
@@ -539,6 +541,15 @@ function AdminLayoutContent({ children }) {
                   </div>
 
                   <div className="mt-3 space-y-2">
+                    <Link
+                      href="/applications-manager"
+                      className={`w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${getButtonClasses("primary")}`}
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Applications Manager
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </Link>
+
                     <Link
                       href="/"
                       className={`w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${getButtonClasses("accent")} border border-opacity-20`}

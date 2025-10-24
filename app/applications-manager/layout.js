@@ -358,7 +358,7 @@ function ApplicationsManagerLayoutContent({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="absolute inset-0 bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden">
       {/* Command Palette - Global Keyboard Navigation */}
       <CommandPalette />
 
@@ -367,7 +367,7 @@ function ApplicationsManagerLayoutContent({ children }) {
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className="admin-card shadow-sm border-b admin-border"
+        className="admin-card shadow-sm border-b admin-border flex-shrink-0"
       >
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className={`flex items-center justify-between ${isMobile ? "h-14" : "h-16"}`}>
@@ -515,8 +515,7 @@ function ApplicationsManagerLayoutContent({ children }) {
         </div>
       </motion.div>
 
-      <div className={`w-full ${isMobile ? "px-4 py-4" : "px-4 sm:px-6 lg:px-8 py-6"}`}>
-        <div className={isMobile ? "block" : "flex space-x-6"}>
+      <div className={`flex flex-1 min-h-0 ${isMobile ? "p-4" : "px-4 sm:px-6 lg:px-8 py-6"}`}>
           {/* Sidebar Navigation with Animation */}
           <AnimatePresence>
             {(!isMobile || isMobileMenuOpen) && (
@@ -540,16 +539,16 @@ function ApplicationsManagerLayoutContent({ children }) {
                   exit={isMobile ? { x: -320, opacity: 0 } : "hidden"}
                   transition={{ type: "tween", duration: 0.3 }}
                   className={`${
-                    isMobile 
-                      ? "fixed left-0 top-0 h-full w-80 z-50 mt-14" 
-                      : "w-64 flex-shrink-0 relative"
-                  } admin-card rounded-lg shadow-sm border admin-border overflow-hidden`}
+                    isMobile
+                      ? "fixed left-0 top-0 h-full w-80 z-50 mt-14"
+                      : "w-64 flex-shrink-0 h-full mr-6"
+                  } admin-card rounded-lg shadow-sm border admin-border flex flex-col`}
                 >
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 }}
-                className={`p-4 ${getStatCardClasses(1).bg}`}
+                className={`flex-shrink-0 p-4 ${getStatCardClasses(1).bg}`}
               >
                 <div
                   className={`flex items-center space-x-2 ${getStatCardClasses(1).icon}`}
@@ -559,7 +558,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                 </div>
               </motion.div>
 
-              <nav className="p-2">
+              <nav className="flex-1 overflow-y-auto p-2">
                 {navigationItems.map((item, index) => {
                   const Icon = item.icon;
                   return (
@@ -632,7 +631,7 @@ function ApplicationsManagerLayoutContent({ children }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="p-4 border-t admin-border bg-gray-50 dark:bg-gray-800"
+                className="flex-shrink-0 p-4 border-t admin-border bg-gray-50 dark:bg-gray-800"
               >
                 <h4 className="text-xs font-semibold admin-text-light uppercase tracking-wide mb-3">
                   Quick Stats
@@ -664,8 +663,7 @@ function ApplicationsManagerLayoutContent({ children }) {
           </AnimatePresence>
 
           {/* Main Content Area with Fixed Page Transitions */}
-          <div className={`${isMobile ? "w-full mt-4" : "flex-1 min-w-0"}`}>{children}</div>
-        </div>
+          <div className={`${isMobile ? "w-full mt-4" : "flex-1 min-w-0 overflow-y-auto"}`}>{children}</div>
       </div>
     </div>
   );

@@ -52,6 +52,7 @@ function ApplicationDetailsContent() {
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
   const [interviewFeedback, setInterviewFeedback] = useState([]);
+  const [scheduledInterviews, setScheduledInterviews] = useState([]);
   const [hireApprovalModal, setHireApprovalModal] = useState({
     isOpen: false,
     type: null,
@@ -114,6 +115,18 @@ function ApplicationDetailsContent() {
         } catch (feedbackError) {
           console.error("Error fetching interview feedback:", feedbackError);
           // Don't fail the whole page if feedback fetch fails
+        }
+
+        // Fetch scheduled interviews
+        try {
+          const interviewsResponse = await fetch(`/api/admin/interviews?applicationId=${applicationId}`);
+          if (interviewsResponse.ok) {
+            const interviewsData = await interviewsResponse.json();
+            setScheduledInterviews(interviewsData.interviews || []);
+          }
+        } catch (interviewsError) {
+          console.error("Error fetching interviews:", interviewsError);
+          // Don't fail the whole page if interviews fetch fails
         }
       } catch (err) {
         console.error("Error fetching application:", err);
@@ -765,6 +778,68 @@ function ApplicationDetailsContent() {
                   </button>
                 </div>
               </div>
+
+              {/* Scheduled Interviews - Read-only list */}
+              {scheduledInterviews.length > 0 && (
+                <div className="admin-card rounded-lg shadow p-6">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                      <Calendar className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold admin-text">
+                      Scheduled Interviews ({scheduledInterviews.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {scheduledInterviews.map((interview) => (
+                      <div key={interview.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border-l-4 border-indigo-500">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              interview.type === 'phone' ? 'bg-green-100 text-green-800' :
+                              interview.type === 'video' ? 'bg-blue-100 text-blue-800' :
+                              'bg-purple-100 text-purple-800'
+                            }`}>
+                              {interview.type?.charAt(0).toUpperCase() + interview.type?.slice(1) || 'Interview'}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              interview.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              interview.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                              interview.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {interview.status?.charAt(0).toUpperCase() + interview.status?.slice(1) || 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm admin-text mb-1">
+                          <Clock className="h-4 w-4 admin-text-light" />
+                          <span>
+                            {new Date(interview.scheduled_at).toLocaleDateString()} at{' '}
+                            {new Date(interview.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {interview.duration && (
+                          <p className="text-xs admin-text-light">
+                            Duration: {interview.duration} minutes
+                          </p>
+                        )}
+                        {interview.meeting_link && (
+                          <a
+                            href={interview.meeting_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center mt-2"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Join Meeting
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Internal Notes - Only show here if there's also a cover letter */}
               {application?.coverLetter && application?.notes && (

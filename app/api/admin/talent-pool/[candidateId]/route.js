@@ -23,7 +23,8 @@ export async function GET(request, { params }) {
       where: { id: candidateId },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         bio: true,
         skills: true,
@@ -35,7 +36,7 @@ export async function GET(request, { params }) {
         portfolio_url: true,
         available_for_opportunities: true,
         last_profile_update: true,
-        created_at: true,
+        createdAt: true,
         role: true,
         account_type: true,
       },
@@ -58,40 +59,48 @@ export async function GET(request, { params }) {
 
     // Get all applications
     const applications = await appPrisma.applications.findMany({
-      where: { user_id: candidateId },
+      where: { userId: candidateId },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
             status: true,
             location: true,
-            job_type: true,
+            department: true,
+            employment_types: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
-        sourced_by_user: {
+        users_applications_sourced_byTousers: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
       },
-      orderBy: { applied_at: "desc" },
+      orderBy: { appliedAt: "desc" },
     });
 
     // Get all interactions
     const interactions = await appPrisma.talent_pool_interactions.findMany({
       where: { candidate_id: candidateId },
       include: {
-        admin: {
+        users_talent_pool_interactions_admin_idTousers: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
@@ -105,17 +114,18 @@ export async function GET(request, { params }) {
     const invitations = await appPrisma.job_invitations.findMany({
       where: { candidate_id: candidateId },
       include: {
-        job: {
+        jobs: {
           select: {
             id: true,
             title: true,
             status: true,
           },
         },
-        invited_by_user: {
+        users_job_invitations_invited_byTousers: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true,
           },
         },
@@ -136,6 +146,9 @@ export async function GET(request, { params }) {
       },
     });
 
+    // Compute candidate name
+    const candidateName = [candidate.firstName, candidate.lastName].filter(Boolean).join(" ") || candidate.email;
+
     // Log audit event
     await logAuditEvent({
       eventType: "READ",
@@ -143,15 +156,15 @@ export async function GET(request, { params }) {
       subcategory: "VIEW_PROFILE",
       entityType: "user",
       entityId: candidateId,
-      entityName: candidate.name || candidate.email,
+      entityName: candidateName,
       actorId: session.user.id,
       actorName: session.user.name || session.user.email,
       actorType: "user",
       action: "View talent pool candidate profile",
-      description: `Viewed profile of ${candidate.name || candidate.email}`,
+      description: `Viewed profile of ${candidateName}`,
       metadata: {
         candidateId,
-        candidateName: candidate.name,
+        candidateName,
         candidateEmail: candidate.email,
       },
     });
@@ -159,6 +172,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       candidate: {
         ...candidate,
+        name: candidateName, // Add computed name field
         stats: {
           totalApplications: applications.length,
           interactionsCount: interactions.length,
@@ -171,14 +185,43 @@ export async function GET(request, { params }) {
       applications: applications.map((app) => ({
         id: app.id,
         status: app.status,
-        appliedAt: app.applied_at,
+        appliedAt: app.appliedAt,
         sourceType: app.source_type,
-        sourcedBy: app.sourced_by_user,
+        sourcedBy: app.users_applications_sourced_byTousers ? {
+          ...app.users_applications_sourced_byTousers,
+          name: [
+            app.users_applications_sourced_byTousers.firstName,
+            app.users_applications_sourced_byTousers.lastName
+          ].filter(Boolean).join(" ") || "Unknown",
+        } : null,
         sourcedAt: app.sourced_at,
-        job: app.job,
+        job: app.jobs ? {
+          ...app.jobs,
+          jobType: app.jobs.employment_types?.name || null,
+        } : null,
       })),
-      interactions,
-      invitations,
+      interactions: interactions.map((int) => ({
+        ...int,
+        admin: int.users_talent_pool_interactions_admin_idTousers ? {
+          ...int.users_talent_pool_interactions_admin_idTousers,
+          name: [
+            int.users_talent_pool_interactions_admin_idTousers.firstName,
+            int.users_talent_pool_interactions_admin_idTousers.lastName
+          ].filter(Boolean).join(" ") || "Unknown",
+        } : null,
+        job: int.jobs || null,
+      })),
+      invitations: invitations.map((inv) => ({
+        ...inv,
+        job: inv.jobs || null,
+        invited_by_user: inv.users_job_invitations_invited_byTousers ? {
+          ...inv.users_job_invitations_invited_byTousers,
+          name: [
+            inv.users_job_invitations_invited_byTousers.firstName,
+            inv.users_job_invitations_invited_byTousers.lastName
+          ].filter(Boolean).join(" ") || "Unknown",
+        } : null,
+      })),
     });
   } catch (error) {
     console.error("Error fetching candidate details:", error);

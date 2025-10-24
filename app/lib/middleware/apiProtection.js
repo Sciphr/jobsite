@@ -277,7 +277,7 @@ export async function validateRequest(request, requiredParams = []) {
 export async function validateJsonBody(request, requiredFields = []) {
   try {
     const body = await request.json();
-    
+
     const missing = requiredFields.filter(field => body[field] === undefined);
     if (missing.length > 0) {
       return {
@@ -294,6 +294,78 @@ export async function validateJsonBody(request, requiredFields = []) {
       error: NextResponse.json(
         { error: "Invalid JSON body" },
         { status: 400 }
+      )
+    };
+  }
+}
+
+/**
+ * Protect premium/applications-manager features
+ * These features require specific permissions beyond basic admin access
+ *
+ * Premium features include:
+ * - Candidate matching and AI recommendations
+ * - Bulk invite/source operations
+ * - Email history tracking
+ * - Analytics export (Excel/CSV)
+ * - Advanced filtering
+ * - Integration APIs (Zoom, Calendar, Certn, BambooHR)
+ * - Interview management (CRUD)
+ * - Auto-progress automation
+ * - Communication templates
+ *
+ * Usage: const result = await protectPremiumFeature(request, featureName);
+ * if (result.error) return result.error;
+ * const { session } = result;
+ */
+export async function protectPremiumFeature(request, featureName = "premium feature") {
+  try {
+    const { getServerSession } = await import("next-auth/next");
+    const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return {
+        error: NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        )
+      };
+    }
+
+    const userId = session.user.id;
+
+    // Super admin bypass - privilege level 3+ has all permissions
+    if (session.user.privilegeLevel >= 3) {
+      return { session };
+    }
+
+    // Check if user has applications-manager access
+    // This is determined by having "applications" resource with "manage" or "advanced" actions
+    const hasApplicationsManage = await userHasPermission(userId, "applications", "manage");
+    const hasAdvancedAccess = await userHasPermission(userId, "applications", "advanced");
+
+    if (!hasApplicationsManage && !hasAdvancedAccess) {
+      return {
+        error: NextResponse.json(
+          {
+            error: "Premium feature access required",
+            feature: featureName,
+            message: `Access to ${featureName} requires Applications Manager permissions. Please upgrade your account or contact your administrator.`,
+            upgradeRequired: true
+          },
+          { status: 403 }
+        )
+      };
+    }
+
+    return { session };
+  } catch (error) {
+    console.error("Premium feature protection error:", error);
+    return {
+      error: NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
       )
     };
   }

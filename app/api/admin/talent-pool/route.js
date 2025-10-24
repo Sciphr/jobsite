@@ -46,7 +46,8 @@ export async function GET(request) {
     if (search) {
       where.AND.push({
         OR: [
-          { name: { contains: search, mode: "insensitive" } },
+          { firstName: { contains: search, mode: "insensitive" } }, // Fixed: was name
+          { lastName: { contains: search, mode: "insensitive" } },  // Added: search lastName too
           { email: { contains: search, mode: "insensitive" } },
           { bio: { contains: search, mode: "insensitive" } },
           { current_company: { contains: search, mode: "insensitive" } },
@@ -86,7 +87,8 @@ export async function GET(request) {
       where,
       select: {
         id: true,
-        name: true,
+        firstName: true, // Fixed: was name
+        lastName: true,  // Added: need lastName too
         email: true,
         bio: true,
         skills: true,
@@ -98,7 +100,7 @@ export async function GET(request) {
         portfolio_url: true,
         available_for_opportunities: true,
         last_profile_update: true,
-        created_at: true,
+        createdAt: true,
         // Include application count
         _count: {
           select: {
@@ -108,7 +110,7 @@ export async function GET(request) {
       },
       orderBy: [
         { last_profile_update: "desc" },
-        { created_at: "desc" },
+        { createdAt: "desc" },
       ],
       skip: offset,
       take: limit,
@@ -124,9 +126,9 @@ export async function GET(request) {
 
         // Get recent applications
         const recentApplications = await appPrisma.applications.findMany({
-          where: { user_id: candidate.id },
+          where: { userId: candidate.id }, // Fixed: was user_id
           include: {
-            job: {
+            jobs: { // Fixed: was job (should be jobs based on relation name)
               select: {
                 id: true,
                 title: true,
@@ -134,7 +136,7 @@ export async function GET(request) {
               },
             },
           },
-          orderBy: { applied_at: "desc" },
+          orderBy: { appliedAt: "desc" }, // Fixed: was applied_at
           take: 3,
         });
 
@@ -148,6 +150,8 @@ export async function GET(request) {
 
         return {
           ...candidate,
+          // Add computed name field for frontend compatibility
+          name: [candidate.firstName, candidate.lastName].filter(Boolean).join(" ") || "Anonymous",
           stats: {
             totalApplications: candidate._count.applications,
             interactionsCount,
@@ -156,9 +160,9 @@ export async function GET(request) {
           recentApplications: recentApplications.map((app) => ({
             id: app.id,
             status: app.status,
-            appliedAt: app.applied_at,
+            appliedAt: app.appliedAt,
             sourceType: app.source_type,
-            job: app.job,
+            job: app.jobs,
           })),
         };
       })
@@ -170,7 +174,7 @@ export async function GET(request) {
       category: "TALENT_POOL",
       subcategory: "SEARCH",
       entityType: "talent_pool",
-      entityId: "search",
+      entityId: null, // Fixed: was "search" which is not a valid UUID
       entityName: "Talent Pool Search",
       actorId: session.user.id,
       actorName: session.user.name || session.user.email,

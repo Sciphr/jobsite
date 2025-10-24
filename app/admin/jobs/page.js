@@ -43,6 +43,7 @@ import {
   FileText,
   UserCheck,
   ClipboardList,
+  Target,
 } from "lucide-react";
 import { exportJobsToExcel, exportJobsToCSV } from "@/app/utils/jobsExport";
 
@@ -773,6 +774,13 @@ function AdminJobsContent() {
                       title="View applications"
                     >
                       <UserCheck className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => router.push(`/admin/talent-pool?jobId=${job.id}&matchJob=true`)}
+                      className="p-3 sm:p-2 text-gray-400 hover:text-purple-600 transition-colors duration-200 bg-gray-100 dark:bg-gray-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg sm:rounded-none sm:bg-transparent dark:sm:bg-transparent"
+                      title="Find matching candidates"
+                    >
+                      <Target className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => cloneAndEditJob(job)}

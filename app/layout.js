@@ -99,10 +99,12 @@ export default async function RootLayout({ children }) {
           <GoogleAnalytics />
           <ThemeProvider>
             <Providers session={undefined}>
-              <Header />
-              <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-                {children}
-              </main>
+              <div className="flex flex-col h-screen overflow-hidden">
+                <Header />
+                <main className="flex-1 bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative overflow-auto">
+                  {children}
+                </main>
+              </div>
               <SubscriptionNotifications />
             </Providers>
           </ThemeProvider>

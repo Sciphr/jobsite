@@ -33,6 +33,12 @@ export async function GET(req) {
         privilegeLevel: true,
         isActive: true,
         createdAt: true,
+        linkedin_url: true,
+        portfolio_url: true,
+        facebook_url: true,
+        twitter_url: true,
+        instagram_url: true,
+        bluesky_url: true,
         // Include admin-specific data if user is admin
         ...(session.user.privilegeLevel > 0 && {
           jobs: {
@@ -115,7 +121,7 @@ export async function PUT(req) {
 
   try {
     const body = await req.json();
-    const { firstName, lastName, email, phone } = body;
+    const { firstName, lastName, email, phone, linkedinUrl, portfolioUrl, facebookUrl, twitterUrl, instagramUrl, blueskyUrl } = body;
 
     // Get current user data for change tracking
     const currentUser = await appPrisma.users.findUnique({
@@ -125,6 +131,12 @@ export async function PUT(req) {
         lastName: true,
         email: true,
         phone: true,
+        linkedin_url: true,
+        portfolio_url: true,
+        facebook_url: true,
+        twitter_url: true,
+        instagram_url: true,
+        bluesky_url: true,
       },
     });
 
@@ -159,6 +171,12 @@ export async function PUT(req) {
       lastName,
       email,
       phone,
+      linkedin_url: linkedinUrl || null,
+      portfolio_url: portfolioUrl || null,
+      facebook_url: facebookUrl || null,
+      twitter_url: twitterUrl || null,
+      instagram_url: instagramUrl || null,
+      bluesky_url: blueskyUrl || null,
     };
 
     // Track changes for audit log
@@ -186,6 +204,36 @@ export async function PUT(req) {
       oldValues.phone = currentUser.phone;
       newValues.phone = phone;
     }
+    if (currentUser.linkedin_url !== linkedinUrl) {
+      changes.linkedin_url = { from: currentUser.linkedin_url, to: linkedinUrl };
+      oldValues.linkedin_url = currentUser.linkedin_url;
+      newValues.linkedin_url = linkedinUrl;
+    }
+    if (currentUser.portfolio_url !== portfolioUrl) {
+      changes.portfolio_url = { from: currentUser.portfolio_url, to: portfolioUrl };
+      oldValues.portfolio_url = currentUser.portfolio_url;
+      newValues.portfolio_url = portfolioUrl;
+    }
+    if (currentUser.facebook_url !== facebookUrl) {
+      changes.facebook_url = { from: currentUser.facebook_url, to: facebookUrl };
+      oldValues.facebook_url = currentUser.facebook_url;
+      newValues.facebook_url = facebookUrl;
+    }
+    if (currentUser.twitter_url !== twitterUrl) {
+      changes.twitter_url = { from: currentUser.twitter_url, to: twitterUrl };
+      oldValues.twitter_url = currentUser.twitter_url;
+      newValues.twitter_url = twitterUrl;
+    }
+    if (currentUser.instagram_url !== instagramUrl) {
+      changes.instagram_url = { from: currentUser.instagram_url, to: instagramUrl };
+      oldValues.instagram_url = currentUser.instagram_url;
+      newValues.instagram_url = instagramUrl;
+    }
+    if (currentUser.bluesky_url !== blueskyUrl) {
+      changes.bluesky_url = { from: currentUser.bluesky_url, to: blueskyUrl };
+      oldValues.bluesky_url = currentUser.bluesky_url;
+      newValues.bluesky_url = blueskyUrl;
+    }
 
     const updatedUser = await appPrisma.users.update({
       where: { id: userId },
@@ -199,6 +247,12 @@ export async function PUT(req) {
         role: true,
         privilegeLevel: true,
         createdAt: true,
+        linkedin_url: true,
+        portfolio_url: true,
+        facebook_url: true,
+        twitter_url: true,
+        instagram_url: true,
+        bluesky_url: true,
       },
     });
 

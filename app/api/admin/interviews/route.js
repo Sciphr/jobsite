@@ -15,10 +15,16 @@ export async function GET(request) {
     const myOnly = searchParams.get('myOnly') === 'true';
     const status = searchParams.get('status');
     const type = searchParams.get('type');
+    const applicationId = searchParams.get('applicationId');
 
     // Build where clause
     let whereClause = {};
-    
+
+    // Filter by application ID if provided
+    if (applicationId) {
+      whereClause.application_id = applicationId;
+    }
+
     // If myOnly is true, filter by jobs created by the current user
     if (myOnly) {
       whereClause.applications = {

@@ -165,7 +165,7 @@ export default function JobApprovalsTab() {
         <p className="text-red-600 dark:text-red-400 mb-4">Failed to load job approval requests</p>
         <button
           onClick={handleRefresh}
-          className={`${getButtonClasses("primary")} inline-flex items-center`}
+          className={`${getButtonClasses("primary")} inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Retry
@@ -218,7 +218,7 @@ export default function JobApprovalsTab() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className={`${getButtonClasses("secondary")} inline-flex items-center`}
+          className={`${getButtonClasses("secondary")} inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors`}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh

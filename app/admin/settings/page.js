@@ -1254,28 +1254,10 @@ export default function AdminSettings() {
             <div className="space-y-6">
               <SupportTickets />
             </div>
-          ) : /* Special handling for Personal tab - show theme selector and calendar integration */
+          ) : /* Special handling for Personal tab - show theme selector */
           activeTab === "personal" ? (
             <div className="space-y-6">
               <ThemeSelector />
-              
-              {/* Integrations Section */}
-              <div>
-                <h3 className="text-lg font-semibold admin-text mb-4">
-                  Calendar & Meeting Integrations
-                </h3>
-                <p className="text-sm admin-text-light mb-6">
-                  Connect your calendar and meeting platforms to enable seamless interview scheduling
-                </p>
-                
-                {/* Three integrations side by side */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  <CalendarIntegration />
-                  <ZoomIntegration />
-                  <MicrosoftIntegration />
-                </div>
-              </div>
-
 
               {/* Show other personal settings if any (excluding theme setting to avoid duplicates) */}
               {activeSettings.filter(
