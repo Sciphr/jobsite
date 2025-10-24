@@ -663,7 +663,7 @@ function ApplicationsManagerLayoutContent({ children }) {
           </AnimatePresence>
 
           {/* Main Content Area with Fixed Page Transitions */}
-          <div className={`${isMobile ? "w-full mt-4" : "flex-1 min-w-0 overflow-y-auto"}`}>{children}</div>
+          <div className={`${isMobile ? "w-full mt-4" : "flex-1 min-w-0 overflow-y-auto pr-2"}`}>{children}</div>
       </div>
     </div>
   );

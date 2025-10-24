@@ -814,8 +814,8 @@ export default function ApplicationsManagerSettings() {
                           Connect your calendar and meeting platforms to enable seamless interview scheduling
                         </p>
 
-                        {/* Three integrations side by side */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {/* Three integrations stacked */}
+                        <div className="space-y-6">
                           <CalendarIntegration />
                           <ZoomIntegration />
                           <MicrosoftIntegration />
