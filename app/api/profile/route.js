@@ -39,6 +39,18 @@ export async function GET(req) {
         twitter_url: true,
         instagram_url: true,
         bluesky_url: true,
+        user_resumes: {
+          where: { is_default: true },
+          take: 1,
+          select: {
+            id: true,
+            file_name: true,
+            storage_path: true,
+            file_size: true,
+            file_type: true,
+            uploaded_at: true,
+          },
+        },
         // Include admin-specific data if user is admin
         ...(session.user.privilegeLevel > 0 && {
           jobs: {

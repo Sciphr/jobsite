@@ -133,6 +133,8 @@ export async function POST(req) {
       featured,
       priority,
       categoryId,
+      application_type,
+      visibility,
     } = body;
 
     // Basic validation
@@ -278,6 +280,8 @@ export async function POST(req) {
         featured: featured || false,
         priority: priority ? parseInt(priority, 10) : 0,
         categoryId,
+        application_type: application_type || "quick",
+        visibility: visibility || "external",
         createdBy: session.user.id,
         postedAt,
         // Add auto-expiration if calculated

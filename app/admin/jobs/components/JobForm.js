@@ -679,6 +679,8 @@ export default function JobForm({
         <p className="text-sm admin-text-light mt-1">
           {formData.application_type === "quick"
             ? "Applicants fill out a simple form with basic information"
+            : !initialData
+            ? "You'll be taken to set up screening questions after creating this job"
             : "Applicants will be redirected to a dedicated page with screening questions"}
         </p>
       </div>
@@ -765,9 +767,11 @@ export default function JobForm({
           )}
           <span>
             {submitting
-              ? "Creating Job..."
+              ? (initialData ? "Updating..." : formData.application_type === "full" ? "Saving..." : "Creating Job...")
               : initialData
               ? "Update Job"
+              : formData.application_type === "full"
+              ? "Next: Screening Questions →"
               : "Create Job"}
           </span>
         </button>

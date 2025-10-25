@@ -25,8 +25,8 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Only return questions if job is open and has full application type
-    if (job.status !== "Open") {
+    // Only return questions if job is active and has full application type
+    if (job.status !== "Active") {
       return NextResponse.json(
         { error: "Job is not accepting applications" },
         { status: 400 }

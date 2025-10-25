@@ -10,12 +10,17 @@ export default function ScreeningAnswers({ applicationId }) {
   useEffect(() => {
     const fetchAnswers = async () => {
       try {
+        console.log(`Fetching screening answers for application: ${applicationId}`);
         const response = await fetch(
           `/api/admin/applications/${applicationId}/screening-answers`
         );
         if (response.ok) {
           const data = await response.json();
+          console.log('Screening answers response:', data);
+          console.log(`Received ${data.answers?.length || 0} answers`);
           setAnswers(data.answers || []);
+        } else {
+          console.error('Failed to fetch screening answers:', response.status, response.statusText);
         }
       } catch (error) {
         console.error("Error fetching screening answers:", error);

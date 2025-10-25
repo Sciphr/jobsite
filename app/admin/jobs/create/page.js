@@ -25,6 +25,7 @@ function CreateJobPageContent() {
   const [permissionError, setPermissionError] = useState(null);
   const [clonedJobData, setClonedJobData] = useState(null);
   const [loadingCloneData, setLoadingCloneData] = useState(false);
+  const [createdJobType, setCreatedJobType] = useState(null);
 
   useEffect(() => {
     // Check authentication and authorization
@@ -100,12 +101,20 @@ function CreateJobPageContent() {
 
       if (response.ok) {
         console.log("Job created successfully:", result);
-        setSuccess(true);
+        setCreatedJobType(formData.application_type);
 
-        // Redirect to jobs list after a short delay
-        setTimeout(() => {
-          router.push("/admin/jobs");
-        }, 2000);
+        // If full application type, redirect to screening questions setup
+        if (formData.application_type === "full") {
+          // Set flag in sessionStorage to show new job banner
+          sessionStorage.setItem('newJobScreeningSetup', result.id);
+          router.push(`/admin/jobs/${result.id}/screening-questions`);
+        } else {
+          setSuccess(true);
+          // Redirect to jobs list after a short delay
+          setTimeout(() => {
+            router.push("/admin/jobs");
+          }, 2000);
+        }
       } else {
         console.error("Failed to create job:", result);
         // Stay on the form and show the error
@@ -222,7 +231,9 @@ function CreateJobPageContent() {
               Job Created Successfully!
             </h2>
             <p className="text-gray-600 mb-4">
-              Your job posting has been created. Redirecting to jobs list...
+              {createdJobType === "full"
+                ? "Redirecting to screening questions setup..."
+                : "Your job posting has been created. Redirecting to jobs list..."}
             </p>
             <div className="flex items-center justify-center space-x-4">
               <button

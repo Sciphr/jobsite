@@ -38,6 +38,7 @@ import {
   getApplicantDisplayName,
   getJobTitle,
 } from "../../../utils/quickActionEmailTemplates";
+import ScreeningAnswers from "../../../components/ScreeningAnswers";
 
 function ApplicationDetailsContent() {
   const { data: session } = useSession();
@@ -908,6 +909,21 @@ function ApplicationDetailsContent() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Screening Questions Answers Section */}
+        {application?.job?.application_type === "full" && (
+          <div className="admin-card rounded-lg shadow p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                <FileText className="h-5 w-5 text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-semibold admin-text">
+                Screening Questions
+              </h3>
+            </div>
+            <ScreeningAnswers applicationId={application.id} />
           </div>
         )}
 

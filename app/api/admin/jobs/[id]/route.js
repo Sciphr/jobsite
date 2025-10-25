@@ -221,6 +221,8 @@ export async function PATCH(req, { params }) {
       "yearsExperienceRequired",
       "applicationInstructions",
       "categoryId",
+      "application_type",
+      "visibility",
     ];
 
     allowedFields.forEach((field) => {

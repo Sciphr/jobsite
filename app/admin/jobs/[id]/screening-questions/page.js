@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Edit2, Trash2, GripVertical, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, GripVertical, AlertTriangle, CheckCircle, Info, X, Save } from "lucide-react";
 
 export default function JobScreeningQuestionsPage() {
   const params = useParams();
@@ -11,9 +11,23 @@ export default function JobScreeningQuestionsPage() {
   const queryClient = useQueryClient();
   const jobId = params.id;
 
-  const [showModal, setShowModal] = useState(false);
+  const [localQuestions, setLocalQuestions] = useState([]);
+  const [showForm, setShowForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [isNewJob, setIsNewJob] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Check if this is a newly created job (coming from create flow)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const newJobFlag = sessionStorage.getItem('newJobScreeningSetup');
+      if (newJobFlag === jobId) {
+        setIsNewJob(true);
+        sessionStorage.removeItem('newJobScreeningSetup');
+      }
+    }
+  }, [jobId]);
 
   // Fetch job details
   const { data: jobData } = useQuery({
@@ -35,63 +49,130 @@ export default function JobScreeningQuestionsPage() {
     },
   });
 
-  const questions = questionsData?.questions || [];
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (questionId) => {
-      const response = await fetch(
-        `/api/admin/jobs/${jobId}/screening-questions/${questionId}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) throw new Error("Failed to delete question");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["job-screening-questions", jobId]);
-    },
-  });
-
-  // Reorder mutation
-  const reorderMutation = useMutation({
-    mutationFn: async (questionIds) => {
-      const response = await fetch(
-        `/api/admin/jobs/${jobId}/screening-questions/reorder`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questionIds }),
-        }
-      );
-      if (!response.ok) throw new Error("Failed to reorder questions");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["job-screening-questions", jobId]);
-    },
-  });
-
-  const handleDelete = async (questionId) => {
-    if (!confirm("Are you sure you want to delete this question?")) return;
-    try {
-      await deleteMutation.mutateAsync(questionId);
-    } catch (error) {
-      alert("Failed to delete question");
+  // Sync fetched questions to local state
+  useEffect(() => {
+    if (questionsData?.questions) {
+      setLocalQuestions(questionsData.questions.map(q => ({
+        ...q,
+        _localId: q.id || `temp-${Date.now()}-${Math.random()}`,
+        _isNew: false,
+      })));
     }
+  }, [questionsData]);
+
+  // Save all changes mutation
+  const saveAllMutation = useMutation({
+    mutationFn: async (questions) => {
+      const response = await fetch(`/api/admin/jobs/${jobId}/screening-questions/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions }),
+      });
+      if (!response.ok) throw new Error("Failed to save questions");
+      return response.json();
+    },
+    onSuccess: () => {
+      setHasUnsavedChanges(false);
+      queryClient.invalidateQueries(["job-screening-questions", jobId]);
+    },
+  });
+
+  const handleAddQuestion = (questionData) => {
+    const newQuestion = {
+      ...questionData,
+      _localId: `temp-${Date.now()}-${Math.random()}`,
+      _isNew: true,
+      id: null,
+      sort_order: localQuestions.length * 10,
+    };
+    setLocalQuestions([...localQuestions, newQuestion]);
+    setHasUnsavedChanges(true);
+    setShowForm(false);
+  };
+
+  const handleUpdateQuestion = (questionData) => {
+    setLocalQuestions(localQuestions.map(q =>
+      q._localId === editingQuestion._localId
+        ? { ...q, ...questionData }
+        : q
+    ));
+    setHasUnsavedChanges(true);
+    setShowForm(false);
+    setEditingQuestion(null);
+  };
+
+  const handleDelete = (localId) => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+    setLocalQuestions(localQuestions.filter(q => q._localId !== localId));
+    setHasUnsavedChanges(true);
   };
 
   const handleMoveUp = (index) => {
     if (index === 0) return;
-    const newOrder = [...questions];
+    const newOrder = [...localQuestions];
     [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-    reorderMutation.mutate(newOrder.map((q) => q.id));
+    setLocalQuestions(newOrder);
+    setHasUnsavedChanges(true);
   };
 
   const handleMoveDown = (index) => {
-    if (index === questions.length - 1) return;
-    const newOrder = [...questions];
+    if (index === localQuestions.length - 1) return;
+    const newOrder = [...localQuestions];
     [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-    reorderMutation.mutate(newOrder.map((q) => q.id));
+    setLocalQuestions(newOrder);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleEditQuestion = (question) => {
+    setEditingQuestion(question);
+    setShowForm(true);
+    setShowTemplateSelector(false);
+  };
+
+  const handleCreateNew = () => {
+    setEditingQuestion(null);
+    setShowForm(true);
+    setShowTemplateSelector(false);
+  };
+
+  const handleAddFromTemplate = () => {
+    setShowTemplateSelector(true);
+    setShowForm(false);
+    setEditingQuestion(null);
+  };
+
+  const handleAddFromTemplateSuccess = (templateQuestion) => {
+    const newQuestion = {
+      ...templateQuestion,
+      _localId: `temp-${Date.now()}-${Math.random()}`,
+      _isNew: true,
+      id: null,
+      sort_order: localQuestions.length * 10,
+    };
+    setLocalQuestions([...localQuestions, newQuestion]);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      await saveAllMutation.mutateAsync(localQuestions);
+    } catch (error) {
+      alert("Failed to save questions: " + error.message);
+    }
+  };
+
+  const handleFinishSetup = async () => {
+    if (hasUnsavedChanges) {
+      await handleSaveAll();
+    }
+    router.push("/admin/jobs");
+  };
+
+  const handleDone = async () => {
+    if (hasUnsavedChanges) {
+      await handleSaveAll();
+    }
+    router.push("/admin/jobs");
   };
 
   const getQuestionTypeLabel = (type) => {
@@ -109,6 +190,24 @@ export default function JobScreeningQuestionsPage() {
 
   return (
     <div className="space-y-6">
+      {/* New Job Banner */}
+      {isNewJob && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-blue-900 mb-1">
+                Complete Your Job Setup
+              </h3>
+              <p className="text-sm text-blue-700">
+                Add screening questions below to help filter candidates. You can add questions from templates or create custom ones.
+                When you're done, click "Save & Finish" at the bottom.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <nav className="flex items-center space-x-2 text-sm text-gray-600">
         <button
@@ -136,52 +235,93 @@ export default function JobScreeningQuestionsPage() {
       </nav>
 
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => router.push(`/admin/jobs/${jobId}/edit`)}
-          className="p-2 text-gray-400 hover:text-gray-600"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Screening Questions
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {jobData?.job?.title || "Loading..."}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => router.push(`/admin/jobs/${jobId}/edit`)}
+            className="p-2 text-gray-400 hover:text-gray-600"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Screening Questions
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {jobData?.title || "Loading..."}
+            </p>
+          </div>
         </div>
+        {/* Save Button in Header */}
+        {hasUnsavedChanges && !showForm && !showTemplateSelector && (
+          <button
+            onClick={handleSaveAll}
+            disabled={saveAllMutation.isPending}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
+          >
+            <Save className="h-5 w-5" />
+            {saveAllMutation.isPending ? "Saving..." : "Save All Changes"}
+          </button>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      {!showForm && !showTemplateSelector && (
         <div className="flex gap-3">
           <button
-            onClick={() => setShowTemplateSelector(true)}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            onClick={handleAddFromTemplate}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Add from Template
           </button>
           <button
-            onClick={() => {
-              setEditingQuestion(null);
-              setShowModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            onClick={handleCreateNew}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             <Plus className="h-5 w-5" />
             Create Custom Question
           </button>
         </div>
-      </div>
+      )}
+
+      {/* In-Page Question Form */}
+      {showForm && (
+        <QuestionForm
+          question={editingQuestion}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingQuestion(null);
+          }}
+          onSave={editingQuestion ? handleUpdateQuestion : handleAddQuestion}
+        />
+      )}
+
+      {/* Template Selector */}
+      {showTemplateSelector && (
+        <TemplateSelector
+          onCancel={() => setShowTemplateSelector(false)}
+          onSelect={(template) => {
+            handleAddFromTemplateSuccess(template);
+            setShowTemplateSelector(false);
+          }}
+        />
+      )}
 
       {/* Questions List */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {localQuestions.length > 0 ? `Questions (${localQuestions.length})` : "No Questions Yet"}
+        </h2>
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           </div>
-        ) : questions.length === 0 ? (
+        ) : localQuestions.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 mb-4">No screening questions yet</p>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={handleCreateNew}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               Create your first question
@@ -189,16 +329,16 @@ export default function JobScreeningQuestionsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {questions.map((question, index) => (
+            {localQuestions.map((question, index) => (
               <div
-                key={question.id}
+                key={question._localId}
                 className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex flex-col gap-1 pt-2">
                     <button
                       onClick={() => handleMoveUp(index)}
-                      disabled={index === 0 || reorderMutation.isPending}
+                      disabled={index === 0}
                       className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
                     >
                       <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -208,7 +348,7 @@ export default function JobScreeningQuestionsPage() {
                     <GripVertical className="h-5 w-5 text-gray-400" />
                     <button
                       onClick={() => handleMoveDown(index)}
-                      disabled={index === questions.length - 1 || reorderMutation.isPending}
+                      disabled={index === localQuestions.length - 1}
                       className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
                     >
                       <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -242,24 +382,20 @@ export default function JobScreeningQuestionsPage() {
                     {question.options && (
                       <div className="text-sm text-gray-600 mb-2">
                         <span className="font-medium">Options:</span>{" "}
-                        {JSON.parse(question.options).join(", ")}
+                        {(typeof question.options === 'string' ? JSON.parse(question.options) : question.options).join(", ")}
                       </div>
                     )}
 
                     <div className="flex items-center gap-3 mt-3">
                       <button
-                        onClick={() => {
-                          setEditingQuestion(question);
-                          setShowModal(true);
-                        }}
+                        onClick={() => handleEditQuestion(question)}
                         className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                       >
                         <Edit2 className="h-4 w-4" />
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(question.id)}
-                        disabled={deleteMutation.isPending}
+                        onClick={() => handleDelete(question._localId)}
                         className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -274,85 +410,100 @@ export default function JobScreeningQuestionsPage() {
         )}
       </div>
 
-      {/* Modals */}
-      {showModal && (
-        <QuestionModal
-          jobId={jobId}
-          question={editingQuestion}
-          onClose={() => {
-            setShowModal(false);
-            setEditingQuestion(null);
-          }}
-          onSuccess={() => {
-            setShowModal(false);
-            setEditingQuestion(null);
-            queryClient.invalidateQueries(["job-screening-questions", jobId]);
-          }}
-        />
+      {/* Unsaved Changes Warning */}
+      {hasUnsavedChanges && !showForm && !showTemplateSelector && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-orange-900 mb-1">
+                Unsaved Changes
+              </h3>
+              <p className="text-sm text-orange-700">
+                You have unsaved changes. Click "Save All Changes" above to save your work.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
-      {showTemplateSelector && (
-        <TemplateSelectorModal
-          jobId={jobId}
-          onClose={() => setShowTemplateSelector(false)}
-          onSuccess={() => {
-            setShowTemplateSelector(false);
-            queryClient.invalidateQueries(["job-screening-questions", jobId]);
-          }}
-        />
+      {/* Saved Notice */}
+      {!hasUnsavedChanges && !showForm && !showTemplateSelector && localQuestions.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-green-900 mb-1">
+                All Changes Saved
+              </h3>
+              <p className="text-sm text-green-700">
+                You have {localQuestions.length} screening question{localQuestions.length !== 1 ? 's' : ''} configured for this job.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finish Setup Button for New Jobs */}
+      {isNewJob && !showForm && !showTemplateSelector && (
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                Ready to finish?
+              </h3>
+              <p className="text-sm text-gray-600">
+                {localQuestions.length === 0
+                  ? "You haven't added any screening questions yet. You can add them now or finish setup and add them later."
+                  : `You've added ${localQuestions.length} screening question${localQuestions.length !== 1 ? 's' : ''}. Your job is ready!`
+                }
+              </p>
+            </div>
+            <button
+              onClick={handleFinishSetup}
+              disabled={saveAllMutation.isPending}
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
+            >
+              <CheckCircle className="h-5 w-5" />
+              {saveAllMutation.isPending ? "Saving..." : hasUnsavedChanges ? "Save & Finish" : "Finish"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Button for Existing Jobs */}
+      {!isNewJob && !showForm && !showTemplateSelector && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleDone}
+            disabled={saveAllMutation.isPending}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
+          >
+            <CheckCircle className="h-5 w-5" />
+            {saveAllMutation.isPending ? "Saving..." : hasUnsavedChanges ? "Save & Done" : "Done"}
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
-// Question Modal (simplified - reuse template modal logic from template page)
-function QuestionModal({ jobId, question, onClose, onSuccess }) {
+// In-Page Question Form Component
+function QuestionForm({ question, onCancel, onSave }) {
   const [formData, setFormData] = useState({
     question_text: question?.question_text || "",
     question_type: question?.question_type || "text",
-    options: question?.options ? JSON.parse(question.options) : ["", ""],
+    options: question?.options
+      ? (typeof question.options === 'string' ? JSON.parse(question.options) : question.options)
+      : ["", ""],
     is_required: question?.is_required || false,
     placeholder_text: question?.placeholder_text || "",
     help_text: question?.help_text || "",
   });
 
   const [errors, setErrors] = useState({});
-  const [warning, setWarning] = useState(null);
-  const [acknowledgeWarning, setAcknowledgeWarning] = useState(false);
 
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const url = question
-        ? `/api/admin/jobs/${jobId}/screening-questions/${question.id}`
-        : `/api/admin/jobs/${jobId}/screening-questions`;
-      const method = question ? "PATCH" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const responseData = await response.json();
-
-      if (response.status === 409) {
-        // Warning about existing applicants
-        setWarning(responseData);
-        return null;
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to save question");
-      }
-
-      return responseData;
-    },
-    onSuccess: (data) => {
-      if (data) onSuccess();
-    },
-  });
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -372,185 +523,159 @@ function QuestionModal({ jobId, question, onClose, onSuccess }) {
       return;
     }
 
-    try {
-      await saveMutation.mutateAsync({
-        ...formData,
-        acknowledgeWarning: acknowledgeWarning || undefined,
-      });
-    } catch (error) {
-      alert(error.message);
-    }
+    onSave(formData);
   };
 
   const showOptions = ["multiple_choice", "checkbox"].includes(formData.question_type);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {question ? "Edit Question" : "Create Question"}
-          </h2>
+    <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">
+          {question ? "Edit Question" : "Create Question"}
+        </h2>
+        <button
+          onClick={onCancel}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-          {warning && (
-            <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-orange-900 font-medium">
-                    {warning.message}
-                  </p>
-                  <label className="flex items-center gap-2 mt-3">
-                    <input
-                      type="checkbox"
-                      checked={acknowledgeWarning}
-                      onChange={(e) => setAcknowledgeWarning(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <span className="text-sm text-orange-800">
-                      I understand and want to proceed
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Question Text *
+          </label>
+          <textarea
+            value={formData.question_text}
+            onChange={(e) =>
+              setFormData({ ...formData, question_text: e.target.value })
+            }
+            rows={3}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter your question here..."
+          />
+          {errors.question_text && (
+            <p className="text-red-500 text-sm mt-1">{errors.question_text}</p>
           )}
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Similar form fields as in template modal - shortened for brevity */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Question Text *
-              </label>
-              <textarea
-                value={formData.question_text}
-                onChange={(e) =>
-                  setFormData({ ...formData, question_text: e.target.value })
-                }
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.question_text && (
-                <p className="text-red-500 text-sm mt-1">{errors.question_text}</p>
-              )}
-            </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Question Type *</label>
+          <select
+            value={formData.question_type}
+            onChange={(e) =>
+              setFormData({ ...formData, question_type: e.target.value })
+            }
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="text">Short Text</option>
+            <option value="textarea">Long Text</option>
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="checkbox">Checkboxes</option>
+            <option value="yes_no">Yes/No</option>
+            <option value="file_upload">File Upload</option>
+            <option value="date">Date</option>
+          </select>
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Question Type *</label>
-              <select
-                value={formData.question_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, question_type: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="text">Short Text</option>
-                <option value="textarea">Long Text</option>
-                <option value="multiple_choice">Multiple Choice</option>
-                <option value="checkbox">Checkboxes</option>
-                <option value="yes_no">Yes/No</option>
-                <option value="file_upload">File Upload</option>
-                <option value="date">Date</option>
-              </select>
-            </div>
-
-            {showOptions && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Options *</label>
-                {formData.options.map((option, index) => (
-                  <div key={index} className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => {
-                        const newOptions = [...formData.options];
-                        newOptions[index] = e.target.value;
-                        setFormData({ ...formData, options: newOptions });
-                      }}
-                      placeholder={`Option ${index + 1}`}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                    {formData.options.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newOptions = formData.options.filter((_, i) => i !== index);
-                          setFormData({ ...formData, options: newOptions });
-                        }}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, options: [...formData.options, ""] })
-                  }
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  + Add Option
-                </button>
-                {errors.options && (
-                  <p className="text-red-500 text-sm mt-1">{errors.options}</p>
+        {showOptions && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Options *</label>
+            {formData.options.map((option, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={option}
+                  onChange={(e) => {
+                    const newOptions = [...formData.options];
+                    newOptions[index] = e.target.value;
+                    setFormData({ ...formData, options: newOptions });
+                  }}
+                  placeholder={`Option ${index + 1}`}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {formData.options.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newOptions = formData.options.filter((_, i) => i !== index);
+                      setFormData({ ...formData, options: newOptions });
+                    }}
+                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 )}
               </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setFormData({ ...formData, options: [...formData.options, ""] })
+              }
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              + Add Option
+            </button>
+            {errors.options && (
+              <p className="text-red-500 text-sm mt-1">{errors.options}</p>
             )}
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Help Text (Optional)
-              </label>
-              <textarea
-                value={formData.help_text}
-                onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_required"
-                checked={formData.is_required}
-                onChange={(e) =>
-                  setFormData({ ...formData, is_required: e.target.checked })
-                }
-                className="w-4 h-4 text-blue-600 rounded"
-              />
-              <label htmlFor="is_required" className="text-sm font-medium">
-                Required Question
-              </label>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saveMutation.isPending || (warning && !acknowledgeWarning)}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:bg-gray-400"
-              >
-                {saveMutation.isPending ? "Saving..." : "Save Question"}
-              </button>
-            </div>
-          </form>
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Help Text (Optional)
+          </label>
+          <textarea
+            value={formData.help_text}
+            onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
+            rows={2}
+            placeholder="Provide additional context or instructions..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
-      </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="is_required"
+            checked={formData.is_required}
+            onChange={(e) =>
+              setFormData({ ...formData, is_required: e.target.checked })
+            }
+            className="w-4 h-4 text-blue-600 rounded"
+          />
+          <label htmlFor="is_required" className="text-sm font-medium">
+            Required Question
+          </label>
+        </div>
+
+        <div className="flex gap-3 pt-4 border-t">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {question ? "Update Question" : "Add Question"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
 
-// Template Selector Modal (simplified)
-function TemplateSelectorModal({ jobId, onClose, onSuccess }) {
+// Template Selector Component
+function TemplateSelector({ onCancel, onSelect }) {
   const { data, isLoading } = useQuery({
     queryKey: ["question-templates"],
     queryFn: async () => {
@@ -560,80 +685,64 @@ function TemplateSelectorModal({ jobId, onClose, onSuccess }) {
     },
   });
 
-  const addMutation = useMutation({
-    mutationFn: async (template) => {
-      const response = await fetch(`/api/admin/jobs/${jobId}/screening-questions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question_text: template.question_text,
-          question_type: template.question_type,
-          options: template.options ? JSON.parse(template.options) : null,
-          is_required: template.is_required,
-          placeholder_text: template.placeholder_text,
-          help_text: template.help_text,
-          created_from_template_id: template.id,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to add question");
-      return response.json();
-    },
-    onSuccess,
-  });
-
   const templates = data?.templates || [];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Select Template
-          </h2>
-
-          {isLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">No templates available</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    {template.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {template.question_text}
-                  </p>
-                  <button
-                    onClick={() => addMutation.mutate(template)}
-                    disabled={addMutation.isPending}
-                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm disabled:bg-gray-400"
-                  >
-                    {addMutation.isPending ? "Adding..." : "Add to Job"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-6">
-            <button
-              onClick={onClose}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+    <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">
+          Select Template
+        </h2>
+        <button
+          onClick={onCancel}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
+
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">No templates available</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Create templates in Settings → Question Templates
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 transition-colors"
+            >
+              <h3 className="font-semibold text-gray-900 mb-2">
+                {template.title}
+              </h3>
+              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                {template.question_text}
+              </p>
+              <button
+                onClick={() => onSelect({
+                  question_text: template.question_text,
+                  question_type: template.question_type,
+                  options: template.options,
+                  is_required: template.is_required,
+                  placeholder_text: template.placeholder_text,
+                  help_text: template.help_text,
+                  created_from_template_id: template.id,
+                })}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+              >
+                Add to Job
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

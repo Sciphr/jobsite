@@ -13,11 +13,14 @@ import { extractRequestContext } from "../../lib/auditLog";
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id || null;
+  const requestContext = extractRequestContext(request);
+
+  // Declare these outside try block so they're accessible in catch
+  let jobId, name, email, phone, coverLetter, resumeUrl, screeningAnswers, invitationId;
 
   try {
-    const { jobId, name, email, phone, coverLetter, resumeUrl, screeningAnswers, invitationId } =
-      await request.json();
-    const requestContext = extractRequestContext(request);
+    const body = await request.json();
+    ({ jobId, name, email, phone, coverLetter, resumeUrl, screeningAnswers, invitationId } = body);
 
     if (!jobId || !resumeUrl) {
       // Log validation failure for application submission
@@ -143,7 +146,7 @@ export async function POST(request) {
       coverLetter: coverLetter || null,
       resumeUrl,
       source_type: invitationId ? "invited" : "applied",
-      invitation_id: invitationId || null,
+      updatedAt: new Date(),
     };
 
     let applicantName = name;
@@ -445,9 +448,9 @@ export async function POST(request) {
         // Create initial stage history record
         await appPrisma.$executeRaw`
           INSERT INTO application_stage_history (
-            application_id, 
-            stage, 
-            previous_stage, 
+            application_id,
+            stage,
+            previous_stage,
             entered_at,
             changed_by_user_id,
             changed_by_name,
@@ -458,7 +461,7 @@ export async function POST(request) {
             'Applied',
             NULL,
             NOW(),
-            ${userId ? `${userId}::uuid` : null},
+            ${userId}::uuid,
             ${applicantName || 'System'},
             NOW(),
             NOW()
@@ -718,8 +721,7 @@ This email was sent automatically when you submitted your application. Please sa
           jobTitle: job.title,
           department: job.department,
           hasCoverLetter: !!coverLetter,
-          confirmationEmailSent: confirmationEmailEnabled && applicantEmail,
-          adminNotificationSent: adminNotificationEnabled,
+          confirmationEmailSent: autoSendApplicationReceived && applicantEmail,
           userType: userId ? "authenticated_user" : "guest_user",
         },
         ...requestContext,

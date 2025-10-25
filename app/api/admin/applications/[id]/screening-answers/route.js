@@ -15,6 +15,8 @@ export async function GET(request, { params }) {
       orderBy: { created_at: "asc" },
     });
 
+    console.log(`Found ${answers.length} screening answers for application ${resolvedParams.id}`);
+
     return NextResponse.json({ answers });
   } catch (error) {
     console.error("Error fetching screening answers:", error);

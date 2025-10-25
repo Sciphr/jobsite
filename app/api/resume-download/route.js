@@ -41,11 +41,11 @@ export async function GET(request) {
       }
       const fileBuffer = Buffer.concat(chunks);
       
-      // Return the file directly
+      // Return the file directly - use 'inline' to view in browser instead of download
       return new NextResponse(fileBuffer, {
         headers: {
           'Content-Type': stats.metaData['content-type'] || 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="${fileName}"`,
+          'Content-Disposition': `inline; filename="${fileName}"`,
           'Content-Length': fileBuffer.length.toString(),
         },
       });

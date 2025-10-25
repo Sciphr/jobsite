@@ -424,6 +424,7 @@ export async function GET(req, { params }) {
             description: true,
             requirements: true,
             location: true,
+            application_type: true,
             employment_types: {
               select: {
                 name: true
