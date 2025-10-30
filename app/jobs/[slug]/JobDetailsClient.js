@@ -12,9 +12,17 @@ import {
   Mail,
   Gift,
   AlertCircle,
+  Share2,
+  Linkedin,
+  Twitter,
+  Facebook,
+  MessageCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import JobApplicationForm from "./JobApplicationForm";
+import SimilarJobs from "../../components/SimilarJobs";
+import AboutCompany from "../../components/AboutCompany";
+import SuccessAnimation from "../../components/SuccessAnimation";
 import { generateJobShareMailtoUrl } from "../../utils/emailTemplates";
 import { formatDate, formatNumber } from "../../utils/dateFormat";
 import { cleanHtmlForDisplay } from "../../utils/htmlSanitizer";
@@ -34,7 +42,8 @@ export default function JobDetailsClient({
 }) {
   const [copied, setCopied] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const { data: session, status } = useSession();
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const { data: session, status} = useSession();
   const [invitation, setInvitation] = useState(null);
   const [invitationLoading, setInvitationLoading] = useState(!!invitationToken);
   const [invitationError, setInvitationError] = useState(null);
@@ -184,6 +193,32 @@ export default function JobDetailsClient({
     }
   };
 
+  const handleLinkedInShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+    window.open(linkedInUrl, "_blank", "width=600,height=600");
+  };
+
+  const handleTwitterShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`Check out this job opportunity: ${job.title} at ${job.department}`);
+    const twitterUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+    window.open(twitterUrl, "_blank", "width=600,height=600");
+  };
+
+  const handleFacebookShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    window.open(facebookUrl, "_blank", "width=600,height=600");
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent(`Check out this job: ${job.title} - ${window.location.href}`);
+    const whatsappUrl = `https://wa.me/?text=${text}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleApplyClick = () => {
     // Check if user is logged in and has already applied
     if (session?.user?.id && hasApplied) {
@@ -215,11 +250,11 @@ export default function JobDetailsClient({
   const handleApplicationSuccess = () => {
     setShowApplicationForm(false);
 
-    // Show success message
-    alert("Application submitted successfully!");
+    // Show success animation with confetti!
+    setShowSuccessAnimation(true);
 
-    // Invalidate application status to refresh from server
-    // This will be handled automatically by React Query when the component re-renders
+    // Animation will auto-hide after 3 seconds
+    // Application status will be refreshed automatically by React Query
   };
 
   const renderApplyButton = () => {
@@ -352,7 +387,15 @@ export default function JobDetailsClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <>
+      {/* Success Animation with Confetti */}
+      <SuccessAnimation
+        show={showSuccessAnimation}
+        message="Application Submitted!"
+        onComplete={() => setShowSuccessAnimation(false)}
+      />
+
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Breadcrumb */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -972,29 +1015,80 @@ export default function JobDetailsClient({
               {/* Share Job */}
               {!showApplicationForm && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                    Share Job
-                  </h4>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Share2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    <h4 className="font-semibold text-gray-900 dark:text-white">
+                      Share This Job
+                    </h4>
+                  </div>
+
+                  {/* Primary Share Actions */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
                     <button
                       onClick={handleCopyLink}
-                      className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center justify-center gap-2"
+                      className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 px-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 font-medium hover:shadow-md"
                     >
                       {copied ? <Check size={16} /> : <Copy size={16} />}
                       {copied ? "Copied!" : "Copy Link"}
                     </button>
                     <button
                       onClick={handleEmailShare}
-                      className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center justify-center gap-2"
+                      className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 px-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 font-medium hover:shadow-md"
                     >
                       <Mail size={16} />
                       Email
                     </button>
                   </div>
+
+                  {/* Social Media Share Buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      onClick={handleLinkedInShare}
+                      className="bg-[#0077B5] hover:bg-[#006399] text-white py-2.5 px-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105"
+                      title="Share on LinkedIn"
+                    >
+                      <Linkedin size={18} />
+                    </button>
+                    <button
+                      onClick={handleTwitterShare}
+                      className="bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white py-2.5 px-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105"
+                      title="Share on Twitter/X"
+                    >
+                      <Twitter size={18} />
+                    </button>
+                    <button
+                      onClick={handleFacebookShare}
+                      className="bg-[#1877F2] hover:bg-[#1565d8] text-white py-2.5 px-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105"
+                      title="Share on Facebook"
+                    >
+                      <Facebook size={18} />
+                    </button>
+                    <button
+                      onClick={handleWhatsAppShare}
+                      className="bg-[#25D366] hover:bg-[#1fb855] text-white py-2.5 px-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105"
+                      title="Share on WhatsApp"
+                    >
+                      <MessageCircle size={18} />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">
+                    Share with your network and help someone find their next opportunity
+                  </p>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        {/* About Company Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AboutCompany />
+        </div>
+
+        {/* Similar Jobs Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SimilarJobs currentJob={job} />
         </div>
 
         {/* Back to Jobs Link */}
@@ -1021,5 +1115,6 @@ export default function JobDetailsClient({
         </div>
       </div>
     </div>
+    </>
   );
 }

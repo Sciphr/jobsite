@@ -2,14 +2,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import JobsFilter from "../components/JobsFilter";
 import JobsList from "../components/JobsList";
+import EmptyState from "../components/EmptyState";
 import Pagination from "../admin/jobs/components/ui/Pagination";
 import { usePublicJobs, usePrefetchJob } from "../hooks/usePublicJobsData";
 
 export default function JobsPage() {
+  const router = useRouter();
   // Use React Query for jobs data with aggressive caching
   const { data, isLoading, error, isError } = usePublicJobs();
   const prefetchJob = usePrefetchJob();
@@ -28,6 +30,9 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8); // Adjust as needed
 
+  // Sorting state
+  const [sortBy, setSortBy] = useState("newest"); // Default: newest first
+
   // Get search parameters
   const searchParams = useSearchParams();
   const search = searchParams.get("search") || "";
@@ -36,6 +41,8 @@ export default function JobsPage() {
   const employmentType = searchParams.get("employmentType") || "";
   const experienceLevel = searchParams.get("experienceLevel") || "";
   const remotePolicy = searchParams.get("remotePolicy") || "";
+  const salaryMin = parseInt(searchParams.get("salaryMin")) || null;
+  const salaryMax = parseInt(searchParams.get("salaryMax")) || null;
 
   // Job prefetching handler for better UX
   const handleJobHover = (job) => {
@@ -83,6 +90,29 @@ export default function JobsPage() {
       filtered = filtered.filter((job) => job.remote_policies?.name === remotePolicy || job.remotePolicy === remotePolicy);
     }
 
+    // Salary filtering
+    if (salaryMin !== null || salaryMax !== null) {
+      filtered = filtered.filter((job) => {
+        // Only filter jobs that have salary information
+        if (!job.showSalary || !job.salaryMin || !job.salaryMax) {
+          return false; // Exclude jobs without salary data
+        }
+
+        const jobMinSalary = job.salaryMin;
+        const jobMaxSalary = job.salaryMax;
+
+        // Job salary range should overlap with the filter range
+        if (salaryMin !== null && jobMaxSalary < salaryMin) {
+          return false; // Job's max is below filter's min
+        }
+        if (salaryMax !== null && jobMinSalary > salaryMax) {
+          return false; // Job's min is above filter's max
+        }
+
+        return true;
+      });
+    }
+
     return filtered;
   }, [
     jobs,
@@ -92,14 +122,52 @@ export default function JobsPage() {
     employmentType,
     experienceLevel,
     remotePolicy,
+    salaryMin,
+    salaryMax,
   ]);
+
+  // Client-side sorting
+  const sortedJobs = useMemo(() => {
+    const sorted = [...filteredJobs];
+
+    switch (sortBy) {
+      case "newest":
+        return sorted.sort((a, b) => new Date(b.postedAt || b.createdAt) - new Date(a.postedAt || a.createdAt));
+
+      case "oldest":
+        return sorted.sort((a, b) => new Date(a.postedAt || a.createdAt) - new Date(b.postedAt || b.createdAt));
+
+      case "salary-high":
+        return sorted.sort((a, b) => {
+          const aSalary = a.salaryMax || a.salaryMin || 0;
+          const bSalary = b.salaryMax || b.salaryMin || 0;
+          return bSalary - aSalary;
+        });
+
+      case "salary-low":
+        return sorted.sort((a, b) => {
+          const aSalary = a.salaryMin || a.salaryMax || 0;
+          const bSalary = b.salaryMin || b.salaryMax || 0;
+          return aSalary - bSalary;
+        });
+
+      case "title-az":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+
+      case "title-za":
+        return sorted.sort((a, b) => b.title.localeCompare(a.title));
+
+      default:
+        return sorted;
+    }
+  }, [filteredJobs, sortBy]);
 
   // Client-side pagination
   const paginatedJobs = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredJobs.slice(startIndex, endIndex);
-  }, [filteredJobs, currentPage, itemsPerPage]);
+    return sortedJobs.slice(startIndex, endIndex);
+  }, [sortedJobs, currentPage, itemsPerPage]);
 
   // Pagination metadata
   const pagination = useMemo(() => {
@@ -183,14 +251,44 @@ export default function JobsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-200">
-            Job Opportunities
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
-            {filteredJobs.length} {filteredJobs.length === 1 ? "job" : "jobs"}{" "}
-            found
-            {search && ` for "${search}"`}
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-200">
+                Job Opportunities
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                {filteredJobs.length} {filteredJobs.length === 1 ? "job" : "jobs"}{" "}
+                found
+                {search && ` for "${search}"`}
+              </p>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="sort-select"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
+              >
+                Sort by:
+              </label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setCurrentPage(1); // Reset to first page when sorting changes
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors duration-200"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="title-az">Title (A-Z)</option>
+                <option value="title-za">Title (Z-A)</option>
+                <option value="salary-high">Salary (High to Low)</option>
+                <option value="salary-low">Salary (Low to High)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
@@ -209,6 +307,8 @@ export default function JobsPage() {
                 employmentType,
                 experienceLevel,
                 remotePolicy,
+                salaryMin: salaryMin?.toString() || "",
+                salaryMax: salaryMax?.toString() || "",
               }}
             />
           </div>
@@ -232,24 +332,10 @@ export default function JobsPage() {
                 )}
               </>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 dark:text-gray-500 text-6xl mb-4">
-                  🔍
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 transition-colors duration-200">
-                  No jobs found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-200">
-                  Try adjusting your search criteria or browse all available
-                  positions.
-                </p>
-                <Link
-                  href="/jobs"
-                  className="inline-block bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200"
-                >
-                  View All Jobs
-                </Link>
-              </div>
+              <EmptyState
+                type={search || category || location || employmentType || experienceLevel || remotePolicy ? "filter" : "jobs"}
+                onReset={() => router.push("/jobs")}
+              />
             )}
           </div>
         </div>

@@ -16,6 +16,7 @@ import AuthenticationLabels from "./components/AuthenticationLabels";
 import LogoUpload from "./components/LogoUpload";
 import FaviconUpload from "./components/FaviconUpload";
 import SiteThemeSelector from "./components/SiteThemeSelector";
+import CompanyInfo from "./components/CompanyInfo";
 import { useSettings, usePrefetchAdminData, useAutoArchive, useAutoArchivePreview, useAuthSettings } from "@/app/hooks/useAdminData";
 import WeeklyDigestTester, {
   WeeklyDigestButton,
@@ -1398,7 +1399,22 @@ export default function AdminSettings() {
               <div className="border-t border-gray-200 pt-6">
                 <SiteThemeSelector getButtonClasses={getButtonClasses} />
               </div>
-              
+
+              {/* Company Information */}
+              <div className="border-t border-gray-200 pt-6">
+                <CompanyInfo
+                  settings={settings.branding || {}}
+                  onSave={async (companySettings) => {
+                    // Save each company setting
+                    const promises = Object.entries(companySettings).map(([key, value]) =>
+                      updateSetting(key, value, false)
+                    );
+                    await Promise.all(promises);
+                  }}
+                  saving={Object.keys(saving).some(key => key.startsWith('company_'))}
+                />
+              </div>
+
               {/* Other branding settings if any exist */}
               {activeSettings.length > 0 && (
                 <>

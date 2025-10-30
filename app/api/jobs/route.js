@@ -45,6 +45,9 @@ export async function GET(request) {
         employment_types: true,
         experience_levels: true,
         remote_policies: true,
+        job_screening_questions: {
+          select: { id: true },
+        },
       },
       orderBy: [
         { featured: "desc" },
@@ -52,6 +55,13 @@ export async function GET(request) {
         { postedAt: "desc" },
       ],
     });
+
+    // Add hasScreeningQuestions field to each job
+    const jobsWithQuickApply = jobs.map(job => ({
+      ...job,
+      hasScreeningQuestions: job.job_screening_questions && job.job_screening_questions.length > 0,
+      job_screening_questions: undefined, // Remove from response to keep it clean
+    }));
 
     // Get filter options for dropdowns
     const [
@@ -101,7 +111,7 @@ export async function GET(request) {
       eventType: "VIEW",
       category: "JOB",
       action: "Jobs list retrieved successfully",
-      description: `Successfully retrieved ${jobs.length} active jobs with filter options`,
+      description: `Successfully retrieved ${jobsWithQuickApply.length} active jobs with filter options`,
       actorType: "anonymous",
       actorName: "Anonymous",
       ipAddress: requestContext.ipAddress,
@@ -111,7 +121,7 @@ export async function GET(request) {
       status: "success",
       tags: ["jobs", "list", "public", "success"],
       metadata: {
-        jobCount: jobs.length,
+        jobCount: jobsWithQuickApply.length,
         categoryCount: categories.length,
         locationCount: locations.length,
         employmentTypeCount: employmentTypes.length,
@@ -122,7 +132,7 @@ export async function GET(request) {
 
     return new Response(
       JSON.stringify({
-        jobs,
+        jobs: jobsWithQuickApply,
         filterOptions: {
           categories,
           locations: locations.map((l) => l.location),

@@ -2,6 +2,7 @@ import { db } from "./lib/db";
 import Link from "next/link";
 import { ThemedLink } from "./components/ThemedButton";
 import { cleanHtmlForDisplay } from "./utils/htmlSanitizer";
+import HeroSection from "./components/HeroSection";
 
 // Disable static generation for this page since it needs database access
 export const dynamic = 'force-dynamic';
@@ -29,33 +30,24 @@ export default async function HomePage() {
     },
   });
 
+  // Fetch all categories for quick filters
+  const categories = await db.categories.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      {/* Jobs Section - now the primary focus */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-        {/* Header with job count and navigation */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4 transition-colors duration-200">
-              Open Positions
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 transition-colors duration-200">
-              {totalJobs > 0 ? `${totalJobs} active job${totalJobs !== 1 ? 's' : ''} available` : 'No jobs available at the moment'}
-            </p>
-          </div>
-          <div className="mt-6 lg:mt-0">
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: "var(--site-primary)" }}
-            >
-              Browse All Jobs
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
-          </div>
-        </div>
+      {/* Hero Section with Search */}
+      <HeroSection totalJobs={totalJobs} categories={categories} />
+
+      {/* Featured Jobs Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 -mt-8">
 
         {featuredJobs.length > 0 && (
           <div className="mb-8">

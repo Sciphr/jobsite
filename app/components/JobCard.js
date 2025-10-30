@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Check } from "lucide-react";
+import { Check, Clock, XCircle, CheckCircle, User, Calendar, Zap } from "lucide-react";
 import { ThemedLink } from "./ThemedButton";
 
 export default function JobCard({ job, applicationStatus }) {
@@ -14,13 +14,90 @@ export default function JobCard({ job, applicationStatus }) {
     return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}`;
   };
 
+  // Get status badge styling based on application status
+  const getStatusBadge = (status) => {
+    const statusLower = status?.toLowerCase() || "";
+
+    // Applied / New
+    if (statusLower === "applied" || statusLower === "new") {
+      return {
+        bg: "bg-blue-100 dark:bg-blue-900/30",
+        text: "text-blue-800 dark:text-blue-200",
+        border: "border-blue-200 dark:border-blue-700",
+        icon: <Clock className="h-4 w-4" />,
+        label: "Applied",
+      };
+    }
+    // Under Review / Screening
+    if (statusLower === "under review" || statusLower === "screening" || statusLower === "reviewing") {
+      return {
+        bg: "bg-purple-100 dark:bg-purple-900/30",
+        text: "text-purple-800 dark:text-purple-200",
+        border: "border-purple-200 dark:border-purple-700",
+        icon: <User className="h-4 w-4" />,
+        label: status,
+      };
+    }
+    // Interview / Interviewing
+    if (statusLower.includes("interview")) {
+      return {
+        bg: "bg-indigo-100 dark:bg-indigo-900/30",
+        text: "text-indigo-800 dark:text-indigo-200",
+        border: "border-indigo-200 dark:border-indigo-700",
+        icon: <Calendar className="h-4 w-4" />,
+        label: status,
+      };
+    }
+    // Offer / Accepted
+    if (statusLower.includes("offer") || statusLower === "accepted" || statusLower === "hired") {
+      return {
+        bg: "bg-green-100 dark:bg-green-900/30",
+        text: "text-green-800 dark:text-green-200",
+        border: "border-green-200 dark:border-green-700",
+        icon: <CheckCircle className="h-4 w-4" />,
+        label: status,
+      };
+    }
+    // Rejected / Declined
+    if (statusLower === "rejected" || statusLower === "declined" || statusLower === "not selected") {
+      return {
+        bg: "bg-red-100 dark:bg-red-900/30",
+        text: "text-red-800 dark:text-red-200",
+        border: "border-red-200 dark:border-red-700",
+        icon: <XCircle className="h-4 w-4" />,
+        label: status,
+      };
+    }
+    // Default / Generic
+    return {
+      bg: "bg-gray-100 dark:bg-gray-800",
+      text: "text-gray-800 dark:text-gray-200",
+      border: "border-gray-200 dark:border-gray-700",
+      icon: <Check className="h-4 w-4" />,
+      label: status || "Applied",
+    };
+  };
+
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 p-6 border border-gray-200 dark:border-gray-700 flex flex-col h-full relative overflow-hidden">
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50/30 dark:to-gray-700/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-2xl dark:hover:shadow-2xl transition-all duration-300 p-6 border border-gray-200 dark:border-gray-700 flex flex-col h-full relative overflow-hidden hover:glass-subtle">
+      {/* Subtle gradient overlay with glassmorphism on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50/30 dark:to-gray-700/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       
+      {/* Application Status Banner - Most Prominent */}
+      {session && applicationStatus?.hasApplied && (() => {
+        const statusBadge = getStatusBadge(applicationStatus.status);
+        return (
+          <div className="absolute top-0 left-0 right-0">
+            <div className={`${statusBadge.bg} ${statusBadge.text} ${statusBadge.border} border-b-2 px-4 py-2 flex items-center justify-center gap-2 font-semibold text-sm shadow-md`}>
+              {statusBadge.icon}
+              <span>Application Status: {statusBadge.label}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Featured indicator */}
-      {job.featured && (
+      {job.featured && !applicationStatus?.hasApplied && (
         <div className="absolute -top-1 -right-1">
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-3 py-1 rounded-bl-lg rounded-tr-xl font-medium shadow-lg">
             ⭐ Featured
@@ -28,7 +105,17 @@ export default function JobCard({ job, applicationStatus }) {
         </div>
       )}
 
-      <div className="relative z-10">
+      {/* Quick Apply Badge - shows if no screening questions */}
+      {!job.hasScreeningQuestions && !applicationStatus?.hasApplied && (
+        <div className={`absolute ${job.featured ? '-top-1 right-24' : '-top-1 -right-1'}`}>
+          <div className="bg-gradient-to-r from-green-400 to-emerald-500 text-white text-xs px-3 py-1 rounded-bl-lg rounded-tr-xl font-medium shadow-lg flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            Quick Apply
+          </div>
+        </div>
+      )}
+
+      <div className={`relative z-10 ${session && applicationStatus?.hasApplied ? 'pt-12' : ''}`}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="mb-3">
@@ -36,13 +123,6 @@ export default function JobCard({ job, applicationStatus }) {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                   {job.title}
                 </h3>
-                {/* Application Status Badge */}
-                {session && applicationStatus?.hasApplied && (
-                  <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded-full flex items-center gap-1 transition-colors duration-200 animate-pulse">
-                    <Check className="h-3 w-3" />
-                    Applied
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-gray-600 dark:text-gray-400 font-medium transition-colors duration-200">
@@ -174,24 +254,15 @@ export default function JobCard({ job, applicationStatus }) {
               {session && applicationStatus?.hasApplied && (
                 <>
                   <br />
-                  <span className="text-green-600 dark:text-green-400 font-medium text-xs">
-                    Applied {new Date(applicationStatus.appliedAt).toLocaleDateString()}
-                  </span>
+                  <span className="font-medium text-xs mt-1 inline-block">Applied</span>
+                  <br />
+                  <span className="text-xs">{new Date(applicationStatus.appliedAt).toLocaleDateString()}</span>
                 </>
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            {session && applicationStatus?.hasApplied && (
-              <div className="text-center">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Status</span>
-                <div className="text-xs text-green-600 dark:text-green-400 font-bold">
-                  {applicationStatus.status}
-                </div>
-              </div>
-            )}
-            
             {session && applicationStatus?.hasApplied ? (
               <Link
                 href={`/jobs/${job.slug}`}
