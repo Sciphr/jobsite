@@ -5,10 +5,11 @@ import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import JobsFilter from "../components/JobsFilter";
-import JobsList from "../components/JobsList";
+import AnimatedJobsList from "../components/AnimatedJobsList";
 import EmptyState from "../components/EmptyState";
 import Pagination from "../admin/jobs/components/ui/Pagination";
 import { usePublicJobs, usePrefetchJob } from "../hooks/usePublicJobsData";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function JobsPage() {
   const router = useRouter();
@@ -247,10 +248,26 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
+    >
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {/* Page Header */}
-        <div className="mb-8">
+        <motion.div
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="mb-8"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-200">
@@ -264,7 +281,12 @@ export default function JobsPage() {
             </div>
 
             {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2, delay: 0.2 }}
+              className="flex items-center gap-2"
+            >
               <label
                 htmlFor="sort-select"
                 className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
@@ -287,13 +309,18 @@ export default function JobsPage() {
                 <option value="salary-high">Salary (High to Low)</option>
                 <option value="salary-low">Salary (Low to High)</option>
               </select>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="lg:col-span-1"
+          >
             <JobsFilter
               categories={filterOptions.categories}
               locations={filterOptions.locations}
@@ -311,35 +338,56 @@ export default function JobsPage() {
                 salaryMax: salaryMax?.toString() || "",
               }}
             />
-          </div>
+          </motion.div>
 
           {/* Jobs List */}
-          <div className="lg:col-span-3 mt-8 lg:mt-0">
-            {paginatedJobs.length > 0 ? (
-              <>
-                <JobsList jobs={paginatedJobs} onJobHover={handleJobHover} />
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="lg:col-span-3 mt-8 lg:mt-0"
+          >
+            <AnimatePresence mode="wait">
+              {paginatedJobs.length > 0 ? (
+                <motion.div
+                  key="jobs-list"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <AnimatedJobsList jobs={paginatedJobs} onJobHover={handleJobHover} />
 
-                {/* Pagination */}
-                {filteredJobs.length > itemsPerPage && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={pagination.totalPages}
-                    totalItems={filteredJobs.length}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
-                    className="mt-8"
+                  {/* Pagination */}
+                  {filteredJobs.length > itemsPerPage && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={pagination.totalPages}
+                      totalItems={filteredJobs.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      className="mt-8"
+                    />
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty-state"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <EmptyState
+                    type={search || category || location || employmentType || experienceLevel || remotePolicy ? "filter" : "jobs"}
+                    onReset={() => router.push("/jobs")}
                   />
-                )}
-              </>
-            ) : (
-              <EmptyState
-                type={search || category || location || employmentType || experienceLevel || remotePolicy ? "filter" : "jobs"}
-                onReset={() => router.push("/jobs")}
-              />
-            )}
-          </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

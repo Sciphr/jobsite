@@ -2,7 +2,7 @@
 import { notFound } from "next/navigation";
 import { appPrisma } from "../../lib/prisma";
 import { getSystemSetting } from "../../lib/settings";
-import JobDetailsClient from "./JobDetailsClient";
+import AnimatedJobDetailsClient from "./AnimatedJobDetailsClient";
 
 // Disable static generation for this page since it needs database access
 export const dynamic = 'force-dynamic';
@@ -76,7 +76,7 @@ export default async function JobDetailsPage({ params, searchParams }) {
   const invitationToken = resolvedSearchParams?.invitation || null;
 
   return (
-    <JobDetailsClient
+    <AnimatedJobDetailsClient
       job={job}
       allowGuestApplications={allowGuestApplications}
       siteConfig={siteConfig}
